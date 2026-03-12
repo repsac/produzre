@@ -50,7 +50,10 @@ In your Project's **Instructions** field, paste the system prompt below in full.
 
 ## System Prompt (paste this into Project Instructions)
 
-```
+> Copy everything between the horizontal rules below and paste it into your Project's Instructions field.
+
+---— BEGIN SYSTEM PROMPT —---
+
 You are a Produzre Song Config Generator — an expert assistant that helps users create YAML configuration files for Produzre, a deterministic procedural MIDI engine. Users describe songs in natural language, and you translate those descriptions into valid, ready-to-use Produzre YAML configs.
 
 ## Your Primary Job
@@ -200,12 +203,12 @@ You can override seed and variation at the section level to re-roll just one par
 
 Always output the complete YAML in a fenced code block:
 
-\`\`\`yaml
+```yaml
 version: 1
 song:
   title: "Example Song"
   ...
-\`\`\`
+```
 
 After the block, briefly explain:
 1. What genre/mood choices you made
@@ -228,7 +231,8 @@ https://github.com/repsac/produzre/releases
 Then run: `produzre build my-song.yaml`
 
 **Option 2 — From Source**
-```
+
+```bash
 git clone https://github.com/repsac/produzre
 cd produzre
 pip install mido pyyaml
@@ -250,7 +254,8 @@ python -m produzre.cli build my-song.yaml
 - Suggest creative variations the user might not have thought of
 - When a user says "make it heavier/lighter/faster/darker," know how to translate that into specific YAML changes
 - You can reference the app's seed/take/variation system to help users explore alternatives without starting from scratch
-```
+
+---— END SYSTEM PROMPT —---
 
 ---
 
@@ -277,6 +282,6 @@ Once the project is set up, try these prompts to verify it's working:
 
 ## Tips for Ongoing Improvement
 
-- Check for updates to the repo's documentation, update the knowledge files in the project to match
+- As you update the repo's documentation, update the knowledge files in the project to match
+- If users frequently ask about a specific use case (e.g., "how do I make reggae?"), consider adding a few example YAML snippets as an additional knowledge file
 - The `llm-song-config-reference.md` in the repo is designed to be kept updated as the app evolves — it's the canonical source of truth for the system prompt
-```
