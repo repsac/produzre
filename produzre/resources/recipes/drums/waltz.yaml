@@ -1,0 +1,34 @@
+id: waltz
+instrument: drums
+tags:
+  genre: waltz
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  - 9
+  kick_extra_rate: 0.04
+  double_kick_rate: 0.03
+  snare_backbeat_steps:
+  - 0
+  - 4
+  - 9
+  ghost_rate: 0.14
+  ghost_steps:
+  - 5
+  - 7
+  - 8
+  - 11
+  - 12
+  - 14
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  fill_rate: 0.15
+voices: {}

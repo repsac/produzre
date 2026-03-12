@@ -1,0 +1,23 @@
+# Pop rhythm guitar recipe
+# Clean eighth-note strumming, open triads, moderate density
+
+id: pop
+instrument: rhythm_gtr
+tags:
+  genre: pop
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [90, 140]
+
+params:
+  style: straight_8s
+  density: 0.6
+  palm_mute: 0.15
+  voicing: triad
+  strum_style: balanced
+  accent_strength: 0.45
+  groove: tight
+  swing: 0.0
+  chuck_rate: 0.0
+  strum_ms: 18.0
+  use_patterns: true

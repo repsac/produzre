@@ -1,0 +1,25 @@
+id: reggae
+instrument: bass
+tags:
+  genre: "reggae"
+  time_signature: "4/4"
+  bpm_range: [71, 131]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.62
+  rhythm_pattern: "push"
+  articulation_style: "mute"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.27
+  chromatic_rate: 0.08
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.19
+  fifth_jump_rate: 0.19
+  rest_rate: 0.15
+  root_bias: 0.66
+  motion_style: "mixed"
+  swing: 0.05
+  lock_to_kick: 0.34
+  accent_strength: 1.32
+  syncopation: 0.57

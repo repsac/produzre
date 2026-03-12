@@ -1,0 +1,33 @@
+# R&B harmony recipe
+# Smooth voice-leading, extended chord feel, neo-soul influence
+
+id: rnb
+instrument: harmony
+tags:
+  genre: rnb
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [60, 110]
+
+progressions:
+  minor:
+    verse: ["i", "bVII", "bVI", "V"]
+    chorus: ["bVI", "bVII", "i", "V"]
+    bridge: ["iv", "bVII", "bIII", "bVI"]
+    default: ["i", "bVII", "bVI", "V"]
+  major:
+    verse: ["I", "vi", "IV", "V"]
+    chorus: ["vi", "IV", "V", "I"]
+    bridge: ["ii", "V", "vi", "IV"]
+    default: ["I", "vi", "IV", "V"]
+  dorian:
+    verse: ["i", "IV", "bVII", "bIII"]
+    chorus: ["IV", "bVII", "i", "i"]
+    default: ["i", "IV", "bVII", "bIII"]
+  mixolydian:
+    verse: ["I", "bVII", "IV", "ii"]
+    chorus: ["IV", "bVII", "I", "I"]
+    default: ["I", "bVII", "IV", "ii"]
+
+params:
+  chord_rate: 4.0

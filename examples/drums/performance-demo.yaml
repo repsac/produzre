@@ -1,0 +1,218 @@
+version: 1
+song:
+  title: "PerformanceDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.05
+  humanize_timing: 0.02
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # Section 1: No ornaments (baseline)
+  # Clean, mechanical playing for comparison
+  verse_no_ornaments:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.6
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          fill_length: "medium"
+          # No ornaments - baseline mechanical feel
+          choke_rate: 0.0
+          flam_rate: 0.0
+          drag_rate: 0.0
+
+  # Section 2: Cymbal chokes only
+  # Open hats and crashes get shortened for tight grooves
+  verse_chokes_only:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.6
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          # Enable cymbal chokes
+          choke_rate: 0.7  # 70% chance to choke open cymbals
+          flam_rate: 0.0
+          drag_rate: 0.0
+          extra:
+            voices:
+              hats:
+                opens:
+                  rate: 0.3  # More open hats to showcase chokes
+
+  # Section 3: Snare flams only
+  # Grace notes before accented snares (two-note ornament)
+  chorus_flams_only:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          choke_rate: 0.0
+          # Enable flams on accented snares
+          flam_rate: 0.5  # 50% chance of flam on accented snare
+          drag_rate: 0.0
+
+  # Section 4: Snare drags only
+  # Double grace notes before accented snares (three-note ornament)
+  chorus_drags_only:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          choke_rate: 0.0
+          flam_rate: 0.0
+          # Enable drags on accented snares
+          drag_rate: 0.4  # 40% chance of drag on accented snare
+
+  # Section 5: All ornaments combined (realistic performance)
+  # Demonstrates how a real drummer would play with dynamics
+  bridge_all_ornaments:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: "vi IV I V vi IV I V"
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          fill_length: "long"  # Full bar fills to showcase crescendos
+          # Realistic ornament mix
+          choke_rate: 0.5   # Moderate choking
+          flam_rate: 0.3    # Occasional flams
+          drag_rate: 0.15   # Rare drags (more difficult technique)
+          extra:
+            voices:
+              hats:
+                opens:
+                  rate: 0.25
+
+  # Section 6: High-intensity with aggressive ornaments
+  # Shows how ornaments enhance energetic playing
+  solo_aggressive_ornaments:
+    type: solo
+    bars: 8
+    harmony:
+      progression: "I I IV IV I I V V"
+    instruments:
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 2  # More frequent fills
+          fill_length: "long"
+          # Aggressive ornament usage
+          choke_rate: 0.8   # Frequent chokes for tight control
+          flam_rate: 0.6    # Frequent flams for power
+          drag_rate: 0.3    # More drags for intensity
+          kick_syncopation_rate: 0.35
+          kick_double_kick_rate: 0.25
+          extra:
+            voices:
+              hats:
+                opens:
+                  rate: 0.4
+
+  # Section 7: Tight persona with conservative ornaments
+  # Demonstrates persona influence on ornament placement
+  verse_tight_persona:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.6
+        persona: tight  # Conservative ornament choices
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          choke_rate: 0.6
+          flam_rate: 0.4
+          drag_rate: 0.2
+
+  # Section 8: Loose persona with experimental ornaments
+  # More ornaments, less predictable placement
+  chorus_loose_persona:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        persona: loose  # More experimental ornament choices
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          choke_rate: 0.6
+          flam_rate: 0.4
+          drag_rate: 0.2
+
+  # Section 9: Fill crescendo showcase
+  # Different fill types demonstrating built-in velocity ramps
+  outro_fill_crescendos:
+    type: outro
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      drums:
+        intensity: 0.7
+        persona: loose  # More fill variety
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 2  # Frequent fills to showcase types
+          fill_length: "long"  # Longer fills show crescendos better
+          phrase_end_emphasis: 2.0  # Bigger final fill
+          choke_rate: 0.4
+          flam_rate: 0.3
+          drag_rate: 0.1
+
+arrangement:
+  - verse_no_ornaments          # Baseline: no ornaments
+  - verse_chokes_only           # Cymbal chokes only
+  - chorus_flams_only           # Snare flams only
+  - chorus_drags_only           # Snare drags only
+  - bridge_all_ornaments        # All ornaments combined
+  - solo_aggressive_ornaments   # High intensity with aggressive ornaments
+  - verse_tight_persona         # Tight persona influence
+  - chorus_loose_persona        # Loose persona influence
+  - outro_fill_crescendos       # Fill crescendo showcase

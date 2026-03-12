@@ -1,0 +1,85 @@
+version: 1
+song:
+  title: "TomsDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse_groove_toms:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        intensity: 0.4
+        extra:
+          voices:
+            toms:
+              # Low groove tom rate for occasional texture
+              groove:
+                rate: 0.2  # Sparse tom hits during verse
+
+              # No fills in verse
+              fills:
+                rate: 0.0
+
+  chorus_fill_toms:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        extra:
+          voices:
+            toms:
+              # No groove toms in chorus (cleaner)
+              groove:
+                rate: 0.0
+
+              # High fill tom rate at phrase ends
+              fills:
+                rate: 0.8  # Strong probability of fill runs at section end
+
+  bridge_mixed:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "IV I V vi"
+    instruments:
+      drums:
+        intensity: 0.6
+        extra:
+          voices:
+            toms:
+              # Moderate groove tom activity
+              groove:
+                rate: 0.4
+
+              # Moderate fill runs at phrase end
+              fills:
+                rate: 0.5
+
+arrangement:
+  - verse_groove_toms
+  - chorus_fill_toms
+  - bridge_mixed

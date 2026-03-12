@@ -1,0 +1,25 @@
+id: techno
+instrument: bass
+tags:
+  genre: "techno"
+  time_signature: "4/4"
+  bpm_range: [87, 161]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.7
+  rhythm_pattern: "push"
+  articulation_style: "pick"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.27
+  chromatic_rate: 0.08
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.27
+  fifth_jump_rate: 0.24
+  rest_rate: 0.2
+  root_bias: 0.69
+  motion_style: "mixed"
+  swing: 0.03
+  lock_to_kick: 0.32
+  accent_strength: 1.33
+  syncopation: 0.6

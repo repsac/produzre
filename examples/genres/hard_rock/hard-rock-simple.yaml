@@ -1,0 +1,45 @@
+# Hard Rock - Simple Example
+#
+# Aggressive hard rock with power chord riffs in E minor and driving
+# energy. genre: hard_rock activates heavy drum patterns and
+# distorted guitar recipes.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Iron Will"
+  bpm: 140
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: hard_rock
+  seed: 501
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+arrangement:
+  - verse
+  - verse

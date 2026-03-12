@@ -1,0 +1,44 @@
+# Alt Rock - Simple Example
+#
+# Alternative rock with moody minor-key progressions and moderate energy.
+# genre: alt_rock activates recipe-driven drum, bass, and guitar tones.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Faded Signal"
+  bpm: 128
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: alt_rock
+  seed: 201
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - verse
+  - verse

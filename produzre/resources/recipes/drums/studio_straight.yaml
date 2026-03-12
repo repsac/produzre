@@ -1,0 +1,35 @@
+id: studio_straight
+instrument: drums
+tags:
+  genre: studio
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  feel: straight
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  - 6
+  - 8
+  kick_extra_rate: 0.12
+  double_kick_rate: 0.21
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.12
+  ghost_steps:
+  - 1
+  - 7
+  - 9
+  - 13
+  - 14
+  - 15
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.13
+params:
+  fill_rate: 0.15
+voices: {}

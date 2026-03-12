@@ -1,0 +1,2 @@
+# Golden TSV files will be generated here
+# Run: python tests/test_golden_drums.py --regenerate

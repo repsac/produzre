@@ -1,0 +1,63 @@
+# Funk Recipe Showcase
+# Syncopated bass with moderate density, mixed motion style.
+# MIDI analysis: funk bass has 43% syncopation, 26% rests.
+
+version: 1
+
+song:
+  title: "Funk Recipe Showcase"
+  bpm: 100
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: funk
+  seed: 5003
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  groove:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "IV", "i", "IV"]
+    instruments:
+      harmony: { intensity: 0.85 }
+      drums: { intensity: 0.85 }
+      bass: { intensity: 0.85 }
+      rhythm_gtr: { intensity: 0.8 }
+
+  bridge:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: ["iv", "VII"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.7 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.6 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "IV", "VII", "IV"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 0.9 }
+
+arrangement:
+  - groove
+  - groove
+  - bridge
+  - chorus
+  - groove
+  - chorus

@@ -1,0 +1,110 @@
+# Acoustic Guitar - Style Comparison
+#
+# Four sections isolating each acoustic guitar technique:
+#
+#   picking_verse    - Travis fingerpicking (verse default)
+#   strum_chorus     - Dense chord strumming (chorus default)
+#   hybrid_prechorus - Arpeggio first half + strum second half
+#   perc_breakdown   - Sparse body taps + chord stabs
+#
+# The acoustic_gtr engine auto-selects technique by section type, but
+# each section here overrides it explicitly so all four are demonstrated
+# in one file. Harmony only — no drums/bass/rhythm_gtr, acoustic only for clarity.
+
+version: 1
+
+song:
+  title: "Acoustic Style Comparison"
+  bpm: 92
+  key: G
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 777
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  harmony:
+    params: {}
+  acoustic_gtr:
+    params: {}
+
+sections:
+  picking_verse:
+    type: verse
+    bars: 4
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      acoustic_gtr:
+        intensity: 0.7
+        extra:
+          technique: "fingerpicking"
+          picking_pattern: "travis"
+          voicing_style: "open"
+
+  strum_chorus:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: ["I", "IV", "V", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      acoustic_gtr:
+        intensity: 0.85
+        extra:
+          technique: "strumming"
+          strum_density: 0.75
+          voicing_style: "open"
+
+  hybrid_prechorus:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["IV", "V", "vi", "V"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      acoustic_gtr:
+        intensity: 0.75
+        extra:
+          technique: "hybrid"
+          picking_pattern: "broken_chord"
+          voicing_style: "auto"
+
+  perc_breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.55
+      acoustic_gtr:
+        intensity: 0.55
+        extra:
+          technique: "percussive"
+          body_tap_ratio: 0.35
+          voicing_style: "open"
+
+arrangement:
+  - picking_verse
+  - strum_chorus
+  - hybrid_prechorus
+  - perc_breakdown
+
+# Verification checklist:
+# - fingerpicking: alternating low/high pitches, bass notes longer than treble
+# - strumming: 4-6 pitches per strum hit (not power chords), velocity ~55-92
+# - hybrid: arpeggio on beats 0-2, strum block from beat 2 onward
+# - percussive: rare stabs (vel ~45-60) + body tap events (MIDI 40, very short)
+# - Same seed -> same MIDI output (determinism check)

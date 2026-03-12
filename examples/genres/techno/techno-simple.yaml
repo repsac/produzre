@@ -1,0 +1,44 @@
+# Techno - Simple Example
+#
+# Driving techno in F minor at 135 BPM with a four-on-the-floor kick and
+# minimal harmonic movement. Relentless and hypnotic.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Underground"
+  bpm: 135
+  key: F
+  mode: minor
+  meter: "4/4"
+  genre: techno
+  seed: 700
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  loop:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "i", "VII", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - loop
+  - loop

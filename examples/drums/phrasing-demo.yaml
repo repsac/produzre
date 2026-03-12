@@ -1,0 +1,124 @@
+version: 1
+song:
+  title: "PhrasingDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # 8-bar section with 4-bar phrases
+  # Expect fills at bars 4 and 8
+  verse_8bar_4bar_phrases:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      drums:
+        intensity: 0.6
+        params:
+          fill_rate: 1.0           # Always place fills at phrase boundaries
+          phrase_len_bars: 4       # 4-bar phrases
+          phrase_end_emphasis: 1.5 # Final phrase (bar 8) gets longer fill
+          fill_length: "medium"    # 2 beats normally
+
+  # 8-bar section with 2-bar phrases
+  # Expect fills at bars 2, 4, 6, 8
+  chorus_8bar_2bar_phrases:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: "I V vi IV I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 1.0           # Always place fills
+          phrase_len_bars: 2       # 2-bar phrases (more frequent)
+          phrase_end_emphasis: 2.0 # Even bigger final fill
+          fill_length: "short"     # 1 beat normally
+
+  # 6-bar section (non-even phrase division)
+  # With phrase_len_bars=4, expect fills at bars 4 and 6 (last bar)
+  bridge_6bar_4bar_phrases:
+    type: bridge
+    bars: 6
+    harmony:
+      progression: "vi IV I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4       # Phrase at bar 4, then last bar 6
+          phrase_end_emphasis: 1.3
+          fill_length: "medium"
+
+  # 12-bar section with 4-bar phrases
+  # Expect fills at bars 4, 8, 12
+  solo_12bar_4bar_phrases:
+    type: solo
+    bars: 12
+    harmony:
+      progression: "I I I I IV IV I I V IV I V"
+    instruments:
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4       # Standard 4-bar phrases
+          phrase_end_emphasis: 1.8 # Big finish at bar 12
+          fill_length: "long"      # Full bar fills
+
+  # Section with no fills (fill_rate=0)
+  verse_no_fills:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+        params:
+          fill_rate: 0.0           # No fills despite phrase boundaries
+
+  # 6/8 time with 2-bar phrases (auto-detected default)
+  waltz_6_8:
+    type: verse
+    bars: 8
+    meter: "6/8"
+    beats_per_bar: 6
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      drums:
+        intensity: 0.6
+        params:
+          fill_rate: 1.0
+          # phrase_len_bars not specified - should default to 2 for 6/8
+          phrase_end_emphasis: 1.4
+          fill_length: "medium"
+
+arrangement:
+  - verse_8bar_4bar_phrases   # Bars 4, 8: fills
+  - chorus_8bar_2bar_phrases  # Bars 2, 4, 6, 8: fills
+  - bridge_6bar_4bar_phrases  # Bars 4, 6: fills
+  - solo_12bar_4bar_phrases   # Bars 4, 8, 12: fills
+  - verse_no_fills            # No fills
+  - waltz_6_8                 # Auto 2-bar phrases in 6/8

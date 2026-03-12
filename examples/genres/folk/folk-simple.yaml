@@ -1,0 +1,47 @@
+# Simple Folk - Beginner Example
+#
+# Acoustic-focused folk in G major with a simple I-IV-V progression.
+# Features acoustic guitar as the primary instrument with gentle
+# rhythm section support.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Morning Trail"
+  bpm: 95
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 800
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.55
+      acoustic_gtr:
+        intensity: 0.75
+        extra:
+          technique: "fingerpicking"
+
+arrangement:
+  - verse
+  - verse

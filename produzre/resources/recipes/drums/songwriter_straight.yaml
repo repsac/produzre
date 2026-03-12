@@ -1,0 +1,37 @@
+id: songwriter_straight
+instrument: drums
+tags:
+  genre: songwriter
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  feel: straight
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  - 8
+  kick_extra_rate: 0.16
+  double_kick_rate: 0.27
+  snare_backbeat_steps:
+  - 4
+  - 8
+  - 12
+  - 15
+  ghost_rate: 0.3
+  ghost_steps:
+  - 2
+  - 5
+  - 7
+  - 9
+  - 11
+  - 13
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.16
+params:
+  swing: 0.35
+  fill_rate: 0.15
+voices: {}

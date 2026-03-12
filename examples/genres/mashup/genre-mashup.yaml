@@ -1,0 +1,66 @@
+# Genre Mashup Demo
+#
+# Demonstrates per-instrument genre overrides. The song has a base genre
+# of "rock" but individual instruments pull from different genre recipes.
+#
+# Instruments work together because they share the same harmony plan —
+# genre only affects rhythm patterns, density, and voicings, not pitch.
+#
+# Fallback chain: section instrument genre → global instrument genre → song genre
+
+version: 1
+
+song:
+  title: "Genre Mashup"
+  bpm: 110
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: rock       # Base genre (fallback for instruments without override)
+  seed: 42
+  exports_root: "exports"
+
+instruments:
+  drums:
+    genre: funk      # All sections use funk drum recipes by default
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "bVII"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+        # Inherits genre: funk from global instruments block
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        genre: reggae   # Section override: reggae skank rhythm
+        intensity: 0.7
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "V"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        genre: rock     # Override global funk: rock drums for the chorus
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 0.9
+        # No genre override: falls back to song genre = rock
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

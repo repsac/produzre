@@ -1,0 +1,44 @@
+# Simple R&B - Beginner Example
+#
+# Smooth R&B groove in F minor with a laid-back feel.
+# Minor key warmth with jazzy chord extensions.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Midnight Smooth"
+  bpm: 90
+  key: F
+  mode: minor
+  meter: "4/4"
+  genre: rnb
+  seed: 500
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i7", "iv7", "VI", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.65
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.55
+
+arrangement:
+  - verse
+  - verse

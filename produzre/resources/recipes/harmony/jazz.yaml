@@ -1,0 +1,35 @@
+# Jazz harmony recipe
+# ii-V-I based progressions, turnarounds, and modal jazz patterns
+
+id: jazz
+instrument: harmony
+tags:
+  genre: jazz
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [80, 240]
+
+progressions:
+  minor:
+    verse: ["i", "iv", "bVII", "bIII"]
+    chorus: ["bVI", "bVII", "i", "i"]
+    bridge: ["iv", "bVII", "bIII", "bVI"]
+    default: ["i", "iv", "bVII", "bIII"]
+  major:
+    # ii-V-I turnaround patterns
+    verse: ["ii", "V", "I", "vi"]
+    chorus: ["IV", "V", "I", "vi"]
+    bridge: ["ii", "V", "iii", "vi"]
+    default: ["ii", "V", "I", "vi"]
+  dorian:
+    verse: ["i", "IV", "bVII", "bIII"]
+    chorus: ["i", "bVII", "IV", "i"]
+    bridge: ["IV", "bVII", "bIII", "bVI"]
+    default: ["i", "IV", "bVII", "bIII"]
+  mixolydian:
+    verse: ["I", "bVII", "IV", "I"]
+    chorus: ["IV", "bVII", "I", "I"]
+    default: ["I", "bVII", "IV", "I"]
+
+params:
+  chord_rate: 4.0

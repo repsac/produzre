@@ -1,0 +1,25 @@
+id: folk
+instrument: bass
+tags:
+  genre: "folk"
+  time_signature: "4/4"
+  bpm_range: [84, 156]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.37
+  rhythm_pattern: "anchor"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.17
+  chromatic_rate: 0.11
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.28
+  fifth_jump_rate: 0.17
+  rest_rate: 0.26
+  root_bias: 0.74
+  motion_style: "mixed"
+  swing: 0.03
+  lock_to_kick: 0.6
+  accent_strength: 1.2
+  syncopation: 0.26

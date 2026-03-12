@@ -1,0 +1,49 @@
+# Pop Rock Recipe Showcase
+# Accessible rock bass with pop-friendly density.
+
+version: 1
+
+song:
+  title: "Pop Rock Recipe Showcase"
+  bpm: 120
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: "pop rock"
+  seed: 5024
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.75 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "IV"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 0.95 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

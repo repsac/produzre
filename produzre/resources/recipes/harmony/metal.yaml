@@ -1,0 +1,32 @@
+# Metal harmony recipe
+# Power chord progressions, chromatic movement, Phrygian and natural minor
+
+id: metal
+instrument: harmony
+tags:
+  genre: metal
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [100, 220]
+
+progressions:
+  minor:
+    verse: ["i", "bII", "bVII", "i"]
+    chorus: ["bVI", "bVII", "i", "i"]
+    bridge: ["bIII", "bII", "i", "i"]
+    default: ["i", "bII", "bVII", "i"]
+  major:
+    verse: ["I", "bVII", "bVI", "bVII"]
+    chorus: ["bVI", "bVII", "I", "I"]
+    default: ["I", "bVII", "bVI", "bVII"]
+  phrygian:
+    verse: ["i", "bII", "bVII", "i"]
+    chorus: ["bII", "bIII", "i", "i"]
+    default: ["i", "bII", "bVII", "i"]
+  dorian:
+    verse: ["i", "bVII", "IV", "i"]
+    chorus: ["IV", "bVII", "i", "i"]
+    default: ["i", "bVII", "IV", "i"]
+
+params:
+  chord_rate: 4.0

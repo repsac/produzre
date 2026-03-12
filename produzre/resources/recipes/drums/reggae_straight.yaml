@@ -1,0 +1,40 @@
+id: reggae_straight
+instrument: drums
+tags:
+  genre: reggae
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 69
+  - 163
+  feel: straight
+groove:
+  hat_mode: 16th
+  use_ride: false
+  kick_base:
+  - 0
+  - 4
+  - 8
+  - 12
+  kick_extra_rate: 0.05
+  double_kick_rate: 0.13
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.14
+  ghost_steps:
+  - 7
+  - 8
+  - 9
+  - 11
+  - 14
+  - 15
+  open_hat_rate: 0.01
+  crash_start: false
+  crash_phrase_end_rate: 0.08
+params:
+  swing: 0.2
+  fill_rate: 0.2
+voices: {}

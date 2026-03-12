@@ -1,0 +1,101 @@
+# Rock Verse-Chorus - Intermediate Example
+#
+# Classic verse-chorus structure with dynamic contrast.
+# genre: rock activates recipe-driven drums, rhythm guitar, and harmony.
+# Section-level intensity controls the dynamics.
+#
+# Complexity: INTERMEDIATE (4 sections, dynamic contrast)
+
+version: 1
+
+song:
+  title: "Verse Chorus Rock"
+  bpm: 130
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 500
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "rock"
+  bass:
+    params:
+      articulation_style: "pick"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.9
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - intro
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - outro

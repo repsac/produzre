@@ -1,0 +1,32 @@
+# Country harmony recipe
+# Nashville-style I-IV-V progressions and traditional patterns
+
+id: country
+instrument: harmony
+tags:
+  genre: country
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [80, 160]
+
+progressions:
+  minor:
+    verse: ["i", "bVII", "bVI", "bVII"]
+    chorus: ["bVI", "bVII", "i", "i"]
+    bridge: ["bIII", "bVII", "i", "i"]
+    default: ["i", "bVII", "bVI", "bVII"]
+  major:
+    verse: ["I", "IV", "V", "I"]
+    chorus: ["IV", "V", "I", "I"]
+    bridge: ["vi", "IV", "V", "V"]
+    default: ["I", "IV", "V", "I"]
+  dorian:
+    verse: ["i", "IV", "bVII", "i"]
+    default: ["i", "IV", "bVII", "i"]
+  mixolydian:
+    verse: ["I", "IV", "bVII", "I"]
+    chorus: ["IV", "bVII", "I", "I"]
+    default: ["I", "IV", "bVII", "I"]
+
+params:
+  chord_rate: 4.0

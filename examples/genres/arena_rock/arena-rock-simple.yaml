@@ -1,0 +1,45 @@
+# Arena Rock - Simple Example
+#
+# Big, anthemic arena rock with soaring major-key progressions and
+# high energy. genre: arena_rock activates powerful drums and
+# driving rhythm guitar recipes.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Stadium Lights"
+  bpm: 130
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: arena_rock
+  seed: 301
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.9
+
+arrangement:
+  - chorus
+  - chorus

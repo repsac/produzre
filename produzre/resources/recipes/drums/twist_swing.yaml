@@ -1,0 +1,41 @@
+id: twist_swing
+instrument: drums
+tags:
+  genre: twist
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 72
+  - 160
+  feel: swing
+groove:
+  hat_mode: quarter
+  use_ride: false
+  kick_base:
+  - 0
+  - 10
+  - 15
+  kick_extra_rate: 0.15
+  double_kick_rate: 0.17
+  snare_backbeat_steps:
+  - 4
+  - 7
+  - 9
+  - 12
+  - 15
+  ghost_rate: 0.31
+  ghost_steps:
+  - 3
+  - 6
+  - 10
+  - 11
+  - 13
+  - 14
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  fill_rate: 0.15
+voices: {}

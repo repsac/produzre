@@ -1,0 +1,40 @@
+id: boogie
+instrument: drums
+tags:
+  genre: boogie
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  - 3
+  - 8
+  - 11
+  kick_extra_rate: 0.06
+  double_kick_rate: 0.08
+  snare_backbeat_steps:
+  - 1
+  - 2
+  - 4
+  - 7
+  - 8
+  - 12
+  ghost_rate: 0.17
+  ghost_steps:
+  - 0
+  - 5
+  - 6
+  - 10
+  - 11
+  - 15
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  swing: 0.1
+  fill_rate: 0.2
+voices: {}

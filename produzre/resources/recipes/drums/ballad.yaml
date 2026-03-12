@@ -1,0 +1,35 @@
+id: ballad
+instrument: drums
+tags:
+  genre: ballad
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 75
+  - 100
+groove:
+  hat_mode: quarter
+  use_ride: false
+  kick_base:
+  - 0
+  - 13
+  kick_extra_rate: 0.04
+  double_kick_rate: 0.12
+  snare_backbeat_steps:
+  - 11
+  ghost_rate: 0.09
+  ghost_steps:
+  - 5
+  - 7
+  - 8
+  - 9
+  - 12
+  - 13
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  fill_rate: 0.15
+voices: {}

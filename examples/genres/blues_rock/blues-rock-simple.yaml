@@ -1,0 +1,45 @@
+# Blues Rock - Simple Example
+#
+# Blues rock shuffle with a classic 12-bar form and a swinging feel.
+# genre: blues_rock activates bluesy bass walking lines, shuffled drums,
+# and gritty rhythm guitar.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Dusty Highway"
+  bpm: 110
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: blues_rock
+  seed: 401
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  twelve_bar:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - twelve_bar
+  - twelve_bar

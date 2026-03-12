@@ -1,0 +1,36 @@
+# Funk harmony recipe
+# Minimal chord changes, groove-focused, dominant feel
+
+id: funk
+instrument: harmony
+tags:
+  genre: funk
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, breakdown]
+  bpm_range: [80, 120]
+
+progressions:
+  minor:
+    verse: ["i", "i", "iv", "i"]
+    chorus: ["iv", "bVII", "i", "i"]
+    bridge: ["bVI", "bVII", "i", "i"]
+    breakdown: ["i", "i", "i", "i"]
+    default: ["i", "i", "iv", "i"]
+  major:
+    verse: ["I", "I", "IV", "I"]
+    chorus: ["IV", "V", "I", "I"]
+    bridge: ["vi", "IV", "I", "I"]
+    breakdown: ["I", "I", "I", "I"]
+    default: ["I", "I", "IV", "I"]
+  dorian:
+    verse: ["i", "i", "IV", "i"]
+    chorus: ["IV", "bVII", "i", "i"]
+    breakdown: ["i", "i", "i", "i"]
+    default: ["i", "i", "IV", "i"]
+  mixolydian:
+    verse: ["I", "I", "bVII", "I"]
+    chorus: ["IV", "bVII", "I", "I"]
+    default: ["I", "I", "bVII", "I"]
+
+params:
+  chord_rate: 4.0

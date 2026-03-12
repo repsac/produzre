@@ -1,0 +1,36 @@
+id: electronic
+instrument: drums
+tags:
+  genre: electronic
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 60
+  - 170
+groove:
+  hat_mode: 16th
+  use_ride: false
+  kick_base:
+  - 0
+  kick_extra_rate: 0.1
+  double_kick_rate: 0.11
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.11
+  ghost_steps:
+  - 3
+  - 6
+  - 9
+  - 11
+  - 14
+  - 15
+  open_hat_rate: 0.01
+  crash_start: false
+  crash_phrase_end_rate: 0.08
+params:
+  swing: 0.2
+  fill_rate: 0.15
+voices: {}

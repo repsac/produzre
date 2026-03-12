@@ -1,0 +1,49 @@
+# Classical Recipe Showcase
+# Sparse anchor bass (0.20 density), 60% rests, highest on-beat (0.71).
+# MIDI analysis: classical bass averages only 2.87 notes/bar.
+
+version: 1
+
+song:
+  title: "Classical Recipe Showcase"
+  bpm: 72
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: classical
+  seed: 5009
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  theme:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony: { intensity: 0.6 }
+      drums: { intensity: 0.3 }
+      bass: { intensity: 0.6 }
+      rhythm_gtr: { intensity: 0.5 }
+
+  development:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["vi", "ii", "V", "I"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.3 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.5 }
+
+arrangement:
+  - theme
+  - development
+  - theme

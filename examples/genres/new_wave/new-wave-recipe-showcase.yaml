@@ -1,0 +1,49 @@
+# New Wave Recipe Showcase
+# Synth-influenced bass with driving rhythm and melodic hooks.
+
+version: 1
+
+song:
+  title: "New Wave Recipe Showcase"
+  bpm: 135
+  key: F
+  mode: minor
+  meter: "4/4"
+  genre: "new wave"
+  seed: 5027
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "VII"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.75 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "i"]
+    instruments:
+      harmony: { intensity: 0.95 }
+      drums: { intensity: 0.95 }
+      bass: { intensity: 0.95 }
+      rhythm_gtr: { intensity: 0.9 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

@@ -1,0 +1,44 @@
+# Punk - Simple Example
+#
+# Fast and raw punk in A major at 180 BPM. Power chord driven with
+# high energy and straight-ahead simplicity.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "No Brakes"
+  bpm: 180
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: punk
+  seed: 420
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.9
+
+arrangement:
+  - verse
+  - verse

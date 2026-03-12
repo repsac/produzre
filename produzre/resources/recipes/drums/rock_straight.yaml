@@ -1,0 +1,37 @@
+id: rock_straight
+instrument: drums
+tags:
+  genre: rock
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 60
+  - 220
+  feel: straight
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  - 8
+  kick_extra_rate: 0.09
+  double_kick_rate: 0.17
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.16
+  ghost_steps:
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.09
+params:
+  fill_rate: 0.15
+voices: {}

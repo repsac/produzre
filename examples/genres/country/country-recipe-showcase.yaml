@@ -1,0 +1,50 @@
+# Country Recipe Showcase
+# Moderate density, strong on-beat (0.59), stepwise bass motion.
+# MIDI analysis: country bass has 27% root ratio, 46% step motion.
+
+version: 1
+
+song:
+  title: "Country Recipe Showcase"
+  bpm: 110
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: country
+  seed: 5007
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony: { intensity: 0.75 }
+      drums: { intensity: 0.75 }
+      bass: { intensity: 0.75 }
+      rhythm_gtr: { intensity: 0.7 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "IV", "V"]
+    instruments:
+      harmony: { intensity: 0.9 }
+      drums: { intensity: 0.9 }
+      bass: { intensity: 0.9 }
+      rhythm_gtr: { intensity: 0.85 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

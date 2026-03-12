@@ -1,0 +1,22 @@
+# Country rhythm guitar recipe
+# Clean eighth-note strumming, open triads, tight timing
+
+id: country
+instrument: rhythm_gtr
+tags:
+  genre: country
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [80, 160]
+
+params:
+  style: straight_8s
+  density: 0.55
+  palm_mute: 0.15
+  voicing: triad
+  strum_style: balanced
+  accent_strength: 0.4
+  groove: tight
+  swing: 0.0
+  chuck_rate: 0.0
+  use_patterns: true

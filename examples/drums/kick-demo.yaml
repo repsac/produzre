@@ -1,0 +1,89 @@
+version: 1
+song:
+  title: "KickDemo"
+  bpm: 140
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  tight_rock:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.7
+        extra:
+          voices:
+            kick:
+              # Tight rock kick with controlled syncopation
+              syncopation:
+                rate: 0.4
+                placements: ["1&", "2&", "3&", "4&"]
+
+              # No doubles for tight rock
+              double:
+                rate: 0.0
+
+  metal_doubles:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.9
+        extra:
+          voices:
+            kick:
+              # Aggressive syncopation for metal
+              syncopation:
+                rate: 0.8
+                placements: ["1e", "1&", "2e", "2&", "3e", "3&", "4e", "4&"]
+
+              # Heavy double-kick
+              double:
+                rate: 1.0
+                placements: ["4e", "4&", "4a"]
+
+  groove_shuffle:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "IV I V vi"
+    instruments:
+      drums:
+        intensity: 0.6
+        extra:
+          voices:
+            kick:
+              # Moderate syncopation for groove
+              syncopation:
+                rate: 0.5
+                placements: ["2&", "4e"]
+
+              # Occasional doubles for fills
+              double:
+                rate: 0.3
+
+arrangement:
+  - tight_rock
+  - metal_doubles
+  - groove_shuffle

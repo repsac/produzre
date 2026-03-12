@@ -1,0 +1,38 @@
+id: blues_shuffle
+instrument: drums
+tags:
+  genre: blues
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 58
+  - 212
+  feel: shuffle
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  - 8
+  kick_extra_rate: 0.08
+  double_kick_rate: 0.13
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.19
+  ghost_steps:
+  - 7
+  - 8
+  - 9
+  - 11
+  - 13
+  - 15
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  swing: 0.2
+  fill_rate: 0.15
+voices: {}

@@ -1,0 +1,46 @@
+version: 1
+song:
+  title: "PassingTones_Diatonic"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 501  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: pocket
+    intensity: 0.7
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      density: 0.7
+      rest_rate: 0.1
+      approach_rate: 0.8  # High rate for reliable testing
+      chromatic_rate: 0.0  # Only diatonic (scale-based)
+      max_passing_per_bar: 2
+
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

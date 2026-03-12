@@ -1,0 +1,50 @@
+# Simple Funk - Beginner Example
+#
+# genre: funk activates syncopated drum recipe, upbeat-heavy rhythm guitar,
+# and funk harmony. Just add slap bass and you're grooving.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Funk Basics"
+  bpm: 110
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: funk
+  seed: 700
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      rhythm_pattern: "syncopated"
+      articulation_style: "slap"
+
+sections:
+  groove:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "i", "i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+arrangement:
+  - groove
+  - groove

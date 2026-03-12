@@ -1,0 +1,46 @@
+version: 1
+song:
+  title: "Walking_Jazz"
+  bpm: 140
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 800  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: walking  # Walking bass persona
+    intensity: 0.75
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      density: 1.0           # Quarter notes
+      rest_rate: 0.0         # Continuous walking
+      approach_rate: 0.40    # Strong approach tones
+      chromatic_rate: 0.25   # Chromatic passing tones
+      max_passing_per_bar: 4
+
+sections:
+  verse1:
+    type: verse
+    bars: 8  # More bars for better walking pattern
+    harmony:
+      progression: "I vi ii V I vi ii V"  # Classic jazz progression
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

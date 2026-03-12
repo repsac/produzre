@@ -1,0 +1,36 @@
+id: ska
+instrument: drums
+tags:
+  genre: ska
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  - 4
+  - 8
+  - 12
+  kick_extra_rate: 0.0
+  double_kick_rate: 0.0
+  snare_backbeat_steps:
+  - 2
+  - 4
+  - 12
+  ghost_rate: 0.33
+  ghost_steps:
+  - 3
+  - 6
+  - 10
+  - 11
+  - 13
+  - 14
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  fill_rate: 0.2
+voices: {}

@@ -1,0 +1,140 @@
+# Pop Rock - Full Arrangement
+#
+# Complete pop rock song with clean, restrained verses that build
+# into driving, energetic choruses. Bright major-key harmony with
+# hook-friendly progressions throughout.
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Turn It Up"
+  bpm: 125
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 702
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.6
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.6
+      lead_gtr:
+        intensity: 0.3
+        extra:
+          rest_probability: 0.6
+          contour_style: "stepwise"
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["IV", "V", "I", "vi"]
+    instruments:
+      harmony:
+        intensity: 0.95
+      drums:
+        intensity: 0.95
+      bass:
+        intensity: 0.95
+      rhythm_gtr:
+        intensity: 0.95
+      lead_gtr:
+        intensity: 0.6
+        extra:
+          rest_probability: 0.3
+          contour_style: "balanced"
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.65
+      drums:
+        intensity: 0.65
+      bass:
+        intensity: 0.65
+      rhythm_gtr:
+        intensity: 0.65
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["vi", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+        extra:
+          sustain_mode: true
+          sustain_duration: 2.0
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - intro
+  - verse_1
+  - chorus
+  - verse_2
+  - chorus
+  - bridge
+  - chorus
+  - chorus
+  - outro

@@ -1,0 +1,44 @@
+# Dance Pop - Simple Example
+#
+# Driving dance pop in Ab major at 125 BPM with a four-on-the-floor
+# beat and high-energy chorus feel.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Feel the Night"
+  bpm: 125
+  key: Ab
+  mode: major
+  meter: "4/4"
+  genre: dance_pop
+  seed: 300
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.8
+
+arrangement:
+  - chorus
+  - chorus

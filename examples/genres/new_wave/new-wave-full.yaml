@@ -1,0 +1,163 @@
+# New Wave Full Arrangement - Advanced Example
+#
+# Full new wave track in F major at 128 BPM. Bright chords, clean rhythm
+# guitar with angular patterns, and a melodic bass line. Captures the
+# energy of early-80s synth-pop with punchy dynamics.
+#
+# Complexity: ADVANCED (full arrangement, melodic bass, clean guitar)
+
+version: 1
+
+song:
+  title: "Parallel Lines"
+  bpm: 128
+  key: F
+  mode: major
+  meter: "4/4"
+  genre: new_wave
+  seed: 810
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "pick"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.5
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["ii", "V", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.95
+      drums:
+        intensity: 0.95
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.9
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.75
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["vi", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.65
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+  final_chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+
+arrangement:
+  - intro
+  - verse_1
+  - prechorus
+  - chorus
+  - verse_2
+  - prechorus
+  - chorus
+  - bridge
+  - final_chorus
+  - outro

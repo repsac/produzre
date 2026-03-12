@@ -1,0 +1,25 @@
+id: soul
+instrument: bass
+tags:
+  genre: "soul"
+  time_signature: "4/4"
+  bpm_range: [80, 149]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.45
+  rhythm_pattern: "push"
+  articulation_style: "pick"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.32
+  chromatic_rate: 0.07
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.16
+  fifth_jump_rate: 0.13
+  rest_rate: 0.2
+  root_bias: 0.69
+  motion_style: "stepwise"
+  swing: 0.08
+  lock_to_kick: 0.43
+  accent_strength: 1.32
+  syncopation: 0.46

@@ -1,0 +1,52 @@
+# Simple Jazz - Beginner Example
+#
+# genre: jazz activates swing drum recipe, shell-voicing rhythm guitar,
+# and jazz harmony with ii-V-I progressions.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Jazz Basics"
+  bpm: 140
+  key: F
+  mode: major
+  meter: "4/4"
+  genre: jazz
+  seed: 1000
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "jazz-lite"
+  bass:
+    params:
+      articulation_style: "finger"
+      motion_style: "stepwise"
+
+sections:
+  swing:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["ii", "V", "I", "VI", "ii", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - swing
+  - swing

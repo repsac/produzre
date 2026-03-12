@@ -1,0 +1,41 @@
+id: cocktail
+instrument: drums
+tags:
+  genre: cocktail
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  - 3
+  - 4
+  - 8
+  - 12
+  kick_extra_rate: 0.03
+  double_kick_rate: 0.06
+  snare_backbeat_steps:
+  - 1
+  - 3
+  - 7
+  - 9
+  - 11
+  - 14
+  - 15
+  ghost_rate: 0.6
+  ghost_steps:
+  - 0
+  - 2
+  - 5
+  - 6
+  - 10
+  - 13
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  fill_rate: 0.25
+voices: {}

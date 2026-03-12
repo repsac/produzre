@@ -1,0 +1,37 @@
+id: roots_swing
+instrument: drums
+tags:
+  genre: roots
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  feel: swing
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  kick_extra_rate: 0.08
+  double_kick_rate: 0.11
+  snare_backbeat_steps:
+  - 3
+  - 7
+  - 11
+  - 12
+  - 15
+  ghost_rate: 0.24
+  ghost_steps:
+  - 0
+  - 2
+  - 4
+  - 8
+  - 10
+  - 13
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.08
+params:
+  swing: 0.2
+  fill_rate: 0.15
+voices: {}

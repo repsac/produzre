@@ -1,0 +1,129 @@
+version: 1
+# Canonical key name; we also accept legacy `default` in the loader.
+default_persona: tight
+
+personas:
+  tight:
+    params:
+      # Conservative defaults so new users don't mistake humanization for timing bugs.
+      timing_jitter_ms: 0.0
+      velocity_humanize: 0.05
+      swing: 0.0
+      push_pull: 0.0
+      accent_strength: 0.10
+      hat_density: 1.0
+      fill_rate: 0.25
+      fill_chatter: 0.0
+
+  experimental:
+    params:
+      # Noticeable but still musical. Users can dial this down.
+      timing_jitter_ms: 10.0
+      velocity_humanize: 0.20
+      swing: 0.20
+      push_pull: 0.10
+      accent_strength: 0.35
+      hat_density: 0.85
+      fill_rate: 0.6
+      fill_chatter: 0.3
+
+  rock:
+    params:
+      # Rock: driving, consistent, moderate humanization
+      timing_jitter_ms: 3.0
+      velocity_humanize: 0.12
+      swing: 0.0
+      push_pull: 0.05
+      accent_strength: 0.25
+      hat_density: 1.0
+      fill_rate: 0.5
+      fill_chatter: 0.1
+      # Rock typically uses more ghost notes on snare
+    voices:
+      snare:
+        ghosts:
+          rate: 0.35
+      hats:
+        opens:
+          rate: 0.2
+        pedal:
+          rate: 0.15
+
+  metal:
+    params:
+      # Metal: tight, aggressive, precise
+      timing_jitter_ms: 1.0
+      velocity_humanize: 0.08
+      swing: 0.0
+      push_pull: 0.0
+      accent_strength: 0.40
+      hat_density: 0.95
+      fill_rate: 0.4
+      fill_chatter: 0.05
+      fill_length: "short"
+    voices:
+      kick:
+        syncopation:
+          rate: 0.4
+        double:
+          rate: 0.6
+      snare:
+        ghosts:
+          rate: 0.1
+      hats:
+        opens:
+          rate: 0.1
+        accents:
+          rate: 0.4
+
+  funk-lite:
+    params:
+      # Funk-lite: syncopated, groovy, open hats
+      timing_jitter_ms: 5.0
+      velocity_humanize: 0.18
+      swing: 0.15
+      push_pull: 0.15
+      accent_strength: 0.30
+      hat_density: 0.90
+      fill_rate: 0.3
+      fill_chatter: 0.2
+    voices:
+      kick:
+        syncopation:
+          rate: 0.5
+      snare:
+        ghosts:
+          rate: 0.5
+      hats:
+        opens:
+          rate: 0.4
+        pedal:
+          rate: 0.3
+        accents:
+          rate: 0.35
+
+  jazz-lite:
+    params:
+      # Jazz-lite: loose, swung, ride-heavy
+      timing_jitter_ms: 8.0
+      velocity_humanize: 0.25
+      swing: 0.35
+      push_pull: 0.20
+      accent_strength: 0.20
+      hat_density: 0.75
+      fill_rate: 0.35
+      fill_chatter: 0.25
+    voices:
+      kick:
+        syncopation:
+          rate: 0.3
+      snare:
+        ghosts:
+          rate: 0.4
+      hats:
+        opens:
+          rate: 0.35
+        pedal:
+          rate: 0.2
+        accents:
+          rate: 0.25

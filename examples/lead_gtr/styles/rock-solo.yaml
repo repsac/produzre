@@ -1,0 +1,108 @@
+# Rock Guitar Solo
+#
+# Demonstrates rock-style lead guitar building from sparse verse fills
+# to a dense, wide-interval solo. Uses the "full" register preset
+# (E3-E6) for maximum range during the solo section.
+#
+# genre: rock drives drum/rhythm_gtr/harmony recipes.
+# type: solo activates orchestration rules (rhythm reduces during solo).
+
+version: 1
+
+song:
+  title: "Rock Solo"
+  bpm: 140
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 400
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "rock"
+  bass:
+    params:
+      rhythm_pattern: "drive"
+      articulation_style: "pick"
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.6
+      lead_gtr:
+        intensity: 0.5
+        extra:
+          rest_probability: 0.4
+          phrase_len_bars: 2
+          contour_style: "stepwise"
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+      lead_gtr:
+        intensity: 0.75
+        extra:
+          rest_probability: 0.25
+          phrase_len_bars: 2
+          contour_style: "balanced"
+          resolution_strength: 0.6
+
+  guitar_solo:
+    type: solo
+    bars: 16
+    harmony:
+      progression: ["i", "bVII", "bVI", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.5
+      lead_gtr:
+        intensity: 1.0
+        solo: true
+        register: "full"
+        extra:
+          rest_probability: 0.05
+          phrase_len_bars: 4
+          contour_style: "leaping"
+          resolution_strength: 0.7
+
+arrangement:
+  - verse
+  - chorus
+  - guitar_solo
+  - chorus

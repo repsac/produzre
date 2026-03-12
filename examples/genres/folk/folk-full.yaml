@@ -1,0 +1,123 @@
+# Folk Full Arrangement - Intermediate Example
+#
+# Gentle folk arrangement in D major with acoustic guitar prominent
+# throughout. Builds from a quiet fingerpicked intro to a warm
+# strummed chorus. Bass enters lightly to support without dominating.
+#
+# Complexity: INTERMEDIATE (verse-chorus with acoustic guitar focus)
+
+version: 1
+
+song:
+  title: "Timber Creek"
+  bpm: 100
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 850
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "IV", "I"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      bass:
+        intensity: 0.3
+      acoustic_gtr:
+        intensity: 0.6
+        extra:
+          technique: "fingerpicking"
+          picking_pattern: "travis"
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.55
+      acoustic_gtr:
+        intensity: 0.7
+        extra:
+          technique: "fingerpicking"
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["IV", "V", "I", "vi", "IV", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.55
+      bass:
+        intensity: 0.7
+      acoustic_gtr:
+        intensity: 0.85
+        extra:
+          technique: "strumming"
+
+  bridge:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: ["vi", "IV", "V", "V"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.35
+      bass:
+        intensity: 0.5
+      acoustic_gtr:
+        intensity: 0.65
+        extra:
+          technique: "fingerpicking"
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["IV", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      bass:
+        intensity: 0.3
+      acoustic_gtr:
+        intensity: 0.5
+        extra:
+          technique: "fingerpicking"
+
+arrangement:
+  - intro
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - bridge
+  - chorus
+  - outro

@@ -1,0 +1,46 @@
+version: 1
+song:
+  title: "Walking_Blues"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 801  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: walking
+    intensity: 0.75
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      density: 1.0
+      rest_rate: 0.0
+      approach_rate: 0.50    # Higher for blues
+      chromatic_rate: 0.30   # More chromatic for blues
+      max_passing_per_bar: 4
+
+sections:
+  verse1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I I I I IV IV I I"  # Blues progression (partial)
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

@@ -1,0 +1,188 @@
+# Arena Rock - Full Arrangement
+#
+# Complete arena rock anthem with massive choruses, a dramatic breakdown,
+# and all instruments pushed to full intensity. Built for stadiums.
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Raise the Flag"
+  bpm: 136
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: arena_rock
+  seed: 302
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "pick"
+      lock_to_kick: 0.7
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+        extra:
+          sustain_mode: true
+          sustain_duration: 3.0
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "vi", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.4
+        extra:
+          rest_probability: 0.5
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+      lead_gtr:
+        intensity: 0.8
+        extra:
+          rest_probability: 0.2
+          contour_style: "balanced"
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "vi", "V"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.75
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["vi", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.85
+        extra:
+          sustain_mode: true
+          sustain_duration: 3.0
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.4
+
+  solo:
+    type: solo
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 1.0
+        solo: true
+        extra:
+          phrase_len_bars: 4
+          contour_style: "leaping"
+          rest_probability: 0.05
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.8
+        extra:
+          sustain_mode: true
+          sustain_duration: 4.0
+
+arrangement:
+  - intro
+  - verse_1
+  - chorus
+  - verse_2
+  - chorus
+  - bridge
+  - breakdown
+  - solo
+  - chorus
+  - outro

@@ -1,0 +1,52 @@
+# Simple Metal - Beginner Example
+#
+# genre: metal activates chugging drum patterns, power chord rhythm guitar
+# with heavy palm muting, and metal harmony. Bass locks to kick.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Metal Basics"
+  bpm: 160
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: metal
+  seed: 1300
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "metal"
+  bass:
+    params:
+      articulation_style: "pick"
+      lock_to_kick: 0.9
+
+sections:
+  riff:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+
+arrangement:
+  - riff
+  - riff

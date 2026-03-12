@@ -1,0 +1,83 @@
+# Jazz Lead Guitar
+#
+# Jazz-style lead with stepwise voice leading and strong resolution.
+# Head-solo-head form over ii-V-I changes.
+#
+# genre: jazz loads swing drums and shell voicing rhythm guitar.
+
+version: 1
+
+song:
+  title: "Jazz Lead"
+  bpm: 140
+  key: F
+  mode: major
+  meter: "4/4"
+  genre: jazz
+  seed: 800
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "jazz-lite"
+  bass:
+    params:
+      articulation_style: "finger"
+      rhythm_pattern: "syncopated"
+
+sections:
+  jazz_head:
+    type: verse
+    bars: 16
+    harmony:
+      progression: ["ii", "V", "I", "vi", "ii", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+      lead_gtr:
+        intensity: 0.7
+        extra:
+          rest_probability: 0.3
+          phrase_len_bars: 4
+          contour_style: "stepwise"
+          resolution_strength: 0.7
+
+  jazz_solo:
+    type: solo
+    bars: 16
+    harmony:
+      progression: ["ii", "V", "I", "vi", "ii", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.5
+      lead_gtr:
+        intensity: 0.85
+        solo: true
+        extra:
+          rest_probability: 0.15
+          phrase_len_bars: 4
+          contour_style: "balanced"
+          resolution_strength: 0.75
+
+arrangement:
+  - jazz_head
+  - jazz_solo
+  - jazz_head

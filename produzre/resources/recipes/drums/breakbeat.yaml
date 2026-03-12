@@ -1,0 +1,36 @@
+id: breakbeat
+instrument: drums
+tags:
+  genre: breakbeat
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 59
+  - 170
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  kick_extra_rate: 0.02
+  double_kick_rate: 0.01
+  snare_backbeat_steps:
+  - 2
+  - 3
+  - 4
+  ghost_rate: 0.11
+  ghost_steps:
+  - 1
+  - 5
+  - 6
+  - 7
+  - 8
+  - 12
+  open_hat_rate: 0.02
+  crash_start: false
+  crash_phrase_end_rate: 0.1
+params:
+  fill_rate: 0.15
+voices: {}

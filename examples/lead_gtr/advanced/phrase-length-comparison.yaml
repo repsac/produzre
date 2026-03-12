@@ -1,0 +1,109 @@
+# Lead Guitar - Phrase Length Comparison
+#
+# This example demonstrates how phrase_len_bars affects motif repetition and variation:
+# - 1-bar phrases: Very tight, repetitive motifs (almost like a riff)
+# - 2-bar phrases: Balanced phrase length (common in rock/pop)
+# - 4-bar phrases: Longer, more developed melodic ideas (common in jazz/blues)
+#
+# Phrase length controls how often the lead guitar creates a new motif vs. varying
+# an existing one. Shorter phrases = more repetition, longer phrases = more development.
+
+version: 1
+
+song:
+  title: "Phrase Length Test"
+  bpm: 120
+  key: C
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 600
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  one_bar_phrases:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "bVII"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.7
+        solo: true
+        extra:
+          rest_probability: 0.2
+          phrase_len_bars: 1  # Very short phrases, tight repetition
+          contour_style: "balanced"
+          resolution_strength: 0.5
+
+  two_bar_phrases:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "bVII"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.7
+        solo: true
+        extra:
+          rest_probability: 0.2
+          phrase_len_bars: 2  # Standard phrase length
+          contour_style: "balanced"
+          resolution_strength: 0.5
+
+  four_bar_phrases:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["i", "bVII", "bVI", "bVII"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.7
+        solo: true
+        extra:
+          rest_probability: 0.2
+          phrase_len_bars: 4  # Longer phrases, more development
+          contour_style: "balanced"
+          resolution_strength: 0.5
+
+arrangement:
+  - one_bar_phrases
+  - two_bar_phrases
+  - four_bar_phrases
+
+# Analysis targets:
+# 1. Verify 1-bar section has motifs that repeat every bar
+# 2. Verify 2-bar section has motifs that repeat every 2 bars
+# 3. Verify 4-bar section has longer, more varied melodic development
+# 4. Look for motif variation vs. exact repetition
+# 5. Compare predictability across different phrase lengths

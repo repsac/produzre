@@ -1,0 +1,50 @@
+# Folk Recipe Showcase
+# Sparse bass with strong on-beat emphasis, low syncopation.
+# MIDI analysis: folk bass has 74% on-beat (highest), 26% syncopation (lowest).
+
+version: 1
+
+song:
+  title: "Folk Recipe Showcase"
+  bpm: 105
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 5013
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony: { intensity: 0.65 }
+      drums: { intensity: 0.5 }
+      bass: { intensity: 0.65 }
+      rhythm_gtr: { intensity: 0.7 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "IV", "V"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.65 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.8 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

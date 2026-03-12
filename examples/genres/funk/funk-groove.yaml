@@ -1,0 +1,100 @@
+# Funk Groove - Intermediate Example
+#
+# Syncopated patterns across instruments with funk-lite drummer persona.
+# genre: funk handles drum patterns and rhythm guitar style automatically.
+#
+# Complexity: INTERMEDIATE (4 sections, slap bass, ghost notes)
+
+version: 1
+
+song:
+  title: "Funk Machine"
+  bpm: 105
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: funk
+  seed: 800
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "funk-lite"
+  bass:
+    params:
+      rhythm_pattern: "syncopated"
+      articulation_style: "slap"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["i", "i", "i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "IV", "i", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.8
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.85
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["i", "i", "i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - intro
+  - verse
+  - breakdown
+  - verse
+  - outro

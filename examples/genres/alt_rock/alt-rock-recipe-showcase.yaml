@@ -1,0 +1,49 @@
+# Alternative Rock Recipe Showcase
+# MIDI analysis: alt rock bass 7.36 notes/bar, 24% root ratio, high step motion.
+
+version: 1
+
+song:
+  title: "Alt Rock Recipe Showcase"
+  bpm: 130
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: "alternative rock"
+  seed: 5016
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "III", "VII", "VI"]
+    instruments:
+      harmony: { intensity: 0.75 }
+      drums: { intensity: 0.75 }
+      bass: { intensity: 0.75 }
+      rhythm_gtr: { intensity: 0.75 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "III"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

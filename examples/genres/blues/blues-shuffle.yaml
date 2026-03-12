@@ -1,0 +1,143 @@
+# Blues Shuffle - Advanced Example
+#
+# Complete blues arrangement with shuffle feel demonstrating:
+# - genre: blues with jazz-lite drummer persona for authentic shuffle
+# - Walking bass with chromatic passing tones
+# - Lead guitar solo over 12-bar form
+# - Dynamic arrangement building through verses
+#
+# Complexity: ADVANCED (full arrangement, lead guitar solo)
+
+version: 1
+
+song:
+  title: "Midnight Shuffle"
+  bpm: 85
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: blues
+  seed: 300
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "jazz-lite"
+  bass:
+    params:
+      articulation_style: "finger"
+      motion_style: "stepwise"
+      passing_tone_rate: 0.3
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+
+  verse_1:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "IV", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  verse_2:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "IV", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+  solo:
+    type: solo
+    bars: 12
+    harmony:
+      progression: ["I", "IV", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.6
+      lead_gtr:
+        intensity: 0.85
+        solo: true
+        extra:
+          phrase_len_bars: 4
+          contour_style: "stepwise"
+          resolution_strength: 0.6
+          rest_probability: 0.2
+
+  verse_3:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "IV", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.85
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "I", "I", "IV", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - intro
+  - verse_1
+  - verse_2
+  - solo
+  - verse_3
+  - outro

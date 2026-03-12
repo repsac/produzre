@@ -1,0 +1,92 @@
+bass:
+  engine: ".engine.bass"
+  priority: 2
+  channel: 1
+  program: 33  # GM Electric Bass (finger) - standard electric bass sound
+  enabled: true
+  # Phase N7: Bass consumes harmony.plan for chord tones and voice leading
+  requires: ["harmony.plan"]
+  # Phase N3: Plan keys this engine would export (for future phases)
+  provides: ["bass.line", "bass.foundation"]
+  roles: ["rhythm", "foundation"]
+drums:
+  engine: ".engine.drums"
+  priority: 1
+  channel: 9
+  program: null
+  enabled: true
+  requires: []  # Phase N3: No requirements (drums typically runs first)
+  # Phase N6: Drums is the authoritative rhythm source
+  # Provides rhythm.grid (step grid) and rhythm.accents (strong beat positions)
+  # Other engines can lock to these for coordination
+  provides: ["rhythm.grid", "rhythm.accents", "groove.cues", "groove.kick_pattern", "groove.backbeat"]
+  roles: ["rhythm", "timekeep"]
+harmony:
+  engine: ".engine.harmony"
+  priority: 0
+  channel: 0  # Unused (harmony produces no MIDI events)
+  program: null
+  enabled: true
+  requires: []  # Phase N7: Harmony runs first (no dependencies)
+  # Phase N7: Harmony provides structural chord data for melodic engines
+  # Exports section-level chord slots (Roman numerals + timing)
+  provides: ["harmony.plan"]
+  roles: ["structure", "planning"]
+lead_gtr:
+  engine: ".engine.lead_gtr"
+  priority: 4
+  channel: 3
+  program: 30
+  enabled: true
+  # Phase N7: Lead guitar consumes harmony.plan for scale degrees and approach tones
+  requires: ["harmony.plan"]
+  provides: ["melody.line", "lead.phrases"]
+  roles: ["lead", "solo"]
+rhythm_gtr:
+  engine: ".engine.rhythm_gtr"
+  priority: 3
+  channel: 2
+  program: 29
+  enabled: true
+  # Phase RG0: Rhythm guitar consumes harmony, rhythm grid, and accents
+  # Priority 3: runs after harmony (0), drums (1), and bass (2)
+  requires: ["harmony.plan", "rhythm.grid", "rhythm.accents"]
+  provides: ["rhythm.texture", "rhythm.chords"]
+  roles: ["rhythm", "pad"]
+
+# ============================================================================
+# Example Custom Engine (Phase N9)
+# ============================================================================
+# This demonstrates how to add a custom instrument without modifying
+# orchestration code. See produzre/engine/ENGINES.md for the full authoring guide.
+#
+# Field descriptions:
+# - engine: Python module path (relative with leading dot, or absolute)
+# - priority: Execution order (lower = earlier). 0=structure, 1-2=rhythm, 3-5=melody
+# - channel: MIDI channel (0-15). Channel 9 is reserved for drums.
+# - program: GM program number (0-127) or null if not applicable
+# - enabled: Set to false to disable without removing from config
+# - requires: List of plan keys this engine depends on (e.g., ["harmony.plan"])
+# - provides: List of plan keys this engine exports via contribute_plan
+# - roles: Descriptive tags for documentation
+# ============================================================================
+
+acoustic_gtr:
+  engine: ".engine.acoustic_gtr"
+  priority: 4
+  channel: 4
+  program: 25  # GM Acoustic Steel Guitar
+  enabled: true
+  requires: ["harmony.plan"]
+  provides: ["acoustic_gtr.texture"]
+  roles: ["rhythm", "texture"]
+
+arpeggiator:
+  engine: ".engine.arpeggiator"
+  priority: 6
+  channel: 6
+  program: 1  # GM Bright Acoustic Piano
+  enabled: true  # Example engine - demonstrates custom instrument authoring
+  requires: ["harmony.plan"]  # Needs chord structure to arpeggiate
+  provides: []  # This example doesn't export plan data
+  roles: ["texture", "rhythmic"]

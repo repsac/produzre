@@ -1,0 +1,33 @@
+# Rock harmony recipe
+# Classic rock progressions built from music theory
+
+id: rock
+instrument: harmony
+tags:
+  genre: rock
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [90, 160]
+
+progressions:
+  minor:
+    verse: ["i", "bVII", "bVI", "bVII"]
+    chorus: ["bVI", "bVII", "i", "i"]
+    bridge: ["bIII", "IV", "i", "bVII"]
+    default: ["i", "bVII", "bVI", "bVII"]
+  major:
+    verse: ["I", "V", "vi", "IV"]
+    chorus: ["IV", "V", "I", "I"]
+    bridge: ["vi", "IV", "V", "V"]
+    default: ["I", "V", "vi", "IV"]
+  dorian:
+    verse: ["i", "IV", "bVII", "i"]
+    chorus: ["bVII", "IV", "i", "i"]
+    default: ["i", "IV", "bVII", "i"]
+  mixolydian:
+    verse: ["I", "bVII", "IV", "I"]
+    chorus: ["IV", "bVII", "I", "I"]
+    default: ["I", "bVII", "IV", "I"]
+
+params:
+  chord_rate: 4.0

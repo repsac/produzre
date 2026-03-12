@@ -1,0 +1,22 @@
+# Rock rhythm guitar recipe
+# Steady eighth-note strumming, moderate palm mute, power chords
+
+id: rock
+instrument: rhythm_gtr
+tags:
+  genre: rock
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [90, 160]
+
+params:
+  style: straight_8s
+  density: 0.7
+  palm_mute: 0.2
+  voicing: power
+  strum_style: balanced
+  accent_strength: 0.5
+  groove: tight
+  swing: 0.0
+  chuck_rate: 0.0
+  use_patterns: true

@@ -1,0 +1,88 @@
+# Rhythm Guitar - Strum Style Comparison
+#
+# Isolates the effect of strum_style on beat placement.
+# All three sections use identical harmony, intensity, and density
+# so differences in the grid output are caused solely by strum_style.
+#
+# Expected grid behavior (quarter-note grid resolution):
+#   balanced:       hits on beats 1 2 3 4 (all quarter-note positions)
+#   downbeat_heavy: hits only on beats 1 & 3 (strong beats)
+#   upbeat_heavy:   hits only on beats 2 & 4 (backbeat/offbeat)
+
+version: 1
+
+song:
+  title: "Strum Style Test"
+  bpm: 100
+  key: G
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 42
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  balanced:
+    type: verse
+    bars: 4
+    harmony:
+      progression: ["i", "bVII", "bVI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.8
+        extra:
+          strum_style: "balanced"
+          retrigger: "all"   # Retrigger every cell so strum_style weighting is visible
+
+  downbeat_heavy:
+    type: verse
+    bars: 4
+    harmony:
+      progression: ["i", "bVII", "bVI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.8
+        extra:
+          strum_style: "downbeat_heavy"
+          retrigger: "all"
+
+  upbeat_heavy:
+    type: verse
+    bars: 4
+    harmony:
+      progression: ["i", "bVII", "bVI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.8
+        extra:
+          strum_style: "upbeat_heavy"
+          retrigger: "all"
+
+arrangement:
+  - balanced
+  - downbeat_heavy
+  - upbeat_heavy

@@ -1,0 +1,38 @@
+id: soul_triplet
+instrument: drums
+tags:
+  genre: soul
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 54
+  - 186
+  feel: triplet
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  - 10
+  kick_extra_rate: 0.13
+  double_kick_rate: 0.1
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.26
+  ghost_steps:
+  - 1
+  - 7
+  - 9
+  - 11
+  - 14
+  - 15
+  open_hat_rate: 0.01
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  swing: 0.2
+  fill_rate: 0.15
+voices: {}

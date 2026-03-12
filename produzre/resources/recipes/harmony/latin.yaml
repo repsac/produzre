@@ -1,0 +1,30 @@
+# Latin harmony recipe
+# Bossa nova, salsa, and Latin jazz influenced progressions
+
+id: latin
+instrument: harmony
+tags:
+  genre: latin
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [80, 160]
+
+progressions:
+  minor:
+    verse: ["i", "bVII", "bVI", "V"]
+    chorus: ["bVI", "bVII", "i", "V"]
+    bridge: ["iv", "bVII", "bIII", "bVI"]
+    default: ["i", "bVII", "bVI", "V"]
+  major:
+    verse: ["I", "vi", "ii", "V"]
+    chorus: ["IV", "V", "I", "vi"]
+    bridge: ["ii", "V", "iii", "vi"]
+    default: ["I", "vi", "ii", "V"]
+  dorian:
+    verse: ["i", "IV", "bVII", "bIII"]
+    chorus: ["IV", "bVII", "i", "i"]
+    bridge: ["bVII", "IV", "bIII", "bVI"]
+    default: ["i", "IV", "bVII", "bIII"]
+
+params:
+  chord_rate: 4.0

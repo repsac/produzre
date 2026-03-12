@@ -1,0 +1,57 @@
+id: extreme_metal_straight
+instrument: drums
+tags:
+  genre: extreme_metal
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  feel: straight
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  kick_extra_rate: 0.0
+  double_kick_rate: 0.0
+  snare_backbeat_steps:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 14
+  - 15
+  ghost_rate: 0.38
+  ghost_steps:
+  - 0
+  - 3
+  - 13
+  open_hat_rate: 0.0
+  crash_start: true
+  crash_phrase_end_rate: 0.36
+params:
+  swing: 0.35
+  fill_rate: 0.35
+voices: {}

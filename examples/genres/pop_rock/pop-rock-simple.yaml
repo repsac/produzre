@@ -1,0 +1,45 @@
+# Pop Rock - Simple Example
+#
+# Catchy pop rock with bright major-key harmony and an upbeat feel.
+# genre: pop_rock activates tight drums, clean bass, and jangly
+# rhythm guitar recipes.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Sunlit Drive"
+  bpm: 120
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 701
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - verse
+  - verse

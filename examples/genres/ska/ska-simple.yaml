@@ -1,0 +1,44 @@
+# Ska - Simple Example
+#
+# Bright upbeat ska in C major at 155 BPM. Offbeat rhythm guitar skank
+# drives the groove with a bouncy, energetic feel.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Uptown Skank"
+  bpm: 155
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: ska
+  seed: 530
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+arrangement:
+  - verse
+  - verse

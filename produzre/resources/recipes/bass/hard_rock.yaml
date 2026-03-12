@@ -1,0 +1,25 @@
+id: hard_rock
+instrument: bass
+tags:
+  genre: "hard rock"
+  time_signature: "4/4"
+  bpm_range: [81, 150]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.58
+  rhythm_pattern: "push"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.28
+  chromatic_rate: 0.08
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.25
+  fifth_jump_rate: 0.19
+  rest_rate: 0.27
+  root_bias: 0.65
+  motion_style: "mixed"
+  swing: 0.04
+  lock_to_kick: 0.43
+  accent_strength: 1.28
+  syncopation: 0.46

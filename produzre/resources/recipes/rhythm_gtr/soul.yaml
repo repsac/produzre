@@ -1,0 +1,22 @@
+# Soul rhythm guitar recipe
+# Warm eighth-note strumming, open triads, laid-back feel
+
+id: soul
+instrument: rhythm_gtr
+tags:
+  genre: soul
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [70, 120]
+
+params:
+  style: straight_8s
+  density: 0.5
+  palm_mute: 0.1
+  voicing: triad
+  strum_style: balanced
+  accent_strength: 0.4
+  groove: laid_back
+  swing: 0.1
+  chuck_rate: 0.0
+  use_patterns: true

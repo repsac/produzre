@@ -1,0 +1,96 @@
+# 12-Bar Blues - Intermediate Example
+#
+# Multiple 12-bar choruses with intensity build and turnaround.
+# genre: blues loads shuffle drums, laid-back rhythm guitar, and blues harmony.
+#
+# Complexity: INTERMEDIATE (4 sections, dynamic build)
+
+version: 1
+
+song:
+  title: "Twelve Bar Blues"
+  bpm: 88
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: blues
+  seed: 200
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.6
+
+  verse_1:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  verse_2:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+  turnaround:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["I", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - intro
+  - verse_1
+  - verse_2
+  - turnaround

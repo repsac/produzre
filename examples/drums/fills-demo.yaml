@@ -1,0 +1,111 @@
+version: 1
+song:
+  title: "FillsDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse_no_fills:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        intensity: 0.4
+        params:
+          # No fills - acceptance test
+          fill_rate: 0.0
+          fill_chatter: 0.0
+
+  chorus_short_fills:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          # Short fills (1 beat) at phrase ends
+          fill_rate: 1.0
+          fill_length: "short"
+
+  bridge_medium_fills:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "IV I V vi"
+    instruments:
+      drums:
+        intensity: 0.6
+        params:
+          # Medium fills (2 beats) - default
+          fill_rate: 1.0
+          fill_length: "medium"
+
+  prechorus_long_fills:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: "IV V IV V"
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          # Long fills (full bar)
+          fill_rate: 1.0
+          fill_length: "long"
+
+  verse_with_chatter:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I vi IV V I vi IV V"
+    instruments:
+      drums:
+        intensity: 0.5
+        params:
+          # Phrase-end fills + experimental chatter
+          fill_rate: 0.8
+          fill_chatter: 0.4
+          fill_length: "medium"
+
+  solo_loose_persona:
+    type: solo
+    bars: 4
+    harmony:
+      progression: "I I IV I"
+    instruments:
+      drums:
+        intensity: 0.8
+        persona: "loose"
+        params:
+          # Loose persona favors experimental fill types
+          fill_rate: 1.0
+          fill_length: "long"
+
+arrangement:
+  - verse_no_fills
+  - chorus_short_fills
+  - bridge_medium_fills
+  - prechorus_long_fills
+  - verse_with_chatter
+  - solo_loose_persona
