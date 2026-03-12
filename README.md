@@ -60,7 +60,7 @@ and analysis — all reproducible, every time.
   - [Events View (TSV)](#events-view-tsv)
 - [Config Merge Priority](#config-merge-priority)
 - [Common Pitfalls](#common-pitfalls)
-- [Using with LLMs (ChatGPT / Claude)](#using-with-llms-chatgpt--claude)
+- [Generating Song Configs with AI](#generating-song-configs-with-ai)
 - [Standalone Executable](#standalone-executable)
 - [Examples Library](#examples-library)
 
@@ -1351,24 +1351,42 @@ Use `produzre show-config my-song.yaml` to verify recipes loaded correctly.
 
 ---
 
-## Using with LLMs (ChatGPT / Claude)
+## Generating Song Configs with AI
 
-You can use ChatGPT Custom GPTs or Claude Projects to generate Produzre YAML configs
-from natural language descriptions. Point the LLM at the reference document:
+Describe a song in plain English and get a ready-to-use YAML file — no manual parameter
+tuning required. Two options are available depending on which AI platform you use.
 
-```
-docs/llm-song-config-reference.md
-```
+### ChatGPT — Produzre Song Builder GPT
 
-This document contains the complete schema, all 31 genres, all 28 personas, every
-parameter table, harmony syntax, annotated examples, and a natural-language-to-YAML
-translation guide. It's designed to be used as a system prompt or knowledge file.
+The easiest option. Open the [Produzre Song Builder GPT](https://chatgpt.com/g/g-69b2d0cda0088191a7126921c82fedbc-produzre-song-builder)
+in ChatGPT and start describing your song. No setup needed.
 
-**Example prompts that work:**
+### Claude — Set Up Your Own Project
+
+Because Anthropic does not support sharing Claude Projects publicly, you set up your
+own in a few minutes. See [docs/produzre-claude-project-setup.md](docs/produzre-claude-project-setup.md)
+for step-by-step instructions.
+
+The setup guide walks you through creating a Claude Project, uploading the knowledge
+files, and pasting a ready-made system prompt. Once configured, you get the same
+natural-language-to-YAML experience as the ChatGPT GPT.
+
+### Example Prompts
+
+Both options understand the same kinds of descriptions:
 
 - "Create a 3-minute rock song in E minor with a verse-chorus-verse-chorus-bridge-chorus structure"
 - "Make a funk groove at 105 BPM with slap bass and syncopated drums"
 - "Translate this Suno prompt to Produzre YAML: 'Dreamy indie folk, fingerpicked acoustic guitar, gentle drums, 90 BPM, melancholic'"
+- "That's great — can you make the chorus heavier and add a lead guitar solo?"
+
+### The Reference Document
+
+Both integrations are powered by `docs/llm-song-config-reference.md` — a compact
+document containing the complete schema, all 31 genres, all 28 personas, every
+parameter table, harmony syntax, and annotated examples. If you want to set up your
+own integration (custom GPT, API workflow, etc.), this is the file to use as the
+system prompt or knowledge source.
 
 ---
 
