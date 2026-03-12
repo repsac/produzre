@@ -1,0 +1,25 @@
+id: latin
+instrument: bass
+tags:
+  genre: "latin"
+  time_signature: "4/4"
+  bpm_range: [80, 149]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.36
+  rhythm_pattern: "anchor"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.23
+  chromatic_rate: 0.09
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.22
+  fifth_jump_rate: 0.16
+  rest_rate: 0.25
+  root_bias: 0.58
+  motion_style: "mixed"
+  swing: 0.03
+  lock_to_kick: 0.45
+  accent_strength: 1.33
+  syncopation: 0.44

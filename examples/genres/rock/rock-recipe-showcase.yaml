@@ -1,0 +1,63 @@
+# Rock Recipe Showcase
+# Demonstrates the MIDI-learned rock bass recipe with genre-appropriate
+# defaults for density, approach tones, and kick lock.
+
+version: 1
+
+song:
+  title: "Rock Recipe Showcase"
+  bpm: 125
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: rock
+  seed: 5001
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "IV"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.8 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+  bridge:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: ["vi", "IV", "I", "V"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.7 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.7 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - bridge
+  - chorus

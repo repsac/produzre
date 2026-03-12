@@ -1,0 +1,67 @@
+version: 1
+song:
+  title: "Solo_Comparison"
+  bpm: 110
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 1002  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: loose
+    intensity: 0.75
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      approach_rate: 0.20
+      chromatic_rate: 0.15
+
+sections:
+  # Normal accompaniment bass
+  verse1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+  # Solo/lead bass with expanded range and higher density
+  solo1:
+    type: solo
+    solo: true
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"  # Same progression for comparison
+    instruments:
+      harmony: {}
+      bass: {}
+
+  # Back to normal accompaniment
+  verse2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1
+  - solo1
+  - verse2

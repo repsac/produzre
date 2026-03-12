@@ -1,0 +1,40 @@
+id: rock_n_roll_straight
+instrument: drums
+tags:
+  genre: rock_n_roll
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 136
+  - 233
+  feel: straight
+groove:
+  hat_mode: quarter
+  use_ride: false
+  kick_base:
+  - 0
+  - 4
+  - 8
+  - 12
+  - 15
+  kick_extra_rate: 0.08
+  double_kick_rate: 0.23
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.22
+  ghost_steps:
+  - 6
+  - 7
+  - 8
+  - 11
+  - 14
+  - 15
+  open_hat_rate: 0.01
+  crash_start: false
+  crash_phrase_end_rate: 0.1
+params:
+  fill_rate: 0.25
+voices: {}

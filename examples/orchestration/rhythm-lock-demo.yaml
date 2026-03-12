@@ -1,0 +1,242 @@
+version: 1
+song:
+  title: "RhythmLockDemo"
+  bpm: 120
+  key: E
+  mode: minor
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.05
+  humanize_timing: 0.02
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # Section 1: Simple locked groove
+  # Bass locks to kick downbeats, guitar follows steady hat density
+  verse_simple_lock:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 0.6
+        params:
+          fill_rate: 0.0  # No fills to show clean kick pattern
+          kick_syncopation_rate: 0.0  # Simple downbeat kicks
+      bass:
+        intensity: 0.7
+        params:
+          lock_to_kicks: true
+          avoid_fills: true
+          octave: 2
+      rhythm_gtr:
+        intensity: 0.6
+        params:
+          follow_hats: true
+          accent_syncopation: false
+          voicing: "power_chord"
+          octave: 3
+
+  # Section 2: Syncopated kicks
+  # Bass follows syncopated kick pattern, guitar accents syncopation
+  chorus_syncopated_lock:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 0.0
+          kick_syncopation_rate: 0.4  # Add syncopated kicks
+      bass:
+        intensity: 0.8
+        params:
+          lock_to_kicks: true  # Bass follows syncopated kicks
+          avoid_fills: true
+          octave: 2
+      rhythm_gtr:
+        intensity: 0.7
+        params:
+          follow_hats: true
+          accent_syncopation: true  # Accent syncopated kicks
+          voicing: "power_chord"
+          octave: 3
+
+  # Section 3: High hat density
+  # Dense hat pattern increases guitar strumming density
+  bridge_dense_hats:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "VI III VII i"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 0.0
+          kick_syncopation_rate: 0.2
+          extra:
+            voices:
+              hats:
+                base_subdiv: 8  # Double-time hats (16th notes)
+      bass:
+        intensity: 0.8
+        params:
+          lock_to_kicks: true
+          avoid_fills: true
+          octave: 2
+      rhythm_gtr:
+        intensity: 0.9  # High intensity matches dense hats
+        params:
+          follow_hats: true  # More strums with dense hats
+          accent_syncopation: true
+          voicing: "palm_mute"  # Palm mute for tight, fast strumming
+          octave: 3
+
+  # Section 4: Fill windows demonstration
+  # Bass and guitar lay back during drum fills
+  solo_with_fills:
+    type: solo
+    bars: 8
+    harmony:
+      progression: "i VI III VII i VI III VII"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 1.0  # Fill at every phrase end
+          phrase_len_bars: 2
+          fill_length: "medium"
+          kick_syncopation_rate: 0.3
+          kick_double_kick_rate: 0.2
+      bass:
+        intensity: 0.8
+        params:
+          lock_to_kicks: true
+          avoid_fills: true  # Bass lays back during fills
+          octave: 2
+      rhythm_gtr:
+        intensity: 0.8
+        params:
+          follow_hats: true
+          accent_syncopation: true
+          voicing: "power_chord"
+          octave: 3
+
+  # Section 5: Tight vs loose persona comparison
+  # Same kick pattern, different hat density shows guitar response
+  verse_tight_persona:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 0.7
+        persona: tight  # Conservative, steady hats
+        params:
+          fill_rate: 0.0
+          kick_syncopation_rate: 0.2
+      bass:
+        intensity: 0.7
+        params:
+          lock_to_kicks: true
+          avoid_fills: true
+          octave: 2
+      rhythm_gtr:
+        intensity: 0.7
+        params:
+          follow_hats: true  # Should be steady like drums
+          accent_syncopation: true
+          voicing: "power_chord"
+          octave: 3
+
+  verse_loose_persona:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 0.7
+        persona: loose  # More varied hat patterns
+        params:
+          fill_rate: 0.0
+          kick_syncopation_rate: 0.2
+      bass:
+        intensity: 0.7
+        params:
+          lock_to_kicks: true
+          avoid_fills: true
+          octave: 2
+      rhythm_gtr:
+        intensity: 0.7
+        params:
+          follow_hats: true  # Should vary with loose hat pattern
+          accent_syncopation: true
+          voicing: "power_chord"
+          octave: 3
+
+  # Section 6: Extreme demonstration
+  # Maximum kick syncopation and double-kicks with dense hats
+  outro_extreme_lock:
+    type: outro
+    bars: 8
+    harmony:
+      progression: "i VI III VII i VI III VII"
+    instruments:
+      harmony: {}
+      drums:
+        intensity: 1.0
+        params:
+          fill_rate: 0.5
+          phrase_len_bars: 4
+          fill_length: "long"
+          kick_syncopation_rate: 0.6  # Lots of syncopation
+          kick_double_kick_rate: 0.4  # Lots of double-kicks
+          extra:
+            voices:
+              hats:
+                base_subdiv: 8  # Fast hats
+      bass:
+        intensity: 1.0
+        params:
+          lock_to_kicks: true  # Bass follows complex kick pattern
+          avoid_fills: true
+          octave: 2
+      rhythm_gtr:
+        intensity: 1.0
+        params:
+          follow_hats: true  # Fast strumming with dense hats
+          accent_syncopation: true  # Accent all syncopated kicks
+          voicing: "palm_mute"  # Palm mute for aggressive feel
+          octave: 3
+
+arrangement:
+  - verse_simple_lock          # Baseline: simple locked groove
+  - chorus_syncopated_lock     # Bass follows syncopated kicks
+  - bridge_dense_hats          # Guitar increases with hat density
+  - solo_with_fills            # Bass/guitar avoid fills
+  - verse_tight_persona        # Tight persona, steady rhythm
+  - verse_loose_persona        # Loose persona, varied rhythm
+  - outro_extreme_lock         # Maximum complexity demonstration

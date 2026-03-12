@@ -1,0 +1,22 @@
+# Funk rhythm guitar recipe
+# Off-beat syncopation, upbeat emphasis, dead-note chucks, triads
+
+id: funk
+instrument: rhythm_gtr
+tags:
+  genre: funk
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, breakdown]
+  bpm_range: [80, 120]
+
+params:
+  style: syncopated
+  density: 0.7
+  palm_mute: 0.1
+  voicing: triad
+  strum_style: upbeat_heavy
+  accent_strength: 0.6
+  groove: tight
+  swing: 0.05
+  chuck_rate: 0.15
+  use_patterns: true

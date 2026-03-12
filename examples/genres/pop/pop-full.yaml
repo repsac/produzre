@@ -1,0 +1,187 @@
+# Pop Full Arrangement - Advanced Example
+#
+# Complete pop song in G major at 120 BPM with building dynamics across
+# verse, prechorus, chorus, bridge, and outro. Acoustic guitar featured
+# in verses, rhythm guitar drives the choruses.
+#
+# Complexity: ADVANCED (full arrangement, building dynamics)
+
+version: 1
+
+song:
+  title: "Better Together"
+  bpm: 120
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: pop
+  seed: 210
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.4
+      acoustic_gtr:
+        intensity: 0.5
+        extra:
+          technique: "strumming"
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      acoustic_gtr:
+        intensity: 0.65
+        extra:
+          technique: "strumming"
+
+  prechorus_1:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["ii", "IV", "V", "V"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.75
+      acoustic_gtr:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+  chorus_1:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.9
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.65
+      drums:
+        intensity: 0.65
+      bass:
+        intensity: 0.65
+      acoustic_gtr:
+        intensity: 0.7
+        extra:
+          technique: "strumming"
+      rhythm_gtr:
+        intensity: 0.4
+
+  prechorus_2:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["ii", "IV", "V", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.75
+
+  chorus_2:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["vi", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.65
+      acoustic_gtr:
+        intensity: 0.7
+        extra:
+          technique: "fingerpicking"
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      acoustic_gtr:
+        intensity: 0.5
+        extra:
+          technique: "strumming"
+
+arrangement:
+  - intro
+  - verse_1
+  - prechorus_1
+  - chorus_1
+  - verse_2
+  - prechorus_2
+  - chorus_2
+  - bridge
+  - chorus_2
+  - outro

@@ -1,0 +1,45 @@
+# Grunge - Simple Example
+#
+# Raw, heavy grunge with minor-key sludge and a mid-tempo crawl.
+# genre: grunge activates thick distorted guitar, punchy drums,
+# and grinding bass recipes.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Rust and Bone"
+  bpm: 115
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: grunge
+  seed: 901
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "IV", "III", "VI"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - verse
+  - verse

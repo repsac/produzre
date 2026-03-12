@@ -1,0 +1,42 @@
+id: fusion_shuffle
+instrument: drums
+tags:
+  genre: fusion
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 60
+  - 250
+  feel: shuffle
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  kick_extra_rate: 0.13
+  double_kick_rate: 0.17
+  snare_backbeat_steps:
+  - 1
+  - 4
+  - 7
+  - 8
+  - 9
+  - 10
+  - 12
+  - 15
+  ghost_rate: 0.26
+  ghost_steps:
+  - 3
+  - 5
+  - 6
+  - 11
+  - 13
+  - 14
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.08
+params:
+  fill_rate: 0.15
+voices: {}

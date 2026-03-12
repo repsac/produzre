@@ -1,0 +1,202 @@
+# Rhythm Guitar Sustained Chords Demo
+#
+# Showcases the sustained chord mode feature: rhythm guitar holds long
+# chords like pads or ballad-style strumming. Compare normal strumming
+# with short, medium, long, and staccato sustain durations.
+
+version: 1
+
+song:
+  title: "Sustained Chords Demo"
+  bpm: 90
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: pop
+  seed: 800
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      lock_to_kick: 0.7
+
+sections:
+  # Section 1: Normal strumming (no sustain)
+  intro_normal:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        params:
+          density: 0.8
+          sustain_mode: false  # Normal strumming
+
+  # Section 2: Short sustains (rhythmic pads)
+  verse_short_sustain:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        params:
+          density: 0.7
+          sustain_mode: true
+          sustain_duration: 1.5  # 1.5-beat chords (rhythmic)
+          style: "balanced"
+
+  # Section 3: Medium sustains (pad-like)
+  chorus_medium_sustain:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        params:
+          density: 0.8
+          sustain_mode: true
+          sustain_duration: 3.0  # 3-beat sustained chords
+          style: "balanced"
+
+  # Section 4: Long sustains (ballad style)
+  bridge_long_sustain:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["IV", "I", "V", "vi"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.6
+        params:
+          kick_density: 0.7
+          snare_density: 0.7
+      bass:
+        intensity: 0.6
+        params:
+          density: 0.6
+      rhythm_gtr:
+        params:
+          density: 0.6
+          sustain_mode: true
+          sustain_duration: 4.0  # Full bar sustains (ballad)
+          style: "balanced"
+
+  # Section 5: Very short sustains (staccato chords)
+  breakdown_staccato:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.8
+        params:
+          kick_density: 1.2
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        params:
+          density: 0.9
+          sustain_mode: true
+          sustain_duration: 0.5  # Very short (staccato feel)
+          style: "chug"  # Tight, percussive
+
+  # Section 6: Mixed approach (alternating sustain modes)
+  solo_mixed:
+    type: solo
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        params:
+          density: 0.7
+          sustain_mode: true
+          sustain_duration: 2.5  # Medium sustain for background
+
+  # Section 7: Return to normal (comparison)
+  outro_normal:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        params:
+          density: 0.6
+          sustain_mode: false  # Back to normal strumming
+
+arrangement:
+  - intro_normal
+  - verse_short_sustain
+  - chorus_medium_sustain
+  - bridge_long_sustain
+  - breakdown_staccato
+  - solo_mixed
+  - outro_normal
+
+# Expected Behavior:
+# - intro: Normal strumming pattern (re-triggers on beat)
+# - verse: Short 1.5-beat chords (rhythmic pad feel)
+# - chorus: 3-beat sustained chords (fuller sound)
+# - bridge: 4-beat sustains (ballad/ambient style)
+# - breakdown: 0.5-beat sustains (tight, percussive)
+# - solo: 2.5-beat background pads
+# - outro: Return to normal strumming
+#
+# Listen for:
+# - Normal mode: Distinct individual strums
+# - Short sustain: Rhythmic chord hits with decay
+# - Medium sustain: Pad-like chords that overlap
+# - Long sustain: Full bar holds (ballad style)
+# - Very short: Staccato, percussive chunks
+#
+# Use cases:
+# - Ballads: Long sustains (3-4 beats)
+# - Ambient/Post-rock: Very long sustains (4+ beats)
+# - Rhythmic pads: Short-medium sustains (1.5-2.5 beats)
+# - Funk/Reggae: Very short sustains (0.5-1 beat)

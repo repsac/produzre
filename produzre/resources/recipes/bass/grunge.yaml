@@ -1,0 +1,25 @@
+id: grunge
+instrument: bass
+tags:
+  genre: "grunge"
+  time_signature: "4/4"
+  bpm_range: [84, 156]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.82
+  rhythm_pattern: "drive"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.19
+  chromatic_rate: 0.1
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.35
+  fifth_jump_rate: 0.3
+  rest_rate: 0.27
+  root_bias: 0.54
+  motion_style: "mixed"
+  swing: 0.06
+  lock_to_kick: 0.39
+  accent_strength: 1.14
+  syncopation: 0.51

@@ -1,0 +1,27 @@
+# Electronic harmony recipe
+# Minimal harmonic movement, repetitive loops, trance gates
+
+id: electronic
+instrument: harmony
+tags:
+  genre: electronic
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, breakdown]
+  bpm_range: [100, 180]
+
+progressions:
+  minor:
+    verse: ["i", "bVII", "bVI", "bVII"]
+    chorus: ["bVI", "bVII", "i", "i"]
+    bridge: ["bIII", "bVII", "i", "i"]
+    breakdown: ["i", "i", "bVI", "bVII"]
+    default: ["i", "bVII", "i", "bVII"]
+  major:
+    verse: ["I", "V", "vi", "IV"]
+    chorus: ["vi", "IV", "I", "V"]
+    bridge: ["IV", "I", "IV", "V"]
+    breakdown: ["I", "I", "IV", "V"]
+    default: ["I", "V", "I", "V"]
+
+params:
+  chord_rate: 4.0

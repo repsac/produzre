@@ -1,0 +1,29 @@
+# Soul harmony recipe
+# Gospel-influenced progressions, descending bass patterns
+
+id: soul
+instrument: harmony
+tags:
+  genre: soul
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [70, 120]
+
+progressions:
+  minor:
+    verse: ["i", "bVII", "bVI", "V"]
+    chorus: ["bVI", "bVII", "i", "V"]
+    bridge: ["iv", "bVII", "bIII", "V"]
+    default: ["i", "bVII", "bVI", "V"]
+  major:
+    verse: ["I", "vi", "ii", "V"]
+    chorus: ["IV", "V", "I", "vi"]
+    bridge: ["ii", "V", "vi", "IV"]
+    default: ["I", "vi", "ii", "V"]
+  dorian:
+    verse: ["i", "IV", "bVII", "bIII"]
+    chorus: ["IV", "bVII", "i", "bIII"]
+    default: ["i", "IV", "bVII", "bIII"]
+
+params:
+  chord_rate: 4.0

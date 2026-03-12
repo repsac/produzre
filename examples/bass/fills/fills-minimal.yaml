@@ -1,0 +1,56 @@
+version: 1
+song:
+  title: "Bass_Fills_Minimal"
+  bpm: 110
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 902  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: tight
+    intensity: 0.7
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      density: 0.7
+      rest_rate: 0.0
+      fill_rate: 0.1         # Very low fill rate (tight, locked style)
+      fill_complexity: 0.3   # Simple fills when they occur
+      fill_avoid_drums: 0.8  # High drum avoidance
+
+sections:
+  verse1:
+    type: verse
+    bars: 8  # Two 4-bar phrases
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+  chorus1:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: "I vi IV V I vi IV V"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1
+  - chorus1

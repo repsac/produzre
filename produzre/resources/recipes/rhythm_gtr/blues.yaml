@@ -1,0 +1,22 @@
+# Blues rhythm guitar recipe
+# Relaxed eighth-note shuffle, open triads, laid-back groove
+
+id: blues
+instrument: rhythm_gtr
+tags:
+  genre: blues
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [60, 160]
+
+params:
+  style: straight_8s
+  density: 0.6
+  palm_mute: 0.05
+  voicing: triad
+  strum_style: balanced
+  accent_strength: 0.4
+  groove: laid_back
+  swing: 0.15
+  chuck_rate: 0.0
+  use_patterns: true

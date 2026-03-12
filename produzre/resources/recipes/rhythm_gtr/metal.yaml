@@ -1,0 +1,22 @@
+# Metal rhythm guitar recipe
+# Driving 16th-note chugs, heavy palm mute, power chords, dense
+
+id: metal
+instrument: rhythm_gtr
+tags:
+  genre: metal
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [100, 220]
+
+params:
+  style: chugs
+  density: 0.85
+  palm_mute: 0.7
+  voicing: power
+  strum_style: downbeat_heavy
+  accent_strength: 0.7
+  groove: tight
+  swing: 0.0
+  chuck_rate: 0.0
+  use_patterns: true

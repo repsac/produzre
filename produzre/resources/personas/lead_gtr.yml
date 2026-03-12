@@ -1,0 +1,43 @@
+version: 1
+default_persona: balanced
+
+personas:
+  balanced:
+    params:
+      # Balanced: moderate phrasing, some rests, smooth contour
+      phrase_len_bars: 2
+      rest_probability: 0.25
+      resolution_strength: 0.45
+      contour_style: "balanced"
+
+  melodic:
+    params:
+      # Melodic: longer phrases, smooth stepwise motion, strong resolution
+      phrase_len_bars: 4
+      rest_probability: 0.20
+      resolution_strength: 0.65
+      contour_style: "stepwise"
+
+  shredder:
+    params:
+      # Shredder: fast runs, wide leaps, minimal rests, low resolution
+      phrase_len_bars: 2
+      rest_probability: 0.08
+      resolution_strength: 0.25
+      contour_style: "leaping"
+
+  bluesy:
+    params:
+      # Bluesy: spacious phrasing, lots of breathing room, strong chord-tone resolution
+      phrase_len_bars: 2
+      rest_probability: 0.35
+      resolution_strength: 0.60
+      contour_style: "balanced"
+
+  ambient:
+    params:
+      # Ambient: sparse, long phrases, wide intervals, lots of space
+      phrase_len_bars: 4
+      rest_probability: 0.45
+      resolution_strength: 0.30
+      contour_style: "leaping"

@@ -1,0 +1,42 @@
+version: 1
+song:
+  title: "BassRhythm_Syncopated"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 302  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: funk  # Uses syncopated pattern
+    intensity: 0.7
+    params:
+      rhythm_pattern: syncopated  # Offbeat emphasis
+      density: 0.6  # Moderate density
+      rest_rate: 0.2  # Gaps create funk pocket
+
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

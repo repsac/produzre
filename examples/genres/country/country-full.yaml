@@ -1,0 +1,112 @@
+# Country Full Arrangement - Intermediate Example
+#
+# Classic country song structure with acoustic guitar featured alongside
+# the rhythm section. genre: country drives clean, tight drum patterns
+# and open triad rhythm guitar.
+#
+# Complexity: INTERMEDIATE (verse-chorus with acoustic guitar)
+
+version: 1
+
+song:
+  title: "Heartland"
+  bpm: 115
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: country
+  seed: 1650
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "V", "IV", "I"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      acoustic_gtr:
+        intensity: 0.6
+        extra:
+          technique: "fingerpicking"
+          picking_pattern: "travis"
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      acoustic_gtr:
+        intensity: 0.6
+        extra:
+          technique: "fingerpicking"
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["IV", "V", "I", "vi"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.85
+      acoustic_gtr:
+        intensity: 0.8
+        extra:
+          technique: "strumming"
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["IV", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      acoustic_gtr:
+        intensity: 0.5
+        extra:
+          technique: "fingerpicking"
+
+arrangement:
+  - intro
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - outro

@@ -1,0 +1,49 @@
+# Blues Rock Recipe Showcase
+# Rock energy with blues swing and step motion.
+
+version: 1
+
+song:
+  title: "Blues Rock Recipe Showcase"
+  bpm: 130
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: "blues rock"
+  seed: 5023
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "I", "V"]
+    instruments:
+      harmony: { intensity: 0.85 }
+      drums: { intensity: 0.85 }
+      bass: { intensity: 0.85 }
+      rhythm_gtr: { intensity: 0.8 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "IV"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 0.95 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

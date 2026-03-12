@@ -1,0 +1,133 @@
+# Gospel Full Arrangement - Intermediate Example
+#
+# Triumphant gospel arrangement in G major with building dynamics
+# from a reflective verse to a powerful, celebratory chorus.
+# Rich harmonies with passing chords and key lifts.
+#
+# Complexity: INTERMEDIATE (verse-chorus with dynamic build)
+
+version: 1
+
+song:
+  title: "Glory Rising"
+  bpm: 105
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: gospel
+  seed: 650
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "IVmaj7", "I", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.45
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.45
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "vi7", "IV", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.65
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.65
+
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["ii7", "V7", "IV", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.75
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V7", "iii7", "vi", "ii7", "V7", "I"]
+    instruments:
+      harmony:
+        intensity: 0.95
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.85
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["IVmaj7", "#ivdim7", "I", "vi7", "ii7", "V7", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.7
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["IV", "V7", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.55
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - intro
+  - verse
+  - prechorus
+  - chorus
+  - verse
+  - prechorus
+  - chorus
+  - bridge
+  - chorus
+  - outro

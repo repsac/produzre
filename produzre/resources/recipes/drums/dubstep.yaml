@@ -1,0 +1,32 @@
+id: dubstep
+instrument: drums
+tags:
+  genre: dubstep
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 140
+  - 140
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  kick_extra_rate: 0.05
+  double_kick_rate: 0.04
+  snare_backbeat_steps:
+  - 8
+  ghost_rate: 0.07
+  ghost_steps:
+  - 2
+  - 11
+  - 13
+  - 14
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.06
+params:
+  fill_rate: 0.15
+voices: {}

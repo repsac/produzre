@@ -1,0 +1,49 @@
+# Heavy Metal Recipe Showcase
+# Very high density, tight kick lock, pick articulation.
+
+version: 1
+
+song:
+  title: "Heavy Metal Recipe Showcase"
+  bpm: 165
+  key: C
+  mode: minor
+  meter: "4/4"
+  genre: "heavy metal"
+  seed: 5018
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "VII"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "i"]
+    instruments:
+      harmony: { intensity: 0.9 }
+      drums: { intensity: 0.9 }
+      bass: { intensity: 0.9 }
+      rhythm_gtr: { intensity: 0.9 }
+
+arrangement:
+  - verse
+  - verse
+  - breakdown
+  - verse

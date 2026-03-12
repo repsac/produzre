@@ -1,0 +1,25 @@
+id: soft_rock
+instrument: bass
+tags:
+  genre: "soft rock"
+  time_signature: "4/4"
+  bpm_range: [78, 145]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.43
+  rhythm_pattern: "push"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.3
+  chromatic_rate: 0.08
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.22
+  fifth_jump_rate: 0.16
+  rest_rate: 0.26
+  root_bias: 0.64
+  motion_style: "mixed"
+  swing: 0.0
+  lock_to_kick: 0.45
+  accent_strength: 1.32
+  syncopation: 0.44

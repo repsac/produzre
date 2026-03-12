@@ -1,0 +1,184 @@
+version: 1
+song:
+  title: "EnergyDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # Low energy: closed hats, minimal crashes, sparse kicks
+  # Automatically detected from section type "verse"
+  verse_low_auto:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+        # energy auto-detects to 0.3 (low) for verse
+        # Results in:
+        #   - Closed hats only (no ride)
+        #   - Minimal open hats (0.1)
+        #   - Minimal crashes (0.3)
+        #   - Low kick syncopation (0.1)
+        #   - No double kicks (0.0)
+
+  # High energy: ride cymbal, more crashes, active kicks
+  # Automatically detected from section type "chorus"
+  chorus_high_auto:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        # energy auto-detects to 0.9 (high) for chorus
+        # Results in:
+        #   - Ride cymbal instead of hats
+        #   - Frequent open hats/ride (0.35)
+        #   - Frequent crashes (0.75)
+        #   - Active kick syncopation (0.35)
+        #   - Occasional double kicks (0.25)
+
+  # Mid energy: bridge (between verse and chorus)
+  # Automatically detected from section type "bridge"
+  bridge_mid_auto:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "vi IV I V"
+    instruments:
+      drums:
+        intensity: 0.6
+        # energy auto-detects to 0.6 (mid) for bridge
+
+  # Explicit low energy (override auto-detection)
+  chorus_forced_low:
+    type: chorus
+    energy: "low"  # Force low energy despite chorus type
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        # Explicit energy=low overrides chorus auto-detection
+        # Results in verse-like orchestration despite being a chorus
+
+  # Explicit high energy (override auto-detection)
+  verse_forced_high:
+    type: verse
+    energy: "high"  # Force high energy despite verse type
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+        # Explicit energy=high makes this verse sound like a chorus
+
+  # Numeric energy (0.0 - 1.0)
+  solo_numeric_energy:
+    type: solo
+    energy: 0.75  # Numeric energy value
+    bars: 8
+    harmony:
+      progression: "I I IV IV I I V V"
+    instruments:
+      drums:
+        intensity: 0.9
+
+  # Energy lift: verse (0.3) -> chorus (0.9)
+  # This creates a natural "lift" effect
+  verse_before_lift:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+
+  chorus_after_lift:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        # Energy lift detected (0.3 -> 0.9 = +0.6)
+        # Transition effects enhanced
+
+  # Energy drop: chorus (0.9) -> verse (0.3)
+  # This creates a natural "drop" or breakdown effect
+  chorus_before_drop:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+
+  verse_after_drop:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+        # Energy drop detected (0.9 -> 0.3 = -0.6)
+        # Transition effects may be adjusted
+
+  # User override beats energy defaults
+  chorus_custom_orchestration:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        # energy=high auto-detected, but user can still override specific voices
+        extra:
+          voices:
+            hats:
+              opens:
+                rate: 0.1  # Override energy default (would be 0.35)
+            cymbals:
+              crash:
+                rate: 0.3  # Override energy default (would be 0.75)
+        # Result: High energy section but with subdued crashes/opens
+
+arrangement:
+  - verse_low_auto           # Low energy (auto)
+  - chorus_high_auto         # High energy (auto) - LIFT from verse
+  - bridge_mid_auto          # Mid energy (auto) - DROP from chorus
+  - chorus_forced_low        # Low energy (forced) - despite chorus type
+  - verse_forced_high        # High energy (forced) - despite verse type
+  - solo_numeric_energy      # Numeric energy (0.75)
+  - verse_before_lift        # Low energy
+  - chorus_after_lift        # High energy - LIFT
+  - chorus_before_drop       # High energy
+  - verse_after_drop         # Low energy - DROP
+  - chorus_custom_orchestration  # High energy with overrides

@@ -1,0 +1,61 @@
+# Progressive Rock Recipe Showcase
+# Complex harmony, varied bass motion, moderate syncopation.
+
+version: 1
+
+song:
+  title: "Prog Rock Recipe Showcase"
+  bpm: 120
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: "progressive rock"
+  seed: 5019
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "III", "iv", "VII"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.75 }
+
+  bridge:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: ["VI", "III", "iv", "V"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.65 }
+      bass: { intensity: 0.75 }
+      rhythm_gtr: { intensity: 0.65 }
+
+  climax:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "V"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 0.95 }
+
+arrangement:
+  - verse
+  - bridge
+  - climax
+  - verse
+  - climax

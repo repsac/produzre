@@ -1,0 +1,63 @@
+# Pop Recipe Showcase
+# Balanced bass with moderate density, stepwise motion.
+# MIDI analysis: pop bass 8.34 notes/bar, 56% on-beat, 25% rests.
+
+version: 1
+
+song:
+  title: "Pop Recipe Showcase"
+  bpm: 118
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: pop
+  seed: 5010
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony: { intensity: 0.75 }
+      drums: { intensity: 0.75 }
+      bass: { intensity: 0.75 }
+      rhythm_gtr: { intensity: 0.7 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "vi", "V"]
+    instruments:
+      harmony: { intensity: 0.95 }
+      drums: { intensity: 0.95 }
+      bass: { intensity: 0.95 }
+      rhythm_gtr: { intensity: 0.9 }
+
+  bridge:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: ["vi", "IV", "I", "V"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.65 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.65 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - bridge
+  - chorus

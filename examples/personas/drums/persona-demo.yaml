@@ -1,0 +1,148 @@
+# Persona Demo
+#
+# This example demonstrates the persona system for drums, which provides curated
+# out-of-the-box styles that affect humanization, swing, accent strength, and
+# voice-specific parameters.
+#
+# Available personas:
+#   - tight: Conservative defaults, no humanization (default)
+#   - experimental: Noticeable humanization, higher fill rates
+#   - rock: Driving, moderate humanization, more ghost notes
+#   - metal: Tight, aggressive, double kick patterns
+#   - funk-lite: Syncopated, groovy, open hats
+#   - jazz-lite: Loose, swung, ride-heavy
+#
+# Precedence (lowest to highest):
+#   persona defaults < instrument defaults < section overrides < voice overrides
+#
+# Acceptance criteria:
+#   1. Switching persona changes output in obvious ways (density, swing, accents)
+#   2. Section overrides still win and appear in show-config
+#   3. Voice-level params from personas can be overridden per-section
+
+version: 1
+song:
+  title: "PersonaDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+# Global instrument defaults - NOT used in this demo
+# Each section explicitly sets its persona to demonstrate switching
+instruments:
+  drums:
+    intensity: 0.5
+
+sections:
+  verse_tight:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        # Default persona: conservative, no humanization
+        persona: "tight"
+        intensity: 0.4
+
+  chorus_experimental:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        # Experimental persona: noticeable humanization, higher fill rates
+        persona: "experimental"
+        intensity: 0.8
+
+  verse_rock:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        # Rock persona: driving, moderate humanization, more ghost notes
+        persona: "rock"
+        intensity: 0.6
+
+  bridge_metal:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "IV I V vi"
+    instruments:
+      drums:
+        # Metal persona: tight, aggressive, double kick
+        persona: "metal"
+        intensity: 0.9
+
+  verse_funk_lite:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        # Funk-lite persona: syncopated, groovy, open hats
+        persona: "funk-lite"
+        intensity: 0.7
+
+  outro_jazz_lite:
+    type: outro
+    bars: 4
+    harmony:
+      progression: "I IV I V"
+    instruments:
+      drums:
+        # Jazz-lite persona: loose, swung, ride-heavy
+        persona: "jazz-lite"
+        intensity: 0.5
+
+  # Override demonstration: section params win over persona defaults
+  verse_rock_override:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        persona: "rock"
+        intensity: 0.6
+        params:
+          # Override rock's swing (0.0) with explicit swing
+          swing: 0.25
+          # Override rock's fill_rate (0.5) to be higher
+          fill_rate: 0.8
+        extra:
+          voices:
+            # Override rock's snare ghosts.rate (0.35) to be lower
+            snare:
+              ghosts:
+                rate: 0.15
+
+arrangement:
+  - verse_tight
+  - chorus_experimental
+  - verse_rock
+  - bridge_metal
+  - verse_funk_lite
+  - outro_jazz_lite
+  - verse_rock_override

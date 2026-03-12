@@ -1,0 +1,23 @@
+# R&B rhythm guitar recipe
+# Sparse syncopated comping, shell voicings, smooth laid-back feel
+
+id: rnb
+instrument: rhythm_gtr
+tags:
+  genre: rnb
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [60, 110]
+
+params:
+  style: syncopated
+  density: 0.4
+  palm_mute: 0.0
+  voicing: shell
+  strum_style: balanced
+  accent_strength: 0.3
+  groove: laid_back
+  swing: 0.1
+  chuck_rate: 0.0
+  strum_ms: 22.0
+  use_patterns: true

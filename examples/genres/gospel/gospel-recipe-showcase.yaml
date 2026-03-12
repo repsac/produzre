@@ -1,0 +1,49 @@
+# Gospel Recipe Showcase
+# Warm bass with sustained tones, soulful movement.
+
+version: 1
+
+song:
+  title: "Gospel Recipe Showcase"
+  bpm: 95
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: gospel
+  seed: 5022
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "I", "V"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.7 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.65 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "ii", "V"]
+    instruments:
+      harmony: { intensity: 0.9 }
+      drums: { intensity: 0.9 }
+      bass: { intensity: 0.9 }
+      rhythm_gtr: { intensity: 0.85 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

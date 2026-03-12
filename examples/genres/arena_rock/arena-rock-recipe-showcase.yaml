@@ -1,0 +1,50 @@
+# Arena Rock Recipe Showcase
+# Big stadium bass with anthemic progressions.
+
+version: 1
+
+song:
+  title: "Arena Rock Recipe Showcase"
+  bpm: 132
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: "arena rock"
+  seed: 5026
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony: { intensity: 0.85 }
+      drums: { intensity: 0.85 }
+      bass: { intensity: 0.85 }
+      rhythm_gtr: { intensity: 0.85 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - chorus

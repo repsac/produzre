@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Testing
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+out/
+
+# Produzre output
+exports/
+_midi*/
+_analysis/
+
+# Environment / secrets
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp

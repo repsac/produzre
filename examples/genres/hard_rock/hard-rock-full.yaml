@@ -1,0 +1,186 @@
+# Hard Rock - Full Arrangement
+#
+# Full hard rock assault with chugging breakdowns, an aggressive guitar
+# solo, and pick-style bass driving the low end. High intensity throughout
+# with dynamic drops to create impact.
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Wrecking Crew"
+  bpm: 145
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: hard_rock
+  seed: 502
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "pick"
+      lock_to_kick: 0.8
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["i", "VII", "VI", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "v"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+      lead_gtr:
+        intensity: 0.4
+        extra:
+          rest_probability: 0.5
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "V"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+      lead_gtr:
+        intensity: 0.7
+        extra:
+          rest_probability: 0.25
+          contour_style: "balanced"
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "v"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.85
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["VI", "III", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.75
+        extra:
+          sustain_mode: true
+          sustain_duration: 2.0
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.9
+        extra:
+          style: "chugs"
+
+  solo:
+    type: solo
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 1.0
+        solo: true
+        extra:
+          phrase_len_bars: 4
+          contour_style: "leaping"
+          resolution_strength: 0.7
+          rest_probability: 0.05
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["i", "VII", "VI", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - intro
+  - verse_1
+  - chorus
+  - verse_2
+  - chorus
+  - bridge
+  - breakdown
+  - solo
+  - chorus
+  - outro

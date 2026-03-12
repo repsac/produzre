@@ -1,0 +1,49 @@
+# Emo Recipe Showcase (uses punk recipe — closest match)
+# Emotional punk-influenced bass with driving energy.
+
+version: 1
+
+song:
+  title: "Emo Recipe Showcase"
+  bpm: 155
+  key: C
+  mode: minor
+  meter: "4/4"
+  genre: emo
+  seed: 5030
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "III", "VII"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.8 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "III", "VII", "i"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

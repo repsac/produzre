@@ -1,0 +1,48 @@
+version: 1
+default_persona: natural
+
+personas:
+  natural:
+    params:
+      # Natural: moderate humanization, open voicings, fingerpicking default
+      vel_variation: 6
+      timing_variation: 0.02
+      mute_ratio: 0.05
+      body_tap_ratio: 0.0
+      voicing_style: "open"
+
+  precise:
+    params:
+      # Precise: tight timing, consistent velocity, clean technique
+      vel_variation: 3
+      timing_variation: 0.008
+      mute_ratio: 0.02
+      body_tap_ratio: 0.0
+      voicing_style: "auto"
+
+  expressive:
+    params:
+      # Expressive: dynamic velocity, loose timing, percussive elements
+      vel_variation: 12
+      timing_variation: 0.035
+      mute_ratio: 0.10
+      body_tap_ratio: 0.08
+      voicing_style: "open"
+
+  percussive:
+    params:
+      # Percussive: heavy muting, body taps, rhythmic emphasis
+      vel_variation: 10
+      timing_variation: 0.02
+      mute_ratio: 0.20
+      body_tap_ratio: 0.15
+      voicing_style: "auto"
+
+  delicate:
+    params:
+      # Delicate: soft touch, minimal variation, open voicings
+      vel_variation: 4
+      timing_variation: 0.015
+      mute_ratio: 0.0
+      body_tap_ratio: 0.0
+      voicing_style: "open"

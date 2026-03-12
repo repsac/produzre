@@ -1,0 +1,41 @@
+id: emo
+instrument: drums
+tags:
+  genre: emo
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 85
+  - 120
+groove:
+  hat_mode: 16th
+  use_ride: false
+  kick_base:
+  - 0
+  - 2
+  - 10
+  - 13
+  kick_extra_rate: 0.14
+  double_kick_rate: 0.16
+  snare_backbeat_steps:
+  - 4
+  - 7
+  - 12
+  - 15
+  ghost_rate: 0.49
+  ghost_steps:
+  - 0
+  - 1
+  - 9
+  - 10
+  - 11
+  - 14
+  open_hat_rate: 0.0
+  crash_start: false
+  crash_phrase_end_rate: 0.11
+params:
+  swing: 0.1
+  fill_rate: 0.2
+voices: {}

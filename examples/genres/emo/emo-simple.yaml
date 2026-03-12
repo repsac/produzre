@@ -1,0 +1,45 @@
+# Emo - Simple Example
+#
+# Fast, emotionally charged emo with bright major-key harmony and
+# driving tempo. genre: emo activates energetic drum patterns,
+# punchy bass, and jangly-to-distorted guitar recipes.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Paper Hearts"
+  bpm: 160
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: emo
+  seed: 101
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+arrangement:
+  - verse
+  - verse

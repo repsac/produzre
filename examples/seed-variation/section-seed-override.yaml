@@ -1,0 +1,96 @@
+# Seed & Variation — Section Seed Override
+#
+# Identical to base-song.yaml EXCEPT the chorus section has seed: 999.
+# This re-rolls the entire chorus (all instruments) while every other
+# section stays the same as the base song.
+#
+# Compare the chorus MIDI output against base-song.yaml to hear the
+# difference. Intro, verse, and outro should be identical.
+
+version: 1
+
+song:
+  title: "Seed Variation Base"
+  bpm: 120
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 42
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  chorus:
+    type: chorus
+    bars: 8
+    seed: 999                    # ← ONLY CHANGE: section-level seed override
+    harmony:
+      progression: ["VI", "VII", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["i", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.4
+      rhythm_gtr:
+        intensity: 0.3
+
+arrangement:
+  - intro
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - outro

@@ -1,0 +1,45 @@
+# Soft Rock - Simple Example
+#
+# Gentle soft rock with warm major-key harmony and relaxed pacing.
+# genre: soft_rock activates light drum patterns, mellow bass, and
+# clean guitar tones.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Calm Waters"
+  bpm: 95
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: soft_rock
+  seed: 601
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - verse
+  - verse

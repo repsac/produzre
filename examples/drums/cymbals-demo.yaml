@@ -1,0 +1,97 @@
+version: 1
+song:
+  title: "CymbalsDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse_hats_crash:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        intensity: 0.4
+        extra:
+          voices:
+            # Crash at section start, low rate for phrase end
+            crash:
+              rate: 0.2
+
+  chorus_ride_bell:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          # Explicitly request ride cymbal instead of hats
+          groove: "chorus_ride"
+        extra:
+          voices:
+            # Ride bell accents for emphasis
+            ride:
+              bell_rate: 0.3
+
+            # Higher crash rate at phrase ends
+            crash:
+              rate: 0.9
+
+  bridge_splash_china:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "IV I V vi"
+    instruments:
+      drums:
+        intensity: 0.6
+        extra:
+          voices:
+            # Sparse splash and china for color
+            cymbals:
+              splash_rate: 0.4
+              china_rate: 0.3
+
+            # Moderate crash rate
+            crash:
+              rate: 0.5
+
+  outro_crash_placements:
+    type: outro
+    bars: 2
+    harmony:
+      progression: "I I"
+    instruments:
+      drums:
+        intensity: 0.3
+        extra:
+          voices:
+            # Explicit crash placements (downbeat)
+            crash:
+              placements: ["1"]
+
+arrangement:
+  - verse_hats_crash
+  - chorus_ride_bell
+  - bridge_splash_china
+  - outro_crash_placements

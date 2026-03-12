@@ -1,0 +1,188 @@
+# Bass Melodic Motion Style Demo (Phase 4.2)
+#
+# This demo showcases the three motion style options for bass voice leading:
+# - stepwise: Prefer small intervals (smooth, connected)
+# - leaping: Prefer large intervals (angular, jumping)
+# - mixed: Random selection for variety
+#
+# Listen to how the bass line character changes dramatically between sections.
+
+version: 1
+
+song:
+  title: "BassMotionStyleDemo"
+  bpm: 110
+  key: D
+  mode: minor
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 700
+  exports_root: "exports"
+
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    params:
+      kick_density: 1.0
+      snare_density: 1.0
+      hat_density: 1.0
+      fill_rate: 0.3
+
+  bass:
+    params:
+      density: 0.75
+      rhythm_pattern: "syncopated"
+      lock_to_kick: 0.6
+
+  rhythm_gtr:
+    params:
+      style: "balanced"
+      density: 0.7
+
+sections:
+  # Section 1: Stepwise motion (smooth, connected bass)
+  intro_stepwise:
+    type: intro
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "VII", "i", "VII", "VI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.6
+      bass:
+        params:
+          density: 0.7
+          motion_style: "stepwise"  # Smooth voice leading
+          articulation_style: "finger"  # Sustained notes
+      rhythm_gtr:
+        intensity: 0.6
+
+  # Section 2: Leaping motion (angular, jumping bass)
+  verse_leaping:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "VII", "i", "VII", "VI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.7
+      bass:
+        params:
+          density: 0.75
+          motion_style: "leaping"  # Angular jumps
+          articulation_style: "pick"  # Staccato for emphasis
+      rhythm_gtr:
+        intensity: 0.7
+
+  # Section 3: Mixed motion (variety)
+  chorus_mixed:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "III", "VII", "i", "VI", "III", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 0.4
+      bass:
+        params:
+          density: 0.8
+          motion_style: "mixed"  # Random variety
+          articulation_style: "slap"  # Percussive
+      rhythm_gtr:
+        intensity: 0.8
+
+  # Section 4: Stepwise with high density (melodic walking bass)
+  bridge_stepwise_dense:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "VII", "VI", "VII", "i", "V"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.7
+      bass:
+        params:
+          density: 0.9  # High density
+          motion_style: "stepwise"  # Smooth walking
+          articulation_style: "finger"
+      rhythm_gtr:
+        intensity: 0.7
+
+  # Section 5: Leaping with slap (aggressive funk)
+  breakdown_leaping_funk:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.8
+        params:
+          kick_density: 1.3
+      bass:
+        params:
+          density: 0.8
+          motion_style: "leaping"  # Big jumps
+          articulation_style: "slap"  # Percussive funk
+      rhythm_gtr:
+        intensity: 0.8
+
+  # Section 6: Comparison - all three in sequence
+  outro_comparison:
+    type: outro
+    bars: 12
+    harmony:
+      progression: ["i", "VII", "VI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        params:
+          # This will use the default which is stepwise
+          # But in a real composition, you'd create 3 separate sections
+          # for A/B/C comparison
+          density: 0.7
+          motion_style: "stepwise"
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - intro_stepwise
+  - verse_leaping
+  - chorus_mixed
+  - bridge_stepwise_dense
+  - breakdown_leaping_funk
+  - outro_comparison
+
+# Expected Behavior:
+# - intro: Smooth, connected bass line (small intervals)
+# - verse: Angular, jumping bass line (large intervals)
+# - chorus: Varied bass line (mix of both)
+# - bridge: Dense walking bass (stepwise at high density)
+# - breakdown: Aggressive funk bass (leaping + slap)
+# - outro: Return to smooth motion
+#
+# Listen for:
+# - Stepwise: Bass moves by 1-3 semitones between notes
+# - Leaping: Bass jumps octaves or fifths frequently
+# - Mixed: Unpredictable combination of both styles

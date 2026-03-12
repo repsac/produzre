@@ -1,0 +1,36 @@
+# Jazz swing drum recipe
+# Ride cymbal timekeeping, sparse kick, brushy ghost notes, swing feel
+
+id: jazz_swing
+instrument: drums
+tags:
+  genre: jazz
+  feel: swing
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, solo]
+  bpm_range: [100, 200]
+
+groove:
+  hat_mode: "quarter"
+  use_ride: true
+  kick_base: [0]
+  kick_extra_rate: 0.08
+  double_kick_rate: 0.0
+  snare_backbeat_steps: [4, 12]
+  ghost_rate: 0.40
+  ghost_steps: [2, 3, 6, 7, 9, 10, 14, 15]
+  open_hat_rate: 0.05
+  crash_start: false
+  crash_phrase_end_rate: 0.10
+
+params:
+  fill_rate: 0.15
+  swing: 0.30
+
+voices:
+  kick:
+    syncopation: {rate: 0.08}
+  snare:
+    ghosts: {rate: 0.40}
+  hats:
+    pedal: {rate: 0.25}

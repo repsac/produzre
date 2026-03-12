@@ -1,0 +1,174 @@
+# Dance Pop Full Arrangement - Advanced Example
+#
+# Full dance pop song in Bb major at 128 BPM. Features build-up sections
+# leading into big choruses, a stripped-back breakdown, and a high-energy
+# finale. Four-on-the-floor throughout.
+#
+# Complexity: ADVANCED (full arrangement, build-ups and breakdowns)
+
+version: 1
+
+song:
+  title: "Electric Hearts"
+  bpm: 128
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: dance_pop
+  seed: 310
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.4
+      rhythm_gtr:
+        intensity: 0.3
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["vi", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.65
+      rhythm_gtr:
+        intensity: 0.5
+
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["IV", "V", "vi", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.75
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 0.9
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["vi", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.65
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.55
+
+  breakdown:
+    type: breakdown
+    bars: 8
+    harmony:
+      progression: ["vi", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.3
+
+  build:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["IV", "V", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.8
+
+  final_chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+
+arrangement:
+  - intro
+  - verse_1
+  - prechorus
+  - chorus
+  - verse_2
+  - prechorus
+  - chorus
+  - breakdown
+  - build
+  - final_chorus
+  - outro

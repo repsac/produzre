@@ -1,0 +1,25 @@
+id: dance_pop
+instrument: bass
+tags:
+  genre: "dance-pop"
+  time_signature: "4/4"
+  bpm_range: [79, 146]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.53
+  rhythm_pattern: "push"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.27
+  chromatic_rate: 0.08
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.24
+  fifth_jump_rate: 0.17
+  rest_rate: 0.26
+  root_bias: 0.63
+  motion_style: "mixed"
+  swing: 0.04
+  lock_to_kick: 0.46
+  accent_strength: 1.33
+  syncopation: 0.42

@@ -1,0 +1,44 @@
+# Simple Country - Beginner Example
+#
+# genre: country activates clean strumming drums, triad rhythm guitar,
+# and country harmony recipes with straightforward progressions.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Country Road"
+  bpm: 110
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: country
+  seed: 1600
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - verse
+  - verse

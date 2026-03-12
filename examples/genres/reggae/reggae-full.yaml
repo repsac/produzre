@@ -1,0 +1,116 @@
+# Reggae Full Arrangement - Intermediate Example
+#
+# Classic reggae structure with offbeat skank, dub-style breakdown,
+# and dynamic build. genre: reggae drives upbeat-heavy rhythm guitar
+# and laid-back drum patterns.
+#
+# Complexity: INTERMEDIATE (verse-chorus with dub breakdown)
+
+version: 1
+
+song:
+  title: "Roots Riddim"
+  bpm: 76
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: reggae
+  seed: 1750
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+      rhythm_pattern: "syncopated"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["i", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "IV", "i", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+  breakdown:
+    type: breakdown
+    bars: 8
+    harmony:
+      progression: ["i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.3
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["i", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - intro
+  - verse
+  - chorus
+  - verse
+  - breakdown
+  - chorus
+  - outro

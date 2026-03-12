@@ -1,0 +1,44 @@
+# Heavy Metal - Simple Example
+#
+# Aggressive double-kick feel in E minor at 160 BPM. High intensity
+# throughout with pick bass locked to the kick drum.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Iron Descent"
+  bpm: 160
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: heavy_metal
+  seed: 310
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "v"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.9
+
+arrangement:
+  - verse
+  - verse

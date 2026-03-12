@@ -1,0 +1,33 @@
+# Pop harmony recipe
+# Modern pop progressions, the "four chord" pattern and variants
+
+id: pop
+instrument: harmony
+tags:
+  genre: pop
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [90, 140]
+
+progressions:
+  minor:
+    verse: ["i", "bVI", "bIII", "bVII"]
+    chorus: ["bVI", "bVII", "i", "i"]
+    bridge: ["bVI", "bIII", "bVII", "i"]
+    default: ["i", "bVI", "bIII", "bVII"]
+  major:
+    verse: ["I", "V", "vi", "IV"]
+    chorus: ["vi", "IV", "I", "V"]
+    bridge: ["IV", "I", "V", "vi"]
+    default: ["I", "V", "vi", "IV"]
+  dorian:
+    verse: ["i", "bVII", "IV", "i"]
+    chorus: ["IV", "bVII", "i", "i"]
+    default: ["i", "bVII", "IV", "i"]
+  mixolydian:
+    verse: ["I", "bVII", "IV", "I"]
+    chorus: ["IV", "bVII", "I", "I"]
+    default: ["I", "bVII", "IV", "I"]
+
+params:
+  chord_rate: 4.0

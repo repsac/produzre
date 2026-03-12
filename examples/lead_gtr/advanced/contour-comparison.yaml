@@ -1,0 +1,109 @@
+# Lead Guitar - Contour Style Comparison
+#
+# This example demonstrates the three contour_style options:
+# - "stepwise": Small intervals (2-3 semitones), smooth voice leading
+# - "balanced": Moderate intervals (4-5 semitones), mix of steps and leaps
+# - "leaping": Large intervals (7-9 semitones), wide melodic range
+#
+# All three sections use the same intensity, rest_probability, and phrase length
+# to isolate the effect of contour_style on melodic motion.
+
+version: 1
+
+song:
+  title: "Contour Comparison"
+  bpm: 110
+  key: G
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 500
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  stepwise_section:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "v", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.7
+        solo: true  # Use solo mode for all sections to ensure density
+        extra:
+          rest_probability: 0.2      # Same for all sections
+          phrase_len_bars: 2         # Same for all sections
+          contour_style: "stepwise"  # Smooth, conjunct motion
+          resolution_strength: 0.5   # Same for all sections
+
+  balanced_section:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "v", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.7
+        solo: true
+        extra:
+          rest_probability: 0.2      # Same for all sections
+          phrase_len_bars: 2         # Same for all sections
+          contour_style: "balanced"  # Mix of steps and leaps
+          resolution_strength: 0.5   # Same for all sections
+
+  leaping_section:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "v", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.7
+        solo: true
+        extra:
+          rest_probability: 0.2     # Same for all sections
+          phrase_len_bars: 2        # Same for all sections
+          contour_style: "leaping"  # Wide, disjunct intervals
+          resolution_strength: 0.5  # Same for all sections
+
+arrangement:
+  - stepwise_section
+  - balanced_section
+  - leaping_section
+
+# Analysis targets:
+# 1. Measure average interval size in each section
+# 2. Verify stepwise has mostly 1-3 semitone intervals
+# 3. Verify balanced has mix of small and medium intervals
+# 4. Verify leaping has frequent 5+ semitone intervals
+# 5. Compare melodic range (highest - lowest note) across sections

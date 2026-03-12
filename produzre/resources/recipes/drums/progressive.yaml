@@ -1,0 +1,36 @@
+# Auto-learned drums recipe for progressive
+# Learned from 13 MIDI files
+
+id: progressive
+instrument: drums
+tags:
+  genre: progressive
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: 8th
+  use_ride: false
+  kick_base:
+  - 0
+  kick_extra_rate: 0.05
+  double_kick_rate: 0.07
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.15
+  ghost_steps:
+  - 0
+  - 6
+  - 8
+  - 10
+  - 13
+  - 14
+  open_hat_rate: 0.01
+  crash_start: true
+  crash_phrase_end_rate: 0.54
+params:
+  swing: 0.35
+  fill_rate: 0.15
+voices: {}

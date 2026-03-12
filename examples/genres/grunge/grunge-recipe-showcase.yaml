@@ -1,0 +1,49 @@
+# Grunge Recipe Showcase
+# Raw bass with moderate density, mixed motion.
+
+version: 1
+
+song:
+  title: "Grunge Recipe Showcase"
+  bpm: 118
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: grunge
+  seed: 5020
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "i", "iv"]
+    instruments:
+      harmony: { intensity: 0.7 }
+      drums: { intensity: 0.7 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.7 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "IV", "i", "VII"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

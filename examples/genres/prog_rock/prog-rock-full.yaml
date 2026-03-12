@@ -1,0 +1,193 @@
+# Prog Rock - Full Arrangement
+#
+# Complete progressive rock epic with multiple contrasting sections,
+# complex chord progressions, and shifting dynamics. Features extended
+# solo passages and harmonic exploration through modal interchange.
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Spiral Architecture"
+  bpm: 135
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: prog_rock
+  seed: 802
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "III", "VI", "iv", "V", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+      lead_gtr:
+        intensity: 0.4
+        extra:
+          rest_probability: 0.4
+          contour_style: "stepwise"
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "III", "VII", "iv"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.5
+        extra:
+          rest_probability: 0.4
+          phrase_len_bars: 2
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "III", "VI", "V", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.95
+      drums:
+        intensity: 0.95
+      bass:
+        intensity: 0.95
+      rhythm_gtr:
+        intensity: 0.95
+      lead_gtr:
+        intensity: 0.7
+        extra:
+          rest_probability: 0.2
+          contour_style: "balanced"
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "III", "VII", "iv"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.75
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["III", "VI", "VII", "V", "iv", "III", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.55
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+        extra:
+          sustain_mode: true
+          sustain_duration: 3.0
+
+  solo:
+    type: solo
+    bars: 16
+    harmony:
+      progression: ["i", "VII", "III", "VI", "iv", "V", "i", "VII",
+                     "VI", "III", "VII", "iv", "V", "VII", "i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.6
+      lead_gtr:
+        intensity: 1.0
+        solo: true
+        extra:
+          phrase_len_bars: 4
+          contour_style: "leaping"
+          resolution_strength: 0.8
+          rest_probability: 0.05
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "VII", "VI", "V"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.5
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "III", "VI", "iv", "V", "i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+        extra:
+          sustain_mode: true
+          sustain_duration: 4.0
+
+arrangement:
+  - intro
+  - verse_1
+  - chorus
+  - verse_2
+  - chorus
+  - bridge
+  - solo
+  - breakdown
+  - chorus
+  - outro

@@ -1,0 +1,33 @@
+# Rock drum recipe
+# Driving kick on 1 and 3, solid backbeat, 8th-note hats
+
+id: rock
+instrument: drums
+tags:
+  genre: rock
+  feel: straight
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, solo]
+  bpm_range: [100, 160]
+
+groove:
+  hat_mode: "8th"
+  kick_base: [0, 8]
+  kick_extra_rate: 0.12
+  double_kick_rate: 0.05
+  snare_backbeat_steps: [4, 12]
+  ghost_rate: 0.15
+  ghost_steps: [7, 15]
+  open_hat_rate: 0.12
+  crash_start: true
+  crash_phrase_end_rate: 0.15
+
+params:
+  fill_rate: 0.40
+  swing: 0.0
+
+voices:
+  kick:
+    syncopation: {rate: 0.12}
+  snare:
+    ghosts: {rate: 0.15}

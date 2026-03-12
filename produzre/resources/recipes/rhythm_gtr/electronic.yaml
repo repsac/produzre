@@ -1,0 +1,22 @@
+# Electronic rhythm guitar recipe
+# Syncopated patterns, power chords, moderate palm mute
+
+id: electronic
+instrument: rhythm_gtr
+tags:
+  genre: electronic
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, breakdown]
+  bpm_range: [100, 180]
+
+params:
+  style: syncopated
+  density: 0.5
+  palm_mute: 0.2
+  voicing: power
+  strum_style: balanced
+  accent_strength: 0.4
+  groove: tight
+  swing: 0.0
+  chuck_rate: 0.05
+  use_patterns: true

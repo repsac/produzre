@@ -1,0 +1,22 @@
+# Reggae rhythm guitar recipe
+# Off-beat skank pattern, upbeat emphasis, light palm mute
+
+id: reggae
+instrument: rhythm_gtr
+tags:
+  genre: reggae
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [60, 100]
+
+params:
+  style: syncopated
+  density: 0.5
+  palm_mute: 0.1
+  voicing: triad
+  strum_style: upbeat_heavy
+  accent_strength: 0.5
+  groove: laid_back
+  swing: 0.0
+  chuck_rate: 0.05
+  use_patterns: true

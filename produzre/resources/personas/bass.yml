@@ -1,0 +1,343 @@
+version: 1
+default_persona: tight
+
+personas:
+  tight:
+    params:
+      # Conservative defaults: minimal humanization, locked to groove
+      timing_jitter_ms: 0.0
+      velocity_humanize: 0.0
+      swing: 0.0
+      push_pull: 0.0
+
+      # Note generation
+      density: 0.7            # How many notes per bar (0.0-1.0)
+      syncopation: 0.0        # Off-beat emphasis
+      rest_rate: 0.0          # Probability of rests/gaps
+
+      # Pitch/register
+      register_low: 28        # E1 (MIDI note)
+      register_high: 52       # E3 (MIDI note)
+      octave_jump_rate: 0.0   # Probability of octave jumps (Phase B6)
+
+      # Melodic movement
+      approach_rate: 0.0      # Chromatic approach tones before chord changes
+      chromatic_rate: 0.0     # Chromatic passing tones
+      max_passing_per_bar: 0  # Maximum passing/approach tones per bar (Phase B5)
+      fifth_jump_rate: 0.0    # Probability of using fifth on chord changes (Phase B6)
+      pedal_rate: 0.0         # Probability of pedal tones across changes (Phase B6)
+
+      # Articulation
+      articulation_style: finger  # finger | pick | slap | mute
+      accent_strength: 1.1        # Velocity multiplier for accented notes (Phase B6)
+
+      # Slap technique (Phase B7 - only active when articulation_style=slap)
+      slap_pop_rate: 0.4          # Probability of pop on offbeats
+      slap_thumb_rate: 0.9        # Probability of thumb on strong beats
+      ghost_perc_rate: 0.0        # Probability of ghost notes (percussive)
+      slap_velocity_floor: 70     # Minimum velocity for slap hits
+      pop_velocity_boost: 15      # Additional velocity for pops
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: anchor  # anchor | push | drive | syncopated
+      lock_to_kick: 0.8       # How much to lock bass rhythm to kick drum (0.0-1.0)
+      lock_to_snare: 0.3      # Lock to snare backbeat
+      lock_to_hat: 0.0        # Lock to hi-hat/ride pattern
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.2          # Probability of fill at phrase/section boundaries
+      fill_complexity: 0.3    # Fill complexity (0.0=simple, 1.0=complex)
+      fill_avoid_drums: 0.8   # Reduction when drums filling (0.0=ignore, 1.0=full avoid)
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 0.85      # Density for solo sections (higher for melodic lines)
+      solo_register_high: 64  # E4 - expanded range for solo
+      motif_repeat_rate: 0.3  # Probability of repeating melodic motifs
+
+  pocket:
+    params:
+      # Pocket: slightly behind the beat, warm and solid
+      timing_jitter_ms: 2.0
+      velocity_humanize: 0.08
+      swing: 0.0
+      push_pull: -0.05        # Slightly behind the beat (negative = laid back)
+
+      density: 0.65
+      syncopation: 0.15
+      rest_rate: 0.1
+
+      register_low: 28
+      register_high: 52
+      octave_jump_rate: 0.10
+
+      approach_rate: 0.10
+      chromatic_rate: 0.05
+      max_passing_per_bar: 1  # Moderate passing tone usage
+      fifth_jump_rate: 0.15   # Moderate fifth usage on changes
+      pedal_rate: 0.05        # Occasional pedal tones
+
+      articulation_style: finger
+      accent_strength: 1.15   # Moderate accents
+
+      # Slap technique (Phase B7)
+      slap_pop_rate: 0.5
+      slap_thumb_rate: 0.85
+      ghost_perc_rate: 0.1    # Occasional ghost notes for groove
+      slap_velocity_floor: 65
+      pop_velocity_boost: 18
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: anchor  # Solid pocket on main beats
+      lock_to_kick: 0.6       # Moderate kick locking
+      lock_to_snare: 0.4      # Backbeat awareness
+      lock_to_hat: 0.2        # Some hi-hat awareness
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.4          # Moderate fills
+      fill_complexity: 0.5    # Medium complexity
+      fill_avoid_drums: 0.6   # Moderate drum avoidance
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 0.90      # High density for melodic solo
+      solo_register_high: 67  # G4 - wide range for pocket solo
+      motif_repeat_rate: 0.4  # Moderate motif repetition
+
+  loose:
+    params:
+      # Loose: more timing variation, swung feel, more gaps
+      timing_jitter_ms: 8.0
+      velocity_humanize: 0.20
+      swing: 0.25
+      push_pull: 0.10         # Can push or pull around the beat
+
+      density: 0.50
+      syncopation: 0.30
+      rest_rate: 0.25
+
+      register_low: 28
+      register_high: 52
+      octave_jump_rate: 0.20
+
+      approach_rate: 0.20
+      chromatic_rate: 0.15
+      max_passing_per_bar: 2  # More passing tones for loose feel
+      fifth_jump_rate: 0.20   # More fifth usage for variation
+      pedal_rate: 0.10        # Some pedal tones
+
+      articulation_style: finger
+      accent_strength: 1.20   # Dynamic accents
+
+      # Slap technique (Phase B7)
+      slap_pop_rate: 0.6      # More pops for loose feel
+      slap_thumb_rate: 0.8
+      ghost_perc_rate: 0.15   # More ghost notes
+      slap_velocity_floor: 60
+      pop_velocity_boost: 20
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: syncopated  # Off-beat feel
+      lock_to_kick: 0.4       # Less locked to drums
+      lock_to_snare: 0.2
+      lock_to_hat: 0.3        # Following swing ride
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.5          # Moderate fills
+      fill_complexity: 0.6    # Medium-high complexity
+      fill_avoid_drums: 0.4   # Lower drum avoidance (loose style)
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 0.80      # Moderate density for loose solo
+      solo_register_high: 72  # C5 - very wide range for expressive solos
+      motif_repeat_rate: 0.5  # High motif repetition for loose style
+
+  funk:
+    params:
+      # Funk: syncopated, percussive, slap technique
+      timing_jitter_ms: 5.0
+      velocity_humanize: 0.18
+      swing: 0.15
+      push_pull: 0.08
+
+      density: 0.85           # Busy, many notes
+      syncopation: 0.60       # Heavy syncopation
+      rest_rate: 0.15         # Gaps create funk pocket
+
+      register_low: 28
+      register_high: 64       # Higher register for slap (E4)
+      octave_jump_rate: 0.35  # Frequent octave jumps
+
+      approach_rate: 0.15
+      chromatic_rate: 0.25    # Chromatic runs
+      max_passing_per_bar: 3  # Funk loves passing tones
+      fifth_jump_rate: 0.25   # Fifth pops common in funk
+      pedal_rate: 0.15        # Funk grooves use pedal tones
+
+      articulation_style: slap
+      accent_strength: 1.30   # Strong accents for slap technique
+
+      # Slap technique (Phase B7)
+      slap_pop_rate: 0.7      # Frequent pops for funk
+      slap_thumb_rate: 0.9    # Strong thumb presence
+      ghost_perc_rate: 0.25   # Heavy ghost note usage
+      slap_velocity_floor: 75 # Higher floor for punch
+      pop_velocity_boost: 25  # Strong pop contrast
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: syncopated  # Heavy syncopation
+      lock_to_kick: 0.7       # Locked to funk groove
+      lock_to_snare: 0.6      # Strong backbeat emphasis
+      lock_to_hat: 0.5        # 16th note feel
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.6          # High fill rate (funk loves fills)
+      fill_complexity: 0.8    # Complex fills with runs and pops
+      fill_avoid_drums: 0.3   # Low avoidance (funk bass & drums play together)
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 0.95      # Very high density for funk solo
+      solo_register_high: 76  # E5 - highest range for slap solos
+      motif_repeat_rate: 0.6  # High motif repetition for funk grooves
+
+  metal:
+    params:
+      # Metal: tight, fast, picked, aggressive
+      timing_jitter_ms: 1.0
+      velocity_humanize: 0.05
+      swing: 0.0
+      push_pull: 0.0
+
+      density: 0.95           # Dense, rapid notes
+      syncopation: 0.40
+      rest_rate: 0.05         # Few rests, relentless
+
+      register_low: 24        # Lower register (C1)
+      register_high: 48       # C3
+      octave_jump_rate: 0.15
+
+      approach_rate: 0.05
+      chromatic_rate: 0.30    # Fast chromatic runs
+      max_passing_per_bar: 2  # Some chromatic motion
+      fifth_jump_rate: 0.30   # Power chord feel with fifths
+      pedal_rate: 0.20        # Pedal tones common in metal
+
+      articulation_style: pick
+      accent_strength: 1.25   # Aggressive accents
+
+      # Slap technique (Phase B7)
+      slap_pop_rate: 0.3      # Less pops, more aggressive
+      slap_thumb_rate: 0.95   # Heavy thumb emphasis
+      ghost_perc_rate: 0.05   # Minimal ghosts
+      slap_velocity_floor: 80 # Very aggressive
+      pop_velocity_boost: 20
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: drive   # 8ths/16ths with power
+      lock_to_kick: 0.9       # Very tight to double-kick
+      lock_to_snare: 0.4
+      lock_to_hat: 0.1
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.3          # Moderate fills
+      fill_complexity: 0.7    # Complex chromatic runs
+      fill_avoid_drums: 0.7   # High avoidance (tight with drums)
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 0.95      # Very dense for metal solo runs
+      solo_register_high: 60  # C4 - moderate expansion for metal
+      motif_repeat_rate: 0.4  # Moderate repetition for riffs
+
+  walking:
+    params:
+      # Walking: quarter notes, chord tones, smooth voice leading
+      timing_jitter_ms: 3.0
+      velocity_humanize: 0.12
+      swing: 0.30             # Classic jazz swing
+      push_pull: 0.05
+
+      density: 1.0            # Steady quarter note pulse
+      syncopation: 0.10       # Mostly on-beat
+      rest_rate: 0.0          # Continuous walking
+
+      register_low: 28
+      register_high: 52
+      octave_jump_rate: 0.05  # Smooth, stepwise motion
+
+      approach_rate: 0.40     # Strong voice leading to next chord
+      chromatic_rate: 0.25    # Chromatic passing tones common in walking
+      max_passing_per_bar: 4  # Walking bass uses many passing tones
+      fifth_jump_rate: 0.10   # Occasional fifth for variety
+      pedal_rate: 0.0         # Walking bass moves with harmony
+
+      articulation_style: finger
+      accent_strength: 1.10   # Subtle accents for swing feel
+
+      # Slap technique (Phase B7)
+      slap_pop_rate: 0.4
+      slap_thumb_rate: 0.85
+      ghost_perc_rate: 0.1
+      slap_velocity_floor: 65
+      pop_velocity_boost: 15
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: anchor  # Steady quarter notes
+      lock_to_kick: 0.2       # Independent walking line
+      lock_to_snare: 0.1
+      lock_to_hat: 0.6        # Swing ride cymbal feel
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.3          # Moderate fills
+      fill_complexity: 0.5    # Medium complexity (smooth scalar runs)
+      fill_avoid_drums: 0.5   # Moderate avoidance
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 1.0       # Full density for walking solo
+      solo_register_high: 64  # E4 - expanded for melodic walking
+      motif_repeat_rate: 0.3  # Low repetition (walking is continuous)
+
+  dub:
+    params:
+      # Dub: sparse, deep, heavily effects-laden, behind the beat
+      timing_jitter_ms: 12.0   # Loose, human feel
+      velocity_humanize: 0.25
+      swing: 0.10
+      push_pull: -0.15        # Way behind the beat
+
+      density: 0.35           # Very sparse
+      syncopation: 0.20
+      rest_rate: 0.40         # Many gaps for echo/delay
+
+      register_low: 24        # Very low register (C1)
+      register_high: 40       # E2
+      octave_jump_rate: 0.30  # Dramatic octave drops
+
+      approach_rate: 0.05
+      chromatic_rate: 0.10
+      max_passing_per_bar: 0  # Dub is sparse, no passing tones
+      fifth_jump_rate: 0.10   # Occasional fifth drops
+      pedal_rate: 0.40        # Heavy use of pedal tones for deep groove
+
+      articulation_style: finger
+      accent_strength: 1.35   # Strong accents for dramatic effect
+
+      # Slap technique (Phase B7)
+      slap_pop_rate: 0.3      # Sparse pops
+      slap_thumb_rate: 0.9    # Strong thumb presence
+      ghost_perc_rate: 0.0    # No ghosts in dub
+      slap_velocity_floor: 70
+      pop_velocity_boost: 20
+
+      # Rhythm (Phase B3)
+      rhythm_pattern: anchor  # Sparse downbeats
+      lock_to_kick: 0.9       # Deep bass locked to kick
+      lock_to_snare: 0.3
+      lock_to_hat: 0.0
+
+      # Fills & Transitions (Phase B9)
+      fill_rate: 0.2          # Low fill rate (sparse style)
+      fill_complexity: 0.3    # Simple fills (octave drops)
+      fill_avoid_drums: 0.9   # Very high avoidance (dub bass is sparse)
+
+      # Solo / Lead Bass (Phase B10)
+      solo_density: 0.55      # Moderate density for dub solo (still sparse)
+      solo_register_high: 52  # E3 - minimal expansion for dub
+      motif_repeat_rate: 0.7  # High repetition for dub echo/delay effects

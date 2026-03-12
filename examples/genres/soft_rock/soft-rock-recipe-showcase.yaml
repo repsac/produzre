@@ -1,0 +1,49 @@
+# Soft Rock Recipe Showcase
+# Gentle bass with moderate density, smooth motion.
+
+version: 1
+
+song:
+  title: "Soft Rock Recipe Showcase"
+  bpm: 100
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: "soft rock"
+  seed: 5025
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "vi", "IV", "V"]
+    instruments:
+      harmony: { intensity: 0.6 }
+      drums: { intensity: 0.55 }
+      bass: { intensity: 0.6 }
+      rhythm_gtr: { intensity: 0.6 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "V", "I"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.75 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.75 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

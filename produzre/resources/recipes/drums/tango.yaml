@@ -1,0 +1,36 @@
+id: tango
+instrument: drums
+tags:
+  genre: tango
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: quarter
+  use_ride: false
+  kick_base:
+  - 0
+  - 4
+  - 8
+  - 12
+  kick_extra_rate: 0.06
+  double_kick_rate: 0.15
+  snare_backbeat_steps:
+  - 8
+  - 14
+  - 15
+  ghost_rate: 0.6
+  ghost_steps:
+  - 0
+  - 4
+  - 9
+  - 10
+  - 11
+  - 12
+  open_hat_rate: 0.0
+  crash_start: true
+  crash_phrase_end_rate: 0.58
+params:
+  fill_rate: 0.2
+voices: {}

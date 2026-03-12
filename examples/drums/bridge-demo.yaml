@@ -1,0 +1,203 @@
+version: 1
+song:
+  title: "BridgeIntentDemo"
+  bpm: 140
+  key: D
+  mode: minor
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.05
+  humanize_timing: 0.02
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # Section 1: Normal verse (baseline for comparison)
+  verse_baseline:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      drums:
+        intensity: 0.6
+        params:
+          fill_rate: 0.5
+          phrase_len_bars: 4
+          fill_length: "short"
+          # Baseline ornament rates for comparison
+          choke_rate: 0.3
+          flam_rate: 0.2
+          drag_rate: 0.15
+
+  # Section 2: Bridge with "drop" intent
+  # Reduced density, minimal hats, simple kick/snare
+  # Creates space and contrast
+  bridge_drop:
+    type: bridge
+    bars: 4
+    intent: drop  # NEW: Intent parameter
+    harmony:
+      progression: "VI III VII i"
+    instruments:
+      drums:
+        intensity: 0.5
+        params:
+          fill_rate: 0.25  # Minimal fills
+          phrase_len_bars: 4
+          fill_length: "short"
+          # Intent will reduce these: choke*0.3, flam*0.2, drag*0.1
+          choke_rate: 0.3
+          flam_rate: 0.2
+          drag_rate: 0.15
+
+  # Section 3: Bridge with "half_time" intent
+  # Snare on beat 3 only (instead of 2 and 4)
+  # Creates slower, heavier feel
+  bridge_half_time:
+    type: bridge
+    bars: 4
+    intent: half_time  # NEW: Intent parameter
+    harmony:
+      progression: "VI III VII i"
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          fill_rate: 0.5
+          phrase_len_bars: 4
+          fill_length: "medium"
+
+  # Section 4: Bridge with "build" intent
+  # Increase density over time, tom builds, crescendo
+  # Leads into next section with energy
+  bridge_build:
+    type: bridge
+    bars: 8
+    intent: build  # NEW: Intent parameter
+    harmony:
+      progression: "VI III VII i VI III VII i"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 1.0  # Fill at every phrase end for building effect
+          phrase_len_bars: 2  # More frequent fills
+          fill_length: "long"  # Longer fills
+          phrase_end_emphasis: 2.0  # Build to climax
+          # Intent will increase: flam*1.3, drag*1.5
+          choke_rate: 0.3
+          flam_rate: 0.2
+          drag_rate: 0.15
+
+  # Section 5: Chorus with "open" intent
+  # Ride cymbal instead of hats, spacious feel
+  chorus_open:
+    type: chorus
+    bars: 4
+    intent: open  # NEW: Intent parameter
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 0.5
+          phrase_len_bars: 4
+          fill_length: "medium"
+          kick_syncopation_rate: 0.2
+          # Intent will reduce chokes: choke*0.3
+          choke_rate: 0.3
+          flam_rate: 0.2
+          drag_rate: 0.15
+
+  # Section 6: Bridge with "stomp" intent
+  # Heavy kick pattern, minimal cymbals, powerful backbeat
+  # Creates aggressive, driving feel
+  bridge_stomp:
+    type: bridge
+    bars: 4
+    intent: stomp  # NEW: Intent parameter
+    harmony:
+      progression: "VI III VII i"
+    instruments:
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 0.5
+          phrase_len_bars: 4
+          fill_length: "short"
+          # Intent will increase all: choke*1.5, flam*1.4, drag*1.2
+          choke_rate: 0.3
+          flam_rate: 0.2
+          drag_rate: 0.15
+
+  # Section 7: Normal chorus (no intent, for comparison)
+  chorus_baseline:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "i VI III VII"
+    instruments:
+      drums:
+        intensity: 0.9
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 4
+          fill_length: "medium"
+          kick_syncopation_rate: 0.3
+          kick_double_kick_rate: 0.2
+
+  # Section 8: Breakdown with "drop" intent
+  # Shows drop intent in different context (breakdown vs bridge)
+  breakdown_drop:
+    type: breakdown
+    bars: 4
+    intent: drop  # NEW: Intent parameter
+    harmony:
+      progression: "i"
+    instruments:
+      drums:
+        intensity: 0.4
+        params:
+          fill_rate: 0.0  # No fills for stark contrast
+          phrase_len_bars: 4
+
+  # Section 9: Outro with "build" into final hit
+  # Demonstrates build leading to climax
+  outro_build:
+    type: outro
+    bars: 8
+    intent: build  # NEW: Intent parameter
+    harmony:
+      progression: "i VI III VII i VI III i"
+    instruments:
+      drums:
+        intensity: 1.0
+        params:
+          fill_rate: 1.0
+          phrase_len_bars: 2
+          fill_length: "long"
+          phrase_end_emphasis: 3.0  # Huge build to ending
+
+arrangement:
+  - verse_baseline          # Normal verse (baseline)
+  - bridge_drop             # Drop intent: reduced density
+  - bridge_half_time        # Half-time intent: snare on beat 3 only
+  - verse_baseline          # Back to normal
+  - bridge_build            # Build intent: increasing energy
+  - chorus_open             # Open intent: ride cymbal, spacious
+  - bridge_stomp            # Stomp intent: heavy kicks, powerful
+  - chorus_baseline         # Normal chorus for comparison
+  - breakdown_drop          # Drop intent in breakdown context
+  - outro_build             # Build intent leading to climax

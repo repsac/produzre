@@ -1,0 +1,165 @@
+# Blues Rock - Full Arrangement
+#
+# Complete blues rock jam with a 12-bar verse form, turnarounds,
+# and a searing guitar solo section. Greasy shuffled groove throughout.
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Crossroads Revisited"
+  bpm: 115
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: blues_rock
+  seed: 402
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["I", "I", "V", "IV"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.6
+
+  verse_1:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.4
+        extra:
+          rest_probability: 0.5
+          contour_style: "stepwise"
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.85
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.85
+      lead_gtr:
+        intensity: 0.6
+        extra:
+          rest_probability: 0.3
+
+  verse_2:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.75
+
+  solo:
+    type: solo
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.6
+      lead_gtr:
+        intensity: 1.0
+        solo: true
+        extra:
+          phrase_len_bars: 4
+          contour_style: "leaping"
+          rest_probability: 0.05
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["IV", "V", "I", "vi", "IV", "V", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+        extra:
+          sustain_mode: true
+          sustain_duration: 2.0
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["V", "IV", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+
+arrangement:
+  - intro
+  - verse_1
+  - chorus
+  - verse_2
+  - chorus
+  - solo
+  - bridge
+  - chorus
+  - outro

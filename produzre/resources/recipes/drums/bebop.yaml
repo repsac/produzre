@@ -1,0 +1,42 @@
+id: bebop
+instrument: drums
+tags:
+  genre: bebop
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+  bpm_range:
+  - 82
+  - 260
+groove:
+  hat_mode: quarter
+  use_ride: true
+  kick_base:
+  - 0
+  - 4
+  - 8
+  - 12
+  - 15
+  kick_extra_rate: 0.03
+  double_kick_rate: 0.0
+  snare_backbeat_steps:
+  - 3
+  - 4
+  - 11
+  - 15
+  ghost_rate: 0.15
+  ghost_steps:
+  - 0
+  - 7
+  - 8
+  - 9
+  - 12
+  - 13
+  open_hat_rate: 0.01
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  swing: 0.1
+  fill_rate: 0.25
+voices: {}

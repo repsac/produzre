@@ -1,0 +1,51 @@
+# Punk Recipe Showcase
+# High-density driving bass (0.82), straight timing, large leaps.
+# MIDI analysis: punk bass 13.1 notes/bar, 7.35 avg leap, 49% syncopation.
+
+version: 1
+
+song:
+  title: "Punk Recipe Showcase"
+  bpm: 175
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: "punk rock"
+  seed: 5008
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "III", "VII"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "i"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - chorus

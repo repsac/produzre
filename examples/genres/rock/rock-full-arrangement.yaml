@@ -1,0 +1,219 @@
+# Rock Full Arrangement - Advanced Example
+#
+# Complete rock song with full arrangement demonstrating:
+# - genre: rock activates all recipe-driven instruments
+# - Section-level overrides refine the recipe defaults
+# - Lead guitar with verse fills and a dedicated guitar solo
+# - Bridge contrast, breakdown, and dynamic pacing
+# - Orchestration rules: solo support reduces rhythm during solo
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Rock Anthem"
+  bpm: 140
+  key: G
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 600
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: "rock"
+  bass:
+    params:
+      articulation_style: "pick"
+      lock_to_kick: 0.7
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+      lead_gtr:
+        intensity: 0.4
+        extra:
+          rest_probability: 0.5
+          contour_style: "stepwise"
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 0.5
+        extra:
+          rest_probability: 0.4
+          phrase_len_bars: 2
+
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony:
+      progression: ["VI", "VII", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "VII", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+      lead_gtr:
+        intensity: 0.7
+        extra:
+          rest_probability: 0.25
+          contour_style: "balanced"
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.75
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.75
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["III", "VII", "VI", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+        params:
+          rhythm_pattern: "syncopated"
+      rhythm_gtr:
+        intensity: 0.85
+        extra:
+          sustain_mode: true
+          sustain_duration: 3.0
+
+  solo:
+    type: solo
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.9
+      drums:
+        intensity: 0.9
+      bass:
+        intensity: 0.9
+      rhythm_gtr:
+        intensity: 0.7
+      lead_gtr:
+        intensity: 1.0
+        solo: true
+        extra:
+          phrase_len_bars: 4
+          contour_style: "leaping"
+          resolution_strength: 0.7
+          rest_probability: 0.05
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.8
+        extra:
+          style: "chugs"
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+        extra:
+          sustain_mode: true
+          sustain_duration: 4.0
+
+arrangement:
+  - intro
+  - verse_1
+  - prechorus
+  - chorus
+  - verse_2
+  - prechorus
+  - chorus
+  - bridge
+  - solo
+  - breakdown
+  - chorus
+  - outro

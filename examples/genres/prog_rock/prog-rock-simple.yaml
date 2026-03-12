@@ -1,0 +1,46 @@
+# Prog Rock - Simple Example
+#
+# Progressive rock with complex harmony and driving energy. Uses
+# chromatic and modal interchange chords for a sophisticated sound.
+# genre: prog_rock activates intricate drum patterns and technical
+# bass lines.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Event Horizon"
+  bpm: 140
+  key: "F#"
+  mode: minor
+  meter: "4/4"
+  genre: prog_rock
+  seed: 801
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  movement:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "III", "iv", "V", "i", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.8
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.8
+      rhythm_gtr:
+        intensity: 0.8
+
+arrangement:
+  - movement
+  - movement

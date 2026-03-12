@@ -1,0 +1,49 @@
+# Dance Pop Recipe Showcase
+# Four-on-the-floor energy with pop-friendly bass.
+
+version: 1
+
+song:
+  title: "Dance Pop Recipe Showcase"
+  bpm: 122
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: "dance-pop"
+  seed: 5028
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "V", "vi", "IV"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.85 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.7 }
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "vi", "V"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 0.9 }
+
+arrangement:
+  - verse
+  - chorus
+  - verse
+  - chorus

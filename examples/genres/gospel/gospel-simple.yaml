@@ -1,0 +1,44 @@
+# Simple Gospel - Beginner Example
+#
+# Soulful gospel in C major with warm, uplifting harmonies.
+# Major key brightness with classic gospel chord movement.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Joyful Morning"
+  bpm: 100
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: gospel
+  seed: 600
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "IV", "I", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.65
+
+arrangement:
+  - verse
+  - verse

@@ -1,0 +1,44 @@
+# Simple Latin - Beginner Example
+#
+# Rhythmic latin groove in A minor with syncopated feel.
+# Emphasizes rhythmic drive and minor key intensity.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Fuego"
+  bpm: 105
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: latin
+  seed: 900
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  groove:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "V7", "i"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - groove
+  - groove

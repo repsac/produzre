@@ -1,0 +1,101 @@
+version: 1
+song:
+  title: "HatsDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  extreme_hats:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.7
+        extra:
+          voices:
+            hats:
+              # Pattern - full density on all 16th notes
+              pattern:
+                rate: 1.0
+                placements: ["1", "1&", "2", "2&", "3", "3&", "4", "4&"]
+
+              # Open hats - all eligible steps become open
+              open:
+                rate: 1.0
+                placements: ["2&", "4&"]  # Offbeats only
+
+              # Pedal hats - every backbeat
+              pedal:
+                rate: 1.0
+                placements: ["2", "4"]
+
+              # Accents - maximum boost to make them stand out
+              accents:
+                rate: 1.0
+                placements: ["1", "3"]  # Downbeats
+                boost: 30
+                bias: -15
+
+              # Velocity - reduce base to make accents more obvious
+              velocity:
+                bias: -20
+
+  mixed_hats:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        extra:
+          voices:
+            hats:
+              # Pattern - sparse on 8th notes
+              pattern:
+                rate: 0.8
+                placements: ["1", "2", "3", "4"]
+
+              # Open hats - moderate, bar-end pickup
+              open:
+                rate: 0.5
+                placements: ["4&"]
+
+              # Pedal hats - occasional
+              pedal:
+                rate: 0.5
+                placements: ["2", "4"]
+
+              # Accents - moderate boost
+              accents:
+                rate: 0.6
+                placements: ["2&", "4&"]
+                boost: 15
+                bias: -5
+
+              # Velocity - slight reduction
+              velocity:
+                bias: -5
+
+arrangement:
+  - extreme_hats
+  - mixed_hats

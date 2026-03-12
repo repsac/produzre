@@ -1,0 +1,35 @@
+# Funk (straight feel) drum recipe
+# Syncopated kick, busy 16th hats, active ghost notes
+
+id: funk_straight
+instrument: drums
+tags:
+  genre: funk
+  feel: straight
+  time_signature: "4/4"
+  section_types: [verse, chorus, breakdown]
+  bpm_range: [80, 120]
+
+groove:
+  hat_mode: "16th"
+  kick_base: [0, 6, 10]
+  kick_extra_rate: 0.35
+  double_kick_rate: 0.0
+  snare_backbeat_steps: [4, 12]
+  ghost_rate: 0.55
+  ghost_steps: [2, 6, 7, 9, 14]
+  open_hat_rate: 0.30
+  crash_start: false
+  crash_phrase_end_rate: 0.6
+
+params:
+  fill_rate: 0.25
+  swing: 0.10
+
+voices:
+  kick:
+    syncopation: {rate: 0.35}
+  snare:
+    ghosts: {rate: 0.55}
+  hats:
+    accents: {rate: 0.35}

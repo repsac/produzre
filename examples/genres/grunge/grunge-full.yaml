@@ -1,0 +1,162 @@
+# Grunge - Full Arrangement
+#
+# Complete grunge song with the classic quiet-verse / loud-chorus
+# dynamic. Verses pull back to clean, moody territory before
+# exploding into distorted, aggressive choruses.
+#
+# Complexity: ADVANCED (full arrangement, section-level overrides)
+
+version: 1
+
+song:
+  title: "Undertow"
+  bpm: 120
+  key: "C#"
+  mode: minor
+  meter: "4/4"
+  genre: grunge
+  seed: 902
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "pick"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["i", "iv", "III", "VI"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.4
+      rhythm_gtr:
+        intensity: 0.3
+
+  verse_1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "III", "VI"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+      lead_gtr:
+        intensity: 0.3
+        extra:
+          rest_probability: 0.6
+          contour_style: "stepwise"
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["VI", "III", "VII", "i"]
+    instruments:
+      harmony:
+        intensity: 1.0
+      drums:
+        intensity: 1.0
+      bass:
+        intensity: 1.0
+      rhythm_gtr:
+        intensity: 1.0
+      lead_gtr:
+        intensity: 0.7
+        extra:
+          rest_probability: 0.2
+          contour_style: "balanced"
+
+  verse_2:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "III", "VI"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.45
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["iv", "VI", "III", "VII"]
+    instruments:
+      harmony:
+        intensity: 0.6
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.5
+        extra:
+          sustain_mode: true
+          sustain_duration: 3.0
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "i"]
+    instruments:
+      harmony:
+        intensity: 0.4
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.6
+      rhythm_gtr:
+        intensity: 0.7
+        extra:
+          style: "chugs"
+
+  outro:
+    type: outro
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "III", "VI"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.5
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+
+arrangement:
+  - intro
+  - verse_1
+  - chorus
+  - verse_2
+  - chorus
+  - bridge
+  - breakdown
+  - chorus
+  - outro

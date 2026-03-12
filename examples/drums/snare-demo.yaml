@@ -1,0 +1,91 @@
+version: 1
+song:
+  title: "SnareDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse_crossstick:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I vi IV V"
+    instruments:
+      drums:
+        intensity: 0.4
+        extra:
+          voices:
+            snare:
+              # Crossstick articulation for verse
+              articulation:
+                default: crossstick
+
+              # Light ghost notes
+              ghosts:
+                rate: 0.3
+                placements: ["2&", "4&"]
+                velocity_bias: -5  # Slightly softer ghosts
+
+  chorus_rimshot:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        extra:
+          voices:
+            snare:
+              # Rimshot articulation for powerful chorus
+              articulation:
+                default: rimshot
+
+              # Fewer, louder ghosts
+              ghosts:
+                rate: 0.15
+                placements: ["2e"]  # Just before beat 2
+                velocity_bias: 5  # Slightly louder ghosts to cut through
+
+  bridge_normal:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "IV I V vi"
+    instruments:
+      drums:
+        intensity: 0.6
+        extra:
+          voices:
+            snare:
+              # Normal articulation (no override)
+              # articulation:
+              #   default: normal
+
+              # Moderate ghost activity
+              ghosts:
+                rate: 0.5
+                placements: ["1&", "2&", "3&", "4&"]
+                velocity_bias: -8  # Softer for dynamic contrast
+
+arrangement:
+  - verse_crossstick
+  - chorus_rimshot
+  - bridge_normal

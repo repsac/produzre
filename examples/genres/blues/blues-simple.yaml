@@ -1,0 +1,43 @@
+# Simple Blues - Beginner Example
+#
+# A 12-bar blues with genre: blues activating shuffle drum recipe,
+# blues rhythm guitar recipe, and blues harmony progressions.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Simple Blues"
+  bpm: 90
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: blues
+  seed: 100
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  blues_12bar:
+    type: verse
+    bars: 12
+    harmony:
+      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "I"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.7
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.7
+
+arrangement:
+  - blues_12bar

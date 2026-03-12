@@ -1,0 +1,34 @@
+id: linear
+instrument: drums
+tags:
+  genre: linear
+  time_signature: 4/4
+  section_types:
+  - verse
+  - chorus
+groove:
+  hat_mode: quarter
+  use_ride: false
+  kick_base:
+  - 0
+  - 8
+  kick_extra_rate: 0.13
+  double_kick_rate: 0.12
+  snare_backbeat_steps:
+  - 4
+  - 12
+  ghost_rate: 0.13
+  ghost_steps:
+  - 3
+  - 6
+  - 7
+  - 8
+  - 11
+  - 14
+  open_hat_rate: 0.02
+  crash_start: false
+  crash_phrase_end_rate: 0.0
+params:
+  swing: 0.1
+  fill_rate: 0.15
+voices: {}

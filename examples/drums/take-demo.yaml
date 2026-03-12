@@ -1,0 +1,79 @@
+version: 1
+song:
+  title: "TakeDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  take: 0  # Change this to 1, 2, 3... for different but reproducible variations
+  variation: 0.0
+  humanize_velocity: 0.05
+  humanize_timing: 0.02
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # This section demonstrates deterministic RNG behavior with takes
+  # Run with take=0, then take=1, then take=2 to see different variations
+  # Each take produces different outputs but is reproducible
+  verse_take_test:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          # Ghost notes are placed probabilistically
+          # Different takes = different ghost placements
+          # Same take = identical ghost placements every run
+          ghost_rate: 0.3
+
+          # Fill placement also uses RNG
+          fill_rate: 0.8
+          phrase_len_bars: 4
+          fill_length: "medium"
+
+          # Kick syncopation uses RNG for placement
+          kick_syncopation_rate: 0.25
+
+          # Open hat placement uses RNG
+          hats_open_rate: 0.2
+          hats_accent_rate: 0.3
+
+  # Chorus with higher intensity to show take variation
+  chorus_take_test:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: "I V vi IV I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.9
+        params:
+          ghost_rate: 0.4
+          fill_rate: 1.0
+          phrase_len_bars: 2
+          fill_length: "long"
+          kick_syncopation_rate: 0.35
+          kick_double_kick_rate: 0.25
+          hats_open_rate: 0.35
+          hats_accent_rate: 0.5
+          crash_rate: 0.75
+
+arrangement:
+  - verse_take_test
+  - chorus_take_test
+  - verse_take_test
+  - chorus_take_test

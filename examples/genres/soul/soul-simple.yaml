@@ -1,0 +1,44 @@
+# Simple Soul - Beginner Example
+#
+# Warm, groove-oriented soul in Eb major. Smooth rhythm section
+# with rich chord voicings and a laid-back feel.
+#
+# Complexity: SIMPLE (1 section, minimal configuration)
+
+version: 1
+
+song:
+  title: "Warm Soul"
+  bpm: 85
+  key: Eb
+  mode: major
+  meter: "4/4"
+  genre: soul
+  seed: 400
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["I", "vi7", "ii7", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.6
+
+arrangement:
+  - verse
+  - verse

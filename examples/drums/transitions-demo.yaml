@@ -1,0 +1,121 @@
+version: 1
+song:
+  title: "TransitionsDemo"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 42
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+  pattern_bars: 2
+  pattern_merge_repeats: true
+  pattern_merge_max: 4
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  # Verse - sparse, simple groove
+  verse_intro:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+        params:
+          # Transition params (defaults)
+          pickup_rate: 0.7      # 70% chance of pickup before section change
+          downbeat_rate: 0.8    # 80% chance of downbeat crash on section change
+
+  # Chorus - fuller, more energetic
+  # Expect: downbeat crash + kick on first beat (verse→chorus transition)
+  chorus:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 0.6
+
+  # Verse - back to sparse
+  # Expect: pickup snare roll at end of previous chorus, downbeat crash on first beat
+  verse_return:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+
+  # Bridge - different feel
+  # Expect: pickup before this section
+  bridge:
+    type: bridge
+    bars: 4
+    harmony:
+      progression: "vi IV I V"
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          fill_rate: 0.4
+
+  # Chorus with no pickup
+  # Expect: NO pickup at end (pickup_rate=0), but downbeat crash on next section
+  chorus_no_pickup:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          pickup_rate: 0.0    # Disable pickups
+
+  # Verse with no downbeat
+  # Expect: NO downbeat crash (downbeat_rate=0)
+  verse_no_downbeat:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      drums:
+        intensity: 0.5
+        params:
+          downbeat_rate: 0.0  # Disable downbeat punctuation
+
+  # Final chorus - same type as previous, so no transition effects
+  chorus_final:
+    type: chorus
+    bars: 4
+    harmony:
+      progression: "I V vi IV"
+    instruments:
+      drums:
+        intensity: 0.8
+        params:
+          fill_rate: 0.8
+
+arrangement:
+  - verse_intro
+  - chorus           # verse→chorus: pickup + downbeat
+  - verse_return     # chorus→verse: pickup + downbeat
+  - bridge           # verse→bridge: pickup + downbeat
+  - chorus_no_pickup # bridge→chorus: downbeat (no pickup disabled)
+  - verse_no_downbeat # chorus→verse: pickup (no downbeat disabled)
+  - chorus_final     # verse→chorus: pickup + downbeat

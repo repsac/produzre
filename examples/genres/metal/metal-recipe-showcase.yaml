@@ -1,0 +1,62 @@
+# Metal Recipe Showcase
+# High-density driving bass (0.95), large octave jumps, tight kick lock.
+# MIDI analysis: metal bass averages 15.7 notes/bar — the busiest genre.
+
+version: 1
+
+song:
+  title: "Metal Recipe Showcase"
+  bpm: 155
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: metal
+  seed: 5002
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  riff:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VI", "VII", "i"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony:
+      progression: ["i", "VII"]
+    instruments:
+      harmony: { intensity: 0.9 }
+      drums: { intensity: 0.9 }
+      bass: { intensity: 0.9 }
+      rhythm_gtr: { intensity: 0.9 }
+
+  solo:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "iv", "VI", "VII"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 1.0 }
+
+arrangement:
+  - riff
+  - riff
+  - breakdown
+  - solo
+  - riff

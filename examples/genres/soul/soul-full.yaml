@@ -1,0 +1,116 @@
+# Soul Full Arrangement - Intermediate Example
+#
+# Rich soul arrangement in Ab major with II-V-I progressions,
+# diminished passing chords, and smooth dynamic builds. Bass uses
+# finger articulation for a warm, round tone throughout.
+#
+# Complexity: INTERMEDIATE (verse-chorus with bridge and dynamics)
+
+version: 1
+
+song:
+  title: "Golden Hour"
+  bpm: 90
+  key: Ab
+  mode: major
+  meter: "4/4"
+  genre: soul
+  seed: 450
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+instruments:
+  bass:
+    params:
+      articulation_style: "finger"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony:
+      progression: ["Imaj7", "vi7"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+
+  verse:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["Imaj7", "vi7", "ii7", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.7
+      drums:
+        intensity: 0.65
+      bass:
+        intensity: 0.7
+      rhythm_gtr:
+        intensity: 0.65
+
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["IV", "V7", "iii7", "vi7", "ii7", "V7", "Imaj7", "Imaj7"]
+    instruments:
+      harmony:
+        intensity: 0.85
+      drums:
+        intensity: 0.8
+      bass:
+        intensity: 0.85
+      rhythm_gtr:
+        intensity: 0.8
+
+  bridge:
+    type: bridge
+    bars: 8
+    harmony:
+      progression: ["IVmaj7", "#ivdim7", "V7", "iii7", "vi7", "ii7", "V7", "V7"]
+    instruments:
+      harmony:
+        intensity: 0.75
+      drums:
+        intensity: 0.6
+      bass:
+        intensity: 0.75
+      rhythm_gtr:
+        intensity: 0.6
+
+  outro:
+    type: outro
+    bars: 4
+    harmony:
+      progression: ["ii7", "V7", "Imaj7", "Imaj7"]
+    instruments:
+      harmony:
+        intensity: 0.5
+      drums:
+        intensity: 0.4
+      bass:
+        intensity: 0.5
+      rhythm_gtr:
+        intensity: 0.4
+
+arrangement:
+  - intro
+  - verse
+  - chorus
+  - verse
+  - chorus
+  - bridge
+  - chorus
+  - outro

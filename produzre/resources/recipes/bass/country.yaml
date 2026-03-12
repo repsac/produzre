@@ -1,0 +1,25 @@
+id: country
+instrument: bass
+tags:
+  genre: "country"
+  time_signature: "4/4"
+  bpm_range: [82, 153]
+  section_types: [verse, chorus, bridge, default]
+params:
+  density: 0.43
+  rhythm_pattern: "push"
+  articulation_style: "finger"
+  register_low: 28
+  register_high: 52
+  approach_rate: 0.28
+  chromatic_rate: 0.08
+  max_passing_per_bar: 2
+  octave_jump_rate: 0.22
+  fifth_jump_rate: 0.15
+  rest_rate: 0.26
+  root_bias: 0.67
+  motion_style: "mixed"
+  swing: 0.06
+  lock_to_kick: 0.47
+  accent_strength: 1.29
+  syncopation: 0.41

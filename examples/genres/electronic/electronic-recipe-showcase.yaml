@@ -1,0 +1,50 @@
+# Electronic Recipe Showcase
+# High density, off-beat emphasis, large leaps.
+# MIDI analysis: electronic bass 11.23 notes/bar, 58% syncopation, 42% on-beat.
+
+version: 1
+
+song:
+  title: "Electronic Recipe Showcase"
+  bpm: 128
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: electronic
+  seed: 5012
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: ["events", "grid", "tab"]
+    subdiv: 16
+
+sections:
+  build:
+    type: verse
+    bars: 8
+    harmony:
+      progression: ["i", "VII", "VI", "VII"]
+    instruments:
+      harmony: { intensity: 0.8 }
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.8 }
+      rhythm_gtr: { intensity: 0.7 }
+
+  drop:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: ["i", "i", "VII", "VII"]
+    instruments:
+      harmony: { intensity: 1.0 }
+      drums: { intensity: 1.0 }
+      bass: { intensity: 1.0 }
+      rhythm_gtr: { intensity: 0.9 }
+
+arrangement:
+  - build
+  - drop
+  - build
+  - drop
