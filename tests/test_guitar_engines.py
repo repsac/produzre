@@ -150,3 +150,58 @@ class TestGuitarPersonas:
             assert ic is not None, f"No instrument config for {inst}"
             extra = getattr(ic, "extra", None) or (ic.get("params") if isinstance(ic, dict) else None)
             assert extra, f"No persona params in instrument config for {inst}"
+
+
+class TestDevelopBarPattern:
+    """Unit tests for rhythm guitar phrase-level pattern development."""
+
+    def _make_pattern(self):
+        from produzre.engine.rhythm_gtr.types import GtrPattern
+        return GtrPattern(
+            name="test_base",
+            subdivision=4,
+            hits=[0, 4, 8, 12],
+            accents=[0, 8],
+            palm_mutes=[],
+            strum_directions=["down", "up", "down", "up"],
+            density=0.5,
+        )
+
+    def test_returns_valid_pattern(self):
+        import random as rng_mod
+        from produzre.engine.rhythm_gtr.rhythm import develop_bar_pattern
+        pattern = self._make_pattern()
+        result = develop_bar_pattern(
+            pattern, bar_idx=3, total_bars=8, phrase_len_bars=4,
+            section_type="verse", density=0.5, beats_per_bar=4.0,
+            rng=rng_mod.Random(42),
+        )
+        assert hasattr(result, "hits")
+        assert hasattr(result, "accents")
+        assert len(result.hits) > 0
+
+    def test_phrase_end_adds_hits(self):
+        import random as rng_mod
+        from produzre.engine.rhythm_gtr.rhythm import develop_bar_pattern
+        pattern = self._make_pattern()
+        results_lens = []
+        for seed in range(30):
+            result = develop_bar_pattern(
+                pattern, bar_idx=3, total_bars=8, phrase_len_bars=4,
+                section_type="verse", density=0.7, beats_per_bar=4.0,
+                rng=rng_mod.Random(seed),
+            )
+            results_lens.append(len(result.hits))
+        assert max(results_lens) > len(pattern.hits), "Phrase ends should sometimes add hits"
+
+    def test_accents_subset_of_hits(self):
+        import random as rng_mod
+        from produzre.engine.rhythm_gtr.rhythm import develop_bar_pattern
+        pattern = self._make_pattern()
+        for bar_idx in range(8):
+            result = develop_bar_pattern(
+                pattern, bar_idx=bar_idx, total_bars=8, phrase_len_bars=4,
+                section_type="bridge", density=0.6, beats_per_bar=4.0,
+                rng=rng_mod.Random(bar_idx),
+            )
+            assert set(result.accents).issubset(set(result.hits))

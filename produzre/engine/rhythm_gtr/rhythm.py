@@ -85,6 +85,93 @@ def build_bar_pattern(
     return pattern
 
 
+def develop_bar_pattern(
+    pattern: GtrPattern,
+    *,
+    bar_idx: int,
+    total_bars: int,
+    phrase_len_bars: int = 4,
+    section_type: str = "verse",
+    density: float = 0.5,
+    beats_per_bar: float = 4.0,
+    rng: Optional[random.Random] = None,
+) -> GtrPattern:
+    """Apply phrase-level rhythm guitar variation to a one-bar pattern."""
+    if rng is None:
+        rng = random.Random()
+
+    if not pattern.hits:
+        return pattern
+
+    subdivision = int(pattern.subdivision)
+    total_slots = max(1, int(float(beats_per_bar) * subdivision))
+    phrase_len = max(1, int(phrase_len_bars))
+    phrase_pos = bar_idx % phrase_len
+    is_phrase_end = phrase_pos == phrase_len - 1 or bar_idx == total_bars - 1
+    is_section_end = bar_idx == total_bars - 1
+
+    hits = set(int(h) for h in pattern.hits if 0 <= int(h) < total_slots)
+    accents = set(int(a) for a in pattern.accents if int(a) in hits)
+    palm_mutes = set(int(pm) for pm in pattern.palm_mutes if int(pm) in hits)
+
+    # Leave air after phrase starts, especially in verses and lower-density parts.
+    if phrase_pos == 1 and density < 0.75:
+        removable = [h for h in sorted(hits) if h != 0 and (h % subdivision) != 0]
+        for h in removable:
+            if rng.random() < (0.18 + (0.20 * (1.0 - min(1.0, density)))):
+                hits.discard(h)
+                accents.discard(h)
+                palm_mutes.discard(h)
+
+    # Phrase endings answer with a small pickup or syncopated push.
+    if is_phrase_end:
+        last_beat = max(0, int((beats_per_bar - 1.0) * subdivision))
+        candidates = [
+            last_beat,
+            min(total_slots - 1, last_beat + max(1, subdivision // 2)),
+            min(total_slots - 1, total_slots - 1),
+        ]
+        add_prob = 0.45 + (0.35 * min(1.0, density))
+        for h in candidates:
+            if rng.random() < add_prob:
+                hits.add(h)
+                if h >= last_beat:
+                    accents.add(h)
+
+        # Cadences often cut the last offbeat so the next downbeat lands harder.
+        if is_section_end and rng.random() < 0.45:
+            late_weak = [h for h in hits if h >= total_slots - subdivision and h not in accents]
+            if late_weak:
+                h = rng.choice(sorted(late_weak))
+                hits.discard(h)
+                palm_mutes.discard(h)
+
+    # Bridges and breakdowns should not just clone verse/chorus comping.
+    st = (section_type or "").lower()
+    if st in ("bridge", "breakdown", "solo") and total_slots > subdivision:
+        sync_hits = [
+            min(total_slots - 1, subdivision + subdivision // 2),
+            min(total_slots - 1, (2 * subdivision) + subdivision // 2),
+        ]
+        for h in sync_hits:
+            if rng.random() < 0.38 + (density * 0.25):
+                hits.add(h)
+                accents.add(h)
+
+    hits_list = sorted(hits)
+    directions = ["down" if (h % subdivision) == 0 else "up" for h in hits_list]
+
+    return GtrPattern(
+        name=f"{pattern.name}_dev{bar_idx % phrase_len}",
+        subdivision=pattern.subdivision,
+        hits=hits_list,
+        accents=sorted(a for a in accents if a in hits),
+        palm_mutes=sorted(pm for pm in palm_mutes if pm in hits),
+        strum_directions=directions,
+        density=pattern.density,
+    )
+
+
 def _choose_style_for_section(
     section_type: str,
     density: float,

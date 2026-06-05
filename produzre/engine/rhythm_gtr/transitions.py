@@ -191,6 +191,7 @@ def apply_downshift_to_pattern(
     downshift_intensity: float,
     bar_position: float,
     beats_per_bar: float,
+    rng: Optional[random.Random] = None,
 ) -> GtrPattern:
     """Apply downshift effect to a pattern (reduce density at start).
 
@@ -205,6 +206,8 @@ def apply_downshift_to_pattern(
     """
     if downshift_intensity <= 0.0 or bar_position >= 1.0:
         return pattern
+    if rng is None:
+        rng = random.Random()
 
     # Scale downshift by position (reduces from start to normal)
     scaled_intensity = downshift_intensity * (1.0 - bar_position)
@@ -230,7 +233,7 @@ def apply_downshift_to_pattern(
 
         if is_downbeat:
             hits.append(hit)
-        elif random.Random().random() < keep_probability:
+        elif rng.random() < keep_probability:
             hits.append(hit)
 
     # Reduce accents during downshift

@@ -230,7 +230,13 @@ Set in `params:` block. Genre recipes provide good defaults — only override wh
 | `swing` | 0.0-0.35 | 0.0 | Swing feel |
 | `fill_rate` | 0.0-0.6 | 0.2 | Fill probability at boundaries |
 | `fill_complexity` | 0.0-1.0 | 0.3 | Fill complexity |
+| `phrase_len_bars` | 1-8 | 4 | Phrase boundary spacing for fills |
+| `section_role_variation` | true/false | false | Let section type bias bass rhythm role |
 | `chromatic_rate` | 0.0-0.3 | 0.0 | Chromatic passing tones |
+
+When `section_role_variation` is enabled and `rhythm_pattern` remains `anchor`,
+chorus/hook sections bias toward `drive`, while bridge/breakdown/solo sections
+bias toward `syncopated` motion.
 
 ### Bass Persona Quick Reference
 
@@ -261,6 +267,13 @@ Set in `params:` block.
 | `hat_density` | 0.0-1.0 | 1.0 | Hi-hat fill density |
 | `fill_rate` | 0.0-0.6 | 0.25 | Fill probability |
 | `fill_chatter` | 0.0-0.3 | 0.0 | Extra hi-hat chatter |
+| `phrase_len_bars` | 1-8 | auto | Phrase boundary spacing for fills |
+| `pickup_rate` | 0.0-1.0 | 0.7 | Transition pickup probability |
+| `downbeat_rate` | 0.0-1.0 | 0.8 | Section downbeat crash/kick probability |
+
+Transition pickups are energy-aware. Lifts into higher-energy sections can use
+longer snare, tom, kick/snare, and crash pickups; drops use shorter stop-time
+gestures.
 
 ### Drum Voice Overrides (advanced)
 
@@ -311,6 +324,8 @@ Set in `params:` or `extra:` block.
 | `palm_mute` | 0.0-1.0 | 0.06 | Palm mute probability |
 | `register` | `low`, `mid`, `high` | `mid` | Pitch register |
 | `density` | 0.0-1.0 | 0.6 | Strum frequency |
+| `phrase_len_bars` | 1-8 | 4 | Phrase cycle for bar-to-bar pattern development |
+| `phrase_development` | true/false | true | Bar-level pattern variation |
 | `swing` | 0.0-1.0 | 0.0 | Swing feel |
 | `chuck_rate` | 0.0-1.0 | 0.0 | Dead note probability |
 | `strum_ms` | 0.0-100.0 | 15.0 | Strum spread time |
@@ -344,6 +359,9 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 | `syncopation` | 0.0-1.0 | 0.0 | Off-beat emphasis |
 | `leap_probability` | 0.0-1.0 | 0.0 | Large interval jumps |
 | `register` | `low`, `mid`, `high`, `very_high`, `full` | `mid` | Melodic range |
+
+Lead guitar develops a section motif across phrases automatically, using related
+inversions, small interval changes, rhythm rotation, and final-phrase resolution.
 
 Use `solo: true` on the instrument to enable solo mode (denser playing, wider range).
 

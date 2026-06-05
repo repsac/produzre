@@ -525,12 +525,14 @@ def _render_legacy_bass(
         fill_rate = effective_params.get("fill_rate", 0.0)
         fill_complexity = effective_params.get("fill_complexity", 0.5)
         fill_avoid_drums = effective_params.get("fill_avoid_drums", 0.5)
+        phrase_length_bars = effective_params.get("phrase_len_bars", effective_params.get("phrase_length_bars", 4))
         # Phase B10: Solo / lead bass
         solo_density = effective_params.get("solo_density", 0.9)
         solo_register_high = effective_params.get("solo_register_high", 64)
         motif_repeat_rate = effective_params.get("motif_repeat_rate", 0.3)
         # Phase 4.2: Melodic motion style
         motion_style = effective_params.get("motion_style", "stepwise")
+        section_role_variation = bool(effective_params.get("section_role_variation", False))
     else:
         register_low = getattr(effective_params, "register_low", 28)
         register_high = getattr(effective_params, "register_high", 52)
@@ -562,12 +564,14 @@ def _render_legacy_bass(
         fill_rate = getattr(effective_params, "fill_rate", 0.0)
         fill_complexity = getattr(effective_params, "fill_complexity", 0.5)
         fill_avoid_drums = getattr(effective_params, "fill_avoid_drums", 0.5)
+        phrase_length_bars = getattr(effective_params, "phrase_len_bars", getattr(effective_params, "phrase_length_bars", 4))
         # Phase B10: Solo / lead bass
         solo_density = getattr(effective_params, "solo_density", 0.9)
         solo_register_high = getattr(effective_params, "solo_register_high", 64)
         motif_repeat_rate = getattr(effective_params, "motif_repeat_rate", 0.3)
         # Phase 4.2: Melodic motion style
         motion_style = getattr(effective_params, "motion_style", "stepwise")
+        section_role_variation = bool(getattr(effective_params, "section_role_variation", False))
 
     # Phase B4: Apply style-based pattern bias if rhythm_pattern wasn't explicitly set
     # (Only if user didn't override rhythm_pattern in persona or config)
@@ -577,6 +581,17 @@ def _render_legacy_bass(
     if rhythm_pattern == "anchor" and articulation_style in ("pick", "mute", "slap"):
         # User didn't override pattern, so apply style bias
         rhythm_pattern = style_pattern_bias
+
+    # Section role bias: keep verses grounded, make choruses/bridges move differently
+    # when the user has not chosen a more specific rhythm pattern.
+    section_type_lower = str(getattr(section, "type", "") or "").lower()
+    if rhythm_pattern == "anchor" and section_role_variation:
+        if section_type_lower in ("chorus", "hook", "climax") and density >= 0.35:
+            rhythm_pattern = "drive"
+            rest_rate = min(rest_rate, 0.12)
+        elif section_type_lower in ("bridge", "breakdown", "solo"):
+            rhythm_pattern = "syncopated"
+            approach_rate = max(approach_rate, 0.32)
 
     # Phase B10: Detect solo/lead bass mode and apply overrides
     is_solo_mode = False
@@ -733,7 +748,10 @@ def _render_legacy_bass(
 
     # Phase B9: Track fills and detect fill zones
     total_fills = 0
-    phrase_length_bars = 4  # Standard phrase length
+    try:
+        phrase_length_bars = max(1, int(phrase_length_bars))
+    except Exception:
+        phrase_length_bars = 4
     active_fill = None  # Stores (fill_type, notes_list, current_index) for active fill
     fill_start_bar = -1  # Bar where current fill started
     fill_start_beat = -1.0  # Phase B11: Beat where current fill started
@@ -773,63 +791,68 @@ def _render_legacy_bass(
                             next_section_chord = cs
                             break
 
-                    if next_section_chord:
+                    if next_section_chord is not None:
                         target_root = _bass_root_for_numeral(cfg, section, next_section_chord.numeral, bass_cfg)
+                    else:
+                        target_root = _bass_root_for_numeral(cfg, section, harmony_plan.chord_slots[0].numeral, bass_cfg)
 
-                        # Choose fill type based on complexity
-                        if fill_complexity < 0.33:
-                            # Simple fill: rhythmic pickup
-                            fill_type = "pickup"
-                            fill_notes = _generate_fill_rhythmic_pickup(
+                    # Choose fill type based on complexity
+                    effective_fill_complexity = fill_complexity
+                    if zone_type == "section_end":
+                        effective_fill_complexity = min(1.0, effective_fill_complexity + 0.18)
+                    if effective_fill_complexity < 0.33:
+                        # Simple fill: rhythmic pickup
+                        fill_type = "pickup"
+                        fill_notes = _generate_fill_rhythmic_pickup(
+                            current_pitch=prev_pitch or target_root,
+                            target_root=target_root,
+                            fill_complexity=effective_fill_complexity,
+                            register_low=register_low,
+                            register_high=register_high,
+                            rng=rng,
+                        )
+                    elif effective_fill_complexity < 0.66:
+                        # Medium fill: scalar run
+                        fill_type = "run"
+                        fill_notes = _generate_fill_run_to_root(
+                            current_pitch=prev_pitch or target_root,
+                            target_root=target_root,
+                            fill_complexity=effective_fill_complexity,
+                            register_low=register_low,
+                            register_high=register_high,
+                            mode_offsets=mode_offsets,
+                            key_root=key_root,
+                            rng=rng,
+                        )
+                    else:
+                        # Complex fill: octave climb or chromatic run
+                        if rng.random() < 0.5:
+                            fill_type = "octave"
+                            fill_notes = _generate_fill_octave_climb(
                                 current_pitch=prev_pitch or target_root,
-                                target_root=target_root,
-                                fill_complexity=fill_complexity,
+                                fill_complexity=effective_fill_complexity,
                                 register_low=register_low,
                                 register_high=register_high,
                                 rng=rng,
                             )
-                        elif fill_complexity < 0.66:
-                            # Medium fill: scalar run
+                        else:
                             fill_type = "run"
                             fill_notes = _generate_fill_run_to_root(
                                 current_pitch=prev_pitch or target_root,
                                 target_root=target_root,
-                                fill_complexity=fill_complexity,
+                                fill_complexity=effective_fill_complexity,
                                 register_low=register_low,
                                 register_high=register_high,
                                 mode_offsets=mode_offsets,
                                 key_root=key_root,
                                 rng=rng,
                             )
-                        else:
-                            # Complex fill: octave climb or chromatic run
-                            if rng.random() < 0.5:
-                                fill_type = "octave"
-                                fill_notes = _generate_fill_octave_climb(
-                                    current_pitch=prev_pitch or target_root,
-                                    fill_complexity=fill_complexity,
-                                    register_low=register_low,
-                                    register_high=register_high,
-                                    rng=rng,
-                                )
-                            else:
-                                fill_type = "run"
-                                fill_notes = _generate_fill_run_to_root(
-                                    current_pitch=prev_pitch or target_root,
-                                    target_root=target_root,
-                                    fill_complexity=fill_complexity,
-                                    register_low=register_low,
-                                    register_high=register_high,
-                                    mode_offsets=mode_offsets,
-                                    key_root=key_root,
-                                    rng=rng,
-                                )
 
-                        if fill_notes:
-                            active_fill = (fill_type, fill_notes, 0)  # (type, notes, current_index)
-                            fill_start_bar = bar_num
-                            fill_start_beat = local_beat  # Phase B11: Track fill start for negotiation
-                            total_fills += 1
+                    if fill_notes:
+                        active_fill = (fill_type, fill_notes, 0)  # (type, notes, current_index)
+                        fill_start_bar = bar_num
+                        fill_start_beat = local_beat  # Phase B11: Track fill start for negotiation
+                        total_fills += 1
 
         # Find the chord slot that covers this beat
         cs_for_cell = None

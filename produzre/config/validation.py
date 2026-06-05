@@ -70,6 +70,7 @@ KNOWN_RHYTHM_GTR_PARAMS = {
     "density",
     "mute",
     "contrast",
+    "phrase_development",
     "sustain_mode",  # Phase 4.3
     "sustain_duration",  # Phase 4.3
     "strum",

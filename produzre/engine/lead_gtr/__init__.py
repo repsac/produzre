@@ -51,7 +51,7 @@ from .defaults import (
 from .pitch import allowed_pitches_for_slot
 
 # Phase LG2: Motif-based phrase generation
-from .phrasing import make_motif, realize_phrase
+from .phrasing import make_motif, develop_motif, realize_phrase
 
 # Phase LG3: Rhythm-aware note placement
 from .rhythm import choose_note_starts
@@ -361,13 +361,22 @@ def render_into_timeline(
     # Phase LG2: group chord slots into phrase-length windows.
     phrases = _group_slots_by_phrase(harmony_plan.chord_slots, phrase_len_beats)
 
-    for phrase_start, phrase_end, slots_in_phrase in phrases:
+    base_motif = make_motif(section_rng, intensity)
+
+    for phrase_idx, (phrase_start, phrase_end, slots_in_phrase) in enumerate(phrases):
         phrase_beats = phrase_end - phrase_start
         if phrase_beats <= eps:
             continue
 
-        # Generate a motif for this phrase.
-        motif = make_motif(section_rng, intensity)
+        # Reuse and develop a motif across phrases so the line has identity.
+        motif = develop_motif(
+            base_motif,
+            section_rng,
+            phrase_index=phrase_idx,
+            is_final_phrase=(phrase_idx == len(phrases) - 1),
+            intensity=intensity,
+            total_phrases=len(phrases),
+        )
 
         # Collect one pitch pool per chord slot in this phrase.
         pools = []

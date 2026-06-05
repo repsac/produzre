@@ -71,6 +71,8 @@ lead_gtr/
   - `"balanced"`: Mix of steps and leaps (default)
   - `"leaping"`: Wide intervals (7-9 semitones)
 - **phrase_len_bars** (1-4): Length of repeated motifs
+  - Later phrases develop the opening motif with related contour/rhythm changes
+  - Final phrases bias the last note back toward resolution
 
 ### Harmonic Behavior
 - **resolution_strength** (0.0-1.0): Pull toward chord tones

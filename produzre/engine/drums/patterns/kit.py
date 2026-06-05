@@ -53,6 +53,17 @@ def _apply_transition_effects(
     is_first_section = transition_context.get("is_first_section", False)
     pickup_rate = float(transition_context.get("pickup_rate", 0.7))
     downbeat_rate = float(transition_context.get("downbeat_rate", 0.8))
+    current_energy = transition_context.get("current_energy")
+    prev_energy = transition_context.get("prev_energy")
+    next_energy = transition_context.get("next_energy")
+    try:
+        energy_delta_next = float(next_energy) - float(current_energy)
+    except Exception:
+        energy_delta_next = 0.0
+    try:
+        energy_delta_in = float(current_energy) - float(prev_energy)
+    except Exception:
+        energy_delta_in = 0.0
 
     new_events = list(events)
 
@@ -69,7 +80,7 @@ def _apply_transition_effects(
 
         if not has_crash_at_start:
             # Add crash on downbeat
-            crash_velocity = int(base_velocity + accent_strength * 20)
+            crash_velocity = int(base_velocity + accent_strength * 20 + abs(energy_delta_in) * 18)
             crash_velocity = max(60, min(127, crash_velocity))
             new_events.append(
                 DrumEvent(
@@ -83,7 +94,7 @@ def _apply_transition_effects(
 
         if not has_kick_at_start:
             # Add kick on downbeat for emphasis
-            kick_velocity = int(base_velocity + accent_strength * 15)
+            kick_velocity = int(base_velocity + accent_strength * 15 + abs(energy_delta_in) * 18)
             kick_velocity = max(70, min(127, kick_velocity))
             new_events.append(
                 DrumEvent(
@@ -101,24 +112,54 @@ def _apply_transition_effects(
     if (next_section_type is not None
         and next_section_type != section_type
         and rng.random() < pickup_rate):
-        # Variable pickup window: short (0.5 beat), medium (1 beat), or long (2 beats)
-        # Real drummers vary how far back they start the roll — most are short and punchy
-        pickup_lengths = [0.5, 1.0, 1.0, 1.5, 2.0]
+        # Energy lifts deserve longer fills; drops are shorter and leave space.
+        if energy_delta_next >= 0.35:
+            pickup_lengths = [1.0, 1.5, 2.0, 2.0]
+            pickup_style = rng.choice(["snare_toms", "tom_run", "kick_snare"])
+        elif energy_delta_next <= -0.25:
+            pickup_lengths = [0.5, 1.0, 1.0]
+            pickup_style = rng.choice(["snare_toms", "stop_time"])
+        else:
+            pickup_lengths = [0.5, 1.0, 1.0, 1.5, 2.0]
+            pickup_style = rng.choice(["snare_toms", "tom_run", "kick_snare"])
         pickup_length = rng.choice(pickup_lengths)
         pickup_window_start = max(0.0, total_beats - pickup_length)
 
         # 16th-note subdivisions within the window
         step_16th = sb / 4
         num_16ths = max(1, int(pickup_length / step_16th))
+        tom_cycle = [
+            pitches.get("tom_high", pitches.get("snare", 38)),
+            pitches.get("tom_mid", pitches.get("snare", 38)),
+            pitches.get("tom_low", pitches.get("snare", 38)),
+            pitches.get("snare", 38),
+        ]
 
         for i in range(num_16ths):
             pickup_beat = pickup_window_start + (i * step_16th)
             if pickup_beat >= total_beats:
                 break
 
+            if pickup_style == "stop_time" and i < num_16ths - 1:
+                # Short drop transitions: let the last hit breathe into the next section.
+                if i % 2 == 1:
+                    continue
+                pitch = pitches.get("snare", 38)
+                kind = "snare_pickup"
+            elif pickup_style == "tom_run":
+                pitch = tom_cycle[min(len(tom_cycle) - 1, int(i / max(1, num_16ths / len(tom_cycle))))]
+                kind = "tom_pickup" if pitch != pitches.get("snare", 38) else "snare_pickup"
+            elif pickup_style == "kick_snare":
+                pitch = pitches.get("kick", 36) if i % 4 in (0, 3) else pitches.get("snare", 38)
+                kind = "kick_pickup" if pitch == pitches.get("kick", 36) else "snare_pickup"
+            else:
+                pitch = tom_cycle[i % len(tom_cycle)] if i >= num_16ths // 2 else pitches.get("snare", 38)
+                kind = "tom_pickup" if pitch != pitches.get("snare", 38) else "snare_pickup"
+
             # Exponential crescendo: quiet start, loud finish
             velocity_factor = ((i + 1) / num_16ths) ** 1.6
-            pickup_velocity = int(base_velocity - 18 + velocity_factor * 28)
+            lift_boost = 8 if energy_delta_next >= 0.35 else 0
+            pickup_velocity = int(base_velocity - 18 + velocity_factor * (28 + lift_boost))
             pickup_velocity = max(45, min(127, pickup_velocity))
 
             # Micro-timing jitter: natural hand acceleration feel
@@ -128,11 +169,24 @@ def _apply_transition_effects(
                 DrumEvent(
                     beat=pickup_beat + jitter,
                     duration_beats=step_16th,
-                    pitch=pitches.get("snare", 38),
+                    pitch=pitch,
                     velocity=pickup_velocity,
-                    kind="snare_pickup",
+                    kind=kind,
                 )
             )
+
+        if energy_delta_next >= 0.35:
+            final_crash_beat = max(0.0, total_beats - step_16th)
+            if rng.random() < 0.45:
+                new_events.append(
+                    DrumEvent(
+                        beat=final_crash_beat,
+                        duration_beats=0.25,
+                        pitch=pitches.get("crash", 49),
+                        velocity=max(70, min(127, int(base_velocity + 18))),
+                        kind="crash_pickup",
+                    )
+                )
 
     return new_events
 

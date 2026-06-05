@@ -41,7 +41,7 @@ from .voicings import choose_voicing_for_section_type
 from .types import ChordShape
 
 # Phase RG2: Import pattern generation
-from .rhythm import build_bar_pattern, apply_microtiming
+from .rhythm import build_bar_pattern, develop_bar_pattern, apply_microtiming
 
 # Phase RG3: Import parameter resolution
 from .params import resolve_params, params_to_dict
@@ -680,6 +680,18 @@ def _render_pattern_based_guitar(
     # Generate patterns and events per bar
     beats_per_bar = rhythm_grid.beats_per_bar
     total_bars = int(rhythm_grid.total_beats / beats_per_bar)
+    phrase_len_bars = 4
+    phrase_development_enabled = True
+    if isinstance(extra, dict):
+        try:
+            phrase_len_bars = int(extra.get("phrase_len_bars", phrase_len_bars))
+        except Exception:
+            phrase_len_bars = 4
+        if "sustain_mode" in extra:
+            phrase_development_enabled = False
+        if extra.get("phrase_development") is False:
+            phrase_development_enabled = False
+    phrase_len_bars = max(1, phrase_len_bars)
 
     events_count = 0
 
@@ -722,6 +734,17 @@ def _render_pattern_based_guitar(
             beats_per_bar=beats_per_bar,
             rng=rng,
         )
+        if phrase_development_enabled:
+            pattern = develop_bar_pattern(
+                pattern,
+                bar_idx=bar_idx,
+                total_bars=total_bars,
+                phrase_len_bars=phrase_len_bars,
+                section_type=section.type,
+                density=params.density,
+                beats_per_bar=beats_per_bar,
+                rng=rng,
+            )
 
         # Phase RG5: Adjust pattern for transitions (builds, turnarounds, pickups)
         pattern = adjust_pattern_for_transition(

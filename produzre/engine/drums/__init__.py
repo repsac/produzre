@@ -23,6 +23,7 @@ import random
 from ...rng import make_instrument_rng, stable_seed_int
 from ...rhythm_features import extract_rhythm_features
 from ...orchestrate import EngineCoordinator
+from ...orchestrate.energy import resolve_section_energy
 from .fills import add_fills
 from .groove import groove_template, resolve_groove_id
 from .humanize import humanize_events
@@ -339,43 +340,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             log = logger if logger is not None else logging.getLogger("produzre.drums")
             log.info("Section '%s': applying intent='%s'", section_id, section_intent)
 
-    # Section energy: arrangement-level contrast for verse/chorus/bridge orchestration.
-    # Can be explicit (section.energy) or derived from section type.
-    # Values: "low", "mid", "high" or numeric 0.0-1.0
-    energy_raw = _get_attr_or_key(section, "energy", None)
-    if energy_raw is None:
-        # Auto-detect from section type
-        section_type_lower = section_type.lower()
-        if section_type_lower in ("verse", "intro", "outro"):
-            energy = 0.3  # Low energy
-        elif section_type_lower in ("chorus", "hook"):
-            energy = 0.9  # High energy
-        elif section_type_lower in ("bridge", "prechorus", "pre-chorus"):
-            energy = 0.6  # Mid energy
-        elif section_type_lower in ("solo", "breakdown"):
-            energy = 0.7  # Mid-high energy
-        else:
-            energy = 0.5  # Default
-    else:
-        # Parse explicit energy
-        if isinstance(energy_raw, str):
-            energy_str = str(energy_raw).strip().lower()
-            if energy_str == "low":
-                energy = 0.3
-            elif energy_str == "mid" or energy_str == "medium":
-                energy = 0.6
-            elif energy_str == "high":
-                energy = 0.9
-            else:
-                # Try parsing as number
-                try:
-                    energy = float(energy_raw)
-                    energy = max(0.0, min(1.0, energy))
-                except ValueError:
-                    energy = 0.5
-        else:
-            energy = float(energy_raw)
-            energy = max(0.0, min(1.0, energy))
+    energy = resolve_section_energy(_get_attr_or_key(section, "energy", None), section_type)
 
     # Per-instrument merged config (preferred) or instrument under section.instruments["drums"].
     inst = kwargs.get("instrument")

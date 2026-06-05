@@ -43,6 +43,7 @@ from .render import (
     render_section_instruments as _render_section_instruments,
     sort_used_timelines as _sort_used_timelines,
 )
+from .energy import resolve_section_energy
 from .result import BuildResult
 from .plan import plan_song, PerformancePlan, SectionMeta, PLAN_KEY_TRANSITIONS_MAP
 from .transitions import (
@@ -233,41 +234,7 @@ def build_song(
 
         section_rng = make_section_rng(project_seed, effective_song_seed, effective_take, sec_id, sec_type)
 
-        # Calculate current section energy (for lift/drop detection)
-        # This mirrors the energy detection logic in the drums engine
-        energy_raw = getattr(ps.sec, "energy", None)
-        if energy_raw is None:
-            # Auto-detect from section type
-            sec_type_lower = sec_type.lower()
-            if sec_type_lower in ("verse", "intro", "outro"):
-                current_energy = 0.3  # Low
-            elif sec_type_lower in ("chorus", "hook"):
-                current_energy = 0.9  # High
-            elif sec_type_lower in ("bridge", "prechorus", "pre-chorus"):
-                current_energy = 0.6  # Mid
-            elif sec_type_lower in ("solo", "breakdown"):
-                current_energy = 0.7  # Mid-high
-            else:
-                current_energy = 0.5  # Default
-        else:
-            # Parse explicit energy
-            if isinstance(energy_raw, str):
-                energy_str = str(energy_raw).strip().lower()
-                if energy_str == "low":
-                    current_energy = 0.3
-                elif energy_str in ("mid", "medium"):
-                    current_energy = 0.6
-                elif energy_str == "high":
-                    current_energy = 0.9
-                else:
-                    try:
-                        current_energy = float(energy_raw)
-                        current_energy = max(0.0, min(1.0, current_energy))
-                    except ValueError:
-                        current_energy = 0.5
-            else:
-                current_energy = float(energy_raw)
-                current_energy = max(0.0, min(1.0, current_energy))
+        current_energy = resolve_section_energy(getattr(ps.sec, "energy", None), sec_type)
 
         # Build transition context for section boundaries (pickups, downbeat punctuation, lifts).
         # Prev/next section types are used by engines to detect arrangement changes.
@@ -278,13 +245,23 @@ def build_song(
         if idx < total_sections - 1:
             next_section_type = getattr(plan.planned_sections[idx + 1].sec, "type", None)
 
+        next_energy = None
+        if idx < total_sections - 1:
+            next_sec = plan.planned_sections[idx + 1].sec
+            next_energy = resolve_section_energy(
+                getattr(next_sec, "energy", None),
+                str(getattr(next_sec, "type", "") or ""),
+            )
+
         transition_context = {
             "section_type": sec_type,
             "prev_section_type": prev_section_type,
             "next_section_type": next_section_type,
             "is_first_section": idx == 0,
             "is_last_section": idx == total_sections - 1,
+            "current_energy": current_energy,
             "prev_energy": prev_energy,  # For energy lift/drop detection
+            "next_energy": next_energy,
         }
 
         # Update prev_energy for next iteration

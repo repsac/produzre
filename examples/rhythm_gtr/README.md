@@ -47,6 +47,9 @@ rhythm_gtr/
   - 0.1-0.3: Sparse, open chords with space
   - 0.4-0.6: Moderate strumming
   - 0.7-1.0: Dense, driving rhythm
+- **phrase_len_bars** (1-8): Phrase cycle used for bar-to-bar development
+  - Phrase starts leave more space
+  - Phrase endings add small pickups, syncopated answers, or cadential cuts
 
 ### Voicing
 - **voicing**: Chord voicing type

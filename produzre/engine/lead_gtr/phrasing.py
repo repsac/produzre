@@ -107,6 +107,45 @@ def make_motif(rng: random.Random, intensity: float) -> Motif:
     return Motif(intervals=tuple(shape), durations=tuple(rhythm))
 
 
+def develop_motif(
+    motif: Motif,
+    rng: random.Random,
+    *,
+    phrase_index: int,
+    is_final_phrase: bool = False,
+    intensity: float = 0.5,
+    total_phrases: int = 4,
+) -> Motif:
+    """Create a related motif variation for later phrases.
+
+    Lead parts become more useful in a DAW when phrases sound like variations of
+    an idea rather than unrelated licks. This keeps the original contour but
+    applies small deterministic changes: answer phrases may invert direction,
+    final phrases tighten the last interval toward resolution, and active parts
+    can rotate the rhythm.  Later phrases in longer sections drift further.
+    """
+    if phrase_index <= 0 or not motif.intervals:
+        return motif
+
+    progress = phrase_index / max(1, total_phrases - 1)
+
+    intervals = list(motif.intervals)
+    durations = list(motif.durations)
+
+    if phrase_index % 2 == 1 and rng.random() < 0.55:
+        intervals = [0] + [-i for i in intervals[1:]]
+    elif rng.random() < 0.35 + 0.20 * progress:
+        intervals = [0] + [max(-7, min(7, i + rng.choice([-2, -1, 1, 2]))) for i in intervals[1:]]
+
+    if is_final_phrase and len(intervals) > 1:
+        intervals[-1] = 0 if rng.random() < 0.65 else (2 if intervals[-1] < 0 else -2)
+
+    if intensity > 0.65 and len(durations) > 2 and rng.random() < 0.30 + 0.20 * progress:
+        durations = durations[1:] + durations[:1]
+
+    return Motif(intervals=tuple(intervals), durations=tuple(durations))
+
+
 def _snap_to_pool(target: int, pool: PitchPool) -> int:
     """Snap target pitch to nearest tone in pool, preferring chord tones."""
     all_tones = pool.all_tones
