@@ -41,7 +41,12 @@ from .voicings import choose_voicing_for_section_type
 from .types import ChordShape
 
 # Phase RG2: Import pattern generation
-from .rhythm import build_bar_pattern, develop_bar_pattern, apply_microtiming
+from .rhythm import (
+    build_bar_pattern,
+    develop_bar_pattern,
+    apply_microtiming,
+    _apply_accents as _apply_accent_beats,
+)
 
 # Phase RG3: Import parameter resolution
 from .params import resolve_params, params_to_dict
@@ -170,34 +175,36 @@ def _apply_rhythmic_pattern(play_pattern: Optional[str], beat_in_bar: float, bas
     Minimal R2-C pattern override for rhythm placement.
 
     All patterns assume a 4/4-style beat grid where beat_in_bar increases from 0.0
-    at the bar start. These are intentionally coarse and operate at the "beat"
-    level rather than sub-beat micro-timing:
+    at the bar start:
 
-    - "gallop": emphasize beats near [0.0, 0.75, 1.0]
+    - "gallop": eighth + two sixteenths per beat → fractions 0.0, 0.5, 0.75
+      relative to each beat
     - "syncopated": emphasize offbeats [0.5, 1.5, 2.5]
-    - "offbeat": emphasize eighth-note offbeats [0.5, 1.5, 2.5, 3.5]
+    - "offbeat": emphasize eighth-note offbeats (the "and" of every beat)
     - "backbeat": emphasize 2 and 4 in 4/4 → [1.0, 3.0]
 
     Returns a modified place_note decision that can be used to override the
-    intensity-based grid selection.
+    intensity-based grid selection. Note: the legacy renderer synthesizes its
+    own sub-beat positions for these patterns (see
+    ``_pattern_positions_for_bar``) because the shared rhythm grid is usually
+    quarter-note resolution and would never contain the sub-beat targets.
     """
     if not play_pattern:
         return base_place
 
     # Small window around target beats to tolerate floating-point/grid jitter.
     tol = 0.05
+    frac = beat_in_bar % 1.0
 
     if play_pattern == "gallop":
-        gallop_beats = [0.0, 0.75, 1.0]
-        return any(abs(beat_in_bar - b) < tol for b in gallop_beats)
+        return any(abs(frac - f) < tol for f in (0.0, 0.5, 0.75)) or abs(frac - 1.0) < tol
 
     if play_pattern == "syncopated":
         syncop_beats = [0.5, 1.5, 2.5]
         return any(abs(beat_in_bar - b) < tol for b in syncop_beats)
 
     if play_pattern == "offbeat":
-        off_beats = [0.5, 1.5, 2.5, 3.5]
-        return any(abs(beat_in_bar - b) < tol for b in off_beats)
+        return abs(frac - 0.5) < tol
 
     if play_pattern == "backbeat":
         back_beats = [1.0, 3.0]
@@ -205,6 +212,35 @@ def _apply_rhythmic_pattern(play_pattern: Optional[str], beat_in_bar: float, bas
 
     # Unknown pattern: fall back to whatever the intensity logic decided.
     return base_place
+
+
+def _pattern_positions_for_bar(play_pattern: Optional[str], bpb: float) -> Optional[list]:
+    """Bar-relative hit positions (in beats) for legacy play_pattern presets.
+
+    The orchestrator rhythm grid is typically quarter-note resolution, so
+    sub-beat presets (gallop/syncopated/offbeat) can never match grid cells —
+    filtering integer-beat cells produced ZERO notes. Instead, the legacy
+    renderer synthesizes eighth/sixteenth-note positions directly per bar:
+
+    - "gallop":     0.0, 0.5, 0.75 relative to each beat (gallop rhythm)
+    - "syncopated": the "and" of every beat except the last → 0.5, 1.5, 2.5
+    - "offbeat":    the "and" of every beat → 0.5, 1.5, 2.5, 3.5
+    - "backbeat":   beats 2 and 4 (odd integer beats) → 1.0, 3.0
+
+    Returns None for unknown patterns (caller falls back to grid cells).
+    """
+    if not play_pattern:
+        return None
+    n_beats = max(1, int(bpb))
+    if play_pattern == "gallop":
+        return [b + f for b in range(n_beats) for f in (0.0, 0.5, 0.75)]
+    if play_pattern == "syncopated":
+        return [b + 0.5 for b in range(max(1, n_beats - 1))]
+    if play_pattern == "offbeat":
+        return [b + 0.5 for b in range(n_beats)]
+    if play_pattern == "backbeat":
+        return [float(b) for b in range(n_beats) if b % 2 == 1]
+    return None
 
 
 # Very simple key → MIDI root mapping for rhythm guitar (powerchord root)
@@ -261,8 +297,21 @@ def _rhythm_root_for_numeral(
 
     pitch = tonic_midi + semitone
 
-    # Octave shift based on register setting
-    register = getattr(rhythm_cfg, "register", None) if rhythm_cfg is not None else None
+    # Octave shift based on register setting. rhythm_cfg may be an
+    # InstrumentConfig-like object (legacy mode) or a plain params dict
+    # (pattern mode) — support both, including the nested 'extra' wrapper.
+    register = None
+    if rhythm_cfg is not None:
+        if isinstance(rhythm_cfg, dict):
+            register = rhythm_cfg.get("register")
+        else:
+            register = getattr(rhythm_cfg, "register", None)
+            if register is None:
+                _extra = getattr(rhythm_cfg, "extra", None)
+                if isinstance(_extra, dict):
+                    if isinstance(_extra.get("extra"), dict):
+                        _extra = _extra["extra"]
+                    register = _extra.get("register")
     if register == "high":
         pitch += 12
     elif register == "low":
@@ -411,7 +460,11 @@ def render_into_timeline(
             instrument="rhythm_gtr",
             genre=_genre,
             section_type=section.type if section else "verse",
-            intensity=instrument_cfg.intensity if instrument_cfg else 0.7,
+            intensity=(
+                (getattr(instrument_cfg, "intensity", None) if instrument_cfg else None)
+                or getattr(section, "intensity", None)
+                or 0.7
+            ),
             bpm=_bpm,
             time_signature=_meter,
             instrument_recipe=_global_recipe,
@@ -423,11 +476,14 @@ def render_into_timeline(
             _rg_recipe = _all_rg_recipes[_rg_recipe_name]
             _rp = _rg_recipe.get("params", {})
             if _rp and instrument_cfg is not None and hasattr(instrument_cfg, "extra"):
+                from ...config.recipes import merge_recipe_params as _merge_recipe_params
+
                 _existing = instrument_cfg.extra or {}
                 if isinstance(_existing, dict) and "extra" in _existing:
                     _existing = _existing["extra"]
                 if isinstance(_existing, dict):
-                    _merged = {**_rp, **_existing}
+                    # persona < recipe < user (see merge_recipe_params)
+                    _merged = _merge_recipe_params(_existing, _rp)
                     _merged.setdefault("use_patterns", True)
                     instrument_cfg.extra = _merged
 
@@ -599,7 +655,13 @@ def _render_pattern_based_guitar(
     if isinstance(extra, dict) and 'extra' in extra:
         extra = extra['extra']
 
-    raw_intensity = instrument_cfg.intensity if instrument_cfg is not None else 0.7
+    raw_intensity = getattr(instrument_cfg, "intensity", None) if instrument_cfg is not None else None
+    if raw_intensity is None:
+        # Macro-dynamics: fall back to the section's resolved intensity
+        # (orchestrate.plan.resolve_section_intensity) before the default.
+        raw_intensity = getattr(section, "intensity", None)
+    if raw_intensity is None:
+        raw_intensity = 0.7
     params = resolve_params(
         section_type=section.type,
         intensity=raw_intensity,
@@ -619,8 +681,17 @@ def _render_pattern_based_guitar(
     base_velocity = int(75 * intensity * (1.0 + params.accent_strength * 0.3))
     base_velocity = max(1, min(127, base_velocity))
 
-    # Get rhythm_cfg for root computation
-    rhythm_cfg = extra
+    # Root computation config: wire the resolved register through pattern
+    # mode so the `register` param actually shifts the chord roots.
+    rhythm_cfg = {"register": params.register}
+
+    # Song tempo for ms→beats conversions (strum spread).
+    song_bpm = 120.0
+    if cfg is not None and getattr(cfg, "song", None) is not None:
+        try:
+            song_bpm = float(getattr(cfg.song, "bpm", 120.0) or 120.0)
+        except Exception:
+            song_bpm = 120.0
 
     # Phase RG1: Pre-generate chord voicings for all harmony slots
     # Now delegates to shared instruments library for physically playable shapes
@@ -695,24 +766,15 @@ def _render_pattern_based_guitar(
 
     events_count = 0
 
+    # Phase 1.4: strum_style guides auto style selection when style isn't pinned
+    effective_style = params.style
+    if params.strum_style != "balanced" and effective_style == "auto":
+        effective_style = params.strum_style  # e.g. "downbeat_heavy" → straight_8s via mapping in rhythm.py
+
+    base_pattern = None
+
     for bar_idx in range(total_bars):
         bar_start_beat = bar_idx * beats_per_bar
-
-        # Find which chord is active in this bar
-        active_chord_slot = None
-        for chord_slot in harmony_plan.chord_slots:
-            if chord_slot.start_beat <= bar_start_beat < chord_slot.end_beat:
-                active_chord_slot = chord_slot
-                break
-
-        if active_chord_slot is None:
-            continue
-
-        # Get the voicing for this chord
-        voicing_key = f"{active_chord_slot.numeral}_{active_chord_slot.index}"
-        voicing = chord_voicings.get(voicing_key)
-        if voicing is None or not voicing.pitches:
-            continue
 
         # Get accent beats for this bar
         bar_accents = [
@@ -721,19 +783,24 @@ def _render_pattern_based_guitar(
             if bar_start_beat <= beat < bar_start_beat + beats_per_bar
         ]
 
-        # Generate pattern for this bar (Phase RG3: use resolved params)
-        # Phase 1.4: strum_style guides auto style selection when style isn't pinned
-        effective_style = params.style
-        if params.strum_style != "balanced" and effective_style == "auto":
-            effective_style = params.strum_style  # e.g. "downbeat_heavy" → straight_8s via mapping in rhythm.py
-        pattern = build_bar_pattern(
-            section_type=section.type,
-            style=effective_style,
-            density=params.density,
-            accent_beats=bar_accents,
-            beats_per_bar=beats_per_bar,
-            rng=rng,
-        )
+        # Build the phrase's base pattern ONCE per phrase (at phrase
+        # boundaries) and reuse it across the phrase, so phrases
+        # repeat-and-develop instead of re-randomizing every bar.
+        if base_pattern is None or (bar_idx % phrase_len_bars) == 0:
+            base_pattern = build_bar_pattern(
+                section_type=section.type,
+                style=effective_style,
+                density=params.density,
+                accent_beats=None,
+                beats_per_bar=beats_per_bar,
+                rng=rng,
+            )
+        pattern = base_pattern
+
+        # Per-bar drum accents are applied on top of the shared base pattern.
+        if bar_accents:
+            pattern = _apply_accent_beats(pattern, bar_accents, beats_per_bar)
+
         if phrase_development_enabled:
             pattern = develop_bar_pattern(
                 pattern,
@@ -762,6 +829,22 @@ def _render_pattern_based_guitar(
             beat_offset = hit_idx / pattern.subdivision
             beat_position = bar_start_beat + beat_offset
 
+            # Resolve the active chord slot PER HIT so mid-bar chord changes
+            # are honoured (one chord per bar smeared the old chord across
+            # the barline-internal change).
+            active_chord_slot = None
+            for chord_slot in harmony_plan.chord_slots:
+                if chord_slot.start_beat <= beat_position < chord_slot.end_beat:
+                    active_chord_slot = chord_slot
+                    break
+            if active_chord_slot is None:
+                continue
+            voicing = chord_voicings.get(
+                f"{active_chord_slot.numeral}_{active_chord_slot.index}"
+            )
+            if voicing is None or not voicing.pitches:
+                continue
+
             # Apply microtiming if configured (Phase RG3: use params)
             if abs(params.push_pull) > 1e-6:
                 beat_position = apply_microtiming(
@@ -783,6 +866,8 @@ def _render_pattern_based_guitar(
                     break
             duration = next_hit_beat - beat_position
             duration = min(duration, 1.0)  # Max sustain
+            # Never ring past the active chord's span
+            duration = max(0.05, min(duration, active_chord_slot.end_beat - beat_position))
 
             # Sustain cut: occasionally shorten to a percussive stab (stab vs ring)
             if params.sustain_cut_rate > 0.0 and rng.random() < params.sustain_cut_rate:
@@ -831,6 +916,7 @@ def _render_pattern_based_guitar(
                 strum_ms=params.strum_ms,
                 humanize_amount=params.humanize_timing,
                 rng=rng,
+                bpm=song_bpm,
             )
 
             # Phase RG4/RG6: Apply humanization and add to timeline
@@ -847,17 +933,16 @@ def _render_pattern_based_guitar(
                     rng=rng,
                 )
 
-                # Humanize timing (strum offset is already applied)
-                humanized_beat = humanize_timing(
+                # Humanize timing (strum offset is already applied).
+                # NOTE: the hit position (beat_position) is already grid
+                # aligned; the intra-strum offset must NEVER be quantized —
+                # quantizing it to the subdivision grid collapsed strums into
+                # block chords whenever humanize_timing was 0.
+                final_beat_offset = humanize_timing(
                     beat_position=strum_offset,
                     amount=params.humanize_timing,
                     rng=rng,
                 )
-
-                # Phase RG6: Quantize final timing to grid when humanization is disabled
-                final_beat_offset = humanized_beat
-                if params.humanize_timing <= 0.0:
-                    final_beat_offset = quantize_to_subdivision(strum_offset, pattern.subdivision)
 
                 # Add note to timeline
                 timeline.add_note(
@@ -917,44 +1002,10 @@ def _render_legacy_rhythm_guitar(
             numerals_summary,
         )
 
-    # Phase RG1: Pre-generate chord voicings for all harmony slots
-    # This ensures consistent voicings and enables voice leading
-    chord_voicings: Dict[str, ChordShape] = {}
-    prev_shape: Optional[ChordShape] = None
-
-    # Resolve intensity for voicing selection
-    raw_intensity = instrument_cfg.intensity if instrument_cfg is not None else 0.5
-    voicing_intensity = max(0.0, min(1.0, raw_intensity))
-
-    # Get rhythm_cfg for root computation
-    rhythm_cfg = instrument_cfg.extra if instrument_cfg is not None else None
-
-    # Generate voicings for each chord slot
-    for chord_slot in harmony_plan.chord_slots:
-        # Compute root MIDI note from the numeral
-        root_midi = _rhythm_root_for_numeral(cfg, section, chord_slot.numeral, rhythm_cfg)
-
-        voicing = choose_voicing_for_section_type(
-            root_midi=root_midi,
-            numeral=chord_slot.numeral,
-            section_type=section.type,
-            intensity=voicing_intensity,
-            prev_chord_shape=prev_shape,
-            rng=rng,
-        )
-        chord_voicings[chord_slot.numeral] = voicing
-        prev_shape = voicing
-
-        # Phase RG1: DEBUG logging for chosen voicing
-        if logger:
-            logger.debug(
-                "Section '%s': chord %s (root=%d) → voicing %s with notes %s",
-                section.id,
-                chord_slot.numeral,
-                root_midi,
-                voicing.voicing_name or "default",
-                voicing.pitches,
-            )
+    # NOTE: the legacy renderer plays bare power chords built from the chord
+    # root; it deliberately does NOT pre-generate CAGED voicings (a previous
+    # version computed and logged them without ever using them, burning RNG
+    # state and logging misleading voicing names).
 
     # Phase RG4: Use extracted parameter resolution (refactoring)
     # Resolve all legacy guitar parameters via the refactored module
@@ -997,6 +1048,31 @@ def _render_legacy_rhythm_guitar(
     eps = 1e-6
     cells = rhythm_grid.cells
 
+    # R2-C: play_pattern presets define their own (sub-beat) hit positions.
+    # The shared rhythm grid is usually quarter-note resolution, so patterns
+    # like "syncopated"/"offbeat"/"gallop" would otherwise match zero cells.
+    pattern_positions = _pattern_positions_for_bar(play_pattern, bpb)
+    if pattern_positions is not None and not params.user_retrigger_specified:
+        # The preset's positions ARE the intended hits; the default "beat"
+        # retrigger gate would silence every sub-beat hit.
+        retrigger = "all"
+    if pattern_positions is not None:
+        total_beats = float(getattr(rhythm_grid, "total_beats", 0.0) or 0.0)
+        cell_beats = []
+        bar0 = 0.0
+        while bar0 < total_beats - eps:
+            for pos in pattern_positions:
+                lb = bar0 + pos
+                if lb < total_beats - eps:
+                    cell_beats.append(lb)
+            bar0 += bpb
+        # Effective step = smallest gap between pattern hits (for durations).
+        gaps = [b - a for a, b in zip(cell_beats, cell_beats[1:]) if b - a > eps]
+        if gaps:
+            step_beats = max(0.1, min(gaps))
+    else:
+        cell_beats = [cell.beat for cell in cells]
+
     # Classify intensity into bands to control density.
     eff_intensity = _clamp(intensity * density_scale, 0.0, 2.0)
     if eff_intensity <= 0.33:
@@ -1011,11 +1087,11 @@ def _render_legacy_rhythm_guitar(
 
     events_before = len(timeline.events)
 
-    # Walk the rhythm grid and place power-chord hits according to intensity and chord.
+    # Walk the rhythm grid (or synthesized pattern positions) and place
+    # power-chord hits according to intensity and chord.
     last_chord_key: Optional[str] = None
     prev_root_pitch: Optional[int] = None
-    for cell in cells:
-        local_beat = cell.beat  # section-local beat position
+    for local_beat in cell_beats:  # section-local beat position
 
         # Find the chord slot that covers this beat.
         cs_for_cell = None
@@ -1038,8 +1114,11 @@ def _render_legacy_rhythm_guitar(
         pattern_factor = accent_pattern[beat_index % len(accent_pattern)]
 
         # Decide whether to place a chord hit at this cell based on intensity band.
+        # Synthesized pattern positions ARE the hits — no density gating needed.
         place_note = False
-        if intensity_band == "low":
+        if pattern_positions is not None:
+            place_note = True
+        elif intensity_band == "low":
             # Very sparse: hits on bar downbeats only.
             place_note = is_downbeat
         elif intensity_band == "mid":
@@ -1053,7 +1132,7 @@ def _render_legacy_rhythm_guitar(
         # At quarter-note grid resolution, work by beat position within the bar.
         # beat_index 0,2 → beats 1,3 (strong/downbeat side)
         # beat_index 1,3 → beats 2,4 (weak/backbeat/upbeat side)
-        if strum_style != "balanced":
+        if strum_style != "balanced" and pattern_positions is None:
             is_strong_beat = (beat_index % 2 == 0)  # beats 1 & 3 (0-indexed: 0 & 2)
             if strum_style == "downbeat_heavy":
                 # Keep only strong beats (1 & 3), suppress backbeat (2 & 4)
@@ -1067,7 +1146,9 @@ def _render_legacy_rhythm_guitar(
                     place_note = True
 
         # ---- R2-C: Apply rhythmic pattern preset (if any) ----
-        if play_pattern:
+        # Only as a filter when iterating raw grid cells; synthesized pattern
+        # positions already encode the preset's hits.
+        if play_pattern and pattern_positions is None:
             place_note = _apply_rhythmic_pattern(play_pattern, beat_in_bar, place_note)
 
         if not place_note:
@@ -1348,17 +1429,22 @@ def _render_rhythm_locked_guitar(
         octave = getattr(params, "octave", 3)
 
     # Get intensity
-    intensity = 0.7
-    if hasattr(instrument_cfg, "intensity"):
-        intensity = instrument_cfg.intensity
-    elif isinstance(instrument_cfg, dict):
-        intensity = instrument_cfg.get("intensity", 0.7)
+    intensity = None
+    if isinstance(instrument_cfg, dict):
+        intensity = instrument_cfg.get("intensity")
+    elif instrument_cfg is not None:
+        intensity = getattr(instrument_cfg, "intensity", None)
+    if intensity is None:
+        intensity = 0.7
 
     base_vel = int(75 + intensity * 30)
 
     # Rhythm features from drums
     syncopation_beats = drum_features.syncopation_beats if accent_syncopation and hasattr(drum_features, "syncopation_beats") else set()
     density_per_bar = drum_features.density_per_bar if hasattr(drum_features, "density_per_bar") else {}
+
+    # Quantised set for robust membership tests (avoids exact-float comparisons)
+    syncopation_set = {round(float(b), 2) for b in syncopation_beats}
 
     events_before = len(timeline.events)
 
@@ -1379,12 +1465,17 @@ def _render_rhythm_locked_guitar(
         # Scale strumming pattern based on hat density and intensity
         strums_per_beat = max(1.0, min(4.0, hat_density * intensity))
 
-        # Generate strum beats for this bar
-        beat = bar_start
-        while beat < bar_end:
+        # Generate strum beats for this bar. Iterate by index (beat derived
+        # as i / strums_per_beat) instead of accumulating floats, which
+        # drifted across the bar and broke membership tests.
+        n_strums = max(1, int(round(bpb * strums_per_beat)))
+        for strum_idx in range(n_strums):
+            beat = bar_start + strum_idx / strums_per_beat
+            if beat >= bar_end - eps:
+                break
+
             # Skip if in fill window (let drums shine)
             if is_beat_in_fill(beat, drum_features):
-                beat += 1.0 / strums_per_beat
                 continue
 
             # Find the chord slot that covers this beat
@@ -1394,7 +1485,6 @@ def _render_rhythm_locked_guitar(
                     cs_for_beat = cs
                     break
             if cs_for_beat is None:
-                beat += 1.0 / strums_per_beat
                 continue
 
             # Get rhythm guitar root for this chord
@@ -1404,8 +1494,9 @@ def _render_rhythm_locked_guitar(
             octave_offset = (octave - 3) * 12  # 3 is default octave
             root_midi += octave_offset
 
-            # Determine velocity: accent syncopated kicks
-            is_syncopated = beat in syncopation_beats
+            # Determine velocity: accent syncopated kicks (rounded membership
+            # — exact float equality misses derived beat positions)
+            is_syncopated = round(beat, 2) in syncopation_set
             vel = base_vel
 
             if is_syncopated:
@@ -1452,8 +1543,6 @@ def _render_rhythm_locked_guitar(
                     velocity=vel - 5,
                     channel=None,
                 )
-
-            beat += 1.0 / strums_per_beat
 
     added = len(timeline.events) - events_before
     logger.debug(

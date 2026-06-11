@@ -35,6 +35,12 @@ def get_rhythm_pattern_anchor(
                 # Beat 3 in 4/4
                 elif beats_per_bar >= 4.0 and abs(beat_in_bar - 2.0) < 1e-6:
                     eligible.add(slot)
+                # 3/4 (waltz): add beat 2 so bars aren't downbeat-only
+                elif abs(beats_per_bar - 3.0) < 1e-6 and abs(beat_in_bar - 1.0) < 1e-6:
+                    eligible.add(slot)
+                # 6/8 counted in 6: second dotted quarter (beat 4)
+                elif abs(beats_per_bar - 6.0) < 1e-6 and abs(beat_in_bar - 3.0) < 1e-6:
+                    eligible.add(slot)
 
     return eligible
 

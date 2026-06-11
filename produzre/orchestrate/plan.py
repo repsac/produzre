@@ -18,7 +18,7 @@ Time units:
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, Optional
 
 from ..model import RootConfig
@@ -33,6 +33,70 @@ PLAN_KEY_HARMONY_PLAN = "harmony.plan"
 PLAN_KEY_TRANSITIONS_MAP = "transitions.map"
 PLAN_KEY_GROOVE_CUES = "groove.cues"
 PLAN_KEY_FILL_WINDOWS = "groove.fill_windows"
+
+
+# ---------------------------------------------------------------------------
+# Macro-dynamics: default section intensity
+# ---------------------------------------------------------------------------
+# When a section does not set `intensity:` explicitly, the planner derives a
+# default from the section type so an un-tweaked config still has a dynamic
+# shape (instead of every engine falling back to a flat 0.5).
+#
+# The vocabulary mirrors produzre.orchestrate.energy._SECTION_TYPE_ENERGY
+# (including the "hook" and "pre-chorus" aliases).
+_SECTION_TYPE_INTENSITY: Dict[str, float] = {
+    "intro": 0.55,
+    "verse": 0.65,
+    "prechorus": 0.75,
+    "pre-chorus": 0.75,
+    "chorus": 0.9,
+    "hook": 0.9,
+    "bridge": 0.7,
+    "solo": 0.85,
+    "breakdown": 0.45,
+    "outro": 0.5,
+}
+_DEFAULT_SECTION_INTENSITY = 0.65
+
+# Per-repeat escalation: the Nth arrangement occurrence of the same section
+# *type* gets +0.05 per repeat, capped at +0.10. Example: chorus 1 = 0.90,
+# chorus 2 = 0.95, chorus 3+ = 1.00. Escalation only applies to derived
+# defaults — explicit user values are never touched.
+_REPEAT_INTENSITY_STEP = 0.05
+_REPEAT_INTENSITY_CAP = 0.10
+
+
+def resolve_section_intensity(
+    section_type: str,
+    occurrence_index: int = 0,
+    user_value: Optional[float] = None,
+) -> float:
+    """Resolve a section's macro-dynamics intensity.
+
+    Args:
+        section_type: Section type label (e.g., "verse", "chorus").
+            Matched case-insensitively against the default table.
+        occurrence_index: 0-based count of how many sections of this type
+            appeared earlier in the arrangement (0 = first occurrence).
+        user_value: Explicit `intensity:` from the section config, or None
+            when unset.
+
+    Returns:
+        float: The user value unchanged when set; otherwise the type default
+        plus repeat escalation (capped at +0.10 and at 1.0 overall).
+    """
+    if user_value is not None:
+        return float(user_value)
+
+    base = _SECTION_TYPE_INTENSITY.get(
+        str(section_type or "").strip().lower(),
+        _DEFAULT_SECTION_INTENSITY,
+    )
+    bump = min(
+        _REPEAT_INTENSITY_STEP * max(0, int(occurrence_index)),
+        _REPEAT_INTENSITY_CAP,
+    )
+    return min(base + bump, 1.0)
 
 
 @dataclass
@@ -264,6 +328,8 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
       - Determining the effective song name (`cfg.get_effective_song_name()`).
       - Iterating `cfg.arrangement` in order.
       - For each section:
+          * resolving macro-dynamics intensity (user value, or a derived
+            default from section type + arrangement occurrence)
           * building scaffolding via `build_section_scaffold()`
           * computing the absolute start/end beat window for the section
           * recording the section's effective beats-per-bar
@@ -287,9 +353,34 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
     planned_sections: list[PlannedSection] = []
     section_timings: list[SectionTiming] = []
 
+    # Macro-dynamics: count arrangement occurrences per section type so
+    # repeated types (e.g., a second chorus) escalate, and collect the
+    # resolved arc for a one-line build summary.
+    type_occurrences: Dict[str, int] = {}
+    intensity_arc: list[str] = []
+
     for sec_id in cfg.arrangement:
         sec = cfg.sections[sec_id]
         logger.info("Section '%s' (type=%s)", sec.id, sec.type)
+
+        # Resolve macro-dynamics intensity ONCE per arrangement occurrence.
+        # User-set values pass through untouched; unset sections get a derived
+        # default (type table + repeat escalation). Repeated arrangement
+        # entries share one SectionConfig object, so derived values are
+        # written onto a per-occurrence copy — engines read the resolved
+        # value via the planned section (e.g., drums'
+        # `_get_attr_or_key(section, "intensity", ...)`).
+        type_key = str(sec.type or "").strip().lower()
+        occurrence_index = type_occurrences.get(type_key, 0)
+        type_occurrences[type_key] = occurrence_index + 1
+
+        user_intensity = getattr(sec, "intensity", None)
+        resolved_intensity = resolve_section_intensity(
+            sec.type, occurrence_index, user_intensity
+        )
+        if user_intensity is None:
+            sec = replace(sec, intensity=resolved_intensity)
+        intensity_arc.append(f"{sec.type} {resolved_intensity:.2f}")
 
         hplan, section_meter, rgrid, total_beats = _build_section_scaffold(cfg, sec, logger)
 
@@ -322,6 +413,9 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
         )
 
         song_beat_cursor = section_end
+
+    if intensity_arc:
+        logger.info("intensity arc: %s", " → ".join(intensity_arc))
 
     return BuildPlan(
         song_name=song_name,

@@ -1,25 +1,29 @@
+# Punk bass — hand-tuned 2026-06-10.
+# The mined values (root_bias 0.55, octave_jump 0.34, rest_rate 0.25) made
+# the bass noodle. Punk idiom is relentless straight 8th roots: very high
+# root bias, almost no rests, almost no jumps.
 id: punk
 instrument: bass
 tags:
   genre: "punk rock"
   time_signature: "4/4"
-  bpm_range: [90, 167]
+  bpm_range: [90, 200]
   section_types: [verse, chorus, bridge, default]
 params:
-  density: 0.82
-  rhythm_pattern: "drive"
-  articulation_style: "finger"
+  density: 0.9
+  rhythm_pattern: "drive"  # straight 8ths
+  articulation_style: "pick"
   register_low: 28
   register_high: 52
-  approach_rate: 0.21
-  chromatic_rate: 0.1
-  max_passing_per_bar: 2
-  octave_jump_rate: 0.34
-  fifth_jump_rate: 0.27
-  rest_rate: 0.25
-  root_bias: 0.55
+  approach_rate: 0.1
+  chromatic_rate: 0.05
+  max_passing_per_bar: 1
+  octave_jump_rate: 0.05
+  fifth_jump_rate: 0.05
+  rest_rate: 0.05
+  root_bias: 0.9
   motion_style: "mixed"
-  swing: 0.02
+  swing: 0.0
   lock_to_kick: 0.41
   accent_strength: 1.15
-  syncopation: 0.49
+  syncopation: 0.2

@@ -100,13 +100,14 @@ def generate_export_index(
         for inst in instruments_used:
             files["stems"].append(f"instruments/{inst}/{cfg.get_effective_song_name()}_{inst}.mid")
 
-    # List sections
+    # List sections (filenames include the arrangement index so repeated
+    # sections map to distinct files).
     if export_config.write_sections:
         for inst in instruments_used:
             files["sections"][inst] = []
-            for section_id in cfg.arrangement:
+            for arr_idx, section_id in enumerate(cfg.arrangement):
                 files["sections"][inst].append(
-                    f"instruments/{inst}/sections/{cfg.get_effective_song_name()}_{inst}_{section_id}.mid"
+                    f"instruments/{inst}/sections/{cfg.get_effective_song_name()}_{inst}_{arr_idx:02d}_{section_id}.mid"
                 )
 
     # Note about patterns (actual pattern files would be discovered dynamically)
@@ -173,7 +174,7 @@ def generate_quick_reference(
         "Files Generated:",
         f"- Full song: {cfg.get_effective_song_name()}.mid",
         "- Stems: instruments/<instrument>/<song>_<instrument>.mid",
-        "- Sections: instruments/<instrument>/sections/<song>_<instrument>_<section>.mid",
+        "- Sections: instruments/<instrument>/sections/<song>_<instrument>_<NN>_<section>.mid",
         "- Patterns: instruments/<instrument>/patterns/p*.mid",
         "- Sequence: instruments/<instrument>/sequence.yaml",
         "",

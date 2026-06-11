@@ -192,9 +192,12 @@ class InstrumentConfig:
             (e.g., "chug", "slap", swing feel, articulations).
     """
     enabled: Optional[bool] = None
-    intensity: float = 1.0
-    style_bias: float = 0.0
-    offset_beats: float = 0.0
+    # None means "not set here" so merging can distinguish an explicit value
+    # from an inherited one. Engines resolve None to their own defaults
+    # (intensity 1.0, style_bias 0.0, offset_beats 0.0).
+    intensity: Optional[float] = None
+    style_bias: Optional[float] = None
+    offset_beats: Optional[float] = None
     seed: Optional[int] = None
     variation: Optional[float] = None
     groove: Optional[str] = None
@@ -258,6 +261,11 @@ class SectionConfig:
             Overrides song.variation for this section only.
         harmony: Optional structured harmony configuration.
         progression: Optional legacy progression string.
+        energy: Optional energy override ("low"/"mid"/"high" or 0.0..1.0).
+        intensity: Optional macro-dynamics intensity (0.0..1.0+). None means
+            "unset"; the planner derives a per-occurrence default from the
+            section type and arrangement position (see
+            produzre.orchestrate.plan.resolve_section_intensity).
         instruments: Per-instrument configs active in this section.
         extras: Misc. section flags and engine hints.
     """
@@ -278,6 +286,18 @@ class SectionConfig:
     harmony: Optional[HarmonyConfig] = None
     progression: Optional[str] = None   # e.g. "i bVII VI i"
 
+    # Energy override: descriptive name ("low"/"mid"/"high") or numeric
+    # 0.0..1.0. When None, energy is auto-detected from the section type
+    # (see produzre.orchestrate.energy.resolve_section_energy).
+    energy: Optional[Any] = None
+
+    # Macro-dynamics intensity (0.0..1.0+). None means "unset" so planning can
+    # distinguish an explicit user value from a derived default. The planner
+    # resolves None per arrangement occurrence (section type table + repeat
+    # escalation) and writes the result onto the planned section that engines
+    # read (see produzre.orchestrate.plan.resolve_section_intensity).
+    intensity: Optional[float] = None
+
     # Instruments defined in this section
     instruments: Dict[str, InstrumentConfig] = field(default_factory=dict)
 
@@ -297,13 +317,17 @@ class SectionConfig:
 
         Priority order:
           1) If `beats` is provided, it is used directly.
-          2) Else if `bars` is provided, beats are computed as:
-             `bars * global_beats_per_bar`.
+          2) Else if `bars` is provided, beats are computed as
+             `bars * beats_per_bar`, where beats-per-bar comes from the
+             section's own `meter` override when present (via
+             `Meter.beats_per_bar`, e.g. 3.0 quarter-beats per bar for both
+             3/4 and 6/8), falling back to `global_beats_per_bar`.
           3) Otherwise, the section is treated as length 0.
 
         Args:
             global_beats_per_bar: Beats-per-bar (quarter-note beat units) used
-                when converting `bars` to beats.
+                when converting `bars` to beats when the section does not
+                override `meter`.
 
         Returns:
             float: Total section length in quarter-note beats.
@@ -311,6 +335,17 @@ class SectionConfig:
         if self.beats is not None:
             return float(self.beats)
         if self.bars is not None:
+            if self.meter:
+                # Section-level meter override: derive bar length from the
+                # meter. Imported lazily to avoid a circular import
+                # (produzre.harmony imports produzre.model at package init).
+                from .harmony.meter import parse_meter
+
+                try:
+                    bpb = parse_meter(self.meter).beats_per_bar
+                except ValueError:
+                    bpb = float(global_beats_per_bar)
+                return float(self.bars) * float(bpb)
             return float(self.bars * global_beats_per_bar)
         # No explicit length; treat as empty.
         return 0.0

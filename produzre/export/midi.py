@@ -42,19 +42,68 @@ def beats_to_ticks(beats: float, *, ppq: int = PPQ) -> int:
     return int(round(float(beats) * ppq))
 
 
-def add_tempo_and_name(track: mido.MidiTrack, bpm: float, name: str) -> None:
-    """Write common meta events (track name + tempo) at time 0.
+def parse_meter(meter: Optional[str]) -> tuple[int, int]:
+    """Parse a meter string like "6/8" into (numerator, denominator).
+
+    Falls back to (4, 4) when the string is missing or malformed so callers
+    can always emit a valid time_signature meta event.
+
+    Args:
+        meter: Meter string in "N/D" form (e.g., "4/4", "6/8", "7/8").
+
+    Returns:
+        tuple[int, int]: (numerator, denominator).
+    """
+    try:
+        num_s, den_s = str(meter).strip().split("/", 1)
+        num = int(num_s)
+        den = int(den_s)
+        if num > 0 and den > 0:
+            return num, den
+    except Exception:
+        pass
+    return 4, 4
+
+
+def add_time_signature(track: mido.MidiTrack, meter: Optional[str]) -> None:
+    """Write a time_signature meta event at time 0.
+
+    Args:
+        track: Target MIDI track to mutate.
+        meter: Meter string in "N/D" form. Defaults to 4/4 when unparseable.
+
+    Returns:
+        None
+    """
+    num, den = parse_meter(meter)
+    track.append(
+        mido.MetaMessage("time_signature", numerator=num, denominator=den, time=0)
+    )
+
+
+def add_tempo_and_name(
+    track: mido.MidiTrack,
+    bpm: float,
+    name: str,
+    *,
+    meter: Optional[str] = None,
+) -> None:
+    """Write common meta events (track name + tempo [+ time signature]) at time 0.
 
     Args:
         track: Target MIDI track to mutate.
         bpm: Tempo in beats per minute.
         name: Human-readable track name.
+        meter: Optional meter string ("N/D"). When provided, a time_signature
+            meta event is also emitted at time 0.
 
     Returns:
         None
     """
     track.append(mido.MetaMessage("track_name", name=str(name), time=0))
     track.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(float(bpm)), time=0))
+    if meter is not None:
+        add_time_signature(track, meter)
 
 
 def program_for_instrument(cfg: Any, instrument_name: str) -> Optional[int]:
@@ -131,7 +180,9 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
     """
     events: Iterable[Any] = getattr(timeline, "events", [])
 
-    msgs: list[_MidiMsg] = []
+    # First pass: collect note intervals in tick space.
+    # notes: (start_tick, end_tick, pitch, vel, ch)
+    notes: list[tuple[int, int, int, int, int]] = []
 
     for ev in events:
         try:
@@ -148,18 +199,56 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
 
         start_tick = beats_to_ticks(start, ppq=ppq)
         end_tick = beats_to_ticks(start + dur, ppq=ppq)
-        if end_tick < start_tick:
-            end_tick = start_tick
+        # Sub-tick durations would otherwise emit note_off at (or before) the
+        # note_on tick, which sorts the note_off first and leaves the note_on
+        # stuck. Guarantee at least 1 tick of audible length.
+        if end_tick <= start_tick:
+            end_tick = start_tick + 1
 
         pitch = max(0, min(127, pitch))
         vel = max(0, min(127, vel))
         ch = max(0, min(15, ch))
 
+        notes.append((start_tick, end_tick, pitch, vel, ch))
+
+    # Second pass: de-overlap same-pitch/same-channel notes so note_offs never
+    # cross (a later note_off cutting an earlier note, or vice versa).
+    # Rules:
+    #   - Notes starting at the same tick on the same (channel, pitch): keep
+    #     only the longest (velocity as deterministic tie-break).
+    #   - An earlier note overlapping a later note's start is truncated to the
+    #     later note's start tick.
+    by_key: dict[tuple[int, int], list[tuple[int, int, int, int, int]]] = {}
+    for n in notes:
+        by_key.setdefault((n[4], n[2]), []).append(n)
+
+    deduped: list[tuple[int, int, int, int, int]] = []
+    for _key, group in by_key.items():
+        group.sort(key=lambda n: (n[0], -(n[1] - n[0]), -n[3]))
+        # Drop duplicates that share a start tick (keep first = longest/loudest).
+        unique: list[tuple[int, int, int, int, int]] = []
+        last_start: Optional[int] = None
+        for n in group:
+            if last_start is not None and n[0] == last_start:
+                continue
+            unique.append(n)
+            last_start = n[0]
+        # Truncate overlaps against the next note's start.
+        for i, n in enumerate(unique):
+            start_tick, end_tick, pitch, vel, ch = n
+            if i + 1 < len(unique):
+                next_start = unique[i + 1][0]
+                if end_tick > next_start:
+                    end_tick = max(next_start, start_tick + 1)
+            deduped.append((start_tick, end_tick, pitch, vel, ch))
+
+    msgs: list[_MidiMsg] = []
+    for start_tick, end_tick, pitch, vel, ch in deduped:
         # Order: note_off first at the same tick to avoid overlaps/stuck notes.
         msgs.append(_MidiMsg(start_tick, 1, mido.Message("note_on", note=pitch, velocity=vel, channel=ch, time=0)))
         msgs.append(_MidiMsg(end_tick, 0, mido.Message("note_off", note=pitch, velocity=0, channel=ch, time=0)))
 
-    msgs.sort(key=lambda m: (m.tick, m.order, m.msg.type))
+    msgs.sort(key=lambda m: (m.tick, m.order, m.msg.type, m.msg.channel, m.msg.note))
 
     last_tick = 0
     for m in msgs:

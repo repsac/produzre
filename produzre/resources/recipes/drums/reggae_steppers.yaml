@@ -1,0 +1,38 @@
+# Reggae steppers drum recipe — hand-authored 2026-06-10.
+# Preserves the four-on-the-floor kick that the trainer originally mined for
+# reggae (correct for steppers, wrong for one drop). Selected over
+# reggae_straight at driving tempos via bpm_range; can also be requested
+# explicitly with recipe: reggae_steppers.
+# Idiom (steppers): kick on every quarter ("four to the floor"), cross-stick
+# on beat 3, steady 8th hats.
+
+id: reggae_steppers
+instrument: drums
+tags:
+  genre: reggae
+  feel: straight
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, solo]
+  bpm_range: [116, 180]
+
+groove:
+  hat_mode: "8th"
+  use_ride: false
+  # Steppers: kick on all four quarters.
+  kick_base: [0, 4, 8, 12]
+  kick_extra_rate: 0.03
+  double_kick_rate: 0.0
+  snare_backbeat_steps: [8]
+  ghost_rate: 0.10
+  ghost_steps: [6, 14]
+  open_hat_rate: 0.08
+  crash_start: false
+  crash_phrase_end_rate: 0.05
+
+params:
+  swing: 0.15
+  fill_rate: 0.18
+
+voices:
+  snare:
+    articulation: { default: crossstick }

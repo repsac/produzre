@@ -78,8 +78,23 @@ def generate_crash_events(
     crash = int(pitches["crash"])
     events: List[DrumEvent] = []
 
-    # If explicit placements are provided, use them directly
+    # If explicit placements are provided, use them directly.
+    #
+    # Placement convention: `crash_placements` arrives here as 0-based step
+    # indices on the bar's step grid (step 0 == downbeat). User-facing YAML
+    # uses musician-friendly 1-based beat positions ("1" == downbeat, "2&",
+    # "4a", ...) which the engine entrypoint converts to 0-based steps via
+    # `_ghost_placements_to_steps` before calling this function.
+    #
+    # The placements repeat every bar, gated per bar by `crash_rate` (an RNG
+    # roll). When crash_rate is None (unspecified), placements apply to every
+    # bar.
     if crash_placements is not None:
+        place_this_bar = True
+        if crash_rate is not None:
+            place_this_bar = rng.random() < float(crash_rate)
+        if not place_this_bar:
+            return events
         placements = [int(x) for x in crash_placements]
         for step_i in placements:
             if 0 <= step_i < spb:
@@ -275,8 +290,11 @@ def generate_splash_china_events(
             if step_i not in occupied_steps and step_i not in backbeats:
                 eligible_splash.append(step_i)
 
-        # Very conservative: max 1 splash per section
-        if eligible_splash and bar_i < bars and rng.random() < splash_rate * 0.5:
+        # Very conservative: average at most ~1 splash per section.
+        # This function runs once per bar, so divide the per-section
+        # probability budget across the section's bars.
+        splash_prob = min(1.0, splash_rate * 0.5) / float(max(1, bars))
+        if eligible_splash and bar_i < bars and rng.random() < splash_prob:
             step_i = rng.choice(eligible_splash)
             beat = bar_start + float(step_i) * sb
             vel = vel_for(

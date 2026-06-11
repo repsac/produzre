@@ -9,25 +9,26 @@ tags:
   section_types: [verse, chorus, bridge]
   bpm_range: [60, 160]
 
+# Dominants spelled V7 (2026-06-10): blues turnaround V is a dominant 7th, never maj7.
 progressions:
   minor:
     # 12-bar minor blues
-    verse: ["i", "i", "i", "i", "iv", "iv", "i", "i", "V", "iv", "i", "V"]
-    chorus: ["i", "iv", "i", "i", "iv", "iv", "i", "i", "V", "iv", "i", "i"]
-    bridge: ["iv", "iv", "i", "i", "V", "iv", "i", "V"]
-    default: ["i", "i", "i", "i", "iv", "iv", "i", "i", "V", "iv", "i", "V"]
+    verse: ["i", "i", "i", "i", "iv", "iv", "i", "i", "V7", "iv", "i", "V7"]
+    chorus: ["i", "iv", "i", "i", "iv", "iv", "i", "i", "V7", "iv", "i", "i"]
+    bridge: ["iv", "iv", "i", "i", "V7", "iv", "i", "V7"]
+    default: ["i", "i", "i", "i", "iv", "iv", "i", "i", "V7", "iv", "i", "V7"]
   major:
     # 12-bar major blues
-    verse: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
-    chorus: ["I", "IV", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "I"]
-    bridge: ["IV", "IV", "I", "I", "V", "IV", "I", "V"]
-    default: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    verse: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V7", "IV", "I", "V7"]
+    chorus: ["I", "IV", "I", "I", "IV", "IV", "I", "I", "V7", "IV", "I", "I"]
+    bridge: ["IV", "IV", "I", "I", "V7", "IV", "I", "V7"]
+    default: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V7", "IV", "I", "V7"]
   dorian:
-    verse: ["i", "i", "i", "i", "IV", "IV", "i", "i", "V", "IV", "i", "V"]
-    default: ["i", "i", "i", "i", "IV", "IV", "i", "i", "V", "IV", "i", "V"]
+    verse: ["i", "i", "i", "i", "IV", "IV", "i", "i", "V7", "IV", "i", "V7"]
+    default: ["i", "i", "i", "i", "IV", "IV", "i", "i", "V7", "IV", "i", "V7"]
   mixolydian:
-    verse: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
-    default: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "V"]
+    verse: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V7", "IV", "I", "V7"]
+    default: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V7", "IV", "I", "V7"]
 
 params:
   chord_rate: 4.0

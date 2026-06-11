@@ -124,8 +124,12 @@ def add_fills(
 
     bars = _bars_total(tb, bpb)
 
-    # Meter awareness: detect 6/8 time
-    is_6_8 = abs(bpb - 6.0) < 0.1 or (abs(bpb - 3.0) < 0.1 and spb == 6)
+    # Meter awareness: detect compound 6-beat bars (e.g., 6/4, or 6/8 expressed
+    # as 6 quarter beats). Note: Meter.beats_per_bar normalizes 6/8 to 3.0
+    # quarter beats per bar, in which case it is indistinguishable from 3/4
+    # here and uses the straight-16th path. (The old `spb == 6` clause was a
+    # leftover from the legacy fixed 16-step grid and never fired.)
+    is_6_8 = abs(bpb - 6.0) < 0.1
 
     # Map fill_length to beat durations
     fill_length_str = (fill_length or "medium").strip().lower()
@@ -285,20 +289,34 @@ def add_fills(
                 )
                 t += effective_step
 
-            # Optionally support a kick reinforcement on the downbeat of the phrase bar
-            # (avoid duplicates). This stays conservative.
-            vel_k = max(1, min(127, int(base_velocity + 10)))
-            if not any((abs(e.beat - phrase_bar_start) < 1e-9 and int(e.pitch) == kick) for e in out):
-                if rng_fill.random() < 0.40:
-                    out.append(DrumEvent(beat=phrase_bar_start, duration_beats=0.5, pitch=kick, velocity=vel_k, kind="kick"))
+            # The fill resolves on the NEXT bar's downbeat (the downbeat the
+            # fill is leading into), not the downbeat of the bar containing
+            # the fill. At the section end that downbeat belongs to the next
+            # section, so we leave it to the section-transition logic.
+            resolution_beat = phrase_bar_start + bpb
 
-            # Optional crash on the downbeat of the phrase bar (avoid duplicates).
-            vel_c = max(1, min(127, int(base_velocity + 22)))
-            if rng_fill.random() < 0.70:
-                if not any((abs(e.beat - phrase_bar_start) < 1e-9 and int(e.pitch) == crash) for e in out):
+            # Draw the rolls unconditionally to keep the RNG stream stable
+            # regardless of whether the resolution falls inside the section.
+            place_kick = rng_fill.random() < 0.40
+            place_crash = rng_fill.random() < 0.70
+
+            if resolution_beat < tb - 1e-9:
+                # Optional kick reinforcement on the resolution downbeat
+                # (avoid duplicates). This stays conservative.
+                vel_k = max(1, min(127, int(base_velocity + 10)))
+                if place_kick and not any(
+                    (abs(e.beat - resolution_beat) < 1e-9 and int(e.pitch) == kick) for e in out
+                ):
+                    out.append(DrumEvent(beat=resolution_beat, duration_beats=0.5, pitch=kick, velocity=vel_k, kind="kick"))
+
+                # Optional crash on the resolution downbeat (avoid duplicates).
+                vel_c = max(1, min(127, int(base_velocity + 22)))
+                if place_crash and not any(
+                    (abs(e.beat - resolution_beat) < 1e-9 and int(e.pitch) == crash) for e in out
+                ):
                     out.append(
                         DrumEvent(
-                            beat=phrase_bar_start,
+                            beat=resolution_beat,
                             duration_beats=0.5,
                             pitch=crash,
                             velocity=vel_c,

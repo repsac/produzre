@@ -24,16 +24,58 @@ from typing import Mapping, Set, Tuple
 
 DEFAULT_STEPS_PER_BAR = 16
 
+# Internal grid convention (meter support):
+#
+# Produzre expresses musical time in quarter-note beats everywhere
+# (`Meter.beats_per_bar` returns *quarter-note* beats per bar: 4/4 -> 4.0,
+# 3/4 -> 3.0, 6/8 -> 3.0, 7/8 -> 3.5). The drum grid is therefore defined as
+# **4 steps per quarter-note beat** — every step is one 16th note
+# (0.25 beats), regardless of meter:
+#
+#   steps_per_bar = round(beats_per_bar * 4)   # 16 in 4/4, 12 in 3/4 & 6/8
+#
+# Consequence: compound meters such as 6/8 are normalized to 3.0 quarter
+# beats per bar before they reach the drums engine, so the engine cannot
+# distinguish 6/8 from 3/4 — both render on a 12-step bar of 16th notes.
+STEPS_PER_QUARTER_BEAT = 4
+
 
 def steps_per_bar_default() -> int:
-    """Return the canonical internal groove resolution (steps per bar).
+    """Return the canonical internal groove resolution (steps per bar, 4/4).
 
-    Produzre standardizes drum grooves on a 16-step (16th-note) grid per bar.
-    Sections in other meters are mapped onto this grid by scaling the step
-    duration to match the section's beats-per-bar.
+    Produzre standardizes drum grooves on a 16th-note grid: 4 steps per
+    quarter-note beat. This constant is the 4/4 value (16). For other meters
+    use :func:`steps_per_bar_for_meter`.
     """
 
     return DEFAULT_STEPS_PER_BAR
+
+
+def steps_per_bar_for_meter(beats_per_bar: float) -> int:
+    """Return the internal step-grid resolution for a meter.
+
+    The grid is always 4 steps per quarter-note beat (one 16th note per step,
+    step duration == 0.25 beats):
+
+        4/4 (beats_per_bar=4.0)  -> 16 steps
+        3/4 (beats_per_bar=3.0)  -> 12 steps
+        6/8 (beats_per_bar=3.0)  -> 12 steps (normalized by Meter.beats_per_bar)
+        7/8 (beats_per_bar=3.5)  -> 14 steps
+
+    Args:
+        beats_per_bar: Quarter-note beats per bar (see `Meter.beats_per_bar`).
+
+    Returns:
+        Steps per bar (at least 1).
+    """
+
+    try:
+        bpb = float(beats_per_bar)
+    except Exception:
+        bpb = 4.0
+    if bpb <= 0.0:
+        bpb = 4.0
+    return max(1, int(round(bpb * STEPS_PER_QUARTER_BEAT)))
 
 
 def step_beats(beats_per_bar: float, *, steps_per_bar: int) -> float:
@@ -226,30 +268,61 @@ def groove_template(
     gid = (groove_id or "").strip().lower()
     band = _classify_intensity(float(intensity))
 
-    spb = steps_per_bar_default()
+    try:
+        bpb = float(beats_per_bar)
+    except Exception:
+        bpb = 4.0
+    if bpb <= 0.0:
+        bpb = 4.0
+
+    spb = steps_per_bar_for_meter(bpb)
 
     def step_at(beat: float) -> int:
-        return step_index_in_bar(beat, beats_per_bar, steps_per_bar=spb)
+        return step_index_in_bar(beat, bpb, steps_per_bar=spb)
 
-    # Backbeat: map beat numbers onto step indices.
-    snare_2 = step_at(1.0)
-    snare_4 = step_at(3.0)
+    def steps_at(*beats: float) -> Tuple[int, ...]:
+        """Map beat offsets onto step indices, DROPPING out-of-bar positions.
 
-    # Common ghost placements: the 'a' of 2 and 'a' of 4.
-    ghost_a2 = step_at(1.75)
-    ghost_a4 = step_at(3.75)
+        Positions at or beyond the bar length are dropped (not clamped onto
+        the last step), so 4/4-shaped templates degrade gracefully in shorter
+        meters instead of stacking hits on the final 16th.
+        """
+
+        return tuple(step_at(b) for b in beats if 0.0 <= float(b) < bpb - 1e-9)
+
+    # Meter-aware backbeats (beat offsets within the bar; 0.0 == downbeat).
+    # Convention (beats are quarter-note beats, see steps_per_bar_for_meter):
+    #   - bpb >= 4 (4/4, 5/4, 7/4, ...): classic backbeat on beats 2 and 4.
+    #   - bpb == 6 (6/4, or 6/8 expressed as 6 quarter beats): snare on beat 4,
+    #     the start of the second 3-beat group (second dotted-quarter group).
+    #   - bpb < 4 (3/4, 6/8-normalized 3.0, 2/4): snare on beat 2 only.
+    # Note: Meter.beats_per_bar normalizes 6/8 to 3.0 quarter beats, so 6/8
+    # normally takes the "beat 2" branch; the bpb==6 case only fires when the
+    # config supplies six quarter beats per bar.
+    if abs(bpb - 6.0) < 1e-6:
+        backbeat_offsets: Tuple[float, ...] = (3.0,)
+    elif bpb >= 4.0 - 1e-6:
+        backbeat_offsets = (1.0, 3.0)
+    else:
+        backbeat_offsets = (1.0,)
+
+    snare_backbeats = steps_at(*backbeat_offsets)
+
+    # Common ghost placements: the 'a' (last 16th) of each backbeat's beat.
+    # Out-of-bar positions are dropped (e.g. 3.75 in 3/4).
+    default_ghosts = steps_at(*(off + 0.75 for off in backbeat_offsets))
 
     # Defaults.
     tpl = GrooveTemplate(
         hat_mode="8th",
         use_ride=False,
         half_time=False,
-        kick_base=(step_at(0.0),),
+        kick_base=steps_at(0.0),
         kick_extra_rate=0.0,
         double_kick_rate=0.0,
-        snare_backbeat_steps=(snare_2, snare_4),
+        snare_backbeat_steps=snare_backbeats,
         ghost_rate=0.0,
-        ghost_steps=(ghost_a2, ghost_a4),
+        ghost_steps=default_ghosts,
         open_hat_rate=0.0,
         crash_start=False,
         crash_phrase_end_rate=0.0,
@@ -267,7 +340,7 @@ def groove_template(
         double_kick = 0.0 if band != "high" else 0.12
 
         # A common driving chorus kick (1 + "& of 2" + 3).
-        kick_base = (step_at(0.0), step_at(1.5), step_at(2.0))
+        kick_base = steps_at(0.0, 1.5, 2.0)
 
         return GrooveTemplate(
             hat_mode=hat_mode,
@@ -276,9 +349,9 @@ def groove_template(
             kick_base=kick_base,
             kick_extra_rate=kick_extra,
             double_kick_rate=double_kick,
-            snare_backbeat_steps=(snare_2, snare_4),
+            snare_backbeat_steps=snare_backbeats,
             ghost_rate=ghost,
-            ghost_steps=(ghost_a2, ghost_a4),
+            ghost_steps=default_ghosts,
             open_hat_rate=0.10 if band == "low" else 0.20,
             crash_start=True,
             crash_phrase_end_rate=0.10 if band != "high" else 0.20,
@@ -295,12 +368,12 @@ def groove_template(
             hat_mode="8th",
             use_ride=use_ride,
             half_time=False,
-            kick_base=(step_at(0.0), step_at(2.0)),
+            kick_base=steps_at(0.0, 2.0),
             kick_extra_rate=kick_extra,
             double_kick_rate=double_kick,
-            snare_backbeat_steps=(snare_2, snare_4),
+            snare_backbeat_steps=snare_backbeats,
             ghost_rate=ghost,
-            ghost_steps=(ghost_a2, ghost_a4),
+            ghost_steps=default_ghosts,
             open_hat_rate=0.10,
             crash_start=True,
             crash_phrase_end_rate=0.10,
@@ -313,9 +386,9 @@ def groove_template(
         ghost = 0.06 if gid == "prechorus_light" else 0.12
 
         kick_base = (
-            (step_at(0.0), step_at(2.0))
+            steps_at(0.0, 2.0)
             if gid == "prechorus_light"
-            else (step_at(0.0), step_at(1.0), step_at(2.0))
+            else steps_at(0.0, 1.0, 2.0)
         )
 
         return GrooveTemplate(
@@ -325,9 +398,9 @@ def groove_template(
             kick_base=kick_base,
             kick_extra_rate=kick_extra,
             double_kick_rate=0.08 if (gid == "prechorus_drive" and band == "high") else 0.0,
-            snare_backbeat_steps=(snare_2, snare_4),
+            snare_backbeat_steps=snare_backbeats,
             ghost_rate=ghost,
-            ghost_steps=(ghost_a2, ghost_a4),
+            ghost_steps=default_ghosts,
             open_hat_rate=0.06 if gid != "prechorus_light" else 0.03,
             crash_start=False,
             crash_phrase_end_rate=0.05,
@@ -339,12 +412,12 @@ def groove_template(
             hat_mode="quarter" if gid == "bridge_sparse" else "8th",
             use_ride=False,
             half_time=False,
-            kick_base=(step_at(0.0),) if gid == "bridge_sparse" else (step_at(0.0), step_at(2.0)),
+            kick_base=steps_at(0.0) if gid == "bridge_sparse" else steps_at(0.0, 2.0),
             kick_extra_rate=0.02 if gid == "bridge_sparse" else 0.06,
             double_kick_rate=0.0,
-            snare_backbeat_steps=(snare_2, snare_4),
+            snare_backbeat_steps=snare_backbeats,
             ghost_rate=0.04 if gid == "bridge_sparse" else 0.10,
-            ghost_steps=(ghost_a2, ghost_a4),
+            ghost_steps=default_ghosts,
             open_hat_rate=0.02,
             crash_start=False,
             crash_phrase_end_rate=0.0,
@@ -361,12 +434,12 @@ def groove_template(
             hat_mode=hat_mode,
             use_ride=False,
             half_time=False,
-            kick_base=(step_at(0.0),) if gid == "verse_light" else (step_at(0.0), step_at(2.0)),
+            kick_base=steps_at(0.0) if gid == "verse_light" else steps_at(0.0, 2.0),
             kick_extra_rate=kick_extra,
             double_kick_rate=double_kick,
-            snare_backbeat_steps=(snare_2, snare_4),
+            snare_backbeat_steps=snare_backbeats,
             ghost_rate=ghost,
-            ghost_steps=(ghost_a2, ghost_a4),
+            ghost_steps=default_ghosts,
             open_hat_rate=0.04 if gid == "verse_drive" else 0.02,
             crash_start=False,
             crash_phrase_end_rate=0.0,

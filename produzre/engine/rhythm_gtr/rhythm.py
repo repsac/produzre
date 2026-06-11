@@ -459,26 +459,28 @@ def _apply_accents(
     Returns:
         GtrPattern: Pattern with updated accents
     """
-    # Convert accent beats to subdivision indices
+    # Convert accent beats to subdivision indices.
+    # Bound by the bar's total slot count (beats_per_bar * subdivision), NOT by
+    # the number of hits — hits are slot indices, not a dense array.
+    total_slots = max(1, int(beats_per_bar * pattern.subdivision))
     accent_indices: Set[int] = set()
 
     for accent_beat in accent_beats:
         # Normalize to bar-relative position
         bar_beat = accent_beat % beats_per_bar
         # Convert to subdivision index
-        subdivision_idx = int(bar_beat * pattern.subdivision)
-        if subdivision_idx < len(pattern.hits):
+        subdivision_idx = int(round(bar_beat * pattern.subdivision))
+        if 0 <= subdivision_idx < total_slots:
             accent_indices.add(subdivision_idx)
 
-    # Find hits that are close to accent beats
+    # Find hits that are close to accent beats: exact slot match or directly
+    # adjacent slot (1-slot proximity window).
     new_accents = set(pattern.accents)
     for hit in pattern.hits:
-        if hit in accent_indices:
-            new_accents.add(hit)
-        # Also check if hit is within half a subdivision of an accent
         for acc_idx in accent_indices:
-            if abs(hit - acc_idx) <= pattern.subdivision / 2:
+            if abs(hit - acc_idx) <= 1:
                 new_accents.add(hit)
+                break
 
     return GtrPattern(
         name=pattern.name,

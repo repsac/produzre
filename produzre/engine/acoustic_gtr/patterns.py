@@ -3,13 +3,20 @@
 Each pattern describes which strings to pluck and when (relative to bar start).
 Patterns are defined in 4/4 by default; WALTZ is 3/4.
 
-String indices reference the sorted voicing pitches list:
-  0 = lowest (bass/6th string),  1 = 5th string,  2 = 4th string
-  3 = 3rd string,                4 = 2nd string,  5 = 1st string (treble)
+String indices are LOGICAL positions on a fully-played 6-string chord
+(0 = lowest, 5 = highest). The renderer maps them onto the voicing's PLAYED
+strings via ``_pitch_for_pattern_hit``:
+
+  - bass hits (``is_bass=True``) index up from the lowest PLAYED string —
+    index 0 = root (lowest played), index 1 = next-lowest played (typically
+    the 5th), preserving Travis-style root/5th alternation on shapes with
+    muted low strings (C, A, D forms);
+  - treble hits index down from the highest PLAYED string —
+    index 5 = highest played, 4 = second-highest, 3 = third-highest.
 
 PickHit fields:
   beat       — beat within bar (0.0 = bar downbeat)
-  string_idx — index into voicing pitches (clamped to actual chord length)
+  string_idx — logical string index (see mapping contract above)
   vel_ratio  — velocity multiplier relative to base_vel
   is_bass    — True = thumb stroke (warmer, louder), False = finger stroke
 """

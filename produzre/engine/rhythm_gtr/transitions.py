@@ -175,13 +175,17 @@ def apply_build_to_pattern(
 
     accents = sorted(accents)
 
+    # Recompute strum directions from slot parity: the original directions list
+    # is positional (one per hit) and misaligns once hits are added.
+    directions = ["down" if (h % subdivision) == 0 else "up" for h in hits]
+
     return GtrPattern(
         name=f"{pattern.name}_build",
         subdivision=pattern.subdivision,
         hits=hits,
         accents=accents,
         palm_mutes=pattern.palm_mutes,
-        strum_directions=pattern.strum_directions,
+        strum_directions=directions,
         density=pattern.density,
     )
 
@@ -242,13 +246,17 @@ def apply_downshift_to_pattern(
     # Keep palm mutes only for hits we kept
     palm_mutes = [pm for pm in pattern.palm_mutes if pm in hits]
 
+    # Recompute strum directions from slot parity (positional list misaligns
+    # after hits were removed).
+    directions = ["down" if (h % subdivision) == 0 else "up" for h in hits]
+
     return GtrPattern(
         name=f"{pattern.name}_downshift",
         subdivision=pattern.subdivision,
         hits=hits,
         accents=accents,
         palm_mutes=palm_mutes,
-        strum_directions=pattern.strum_directions[:len(hits)],
+        strum_directions=directions,
         density=pattern.density * (1.0 - scaled_intensity),
     )
 
@@ -262,6 +270,11 @@ def create_turnaround_pattern(
     """Create a turnaround pattern for the last bar of a section.
 
     Turnarounds are distinctive cadence patterns that signal section endings.
+
+    Contract: the returned pattern's hits are BAR-ABSOLUTE slot indices in the
+    pattern's own subdivision (slot = beat_in_bar * subdivision). They must be
+    overlaid onto a base pattern with ``merge_patterns`` (which rescales them
+    into the base subdivision) — do NOT shift them by an additional offset.
 
     Args:
         style: Pattern style (straight_8s, chugs, etc.)
@@ -323,6 +336,10 @@ def create_pickup_pattern(
 ) -> GtrPattern:
     """Create a pickup pattern for the last beat before transition.
 
+    Contract: hits are BAR-ABSOLUTE slot indices in this pattern's own
+    subdivision (slot = beat_in_bar * subdivision); merge them with
+    ``merge_patterns`` without any extra offset.
+
     Args:
         beats_per_bar: Beats per bar
         pickup_style: "eighth" or "sixteenth"
@@ -359,65 +376,65 @@ def create_pickup_pattern(
 def merge_patterns(
     base_pattern: GtrPattern,
     overlay_pattern: GtrPattern,
-    overlay_start_beat: float = 0.0,
+    beats_per_bar: float = 4.0,
 ) -> GtrPattern:
     """Merge two patterns, overlaying one on top of the other.
+
+    Contract: hits in BOTH patterns are bar-absolute slot indices expressed
+    in each pattern's OWN subdivision (slot = beat_in_bar * subdivision).
+    Overlay hits are rescaled into the output subdivision — no positional
+    offset is applied (turnaround/pickup hits already encode their bar
+    position). The output uses the finer of the two subdivisions so 16th-note
+    overlays survive merging into an 8th-note base. All merged slots are
+    clamped to the bar (< beats_per_bar * subdivision).
 
     Args:
         base_pattern: Base pattern
         overlay_pattern: Pattern to overlay (e.g., pickup or turnaround)
-        overlay_start_beat: Where to start the overlay (in beats)
+        beats_per_bar: Beats per bar (defines the bar boundary for clamping)
 
     Returns:
         GtrPattern: Merged pattern
     """
-    # Convert overlay start to subdivision indices
-    overlay_offset = int(overlay_start_beat * base_pattern.subdivision)
+    base_sub = max(1, int(base_pattern.subdivision))
+    overlay_sub = max(1, int(overlay_pattern.subdivision))
+    # Output at the finer grid so rescaled slots stay integral.
+    out_sub = base_sub
+    while out_sub % overlay_sub != 0 or out_sub % base_sub != 0:
+        out_sub += 1
+    total_slots = max(1, int(beats_per_bar * out_sub))
 
-    # Shift overlay hits by offset
-    overlay_hits = [h + overlay_offset for h in overlay_pattern.hits]
-    overlay_accents = [a + overlay_offset for a in overlay_pattern.accents]
-    overlay_palm_mutes = [pm + overlay_offset for pm in overlay_pattern.palm_mutes]
+    def _rescale(slots, sub):
+        factor = out_sub // sub
+        return [h * factor for h in slots if 0 <= h * factor < total_slots]
 
-    # Merge hits (overlay replaces base at overlapping positions)
-    merged_hits = list(base_pattern.hits)
-    for hit in overlay_hits:
-        if hit not in merged_hits:
-            merged_hits.append(hit)
+    merged_hits = sorted(
+        set(_rescale(base_pattern.hits, base_sub))
+        | set(_rescale(overlay_pattern.hits, overlay_sub))
+    )
+    merged_accents = sorted(
+        set(_rescale(base_pattern.accents, base_sub))
+        | set(_rescale(overlay_pattern.accents, overlay_sub))
+    )
+    merged_palm_mutes = sorted(
+        set(_rescale(base_pattern.palm_mutes, base_sub))
+        | set(_rescale(overlay_pattern.palm_mutes, overlay_sub))
+    )
 
-    merged_hits = sorted(merged_hits)
-
-    # Merge accents
-    merged_accents = list(base_pattern.accents)
-    for accent in overlay_accents:
-        if accent not in merged_accents:
-            merged_accents.append(accent)
-
-    merged_accents = sorted(merged_accents)
-
-    # Merge palm mutes
-    merged_palm_mutes = list(base_pattern.palm_mutes)
-    for pm in overlay_palm_mutes:
-        if pm not in merged_palm_mutes:
-            merged_palm_mutes.append(pm)
-
-    merged_palm_mutes = sorted(merged_palm_mutes)
-
-    # Extend strum directions as needed
-    merged_directions = list(base_pattern.strum_directions)
-    while len(merged_directions) < len(merged_hits):
-        # Default to alternating
-        last_dir = merged_directions[-1] if merged_directions else "down"
-        merged_directions.append("up" if last_dir == "down" else "down")
+    # Recompute strum directions from slot parity — positional direction lists
+    # from either source pattern no longer line up after merging.
+    merged_directions = [
+        "down" if (h % out_sub) == 0 else "up" for h in merged_hits
+    ]
 
     return GtrPattern(
         name=f"{base_pattern.name}_merged",
-        subdivision=base_pattern.subdivision,
+        subdivision=out_sub,
         hits=merged_hits,
         accents=merged_accents,
         palm_mutes=merged_palm_mutes,
-        strum_directions=merged_directions[:len(merged_hits)],
-        density=len(merged_hits) / (len(merged_hits) if len(merged_hits) > 0 else 1),
+        strum_directions=merged_directions,
+        density=len(merged_hits) / total_slots,
     )
 
 
@@ -479,15 +496,13 @@ def adjust_pattern_for_transition(
                 beats_per_bar=beats_per_bar,
                 base_pattern=pattern,
             )
-            # Replace last 1-2 beats with turnaround
-            turnaround_start = beats_per_bar - 2.0
-            pattern = merge_patterns(pattern, turnaround, turnaround_start)
+            # Turnaround hits are bar-absolute; merge without extra offset.
+            pattern = merge_patterns(pattern, turnaround, beats_per_bar)
 
         # Add pickup notes before transition
         if should_add_pickup(transition):
             pickup = create_pickup_pattern(beats_per_bar, pickup_style="eighth")
-            pickup_start = beats_per_bar - 1.0  # Last beat
-            pattern = merge_patterns(pattern, pickup, pickup_start)
+            pattern = merge_patterns(pattern, pickup, beats_per_bar)
 
     # Apply downshift transition (first bars of section coming from high energy)
     # Note: This requires looking at the PREVIOUS section's transition

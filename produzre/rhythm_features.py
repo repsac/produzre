@@ -121,9 +121,12 @@ def extract_rhythm_features(
     events_per_bar: Dict[int, List[Any]] = {}
     hat_events_per_bar: Dict[int, int] = {}
 
-    # Collect fill windows by tracking consecutive fill events
-    fill_start: float | None = None
-    current_fill_end: float | None = None
+    # Fill tracking: collect fill events (and the pitches they use) so windows
+    # are built from fill events only. Interleaved non-fill events from OTHER
+    # voices (e.g. hats during a tom fill) must not fragment a window.
+    fill_events: List[tuple[float, float]] = []  # (beat, end_beat)
+    fill_pitch_set: Set[int] = set()
+    non_fill_events: List[tuple[float, int]] = []  # (beat, pitch)
 
     for ev in events:
         beat = float(getattr(ev, "beat", 0.0))
@@ -148,30 +151,48 @@ def extract_rhythm_features(
         if (pitch == snare_pitch and velocity >= 80) or pitch == crash_pitch:
             features.accent_beats.add(beat)
 
-        # Syncopation beats: off-beat kicks
+        # Syncopation beats: off-beat kicks only. On-beat kicks (downbeats,
+        # backbeats, or any integer beat position) are NOT syncopated.
         if pitch == kick_pitch:
-            # Check if this is NOT on a downbeat
-            beat_in_bar = beat % bpb
-            # beat_in_bar is in [0, bpb); downbeat is at 0
-            is_downbeat = abs(beat_in_bar) < 0.1
-            if not is_downbeat:
+            beat_in_bar = beat % bpb if bpb > 0 else beat
+            nearest_beat = round(beat_in_bar)
+            is_on_beat = abs(beat_in_bar - nearest_beat) < 0.1
+            if not is_on_beat:
                 features.syncopation_beats.add(beat)
 
-        # Fill windows: track consecutive fill events
+        # Collect fill / non-fill events for window construction below.
         if "fill" in kind:
-            if fill_start is None:
-                fill_start = beat
-            current_fill_end = beat + float(getattr(ev, "duration_beats", 0.25))
+            end = beat + float(getattr(ev, "duration_beats", 0.25))
+            fill_events.append((beat, end))
+            fill_pitch_set.add(pitch)
         else:
-            # End of fill sequence
-            if fill_start is not None and current_fill_end is not None:
-                features.fill_windows.append((fill_start, current_fill_end))
-                fill_start = None
-                current_fill_end = None
+            non_fill_events.append((beat, pitch))
 
-    # Close any open fill window
-    if fill_start is not None and current_fill_end is not None:
-        features.fill_windows.append((fill_start, current_fill_end))
+    # Build fill windows from fill events only. A window ends when:
+    #   - the gap to the next fill event exceeds a threshold, or
+    #   - a non-fill event of the SAME kind family (same pitch as one of the
+    #     fill voices) lands strictly between the current window's end and
+    #     the next fill event.
+    # Interleaved events from other voices never break a window.
+    GAP_THRESHOLD_BEATS = 1.0
+    if fill_events:
+        fill_events.sort(key=lambda fe: fe[0])
+        breaker_beats = sorted(
+            b for b, p in non_fill_events if p in fill_pitch_set
+        )
+
+        def _breaker_between(lo: float, hi: float) -> bool:
+            return any(lo < b <= hi for b in breaker_beats)
+
+        win_start, win_end = fill_events[0]
+        for beat, end in fill_events[1:]:
+            gap_exceeded = (beat - win_end) > GAP_THRESHOLD_BEATS
+            if gap_exceeded or _breaker_between(win_end, beat):
+                features.fill_windows.append((win_start, win_end))
+                win_start, win_end = beat, end
+            else:
+                win_end = max(win_end, end)
+        features.fill_windows.append((win_start, win_end))
 
     # Calculate density per bar (hat events per beat)
     for bar_idx in range(bars):

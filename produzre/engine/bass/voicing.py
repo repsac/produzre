@@ -43,6 +43,7 @@ def select_chord_tone_with_voice_leading(
     get_chromatic_approach=None,
     get_diatonic_approach=None,
     motion_style: str = "stepwise",
+    root_bias: Optional[float] = None,
 ) -> tuple[int, str]:
     """Select the best chord tone using voice leading principles.
 
@@ -62,6 +63,8 @@ def select_chord_tone_with_voice_leading(
         get_chromatic_approach: Function to get chromatic approach (injected to avoid circular import)
         get_diatonic_approach: Function to get diatonic approach (injected to avoid circular import)
         motion_style: Melodic motion preference ("stepwise", "leaping", "mixed") - Phase 4.2
+        root_bias: Probability (0.0-1.0) of including the root among inner-beat
+            candidates. None keeps the legacy default (~0.65).
 
     Returns:
         (pitch, kind) - Selected MIDI note and voice label
@@ -78,8 +81,12 @@ def select_chord_tone_with_voice_leading(
 
     # Downbeats: strongly prefer root
     if is_downbeat:
-        # Occasionally use fifth on downbeat for variation (25% — was 15%)
-        if fifth and rng.random() < 0.25:
+        # Occasionally use fifth on downbeat for variation (25% — was 15%).
+        # Never on the first note of a section (prev_pitch is None): the bass
+        # must establish the root before varying away from it. The rng draw is
+        # unconditional to keep the stream stable.
+        use_fifth = rng.random() < 0.25
+        if fifth and use_fifth and prev_pitch is not None:
             pitch = clamp_to_register(fifth, register_low, register_high)
             return (pitch, "fifth")
         else:
@@ -117,7 +124,10 @@ def select_chord_tone_with_voice_leading(
         # On non-downbeat inner beats, reduce root bias so the bass outlines
         # harmony with thirds and fifths rather than camping on the root.
         # Real bassists walk through chord tones on beats 2-4.
-        include_root = rng.random() > 0.35
+        # root_bias param controls the inclusion probability when provided;
+        # the legacy default is equivalent to root_bias = 0.65.
+        _root_threshold = 0.35 if root_bias is None else (1.0 - float(root_bias))
+        include_root = rng.random() > _root_threshold
         candidates = []
         if include_root:
             candidates.append((root, "root"))

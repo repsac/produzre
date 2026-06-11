@@ -1,25 +1,34 @@
+# Jazz bass — hand-tuned 2026-06-10.
+# The mined recipe used rhythm_pattern "push" with density 0.53, which never
+# reached the old walking trigger (density >= 0.9), and articulation "pick"
+# (jazz upright/electric is fingerstyle). Now requests walking explicitly
+# (engine support for rhythm_pattern: "walking" + relaxed trigger is being
+# wired by a concurrent task).
 id: jazz
 instrument: bass
 tags:
   genre: "jazz"
   time_signature: "4/4"
-  bpm_range: [79, 148]
+  bpm_range: [79, 220]
   section_types: [verse, chorus, bridge, default]
 params:
-  density: 0.53
-  rhythm_pattern: "push"
-  articulation_style: "pick"
+  density: 0.75
+  rhythm_pattern: "walking"
+  articulation_style: "finger"
   register_low: 28
   register_high: 52
-  approach_rate: 0.27
-  chromatic_rate: 0.08
+  approach_rate: 0.35
+  chromatic_rate: 0.12
   max_passing_per_bar: 2
-  octave_jump_rate: 0.24
+  octave_jump_rate: 0.15
   fifth_jump_rate: 0.18
-  rest_rate: 0.25
-  root_bias: 0.63
+  rest_rate: 0.05  # walking lines are continuous quarters
+  root_bias: 0.55  # walking needs non-root motion between changes
   motion_style: "mixed"
-  swing: 0.05
-  lock_to_kick: 0.44
-  accent_strength: 1.32
-  syncopation: 0.45
+  # Intended feel: triplet swing matching the drums (ratio ~2:1).
+  # Bass swing application is being wired by the groove-clock task; the
+  # value is authored to current drum semantics (0.25*swing beat delay).
+  swing: 0.6
+  lock_to_kick: 0.2  # walking floats over the kit rather than locking
+  accent_strength: 1.2
+  syncopation: 0.3

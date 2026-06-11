@@ -48,7 +48,6 @@ class RhythmGuitarParams:
     humanize_velocity: float = 0.1  # 0.0-1.0 (velocity variation)
     humanize_timing: float = 0.05  # 0.0-1.0 (timing variation)
     downbeat_boost: float = 0.2  # 0.0-1.0 (downbeat emphasis)
-    velocity_curve: str = "linear"  # "linear", "exponential", "logarithmic", "compressed"
     sustain_cut_rate: float = 0.0  # 0.0-1.0 (probability of staccato stab instead of ring)
 
     # Meta parameters
@@ -73,7 +72,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.08,
         "humanize_timing": 0.03,
         "downbeat_boost": 0.15,
-        "velocity_curve": "linear",
     },
     "verse": {
         "style": "auto",  # Will choose straight_8s or syncopated
@@ -90,7 +88,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.1,
         "humanize_timing": 0.05,
         "downbeat_boost": 0.2,
-        "velocity_curve": "linear",
     },
     "prechorus": {
         "style": "auto",
@@ -107,7 +104,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.1,
         "humanize_timing": 0.05,
         "downbeat_boost": 0.25,
-        "velocity_curve": "linear",
     },
     "chorus": {
         "style": "auto",  # Will choose chugs or power chords
@@ -124,7 +120,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.12,  # Slightly more variation
         "humanize_timing": 0.04,  # Tighter timing
         "downbeat_boost": 0.3,  # Strong downbeats
-        "velocity_curve": "linear",
     },
     "bridge": {
         "style": "syncopated",
@@ -141,7 +136,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.1,
         "humanize_timing": 0.06,
         "downbeat_boost": 0.2,
-        "velocity_curve": "linear",
     },
     "solo": {
         "style": "auto",
@@ -158,7 +152,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.09,
         "humanize_timing": 0.05,
         "downbeat_boost": 0.15,
-        "velocity_curve": "linear",
     },
     "breakdown": {
         "style": "half_time",
@@ -175,7 +168,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.08,
         "humanize_timing": 0.03,
         "downbeat_boost": 0.4,  # Very strong downbeats
-        "velocity_curve": "linear",
         "sustain_cut_rate": 0.3,  # Punchy stabs suit breakdown sparseness
     },
     "outro": {
@@ -193,7 +185,6 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "humanize_velocity": 0.07,
         "humanize_timing": 0.04,
         "downbeat_boost": 0.15,
-        "velocity_curve": "linear",
     },
 }
 
@@ -214,7 +205,6 @@ NEUTRAL_DEFAULTS: Dict[str, Any] = {
     "humanize_velocity": 0.1,
     "humanize_timing": 0.05,
     "downbeat_boost": 0.2,
-    "velocity_curve": "linear",
     "sustain_cut_rate": 0.0,
     "section_contrast": 0.7,
     "use_patterns": False,
@@ -297,7 +287,6 @@ def resolve_params(
     blended["humanize_velocity"] = max(0.0, min(1.0, blended.get("humanize_velocity", 0.1)))
     blended["humanize_timing"] = max(0.0, min(1.0, blended.get("humanize_timing", 0.05)))
     blended["downbeat_boost"] = max(0.0, min(1.0, blended.get("downbeat_boost", 0.2)))
-    # velocity_curve is string, no clamping needed
     # sustain_cut_rate: user override takes precedence
     blended["sustain_cut_rate"] = max(0.0, min(1.0, float(extra.get("sustain_cut_rate", blended.get("sustain_cut_rate", 0.0)))))
 
@@ -333,7 +322,6 @@ def resolve_params(
         humanize_velocity=float(blended["humanize_velocity"]),
         humanize_timing=float(blended["humanize_timing"]),
         downbeat_boost=float(blended["downbeat_boost"]),
-        velocity_curve=str(blended.get("velocity_curve", "linear")),
         sustain_cut_rate=float(blended["sustain_cut_rate"]),
         section_contrast=contrast,
         use_patterns=bool(blended.get("use_patterns", False)),
@@ -369,7 +357,6 @@ def params_to_dict(params: RhythmGuitarParams) -> Dict[str, Any]:
         "humanize_velocity": round(params.humanize_velocity, 2),
         "humanize_timing": round(params.humanize_timing, 2),
         "downbeat_boost": round(params.downbeat_boost, 2),
-        "velocity_curve": params.velocity_curve,
         "sustain_cut_rate": round(params.sustain_cut_rate, 2),
         "section_contrast": round(params.section_contrast, 2),
         "use_patterns": params.use_patterns,

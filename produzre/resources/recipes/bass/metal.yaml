@@ -1,3 +1,6 @@
+# Metal bass — tuned 2026-06-10.
+# Pick articulation (metal persona agrees), high density riffing locked to
+# roots; density trimmed from the mined 0.95 wall-of-notes to 0.85.
 id: metal
 instrument: bass
 tags:
@@ -6,9 +9,9 @@ tags:
   bpm_range: [84, 156]
   section_types: [verse, chorus, bridge, default]
 params:
-  density: 0.95
+  density: 0.85
   rhythm_pattern: "drive"
-  articulation_style: "finger"
+  articulation_style: "pick"
   register_low: 28
   register_high: 52
   approach_rate: 0.2
@@ -17,7 +20,7 @@ params:
   octave_jump_rate: 0.33
   fifth_jump_rate: 0.28
   rest_rate: 0.21
-  root_bias: 0.64
+  root_bias: 0.8
   motion_style: "mixed"
   swing: 0.01
   lock_to_kick: 0.39

@@ -28,12 +28,12 @@ import logging
 
 # General MIDI drum note mappings
 KICK_PITCHES = {35, 36}
-SNARE_PITCHES = {38, 40}
+SNARE_PITCHES = {37, 38, 40}  # Cross-stick, acoustic snare, electric snare
 TOM_PITCHES = {41, 43, 45, 47, 48, 50}  # Low floor, low, mid, mid-high, high, high floor
 HAT_CLOSED_PITCH = 42
 HAT_OPEN_PITCH = 46
 HAT_PEDAL_PITCH = 44  # Hi-hat pedal chick/splash
-RIDE_PITCHES = {51, 59}  # Ride cymbal, ride bell
+RIDE_PITCHES = {51, 53, 59}  # Ride cymbal 1, ride bell, ride cymbal 2
 CRASH_PITCHES = {49, 57, 52, 55}  # Crash 1, Crash 2, Chinese, Splash
 
 
@@ -57,6 +57,7 @@ class DrumHit:
     kind: str
     voice: str
     limb: str
+    channel: int = 9  # Source MIDI channel (preserved through reconstruction)
 
 
 def classify_drum_event(pitch: int, velocity: int, start_beat: float, beats_per_bar: float = 4.0) -> tuple[str, str, str]:
@@ -204,13 +205,15 @@ def resolve_step_collisions(
     Returns:
         List[DrumHit]: Filtered hits that respect limb constraints.
     """
-    if len(step_hits) <= max_hand_hits + max_foot_hits:
-        # No collision possible
-        return step_hits
-
-    # Partition by limb
+    # Partition by limb FIRST: a step with e.g. 4 hand hits and 0 foot hits
+    # still violates the hand budget even though the total is within
+    # max_hand_hits + max_foot_hits.
     hand_hits = [h for h in step_hits if h.limb == "hand"]
     foot_hits = [h for h in step_hits if h.limb == "foot"]
+
+    if len(hand_hits) <= max_hand_hits and len(foot_hits) <= max_foot_hits:
+        # No collision possible: each limb group is within its own budget.
+        return step_hits
 
     kept_hits = []
 
@@ -316,6 +319,7 @@ def apply_constraints(
             kind=original_kind or kind,  # Prefer original kind if available
             voice=voice,
             limb=limb,
+            channel=int(getattr(ev, 'channel', 9)),
         )
         drum_hits.append(hit)
 
@@ -343,13 +347,15 @@ def apply_constraints(
         for bar, count in kick_hits_by_bar.items()
     }
 
-    # Identify fill windows (high tom activity)
+    # Identify fill windows (tom activity OR explicit fill events such as
+    # snare-roll fills, which carry kind == "fill" but hit no toms).
     fill_windows: Set[float] = set()
     if fill_duck_hats:
         for step, hits in hits_by_step.items():
             tom_count = sum(1 for h in hits if "tom" in h.voice)
-            if tom_count >= 1:
-                # This step has tom activity, mark as fill window
+            has_fill_kind = any(h.kind == "fill" for h in hits)
+            if tom_count >= 1 or has_fill_kind:
+                # This step has fill activity, mark as fill window
                 fill_windows.add(step)
 
     # Resolve collisions at each step
@@ -411,7 +417,8 @@ def apply_constraints(
             )
             filtered_events.append(event)
     else:
-        # NoteEvent type - reconstruct NoteEvent objects
+        # NoteEvent type - reconstruct NoteEvent objects, preserving the
+        # source event's channel and kind.
         from ...timeline import NoteEvent
 
         filtered_events = []
@@ -421,7 +428,8 @@ def apply_constraints(
                 start_beat=hit.start_beat,
                 duration_beats=hit.duration_beats,
                 velocity=hit.velocity,
-                channel=0,
+                channel=hit.channel,
+                kind=hit.kind or None,
             )
             filtered_events.append(event)
 

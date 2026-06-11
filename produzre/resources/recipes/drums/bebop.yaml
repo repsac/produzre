@@ -1,42 +1,37 @@
+# Bebop drum recipe — hand-tuned 2026-06-10.
+# The mined recipe had swing: 0.1 (inaudible), backbeat snares on
+# noise steps [3, 4, 11, 15], and a four-on-the-floor kick (corpus
+# averaging of feathered quarters at full count).
+# Idiom: ride-led time, swung 8ths, sparse "bomb" kicks, snare comping
+# expressed as ghosts. Intended feel: triplet swing (2:1); with current
+# engine semantics (0.25*swing beat delay on the "&") that needs ~0.67.
+
 id: bebop
 instrument: drums
 tags:
   genre: bebop
-  time_signature: 4/4
-  section_types:
-  - verse
-  - chorus
-  bpm_range:
-  - 82
-  - 260
+  feel: swing
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, solo]
+  bpm_range: [120, 280]
+
 groove:
-  hat_mode: quarter
+  hat_mode: "8th"
   use_ride: true
-  kick_base:
-  - 0
-  - 4
-  - 8
-  - 12
-  - 15
-  kick_extra_rate: 0.03
+  # Sparse kick: downbeat anchor only; comping bombs come from kick_extra_rate.
+  kick_base: [0]
+  kick_extra_rate: 0.10
   double_kick_rate: 0.0
-  snare_backbeat_steps:
-  - 3
-  - 4
-  - 11
-  - 15
-  ghost_rate: 0.15
-  ghost_steps:
-  - 0
-  - 7
-  - 8
-  - 9
-  - 12
-  - 13
+  snare_backbeat_steps: [4, 12]
+  # Comping: heavy ghost activity on offbeat/upbeat positions.
+  ghost_rate: 0.35
+  ghost_steps: [2, 5, 7, 10, 13, 15]
   open_hat_rate: 0.01
   crash_start: false
-  crash_phrase_end_rate: 0.0
+  crash_phrase_end_rate: 0.05
+
 params:
-  swing: 0.1
-  fill_rate: 0.25
+  swing: 0.65  # ~+0.16 beats on the "&" = triplet ride feel
+  fill_rate: 0.20
+
 voices: {}

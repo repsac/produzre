@@ -205,9 +205,13 @@ def _parse_instrument_config(name: str, data: Dict[str, Any]) -> InstrumentConfi
         InstrumentConfig: Parsed instrument settings for this section.
     """
     enabled = data.get("enabled")
-    intensity = float(data.get("intensity", 1.0))
-    style_bias = data.get("style_bias", 0.0)
-    offset_beats = float(data.get("offset_beats", 0.0))
+    # Keep "unset" as None so global/persona values survive the section merge.
+    intensity = data.get("intensity")
+    intensity = float(intensity) if intensity is not None else None
+    style_bias = data.get("style_bias")
+    style_bias = float(style_bias) if style_bias is not None else None
+    offset_beats = data.get("offset_beats")
+    offset_beats = float(offset_beats) if offset_beats is not None else None
 
     seed = data.get("seed")
     if seed is not None:
@@ -265,6 +269,14 @@ def _parse_instrument_config(name: str, data: Dict[str, Any]) -> InstrumentConfi
     }
     extra = {k: v for k, v in data.items() if k not in known_keys}
 
+    # `params:` is a user-facing alias for engine-specific options. Fold its
+    # keys into `extra` (engines read extra); explicit top-level unknown keys
+    # win over the params block on collision. `transitions` was already
+    # extracted above and is not an engine param.
+    if isinstance(params, dict):
+        param_extras = {k: v for k, v in params.items() if k != "transitions"}
+        extra = {**param_extras, **extra}
+
     return InstrumentConfig(
         enabled=enabled,
         intensity=intensity,
@@ -307,10 +319,17 @@ def _parse_harmony(data: Dict[str, Any]) -> HarmonyConfig:
         HarmonyConfig: Parsed harmony configuration.
     """
     progression = data.get("progression", "")
-    chord_rate = float(data.get("chord_rate", 4.0))
+    chord_rate_raw = data.get("chord_rate")
+    chord_rate = float(chord_rate_raw) if chord_rate_raw is not None else 4.0
 
     known_keys = {"progression", "chord_rate"}
     extra = {k: v for k, v in data.items() if k not in known_keys}
+
+    # Track whether the user explicitly set chord_rate so downstream recipe
+    # resolution (harmony/plan.py) can apply the recipe's chord_rate when the
+    # user left it at the default.
+    if chord_rate_raw is None:
+        extra["_chord_rate_default"] = True
 
     prog_value = progression if progression else ""
     if isinstance(prog_value, list):
@@ -336,6 +355,9 @@ def parse_section(section_id: str, data: Dict[str, Any]) -> SectionConfig:
 
     Optional musical overrides:
       - `meter`, `key`, `mode`
+      - `energy` ("low"/"mid"/"high" or numeric 0.0..1.0)
+      - `intensity` (numeric 0.0..1.0+; when omitted, the planner derives a
+        default from section type and arrangement position)
 
     Harmony:
       - `harmony` may be provided as a mapping; when present it is parsed and
@@ -387,6 +409,23 @@ def parse_section(section_id: str, data: Dict[str, Any]) -> SectionConfig:
     harmony = _parse_harmony(harmony_data) if isinstance(harmony_data, dict) else None
     progression = data.get("progression")
 
+    # Legacy convenience: a bare section-level `progression:` (without a
+    # `harmony:` block) synthesizes a HarmonyConfig so it actually produces
+    # harmony instead of being silently ignored.
+    if harmony is None and progression:
+        harmony = _parse_harmony({"progression": progression})
+
+    # Energy override ("low"/"mid"/"high" or numeric 0.0..1.0). Resolved by
+    # produzre.orchestrate.energy.resolve_section_energy at build time.
+    energy = data.get("energy")
+
+    # Macro-dynamics intensity. Keep "unset" as None so the planner can derive
+    # a default from section type + arrangement position (and never touch an
+    # explicit user value). See produzre.orchestrate.plan.resolve_section_intensity.
+    intensity = data.get("intensity")
+    if intensity is not None:
+        intensity = float(intensity)
+
     # Intent: bridge/break contrast patterns (Phase 15)
     intent = data.get("intent")
     if intent is not None:
@@ -411,7 +450,7 @@ def parse_section(section_id: str, data: Dict[str, Any]) -> SectionConfig:
                 )
             instruments[inst_name] = _parse_instrument_config(inst_name, inst_cfg)
 
-    known_keys = {"type", "bars", "beats", "meter", "key", "mode", "harmony", "instruments", "progression", "intent", "solo", "role", "seed", "variation"}
+    known_keys = {"type", "bars", "beats", "meter", "key", "mode", "harmony", "instruments", "progression", "intent", "solo", "role", "seed", "variation", "energy", "intensity"}
     extras = {k: v for k, v in data.items() if k not in known_keys}
 
     return SectionConfig(
@@ -427,6 +466,8 @@ def parse_section(section_id: str, data: Dict[str, Any]) -> SectionConfig:
         harmony=harmony,
         instruments=instruments,
         progression=progression,
+        energy=energy,
+        intensity=intensity,
         intent=intent,
         solo=solo,
         role=role,

@@ -1,38 +1,37 @@
+# Blues shuffle drum recipe — hand-tuned 2026-06-10.
+# The mined value swing: 0.2 (= "&" delayed by 0.05 beats) is inaudible.
+# Intended feel: 12/8 triplet shuffle, long-short 2:1 ratio. With current
+# engine semantics (offbeat delayed by 0.25*swing beats) the triplet
+# position (+0.167 beats) needs swing ~= 0.67; we use 0.6 (~+0.15 beats),
+# corpus-measured blues swing was 0.54.
+# Ride carries the shuffle on 8th positions so the swung "&" actually
+# exists (the old hat_mode: quarter had no offbeats to swing).
+
 id: blues_shuffle
 instrument: drums
 tags:
   genre: blues
-  time_signature: 4/4
-  section_types:
-  - verse
-  - chorus
-  bpm_range:
-  - 58
-  - 212
   feel: shuffle
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, solo]
+  bpm_range: [58, 212]
+
 groove:
-  hat_mode: quarter
+  hat_mode: "8th"
   use_ride: true
-  kick_base:
-  - 0
-  - 8
+  kick_base: [0, 8]
   kick_extra_rate: 0.08
-  double_kick_rate: 0.13
-  snare_backbeat_steps:
-  - 4
-  - 12
+  double_kick_rate: 0.0
+  snare_backbeat_steps: [4, 12]
   ghost_rate: 0.19
-  ghost_steps:
-  - 7
-  - 8
-  - 9
-  - 11
-  - 13
-  - 15
+  # Ghosts on swung offbeat positions ("&" of 2 and 4 + leading 16ths).
+  ghost_steps: [6, 7, 14, 15]
   open_hat_rate: 0.0
   crash_start: false
   crash_phrase_end_rate: 0.0
+
 params:
-  swing: 0.2
+  swing: 0.6  # ~+0.15 beats on the "&" under current semantics (12/8 feel)
   fill_rate: 0.15
+
 voices: {}

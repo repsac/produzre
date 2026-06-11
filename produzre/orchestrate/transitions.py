@@ -1582,6 +1582,44 @@ def _compute_section_pickup_hint(current_type: str, next_type: Optional[str]) ->
         return False
 
 
+def transition_occurrence_key(arrangement_index: int, section_id: str) -> str:
+    """Return the per-occurrence transitions-map key for a section.
+
+    Repeated sections (the same section id appearing multiple times in the
+    arrangement) get distinct directives keyed by their arrangement index.
+    """
+    return f"{int(arrangement_index):02d}:{section_id}"
+
+
+def get_section_transition(
+    transitions_map: Optional[Dict[str, Any]],
+    section_id: str,
+    arrangement_index: Optional[int] = None,
+):
+    """Look up a transition directive, preferring the per-occurrence key.
+
+    Args:
+        transitions_map: Map produced by `build_section_transitions_map()` (or
+            its serialized form).
+        section_id: Section identifier (e.g., "verse1").
+        arrangement_index: Optional arrangement occurrence index. When given,
+            the per-occurrence entry is preferred; the plain `section_id` key
+            (last occurrence) is the backward-compatible fallback.
+
+    Returns:
+        The directive (SectionTransition or serialized dict) or None.
+    """
+    if not transitions_map:
+        return None
+    if arrangement_index is not None:
+        directive = transitions_map.get(
+            transition_occurrence_key(arrangement_index, section_id)
+        )
+        if directive is not None:
+            return directive
+    return transitions_map.get(section_id)
+
+
 def build_section_transitions_map(
     planned_sections: list,
     logger: Optional[logging.Logger] = None,
@@ -1596,12 +1634,22 @@ def build_section_transitions_map(
     transitions in evaluate_transitions(), these are computed once per song
     and stored in the PerformancePlan before rendering begins.
 
+    Keying:
+      - The primary key is per arrangement occurrence
+        (`"<NN>:<section_id>"`, see `transition_occurrence_key()`), so a
+        repeated section gets the correct directive for *each* occurrence.
+      - For backward compatibility, the directive is ALSO stored under the
+        plain `section_id` key; for repeated sections that alias holds the
+        last occurrence's directive (legacy behavior). Both keys reference
+        the same directive object.
+
     Args:
         planned_sections: List of PlannedSection objects from BuildPlan.
         logger: Optional logger for debug output.
 
     Returns:
-        Dict[str, SectionTransition]: Map of section_id -> transition directive.
+        Dict[str, SectionTransition]: Map of occurrence-key (and legacy
+        section_id alias) -> transition directive.
     """
     transitions_map: Dict[str, SectionTransition] = {}
     num_sections = len(planned_sections)
@@ -1637,11 +1685,14 @@ def build_section_transitions_map(
             is_last_section=is_last,
         )
 
+        # Primary, per-occurrence key (repeated sections stay distinct) plus a
+        # legacy alias under the bare section id (last occurrence wins).
+        transitions_map[transition_occurrence_key(i, ps.sec_id)] = directive
         transitions_map[ps.sec_id] = directive
 
         if logger:
             logger.debug(
-                f"Section '{ps.sec_id}' ({current_type}) -> '{next_section_id}' ({next_section_type}): "
+                f"Section '{ps.sec_id}' (occurrence {i}, {current_type}) -> '{next_section_id}' ({next_section_type}): "
                 f"energy_ramp={energy_ramp:+.1f}, density_ramp={density_ramp:+.1f}, "
                 f"lead_in_bars={lead_in_bars}, turnaround={turnaround_hint}, pickup={pickup_hint}"
             )
@@ -1654,24 +1705,33 @@ def serialize_section_transitions_map(
 ) -> Dict[str, Dict]:
     """Serialize section transitions map to plain dict for storage in PerformancePlan.
 
+    Aliased keys (per-occurrence key + legacy section_id key pointing at the
+    same directive) serialize to the SAME dict object so in-place adjustments
+    (e.g. negotiation feedback) stay consistent across both keys.
+
     Args:
-        transitions_map: Map of section_id -> SectionTransition.
+        transitions_map: Map of occurrence-key / section_id -> SectionTransition.
 
     Returns:
         Dict[str, Dict]: Serialized transitions map (plain dicts).
     """
-    serialized = {}
+    serialized: Dict[str, Dict] = {}
+    memo: Dict[int, Dict] = {}
     for section_id, directive in transitions_map.items():
-        serialized[section_id] = {
-            "section_id": directive.section_id,
-            "next_section_id": directive.next_section_id,
-            "next_section_type": directive.next_section_type,
-            "energy_ramp": directive.energy_ramp,
-            "density_ramp": directive.density_ramp,
-            "lead_in_bars": directive.lead_in_bars,
-            "turnaround_hint": directive.turnaround_hint,
-            "pickup_hint": directive.pickup_hint,
-            "is_first_section": directive.is_first_section,
-            "is_last_section": directive.is_last_section,
-        }
+        cached = memo.get(id(directive))
+        if cached is None:
+            cached = {
+                "section_id": directive.section_id,
+                "next_section_id": directive.next_section_id,
+                "next_section_type": directive.next_section_type,
+                "energy_ramp": directive.energy_ramp,
+                "density_ramp": directive.density_ramp,
+                "lead_in_bars": directive.lead_in_bars,
+                "turnaround_hint": directive.turnaround_hint,
+                "pickup_hint": directive.pickup_hint,
+                "is_first_section": directive.is_first_section,
+                "is_last_section": directive.is_last_section,
+            }
+            memo[id(directive)] = cached
+        serialized[section_id] = cached
     return serialized

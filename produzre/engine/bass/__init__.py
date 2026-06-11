@@ -2,7 +2,12 @@
 from __future__ import annotations
 
 import logging
+from collections import namedtuple
 from typing import Optional, Dict
+
+# Lightweight drum-event view used to feed apply_drum_locking from
+# RhythmFeatures (which publishes beat sets, not event objects).
+_DrumHit = namedtuple("_DrumHit", ["beat", "kind"])
 
 from ...model import (
     RootConfig,
@@ -74,6 +79,29 @@ from .slap import (
     apply_slap_duration,
 )
 
+
+def _effective_bass_params(instrument_cfg) -> dict:
+    """Extract the effective params dict from an instrument config.
+
+    The orchestrated path delivers an InstrumentConfig dataclass whose
+    engine params live in `.extra` (there is no `.params` field on the
+    dataclass). Raw dicts (tests, legacy callers) may carry either a
+    `params` or an `extra` key. Unwraps the loader's nested-`extra`
+    wrapping like the other engines do.
+    """
+    params: dict = {}
+    if instrument_cfg is None:
+        return params
+    if isinstance(instrument_cfg, dict):
+        params = instrument_cfg.get("params") or instrument_cfg.get("extra") or {}
+    elif getattr(instrument_cfg, "params", None):
+        params = instrument_cfg.params
+    elif hasattr(instrument_cfg, "extra"):
+        params = instrument_cfg.extra or {}
+    if isinstance(params, dict) and "extra" in params and isinstance(params["extra"], dict):
+        params = params["extra"]
+    return params if isinstance(params, dict) else {}
+
 # Import from fills module
 from .fills import (
     is_fill_zone,
@@ -142,6 +170,7 @@ def _select_chord_tone_with_voice_leading(
     mode_offsets: Optional[list[int]] = None,
     key_root: int = 60,
     motion_style: str = "stepwise",
+    root_bias: Optional[float] = None,
 ) -> tuple[int, str]:
     """Wrapper for backwards compatibility - injects approach functions."""
     # Inject approach functions (defined later in this file)
@@ -161,6 +190,7 @@ def _select_chord_tone_with_voice_leading(
         get_chromatic_approach=_get_chromatic_approach,
         get_diatonic_approach=_get_diatonic_approach,
         motion_style=motion_style,
+        root_bias=root_bias,
     )
 
 
@@ -350,11 +380,18 @@ def render_into_timeline(
         _bpm = float(getattr(_song, "bpm", 120.0)) if _song else 120.0
         _meter = str(getattr(_song, "meter", "4/4")) if _song else "4/4"
 
-        _section_type = getattr(section, "id", "default") if section else "default"
-        _intensity = 1.0
+        _section_type = getattr(section, "type", None) or "default" if section else "default"
         _bass_cfg = getattr(section, "instruments", {}).get("bass") if section else None
-        if _bass_cfg is not None:
-            _intensity = getattr(_bass_cfg, "intensity", 1.0)
+        _intensity = None
+        if instrument_cfg is not None:
+            if isinstance(instrument_cfg, dict):
+                _intensity = instrument_cfg.get("intensity")
+            else:
+                _intensity = getattr(instrument_cfg, "intensity", None)
+        if _intensity is None and _bass_cfg is not None:
+            _intensity = getattr(_bass_cfg, "intensity", None)
+        if _intensity is None:
+            _intensity = 1.0
 
         # Read explicit recipe from section or global instrument config
         _section_recipe = None
@@ -384,24 +421,28 @@ def render_into_timeline(
         )
 
         if _recipe_name and _recipe_name in _all_recipes:
+            from ...config.recipes import merge_recipe_params as _merge_recipe_params
+
             _recipe = _all_recipes[_recipe_name]
             _rp = _recipe.get("params", {})
             if _rp:
-                # Merge recipe params UNDER existing instrument params (user wins)
+                # Merge honoring persona < recipe < user (see merge_recipe_params)
                 if isinstance(instrument_cfg, dict):
-                    existing = instrument_cfg.get("params", {})
-                    instrument_cfg["params"] = {**_rp, **(existing or {})}
+                    existing = instrument_cfg.get("params") or instrument_cfg.get("extra") or {}
+                    instrument_cfg["params"] = _merge_recipe_params(existing, _rp)
+                elif instrument_cfg is not None and hasattr(instrument_cfg, "extra"):
+                    # Orchestrated path: InstrumentConfig holds params in .extra
+                    existing = instrument_cfg.extra or {}
+                    if isinstance(existing, dict) and "extra" in existing:
+                        existing = existing["extra"]
+                    if isinstance(existing, dict):
+                        instrument_cfg.extra = _merge_recipe_params(existing, _rp)
                 elif instrument_cfg is not None and hasattr(instrument_cfg, "params"):
                     existing = instrument_cfg.params or {}
                     if isinstance(existing, dict):
-                        instrument_cfg.params = {**_rp, **existing}
+                        instrument_cfg.params = _merge_recipe_params(existing, _rp)
 
-    params = {}
-    if instrument_cfg is not None:
-        if hasattr(instrument_cfg, "params"):
-            params = instrument_cfg.params or {}
-        elif isinstance(instrument_cfg, dict):
-            params = instrument_cfg.get("params", {})
+    params = _effective_bass_params(instrument_cfg)
 
     lock_to_kicks = False
     if isinstance(params, dict):
@@ -479,19 +520,31 @@ def _render_legacy_bass(
             event_count=0,
         )
 
-    # Resolve section-level bass config (intensity, etc.)
+    # Resolve bass config from the merged instrument config (global/persona +
+    # section overrides), falling back to the raw section block.
     bass_cfg = section.instruments.get("bass")
-    intensity = bass_cfg.intensity if bass_cfg is not None else 1.0
+    intensity = None
+    register = None
+    if instrument_cfg is not None and not isinstance(instrument_cfg, dict):
+        intensity = getattr(instrument_cfg, "intensity", None)
+        register = getattr(instrument_cfg, "register", None)
+    elif isinstance(instrument_cfg, dict):
+        intensity = instrument_cfg.get("intensity")
+        register = instrument_cfg.get("register")
+    if intensity is None and bass_cfg is not None:
+        intensity = getattr(bass_cfg, "intensity", None)
+    if register is None and bass_cfg is not None:
+        register = getattr(bass_cfg, "register", None)
+    # Macro-dynamics: fall back to the section's resolved intensity (set by
+    # orchestrate.plan.resolve_section_intensity) before the engine default.
+    if intensity is None:
+        intensity = getattr(section, "intensity", None)
+    intensity = 1.0 if intensity is None else intensity
+    register = register or "low"
     base_vel = int(70 * max(0.1, min(intensity, 2.0)))  # clamp to a reasonable range
-    register = getattr(bass_cfg, "register", "low") if bass_cfg is not None else "low"
 
-    # Get persona params from effective config (Phase B2: HarmonyPlan-driven selection)
-    effective_params = {}
-    if instrument_cfg:
-        if hasattr(instrument_cfg, "params"):
-            effective_params = instrument_cfg.params or {}
-        elif isinstance(instrument_cfg, dict):
-            effective_params = instrument_cfg.get("params", {})
+    # Effective params: persona + recipe + user, resolved via .extra
+    effective_params = _effective_bass_params(instrument_cfg)
 
     # Extract persona-driven parameters with defaults
     if isinstance(effective_params, dict):
@@ -533,6 +586,8 @@ def _render_legacy_bass(
         # Phase 4.2: Melodic motion style
         motion_style = effective_params.get("motion_style", "stepwise")
         section_role_variation = bool(effective_params.get("section_role_variation", False))
+        # Inner-beat root inclusion probability (None = legacy default 0.65)
+        root_bias = effective_params.get("root_bias", None)
     else:
         register_low = getattr(effective_params, "register_low", 28)
         register_high = getattr(effective_params, "register_high", 52)
@@ -572,6 +627,8 @@ def _render_legacy_bass(
         # Phase 4.2: Melodic motion style
         motion_style = getattr(effective_params, "motion_style", "stepwise")
         section_role_variation = bool(getattr(effective_params, "section_role_variation", False))
+        # Inner-beat root inclusion probability (None = legacy default 0.65)
+        root_bias = getattr(effective_params, "root_bias", None)
 
     # Phase B4: Apply style-based pattern bias if rhythm_pattern wasn't explicitly set
     # (Only if user didn't override rhythm_pattern in persona or config)
@@ -644,7 +701,9 @@ def _render_legacy_bass(
         )
 
     # Per-section bass offset (can be used to push/pull the line slightly).
-    offset_beats = bass_cfg.offset_beats if bass_cfg is not None else 0.0
+    offset_beats = getattr(bass_cfg, "offset_beats", None) if bass_cfg is not None else None
+    if offset_beats is None:
+        offset_beats = 0.0
 
     bpb = rhythm_grid.beats_per_bar
 
@@ -661,8 +720,12 @@ def _render_legacy_bass(
     key_root = bass_key_root + 24  # Convert to C4 register (60)
 
     # Check if walking persona (allows passing tones on strong beats + needs all quarter notes)
-    # Walking bass: high density, high approach rate, anchor pattern
-    is_walking_persona = (rhythm_pattern == "anchor" and density >= 0.9 and approach_rate > 0.3)
+    # Walking bass triggers either explicitly (rhythm_pattern: walking) or
+    # heuristically on a dense anchor pattern with frequent approach tones.
+    is_walking_persona = (
+        rhythm_pattern == "walking"
+        or (rhythm_pattern == "anchor" and density >= 0.8 and approach_rate >= 0.25)
+    )
 
     # Track previous pitch for voice leading
     prev_pitch = None
@@ -683,7 +746,7 @@ def _render_legacy_bass(
 
     # Select rhythm pattern based on persona
     # Walking bass (is_walking_persona) needs all quarter notes, not just beats 1 and 3
-    if rhythm_pattern == "anchor":
+    if rhythm_pattern in ("anchor", "walking"):
         eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat, walking_quarters=is_walking_persona)
     elif rhythm_pattern == "push":
         eligible_slots = _get_rhythm_pattern_push(all_slots, bpb, chord_changes, subdivisions_per_beat)
@@ -701,11 +764,38 @@ def _render_legacy_bass(
     # Apply rest filtering
     selected_slots = _apply_rest_filter(selected_slots, rest_rate, rng)
 
-    # Rule 2: Bass-kick alignment (60% probability per kick beat not already covered).
-    # MIDI analysis showed 60% bass-kick coincidence on strong beats.
-    # We pull any kick beat that fell through density/rest filtering back in.
+    # Drum locking: pull bass onto drum hits per lock_to_kick / lock_to_snare /
+    # lock_to_hat. RhythmFeatures exposes kick strong beats and snare/crash
+    # accent beats; hat positions aren't published, so lock_to_hat only fires
+    # if richer drum events ever flow through here.
+    if (
+        drum_features is not None
+        and rng is not None
+        and (lock_to_kick > 0 or lock_to_snare > 0 or lock_to_hat > 0)
+    ):
+        _drum_events = [
+            _DrumHit(beat=b, kind="kick")
+            for b in sorted(getattr(drum_features, "strong_beats", set()) or set())
+        ] + [
+            _DrumHit(beat=b, kind="snare")
+            for b in sorted(getattr(drum_features, "accent_beats", set()) or set())
+        ]
+        if _drum_events:
+            selected_slots = _apply_drum_locking(
+                slots=selected_slots,
+                drum_events=_drum_events,
+                lock_to_kick=lock_to_kick,
+                lock_to_snare=lock_to_snare,
+                lock_to_hat=lock_to_hat,
+                subdivisions_per_beat=subdivisions_per_beat,
+                rng=rng,
+            )
+
+    # Rule 2: Bass-kick alignment (per kick beat not already covered).
+    # MIDI analysis showed 60% bass-kick coincidence on strong beats; the
+    # lock_to_kick param overrides that default when set.
     if drum_features is not None and drum_features.strong_beats and rng is not None:
-        kick_alignment_prob = 0.6
+        kick_alignment_prob = lock_to_kick if lock_to_kick > 0 else 0.6
         eligible_set = set(round(b, 3) for b in eligible_slots)
         selected_set = set(round(b, 3) for b in selected_slots)
         additions: set = set()
@@ -725,8 +815,29 @@ def _render_legacy_bass(
                     len(additions),
                 )
 
-    # Sort slots for iteration
-    selected_slots_list = sorted(selected_slots)
+    # Guarantee a cadence anchor: the density/rest filters can stochastically
+    # empty the final chord span, leaving the section without resolution (and
+    # root_cadence unreachable). If no selected slot falls in the final chord,
+    # re-add its first eligible slot (the chord's downbeat) so the section
+    # always closes on a resolved root.
+    if harmony_plan.chord_slots and selected_slots is not None:
+        _final_start = harmony_plan.chord_slots[-1].start_beat
+        if not any(s >= _final_start for s in selected_slots):
+            _final_eligible = sorted(s for s in eligible_slots if s >= _final_start)
+            if not _final_eligible:
+                _final_eligible = sorted(s for s in all_slots if s >= _final_start)
+            if _final_eligible:
+                selected_slots = set(selected_slots) | {_final_eligible[0]}
+
+    # Sort slots for iteration. The list may be extended mid-iteration when a
+    # fill is scheduled (fill notes occupy the final subdivisions of a bar).
+    slots_iter = sorted(selected_slots)
+
+    # Phase B11: Pre-round intent accent beats so membership checks don't
+    # depend on exact float equality (matches kick-alignment rounding).
+    intent_accent_beats: set = set()
+    if rhythm_intent and rhythm_intent.accent_beats:
+        intent_accent_beats = {round(b, 3) for b in rhythm_intent.accent_beats}
 
     # Phase B5: Track bar boundaries to reset passing tone counter
     current_bar = -1
@@ -752,19 +863,15 @@ def _render_legacy_bass(
         phrase_length_bars = max(1, int(phrase_length_bars))
     except Exception:
         phrase_length_bars = 4
-    active_fill = None  # Stores (fill_type, notes_list, current_index) for active fill
+    active_fill = None  # Dict mapping rounded beat -> (pitch, kind) for active fill
     fill_start_bar = -1  # Bar where current fill started
     fill_start_beat = -1.0  # Phase B11: Beat where current fill started
 
     # Walk the selected rhythm slots and place bass notes with harmony/voice leading
-    for i, local_beat in enumerate(selected_slots_list):
-        # Compute gap to next note for legato sustain.
-        # finger/pick styles will fill this gap; mute/slap ignore it (stay percussive).
-        if i + 1 < len(selected_slots_list):
-            _next_note_beat = selected_slots_list[i + 1]
-        else:
-            _next_note_beat = total_beats
-        _note_gap = max(0.25, _next_note_beat - local_beat)  # floor at quarter note
+    i = -1
+    while i + 1 < len(slots_iter):
+        i += 1
+        local_beat = slots_iter[i]
         # Phase B5: Track bar boundaries to reset passing tone counter
         bar_num = int(local_beat // bpb)
         if bar_num != current_bar:
@@ -849,10 +956,48 @@ def _render_legacy_bass(
                             )
 
                     if fill_notes:
-                        active_fill = (fill_type, fill_notes, 0)  # (type, notes, current_index)
+                        # Align the fill to the END of the bar so the final
+                        # pickup/approach note lands on the last subdivision
+                        # before the next downbeat (instead of consuming fill
+                        # notes from the start of the fill-zone bar).
+                        bar_start = bar_num * bpb
+                        bar_end = bar_start + bpb
+                        subdivision_duration = 1.0 / subdivisions_per_beat
+                        # Cap the fill to the slots remaining after the
+                        # current position in this bar.
+                        max_notes = int((bar_end - local_beat - eps) // subdivision_duration)
+                        if max_notes < len(fill_notes):
+                            # Keep the tail (the approach note is last)
+                            fill_notes = fill_notes[-max_notes:] if max_notes > 0 else []
+
+                    if fill_notes:
+                        n_fill = len(fill_notes)
+                        fill_beats = [
+                            round(bar_end - (n_fill - k) * subdivision_duration, 6)
+                            for k in range(n_fill)
+                        ]
+                        active_fill = {
+                            fb: fill_notes[k] for k, fb in enumerate(fill_beats)
+                        }
+                        # Replace any normal slots inside the fill window with
+                        # the fill beats themselves.
+                        fill_window_start = fill_beats[0]
+                        remaining = [
+                            b for b in slots_iter[i + 1:]
+                            if b < fill_window_start - eps or b >= bar_end - eps
+                        ]
+                        slots_iter = slots_iter[: i + 1] + sorted(set(remaining) | set(fill_beats))
                         fill_start_bar = bar_num
-                        fill_start_beat = local_beat  # Phase B11: Track fill start for negotiation
+                        fill_start_beat = fill_window_start  # Phase B11: fill window start
                         total_fills += 1
+
+        # Compute gap to next note for legato sustain and duration capping.
+        # (Computed after fill scheduling so injected fill beats are seen.)
+        if i + 1 < len(slots_iter):
+            _next_note_beat = slots_iter[i + 1]
+        else:
+            _next_note_beat = total_beats
+        _note_gap = max(0.25, _next_note_beat - local_beat)  # floor at quarter note
 
         # Find the chord slot that covers this beat
         cs_for_cell = None
@@ -874,9 +1019,10 @@ def _render_legacy_bass(
         chord_start = cs_for_cell.start_beat
         chord_duration = chord_end - chord_start
         subdivision_duration = 1.0 / subdivisions_per_beat
-        # Phase B5: Consider second half of chord as approach zone for passing tones
-        chord_midpoint = chord_start + (chord_duration * 0.5)
-        is_last_beat_in_chord = local_beat >= chord_midpoint - eps
+        # Phase B5: Approach/next-root eligibility is restricted to the LAST
+        # selected slot before the chord change, so tension (approach) notes
+        # resolve immediately into the next chord instead of hanging.
+        is_last_slot_in_chord = _next_note_beat >= chord_end - eps
 
         # Compute the next chord's root (if there is a next chord) for approach tones
         next_root_midi = None
@@ -896,9 +1042,18 @@ def _render_legacy_bass(
         if is_chord_change:
             prev_chord_slot = cs_for_cell
 
-        # Detect cadence: last chord of section, near section end
-        is_cadence = (cs_index == len(harmony_plan.chord_slots) - 1 and
-                      abs(local_beat - (total_beats - subdivision_duration)) < subdivision_duration)
+        # Detect cadence: the last selected (non-fill) slot within the final
+        # chord slot of the section, so root_cadence resolution actually fires
+        # for anchor/walking patterns (whose last slot is rarely in the final
+        # subdivision of the section).
+        is_cadence = False
+        if cs_index == len(harmony_plan.chord_slots) - 1:
+            is_cadence = True
+            for _later in slots_iter[i + 1:]:
+                if active_fill is None or round(_later, 6) not in active_fill:
+                    # A later non-fill slot exists; this isn't the cadence.
+                    is_cadence = False
+                    break
 
         # Phase B5: Check if passing tones are allowed at this position
         allow_passing = _should_allow_passing_tone(
@@ -908,22 +1063,22 @@ def _render_legacy_bass(
             max_passing_per_bar=max_passing_per_bar,
         )
 
-        # Phase B9: Check if we're in an active fill and consume fill notes
+        # Phase B9: Check if we're in an active fill and consume fill notes.
+        # Fill notes are keyed by their scheduled beat (aligned to the end of
+        # the fill bar); other slots fall through to normal selection.
         if active_fill is not None:
-            fill_type, fill_notes, fill_index = active_fill
-
-            if fill_index < len(fill_notes):
-                # Use next fill note
-                pitch, note_kind = fill_notes[fill_index]
-                active_fill = (fill_type, fill_notes, fill_index + 1)
+            _lb_key = round(local_beat, 6)
+            if _lb_key in active_fill:
+                pitch, note_kind = active_fill.pop(_lb_key)
+                if not active_fill:
+                    # Last fill note consumed; close the fill window
+                    # Phase B11: Track fill window that was used
+                    if fill_start_beat >= 0:
+                        fill_windows_used.append((fill_start_beat, local_beat))
+                    active_fill = None
+                    fill_start_beat = -1.0
             else:
-                # Fill complete, reset
-                # Phase B11: Track fill window that was used
-                if fill_start_beat >= 0:
-                    fill_windows_used.append((fill_start_beat, local_beat))
-                active_fill = None
-                fill_start_beat = -1.0
-                # Fall through to normal pitch selection
+                # Not a fill beat; fall through to normal pitch selection
                 pitch = None
                 note_kind = None
 
@@ -935,7 +1090,9 @@ def _render_legacy_bass(
                 # Skip to duration/velocity application
                 song_beat = section_start_beat + local_beat + offset_beats
                 remaining_in_chord = max(0.0, chord_end - local_beat)
-                base_duration = min(1.0, remaining_in_chord)
+                # Cap at the gap to the next note so consecutive fill notes
+                # on a 16th grid never overlap.
+                base_duration = min(1.0, remaining_in_chord, _note_gap)
 
                 # Apply style to velocity and duration
                 styled_velocity = _apply_style_velocity(
@@ -991,7 +1148,7 @@ def _render_legacy_bass(
                 is_accent = (is_downbeat or is_chord_change) and slap_technique != "ghost"
 
                 # Phase B11: Check if rhythm_intent specifies accent at this beat
-                if rhythm_intent and rhythm_intent.accent_beats and local_beat in rhythm_intent.accent_beats:
+                if intent_accent_beats and round(local_beat, 3) in intent_accent_beats:
                     is_accent = True
 
                 final_velocity = _apply_accent(styled_velocity, is_accent, accent_strength)
@@ -1049,12 +1206,15 @@ def _render_legacy_bass(
                         mode_offsets=mode_offsets,
                         key_root=key_root,
                         motion_style=motion_style,
+                        root_bias=root_bias,
                     )
             else:
                 # Normal chord tone selection with voice leading
                 # Phase B5: Pass chromatic_rate, mode_offsets, key_root for approach notes
-                # Only enable approach_rate if passing tones are allowed at this position
-                effective_approach_rate = approach_rate if (is_last_beat_in_chord and allow_passing) else 0.0
+                # Only enable approach_rate on the last selected slot of the
+                # chord (and where passing tones are allowed), so approach
+                # tones always resolve directly into the next chord.
+                effective_approach_rate = approach_rate if (is_last_slot_in_chord and allow_passing) else 0.0
 
                 pitch, note_kind = _select_chord_tone_with_voice_leading(
                     chord_tones=chord_tones,
@@ -1062,7 +1222,7 @@ def _render_legacy_bass(
                     is_downbeat=is_downbeat,
                     is_cadence=is_cadence,
                     approach_rate=effective_approach_rate,
-                    next_root=next_root_midi if is_last_beat_in_chord else None,
+                    next_root=next_root_midi if is_last_slot_in_chord else None,
                     register_low=register_low,
                     register_high=register_high,
                     rng=rng,
@@ -1070,6 +1230,7 @@ def _render_legacy_bass(
                     mode_offsets=mode_offsets,
                     key_root=key_root,
                     motion_style=motion_style,
+                    root_bias=root_bias,
                 )
 
             # Update pedal pitch if this is a root note on chord change
@@ -1104,11 +1265,13 @@ def _render_legacy_bass(
         # Keep note durations constrained by remaining chord span
         remaining_in_chord = max(0.0, chord_end - local_beat)
         # Legato sustain: finger/pick fill the gap to the next note so the bass
-        # rings naturally. Mute/slap stay percussive (capped at one beat).
+        # rings naturally. Mute/slap stay percussive (capped at one beat) but
+        # are still capped at the gap so same-pitch notes never overlap on
+        # 16th grids.
         if articulation_style in ("finger", "pick"):
             _max_sustain = _note_gap
         else:
-            _max_sustain = 1.0
+            _max_sustain = min(1.0, _note_gap)
         base_duration = min(_max_sustain, remaining_in_chord)
 
         # Phase B4: Apply articulation style to velocity and duration
@@ -1173,7 +1336,7 @@ def _render_legacy_bass(
         is_accent = (is_downbeat or is_chord_change) and slap_technique != "ghost"
 
         # Phase B11: Check if rhythm_intent specifies accent at this beat
-        if rhythm_intent and rhythm_intent.accent_beats and local_beat in rhythm_intent.accent_beats:
+        if intent_accent_beats and round(local_beat, 3) in intent_accent_beats:
             is_accent = True
 
         final_velocity = _apply_accent(styled_velocity, is_accent, accent_strength)
@@ -1281,26 +1444,21 @@ def _render_rhythm_locked_bass(
         )
 
     # Extract parameters
-    params = {}
-    if hasattr(instrument_cfg, "params"):
-        params = instrument_cfg.params or {}
-    elif isinstance(instrument_cfg, dict):
-        params = instrument_cfg.get("params", {})
+    params = _effective_bass_params(instrument_cfg)
 
-    # Get configuration values
-    if isinstance(params, dict):
-        avoid_fills = params.get("avoid_fills", True)
-        octave = params.get("octave", 2)
-    else:
-        avoid_fills = getattr(params, "avoid_fills", True)
-        octave = getattr(params, "octave", 2)
+    avoid_fills = params.get("avoid_fills", True)
+    octave = params.get("octave", 2)
 
-    # Get intensity
-    intensity = 0.7
-    if hasattr(instrument_cfg, "intensity"):
-        intensity = instrument_cfg.intensity
-    elif isinstance(instrument_cfg, dict):
-        intensity = instrument_cfg.get("intensity", 0.7)
+    # Get intensity (instrument > resolved section intensity > engine default)
+    intensity = None
+    if isinstance(instrument_cfg, dict):
+        intensity = instrument_cfg.get("intensity")
+    elif instrument_cfg is not None:
+        intensity = getattr(instrument_cfg, "intensity", None)
+    if intensity is None:
+        intensity = getattr(section, "intensity", None)
+    if intensity is None:
+        intensity = 0.7
 
     base_vel = int(70 + intensity * 30)
 
@@ -1333,6 +1491,12 @@ def _render_rhythm_locked_bass(
         len(strong_beats),
     )
 
+    # Pre-round intent accent beats so membership checks don't depend on
+    # exact float equality (matches kick-alignment rounding).
+    intent_accent_beats: set = set()
+    if rhythm_intent and rhythm_intent.accent_beats:
+        intent_accent_beats = {round(b, 3) for b in rhythm_intent.accent_beats}
+
     eps = 1e-6
     for beat in strong_beats:
         # Skip if in fill window
@@ -1361,7 +1525,7 @@ def _render_rhythm_locked_bass(
 
         # Phase B11: Check if rhythm_intent specifies accent at this beat
         is_accent = False
-        if rhythm_intent and rhythm_intent.accent_beats and beat in rhythm_intent.accent_beats:
+        if intent_accent_beats and round(beat, 3) in intent_accent_beats:
             is_accent = True
             velocity = min(127, int(velocity * 1.3))  # Boost velocity for accents
 

@@ -25,7 +25,7 @@ from ...rhythm_features import extract_rhythm_features
 from ...orchestrate import EngineCoordinator
 from ...orchestrate.energy import resolve_section_energy
 from .fills import add_fills
-from .groove import groove_template, resolve_groove_id
+from .groove import groove_template, resolve_groove_id, steps_per_bar_for_meter
 from .humanize import humanize_events
 from .ornaments import add_ornaments
 from .patterns import DrumEvent, events_for_section_from_template
@@ -163,10 +163,14 @@ def contribute_plan(*args: Any, **kwargs: Any) -> None:
     beats_per_bar = float(_get_attr_or_key(rhythm_grid, "beats_per_bar", 4.0))
     total_beats = float(_get_attr_or_key(rhythm_grid, "total_beats", 0.0))
 
-    # Calculate step grid (16th notes = 4 subdivisions per beat)
-    steps_per_beat = 4
-    steps_per_bar = int(beats_per_bar * steps_per_beat)
-    total_steps = int(total_beats * steps_per_beat)
+    # Calculate step grid. The renderer derives its grid from the meter
+    # (4 steps per quarter-note beat: 16 in 4/4, 12 in 3/4, see
+    # groove.steps_per_bar_for_meter), so publish that same grid here.
+    # Step duration is always 0.25 beats (one 16th note).
+    bpb_safe = beats_per_bar if beats_per_bar > 0 else 4.0
+    steps_per_bar = steps_per_bar_for_meter(bpb_safe)
+    steps_per_beat = steps_per_bar / bpb_safe
+    total_steps = int(round((total_beats / bpb_safe) * steps_per_bar))
 
     # Build rhythm.grid data structure
     rhythm_grid_data = {
@@ -175,35 +179,16 @@ def contribute_plan(*args: Any, **kwargs: Any) -> None:
         "steps_per_beat": steps_per_beat,
         "steps_per_bar": steps_per_bar,
         "total_steps": total_steps,
-        "step_duration_beats": 1.0 / steps_per_beat,  # 0.25 beats per 16th note
+        "step_duration_beats": bpb_safe / steps_per_bar,
     }
 
     # Store rhythm.grid in plan
     plan.set("rhythm.grid", rhythm_grid_data)
 
-    # For rhythm.accents, we need to generate a lightweight preview of where
-    # strong beats occur. We'll use the groove template to determine accent patterns.
-    # This is a simplified preview - not the full drum pattern.
+    # For rhythm.accents, we generate a lightweight preview of where strong
+    # beats occur. This is a simplified preview - not the full drum pattern.
 
-    # Get groove template for accent detection
-    section_type = str(_get_attr_or_key(section, "type", "verse"))
-    intensity = float(_get_attr_or_key(section, "intensity", 0.5))
-    groove_id = _get_attr_or_key(section, "groove", None)
-    if groove_id is None:
-        groove_id = resolve_groove_id(
-            section_type=section_type,
-            intensity=intensity,
-            params=None,
-        )
-
-    template = groove_template(
-        groove_id,
-        section_type=section_type,
-        intensity=intensity,
-        beats_per_bar=beats_per_bar,
-    )
-
-    # Build accent beat list based on template characteristics
+    # Build accent beat list based on meter characteristics
     # Accents typically occur on:
     # - Downbeats (beat 1 of each bar)
     # - Backbeats (beats 2 and 4 in 4/4 time)
@@ -219,10 +204,16 @@ def contribute_plan(*args: Any, **kwargs: Any) -> None:
         # Downbeat (beat 1) is always an accent
         accent_beats.append(bar_start_beat)
 
-        # In 4/4 time, beats 2 and 4 are backbeats (snare accents)
-        if beats_per_bar == 4.0:
+        # Backbeats (snare accents), meter-aware. Mirrors the convention in
+        # groove.groove_template:
+        #   bpb >= 4 -> beats 2 and 4; bpb == 6 -> beat 4; bpb < 4 -> beat 2.
+        if abs(beats_per_bar - 6.0) < 1e-6:
+            accent_beats.append(bar_start_beat + 3.0)  # Beat 4
+        elif beats_per_bar >= 4.0:
             accent_beats.append(bar_start_beat + 1.0)  # Beat 2
             accent_beats.append(bar_start_beat + 3.0)  # Beat 4
+        elif beats_per_bar >= 2.0:
+            accent_beats.append(bar_start_beat + 1.0)  # Beat 2
 
         # First and last bars often have crashes
         if bar == 0 or bar == num_bars - 1:
@@ -305,6 +296,11 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     beats_per_bar = float(_get_attr_or_key(rhythm_grid, "beats_per_bar", 4.0))
     total_beats = float(_get_attr_or_key(rhythm_grid, "total_beats", 0.0))
 
+    # Internal step grid: 4 steps per quarter-note beat (one 16th note per
+    # step, step duration 0.25 beats). 16 steps in 4/4, 12 in 3/4 (and 6/8,
+    # which Meter.beats_per_bar normalizes to 3.0 quarter beats per bar).
+    steps_per_bar = steps_per_bar_for_meter(beats_per_bar)
+
     # Section metadata
     section_type = str(_get_attr_or_key(section, "type", "verse"))
     section_id = str(_get_attr_or_key(section, "id", section_type))
@@ -359,6 +355,12 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     if params is None and hasattr(inst, "params"):
         params = getattr(inst, "params")
     params_m = dict(_get_mapping(params))
+
+    # Track which params_m keys were explicitly set by the user (vs sourced
+    # from a persona). Recipes sit between them (persona < recipe < user), so
+    # the recipe merge below must know which keys it may override.
+    _user_set_keys: set = set(params_m)
+    _persona_sourced_keys: set = set()
 
     # Inherit global/default instrument params when orchestration passes only
     # section overrides. Global effective defaults may be stored on cfg under
@@ -420,6 +422,10 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     if eff_params:
         # Global defaults first, then per-section params override.
         params_m = {**dict(eff_params), **params_m}
+        _eff_persona_keys = set(eff_drums.get("persona_keys") or [])
+        _persona_sourced_keys |= _eff_persona_keys & set(eff_params)
+        # Global instrument params not tagged as persona-sourced are user-set.
+        _user_set_keys |= set(eff_params) - _eff_persona_keys
 
     # Then per-section instrument config.
     _merge_voices_from(inst_m)
@@ -436,19 +442,42 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
     extra_params = extra_m.get("params")
     if extra_params is not None:
-        params_m.update(_get_mapping(extra_params))
+        _extra_params_m = _get_mapping(extra_params)
+        params_m.update(_extra_params_m)
+        _user_set_keys |= set(_extra_params_m)
+        _persona_sourced_keys -= set(_extra_params_m)
 
     # Section-level voice overrides may be stored under extra.voices.
     extra_voices = extra_m.get("voices")
     if extra_voices is not None:
         _merge_voices_map(extra_voices)
 
-    # Also support legacy shorthand where params were placed at top level.
-    for k in ("fill_rate", "fill_chatter"):
+    # Also support shorthand where params are placed at top level of the
+    # instrument block (section `drums: {params: {...}}` is folded into
+    # `extra` by the config parser, so these keys arrive via extra_m).
+    # Persona-sourced extra keys (tagged `_persona_keys` by the orchestrator
+    # merge) are NOT user overrides and stay recipe-overridable.
+    _extra_persona_keys = set(_get_mapping(extra_m).get("_persona_keys") or [])
+    for k in (
+        "fill_rate",
+        "fill_chatter",
+        "swing",
+        "swing_16th",
+        "timing_jitter_ms",
+        "push_pull",
+        "velocity_humanize",
+    ):
         if k in inst_m:
             params_m[k] = inst_m[k]
+            _user_set_keys.add(k)
+            _persona_sourced_keys.discard(k)
         elif hasattr(inst, "extra") and k in extra_m:
             params_m[k] = extra_m[k]
+            if k in _extra_persona_keys:
+                _persona_sourced_keys.add(k)
+            else:
+                _user_set_keys.add(k)
+                _persona_sourced_keys.discard(k)
 
     # Persona/params (conservative defaults)
     accent_strength = float(params_m.get("accent_strength", 0.1))
@@ -662,18 +691,17 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         ghost_steps_src = "snare"
     elif ghost_placements_raw is not None:
         ghost_steps_src = "snare_placements"
-        # Use the engine's internal step grid by default (16), unless overridden.
+        # Use the engine's internal meter-derived step grid by default
+        # (16 in 4/4, 12 in 3/4), unless overridden via ghost_subdiv.
         try:
-            subdiv = int(ghost_subdiv_raw) if ghost_subdiv_raw is not None else 16
+            subdiv = int(ghost_subdiv_raw) if ghost_subdiv_raw is not None else steps_per_bar
         except Exception:
-            subdiv = 16
-        # For now, interpret subdiv as steps-per-bar when beats_per_bar==4.
-        # This keeps things intuitive and aligns with Produzre's current 16-step grid.
-        steps_per_bar = int(subdiv) if subdiv > 0 else 16
+            subdiv = steps_per_bar
+        ghost_grid_spb = int(subdiv) if subdiv > 0 else steps_per_bar
         ghost_steps_raw = _ghost_placements_to_steps(
             ghost_placements_raw,
             beats_per_bar=float(beats_per_bar),
-            steps_per_bar=steps_per_bar,
+            steps_per_bar=ghost_grid_spb,
             logger=logger,
         )
     else:
@@ -734,18 +762,13 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     crash_voice = _get_mapping(voices_m.get("crash"))
     ride_voice = _get_mapping(voices_m.get("ride"))
 
-    # Crash overrides
+    # Crash overrides.
+    # If the user did not set an explicit rate, keep None so the pattern layer
+    # falls back to the recipe/template's crash_phrase_end_rate instead of an
+    # engine-side energy default permanently overriding trained values.
+    # (Hardcoded templates already derive crash_phrase_end_rate from intensity.)
     crash_rate_raw = crash_voice.get("rate", None)
     crash_rate = None if crash_rate_raw is None else float(crash_rate_raw)
-
-    # Apply energy default for crash rate if not explicitly set
-    if crash_rate is None:
-        if energy <= 0.4:
-            crash_rate = 0.3  # Low energy: minimal crashes
-        elif energy >= 0.7:
-            crash_rate = 0.75  # High energy: frequent crashes
-        else:
-            crash_rate = 0.5  # Mid energy: moderate crashes
 
     crash_placements_raw = crash_voice.get("placements", None)
     crash_placements = None
@@ -753,7 +776,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         crash_placements = _ghost_placements_to_steps(
             crash_placements_raw,
             beats_per_bar=beats_per_bar,
-            steps_per_bar=16,
+            steps_per_bar=steps_per_bar,
             logger=logger,
         )
 
@@ -824,15 +847,6 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             # Open: Reduce chokes to let cymbals ring
             choke_rate *= 0.3
 
-    # Detect energy lift/drop from transition context (for dynamic orchestration)
-    prev_energy = None
-    energy_lift = 0.0  # Positive = lifting up (verse→chorus), negative = dropping down
-    if transition_context is not None:
-        # We need to store prev_energy in transition_context from build.py
-        prev_energy = transition_context.get("prev_energy")
-        if prev_energy is not None:
-            energy_lift = energy - prev_energy
-
     # --- Groove recipe resolution ---
     # Recipes provide genre-aware groove defaults. They are resolved AFTER
     # persona/params merging so user overrides always win.
@@ -885,10 +899,23 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             _recipe = _all_recipes[_recipe_name]
             _recipe_groove = _recipe.get("groove") or None
 
-            # Merge recipe params UNDER existing params_m (user overrides recipe).
+            # Merge recipe params honoring persona < recipe < user: keys the
+            # user explicitly set always win, but persona-sourced defaults
+            # (e.g. swing: 0.0 from the default 'tight' persona) yield to the
+            # recipe (see config.recipes.merge_recipe_params).
             _rp = _recipe.get("params", {})
             if _rp:
-                params_m = {**_rp, **params_m}
+                from ...config.recipes import merge_recipe_params as _merge_recipe_params
+
+                _tagged = dict(params_m)
+                _pk = sorted(
+                    k for k in params_m
+                    if k in _persona_sourced_keys and k not in _user_set_keys
+                )
+                if _pk:
+                    _tagged["_persona_keys"] = _pk
+                params_m = _merge_recipe_params(_tagged, _rp)
+                params_m.pop("_persona_keys", None)
 
             # Merge recipe voices UNDER existing voices_m.
             _rv = _recipe.get("voices", {})
@@ -973,16 +1000,16 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         template_updates["kick_extra_rate"] = 0.0  # No syncopated kicks
         template_updates["double_kick_rate"] = 0.0  # No double kicks
         template_updates["use_ride"] = False  # Closed hats only
-        # Reduce hat density via params (will be applied later)
-        if "hats_density" not in voices_m.get("hats", {}).get("params", {}):
+        # Reduce hat density (only when not explicitly set by user config)
+        if hats_density_raw is None:
             hats_density = 0.5  # Sparse hats
-        if "hats_open_rate" not in voices_m.get("hats", {}).get("opens", {}):
+        if hats_open_rate_raw is None:
             hats_open_rate = 0.0  # No open hats
     elif section_intent == "half_time":
-        # Half-time: Snare on beat 3 only (instead of 2 and 4), slower feel
-        # Template snare_backbeat_steps will be modified to (8,) (beat 3 in 16-step grid)
-        # In a 16-step grid with 4 beats: beat 1=step 0, beat 2=step 4, beat 3=step 8, beat 4=step 12
-        template_updates["snare_backbeat_steps"] = (8,)  # Only beat 3
+        # Half-time: lone snare at the bar midpoint (beat 3 in 4/4), slower feel.
+        # The midpoint step is meter-derived: spb//2 == step 8 on the 16-step
+        # 4/4 grid, step 6 on the 12-step 3/4 grid, etc.
+        template_updates["snare_backbeat_steps"] = (steps_per_bar // 2,)
         template_updates["half_time"] = True  # Mark as half-time feel
         template_updates["kick_extra_rate"] = 0.1  # Minimal syncopation
         template_updates["double_kick_rate"] = 0.0  # No double kicks
@@ -992,14 +1019,15 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         fill_rate = 1.0  # Fill at every phrase end
         if "fill_length" not in params_m:
             params_m["fill_length"] = "long"  # Longer fills for build effect
+            fill_length = "long"  # Update local (already extracted above)
         template_updates["kick_extra_rate"] = 0.3  # More syncopation for energy
     elif section_intent == "stomp":
         # Stomp: Heavy kick pattern, minimal cymbals, powerful backbeat
         template_updates["kick_extra_rate"] = 0.4  # More kicks for stomp feel
         template_updates["use_ride"] = False  # Closed hats only
-        if "hats_density" not in voices_m.get("hats", {}).get("params", {}):
+        if hats_density_raw is None:
             hats_density = 1.0  # Steady hats for stomp pulse
-        if "hats_open_rate" not in voices_m.get("hats", {}).get("opens", {}):
+        if hats_open_rate_raw is None:
             hats_open_rate = 0.0  # No open hats
         # Increase snare velocity for powerful backbeat (will use base_velocity boost)
         base_velocity = max(base_velocity, 80)
@@ -1008,7 +1036,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         template_updates["use_ride"] = True  # Switch to ride
         template_updates["kick_extra_rate"] = 0.15  # Moderate syncopation
         template_updates["double_kick_rate"] = 0.0  # No double kicks for spacious feel
-        if "hats_density" not in voices_m.get("hats", {}).get("params", {}):
+        if hats_density_raw is None:
             hats_density = 0.75  # Slightly reduced ride density
 
     if template_updates:
@@ -1040,7 +1068,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         base_velocity=base_velocity,
         accent_strength=accent_strength,
         hat_density=hat_density,
-        steps_per_bar=16,
+        steps_per_bar=steps_per_bar,
         kick_density=kick_density,
         snare_density=snare_density,
         ghost_rate=ghost_rate,
@@ -1109,6 +1137,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             fill_chatter=fill_chatter,
             fill_length=fill_length,
             persona=persona,
+            steps_per_bar=steps_per_bar,
             phrase_len_bars=phrase_len_bars,
             phrase_end_emphasis=phrase_end_emphasis,
         )
@@ -1125,6 +1154,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             flam_rate=flam_rate,
             drag_rate=drag_rate,
             persona=persona,
+            beats_per_bar=beats_per_bar,
         )
 
     song = _get_attr_or_key(cfg, "song")
@@ -1156,6 +1186,29 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     swing = float(params_m.get("swing", 0.0))
     push_pull = float(params_m.get("push_pull", 0.0))
     velocity_humanize = float(params_m.get("velocity_humanize", 0.05))
+
+    # Publish the resolved humanize params (persona < recipe < user merged)
+    # so the orchestrator's shared groove clock (produzre.groove) can swing
+    # the rest of the band to the same feel. Drums stay the reference clock.
+    _groove_plan = kwargs.get("plan")
+    if _groove_plan is not None:
+        _groove_payload: dict = {
+            "swing": swing,
+            "timing_jitter_ms": timing_jitter_ms,
+            "push_pull": push_pull,
+            "velocity_humanize": velocity_humanize,
+            "source": "drums.params",
+        }
+        _swing_16th_raw = params_m.get("swing_16th")
+        if _swing_16th_raw is not None:
+            try:
+                _groove_payload["swing_16th"] = float(_swing_16th_raw)
+            except (TypeError, ValueError):
+                pass
+        try:
+            _groove_plan.set(f"groove.humanize.{section_id}", _groove_payload)
+        except Exception:
+            pass
 
     notes = humanize_events(
         events=events,

@@ -1,40 +1,42 @@
+# Reggae one drop drum recipe — hand-tuned 2026-06-10.
+# Replaces a mined recipe that had four-on-the-floor WITH a kick on beat 1
+# (the one beat reggae avoids) and rock backbeat snares — that was steppers
+# data averaged into one drop territory (steppers now lives in
+# reggae_steppers.yaml, selected at higher BPM).
+# Idiom (one drop): beat 1 is EMPTY of kick and snare; kick + cross-stick
+# land together on beat 3 (step 8); steady 8th hats with sparse opens.
+
 id: reggae_straight
 instrument: drums
 tags:
   genre: reggae
-  time_signature: 4/4
-  section_types:
-  - verse
-  - chorus
-  bpm_range:
-  - 69
-  - 163
   feel: straight
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge, intro, outro, default]
+  bpm_range: [60, 115]
+
 groove:
-  hat_mode: 16th
+  hat_mode: "8th"
   use_ride: false
-  kick_base:
-  - 0
-  - 4
-  - 8
-  - 12
-  kick_extra_rate: 0.05
-  double_kick_rate: 0.13
-  snare_backbeat_steps:
-  - 4
-  - 12
-  ghost_rate: 0.14
-  ghost_steps:
-  - 7
-  - 8
-  - 9
-  - 11
-  - 14
-  - 15
-  open_hat_rate: 0.01
+  # One drop: the only kick of the bar is on beat 3.
+  kick_base: [8]
+  kick_extra_rate: 0.02
+  double_kick_rate: 0.0
+  # Cross-stick (see voices.snare.articulation) on beat 3 only, with the kick.
+  snare_backbeat_steps: [8]
+  ghost_rate: 0.10
+  ghost_steps: [6, 14]
+  open_hat_rate: 0.10
   crash_start: false
-  crash_phrase_end_rate: 0.08
+  crash_phrase_end_rate: 0.05
+
 params:
+  # Light skank lilt. Intended feel is a slight behind-the-beat push, not a
+  # full shuffle (current engine semantics: "&" delayed by 0.25*swing beats).
   swing: 0.2
-  fill_rate: 0.2
-voices: {}
+  fill_rate: 0.15
+
+voices:
+  snare:
+    # All snare hits render as cross-stick (GM 37) — the one drop rim click.
+    articulation: { default: crossstick }

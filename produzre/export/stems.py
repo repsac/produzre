@@ -23,7 +23,12 @@ import mido
 
 from ..model import RootConfig
 from ..timeline import InstrumentTimeline
-from .midi import PPQ, add_tempo_and_name, program_for_instrument, write_timeline_to_track
+from .midi import (
+    PPQ,
+    add_tempo_and_name,
+    program_for_instrument,
+    write_timeline_to_track,
+)
 
 
 def write_full_song_midi(
@@ -41,12 +46,14 @@ def write_full_song_midi(
         <export_root>/<song_name>.mid
 
     Track layout:
-      - One MIDI track per instrument in `instruments_used`.
+      - Track 0 is a conductor track carrying tempo + time_signature meta
+        events (standard type-1 layout).
+      - One MIDI track per instrument in `instruments_used` follows.
       - Track order is preserved as provided, making downstream DAW imports
         deterministic.
 
-    Track content:
-      - Adds tempo + track name meta events at time 0.
+    Track content (per instrument track):
+      - Adds a track name meta event at time 0.
       - Adds a program_change at time 0 if a program number is configured for
         the instrument *and* the timeline contains at least one note.
       - Writes the full instrument timeline into the track.
@@ -70,6 +77,17 @@ def write_full_song_midi(
 
     mid = mido.MidiFile(ticks_per_beat=PPQ)
 
+    # Conductor track: tempo + time signature live here exactly once (proper
+    # type-1 layout), instead of duplicating set_tempo on every instrument track.
+    conductor = mido.MidiTrack()
+    mid.tracks.append(conductor)
+    add_tempo_and_name(
+        conductor,
+        float(cfg.song.bpm),
+        str(song_name),
+        meter=str(getattr(cfg.song, "meter", "4/4") or "4/4"),
+    )
+
     # One track per instrument. Keep order stable/predictable.
     for inst in instruments_used:
         tl = timelines.get(inst)
@@ -79,7 +97,7 @@ def write_full_song_midi(
         track = mido.MidiTrack()
         mid.tracks.append(track)
 
-        add_tempo_and_name(track, float(cfg.song.bpm), f"{inst}")
+        track.append(mido.MetaMessage("track_name", name=f"{inst}", time=0))
 
         # Program change (if configured) and if we have at least one event to infer channel.
         prog = program_for_instrument(cfg, inst)
@@ -156,7 +174,12 @@ def write_instrument_stems(
         track = mido.MidiTrack()
         mid.tracks.append(track)
 
-        add_tempo_and_name(track, float(cfg.song.bpm), f"{inst}")
+        add_tempo_and_name(
+            track,
+            float(cfg.song.bpm),
+            f"{inst}",
+            meter=str(getattr(cfg.song, "meter", "4/4") or "4/4"),
+        )
 
         prog = program_for_instrument(cfg, inst)
         if prog is not None and getattr(tl, "events", None):

@@ -80,23 +80,31 @@ def test_bass_voice_labels():
 
     tsv_content = tsv_path.read_text()
 
-    # Check that exact expected voice labels appear (deterministic with seed)
+    # Check that expected voice label families appear (deterministic with seed)
     assert "root" in tsv_content, "Missing 'root' voice label"
-    assert "approach_diatonic" in tsv_content, "Missing 'approach_diatonic' voice label"
     assert "fifth" in tsv_content, "Missing 'fifth' voice label"
+    assert "root_cadence" in tsv_content, "Missing 'root_cadence' voice label"
 
     # Verify exact event count and voice label distribution
+    # (seeded-deterministic, seed=42). Old expectation of 6 events predates
+    # the param-plumbing/cadence fixes; both sections now render and each
+    # section closes with a root_cadence resolution.
     lines = tsv_content.strip().split("\n")
     event_count = len(lines) - 1  # minus header
-    assert event_count == 6, f"Expected 6 events, got {event_count}"
+    assert event_count == 11, f"Expected 11 events, got {event_count}"
 
     voice_labels = []
     for line in lines[1:]:
         parts = line.split("\t")
         if len(parts) >= 12:
             voice_labels.append(parts[11])
-    assert voice_labels == ["root", "approach_diatonic", "root", "root", "root", "fifth"], \
-        f"Unexpected voice labels: {voice_labels}"
+    assert voice_labels == [
+        # verse1 (i bVII VI V in E dorian) — opens on root: the engine never
+        # substitutes the fifth on a section's first downbeat.
+        "root", "third", "third", "root", "root_cadence",
+        # chorus1 (i iv V i)
+        "root", "third", "root", "third", "fifth", "root_cadence",
+    ], f"Unexpected voice labels: {voice_labels}"
 
 
 def test_bass_structured_logging():

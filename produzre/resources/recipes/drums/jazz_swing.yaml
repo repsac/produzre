@@ -1,5 +1,11 @@
-# Jazz swing drum recipe
-# Ride cymbal timekeeping, sparse kick, brushy ghost notes, swing feel
+# Jazz swing drum recipe — retuned 2026-06-10.
+# Ride cymbal timekeeping, sparse kick, brushy ghost notes, swing feel.
+# Intended feel: triplet swing (2:1 long-short). Current engine semantics
+# delay the "&" by 0.25*swing beats, so triplet placement (+0.167 beats)
+# needs swing ~= 0.67; the old 0.30 was barely audible.
+# hat_mode is 8th (ride on all 8 positions) because the engine cannot
+# express the spang-a-lang skip pattern (ride on 1, 2, 2&, 3, 4, 4&);
+# steady swung 8th ride is the closest available approximation.
 
 id: jazz_swing
 instrument: drums
@@ -11,7 +17,7 @@ tags:
   bpm_range: [100, 200]
 
 groove:
-  hat_mode: "quarter"
+  hat_mode: "8th"
   use_ride: true
   kick_base: [0]
   kick_extra_rate: 0.08
@@ -25,7 +31,7 @@ groove:
 
 params:
   fill_rate: 0.15
-  swing: 0.30
+  swing: 0.65  # ~+0.16 beats on the "&" = triplet ride feel
 
 voices:
   kick:

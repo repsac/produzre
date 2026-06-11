@@ -1,6 +1,7 @@
 # produzre/engine/bass/harmony.py
 """Harmony resolution for bass engine (key, mode, chord tones)."""
 
+import re
 from typing import Optional, Dict
 
 
@@ -52,6 +53,17 @@ ROMAN_TO_DEGREE = {
 }
 
 
+# Major-scale degree offsets. Borrowed-chord accidentals (bVII, bVI, bIII, ...)
+# are universally spelled relative to the MAJOR scale, regardless of the
+# current mode (in C aeolian, bVII is Bb, not "A flattened from aeolian").
+MAJOR_SCALE_OFFSETS: list[int] = [0, 2, 4, 5, 7, 9, 11]
+
+
+# Leading roman-numeral portion of a chord symbol (quality suffixes like
+# "7", "maj7", "sus4", "°", "dim" follow it and must not affect the lookup).
+_ROMAN_PORTION_RE = re.compile(r"([ivIV]+)")
+
+
 def get_mode_scale_offsets(mode: Optional[str]) -> list[int]:
     """Return semitone offsets for the 7 scale degrees of the given mode.
 
@@ -65,10 +77,13 @@ def parse_roman_numeral(numeral: str) -> tuple[int, int]:
     """Parse a Roman numeral with optional accidentals into (degree_index, accidental).
 
     degree_index is 0-based (0..6) and accidental is a semitone offset (-2..+2 typically).
+    Quality suffixes ("V7", "ii°", "IVsus4", "Imaj7", "i7") are tolerated:
+    only the leading roman portion determines the degree.
     Examples:
     - "i"   -> (0, 0)
     - "bVII"-> (6, -1)
     - "#iv" -> (3, +1)
+    - "V7"  -> (4, 0)
     """
     s = (numeral or "").strip()
     if not s:
@@ -86,7 +101,13 @@ def parse_roman_numeral(numeral: str) -> tuple[int, int]:
     if not s:
         return 0, accidental
 
-    degree = ROMAN_TO_DEGREE.get(s.upper(), 1)
+    # Extract only the leading roman portion so quality suffixes
+    # ("7", "maj7", "sus4", "°", "dim") don't break the degree lookup.
+    m = _ROMAN_PORTION_RE.match(s)
+    if not m:
+        return 0, accidental
+
+    degree = ROMAN_TO_DEGREE.get(m.group(1).upper(), 1)
     # Clamp to 1..7, convert to 0-based index
     degree_index = max(1, min(degree, 7)) - 1
     return degree_index, accidental
@@ -117,7 +138,14 @@ def bass_root_for_numeral(
         semitone = 0
     else:
         degree_index = max(0, min(degree_index, len(offsets) - 1))
-        semitone = offsets[degree_index] + accidental
+        if accidental != 0:
+            # Borrowed chords: accidental-prefixed numerals are spelled
+            # relative to the MAJOR scale (universal convention), so in
+            # C aeolian bVII = Bb (10), bVI = Ab (8), bIII = Eb (3).
+            semitone = MAJOR_SCALE_OFFSETS[degree_index] + accidental
+        else:
+            # Plain numerals resolve per the current mode (i, iv, v ...).
+            semitone = offsets[degree_index]
 
     pitch = tonic_midi + semitone
 
@@ -153,20 +181,34 @@ def get_chord_tones(
         mode_offsets: Scale degree offsets for the current mode
 
     Returns:
-        Dict with keys: root, third, fifth, seventh (MIDI note numbers)
+        Dict with keys: root, third, fifth (MIDI note numbers).
+        "seventh" is only present when the numeral carries a seventh.
     """
-    # Parse the numeral to determine chord quality
-    is_minor = numeral.strip().lower() == numeral.strip()  # lowercase = minor
-    has_seventh = "7" in numeral or "maj7" in numeral.lower()
+    s = (numeral or "").strip()
+    lower_s = s.lower()
+
+    # Parse the numeral to determine chord quality from its roman portion
+    # (suffixes like "sus4"/"maj7" must not influence the case check).
+    core = s.lstrip("b#")
+    m = _ROMAN_PORTION_RE.match(core)
+    roman = m.group(1) if m else core
+
+    is_dim = ("°" in s) or ("ø" in s) or ("dim" in lower_s)
+    is_minor = is_dim or (bool(roman) and roman == roman.lower())  # lowercase = minor
+    has_seventh = "7" in s
 
     # Chord intervals from root
     third_interval = 3 if is_minor else 4  # minor 3rd vs major 3rd
-    fifth_interval = 7  # perfect fifth
-    seventh_interval = 10 if is_minor else 11  # minor 7th vs major 7th
+    fifth_interval = 6 if is_dim else 7  # diminished 5th vs perfect 5th
+    # Sevenths default to the dominant/minor 7th (10); only an explicit
+    # "maj7" yields a major 7th (11). "V7" is a DOMINANT seventh.
+    seventh_interval = 11 if "maj7" in lower_s else 10
 
-    return {
+    tones: Dict[str, int] = {
         "root": root_midi,
         "third": root_midi + third_interval,
         "fifth": root_midi + fifth_interval,
-        "seventh": root_midi + seventh_interval if has_seventh else None,
     }
+    if has_seventh:
+        tones["seventh"] = root_midi + seventh_interval
+    return tones

@@ -106,16 +106,6 @@ VELOCITY_INTENSITY_RANGE = 20   # additional vel at intensity=1.0
 
 
 # =============================================================================
-# Register (MIDI note ranges)
-# =============================================================================
-
-REGISTER_OPEN_MIN  = 40   # E2 — lowest open string (6th string standard tuning)
-REGISTER_OPEN_MAX  = 76   # E5 — highest comfortable acoustic note
-REGISTER_BARRE_MIN = 43   # G2
-REGISTER_BARRE_MAX = 72   # C5
-
-
-# =============================================================================
 # Humanization defaults
 # =============================================================================
 

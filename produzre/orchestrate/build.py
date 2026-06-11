@@ -95,9 +95,12 @@ def _create_performance_plan(
             end_beat=ps.timing.end_beat,
             length_beats=ps.timing.length_beats,
             beats_per_bar=ps.timing.beats_per_bar,
-            meter=getattr(ps.sec, "meter", meter),
-            key=getattr(ps.sec, "key", key),
-            mode=getattr(ps.sec, "mode", mode),
+            # Section fields exist with value None when not overridden, so a
+            # plain getattr default never fires — use `or` to fall back to
+            # the song-level values.
+            meter=getattr(ps.sec, "meter", None) or meter,
+            key=getattr(ps.sec, "key", None) or key,
+            mode=getattr(ps.sec, "mode", None) or mode,
         )
         sections.append(section)
 
@@ -262,6 +265,10 @@ def build_song(
             "current_energy": current_energy,
             "prev_energy": prev_energy,  # For energy lift/drop detection
             "next_energy": next_energy,
+            # Arrangement occurrence index: lets engines resolve the correct
+            # per-occurrence transition directive for repeated sections
+            # (see orchestrate.transitions.get_section_transition).
+            "arrangement_index": idx,
         }
 
         # Update prev_energy for next iteration

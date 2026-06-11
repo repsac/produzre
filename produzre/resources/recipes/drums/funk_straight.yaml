@@ -24,7 +24,11 @@ groove:
 
 params:
   fill_rate: 0.25
-  swing: 0.10
+  # Intended feel: light 16th-note swing (funk pocket). NOTE: the current
+  # engine only swings exact 8th-note offbeats (0.25*swing beat delay on
+  # the "&"), so the 16th lilt won't fully fire until the groove-clock task
+  # adds 16th swing; 0.35 ≈ +0.09 beats on the 8th "&" meanwhile.
+  swing: 0.35
 
 voices:
   kick:

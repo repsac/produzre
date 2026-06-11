@@ -179,7 +179,12 @@ def build_harmony_plan(
 
             _genre = getattr(cfg.song, "genre", None)
             _bpm = float(getattr(cfg.song, "bpm", 120.0))
-            _meter_str = str(getattr(cfg.song, "meter", None) or "4/4")
+            # Prefer the section's meter override, falling back to the song's.
+            _meter_str = str(
+                getattr(section, "meter", None)
+                or getattr(cfg.song, "meter", None)
+                or "4/4"
+            )
 
             _recipe_name = _resolve_recipe(
                 instrument="harmony",
@@ -196,7 +201,10 @@ def build_harmony_plan(
             if _recipe_name and _recipe_name in _recipes:
                 _recipe = _recipes[_recipe_name]
                 _progs = _recipe.get("progressions", {})
-                _mode = (cfg.song.mode or "minor").strip().lower()
+                # Prefer the section's mode override, falling back to the song's.
+                _mode = str(
+                    getattr(section, "mode", None) or cfg.song.mode or "minor"
+                ).strip().lower()
                 _sec_type = section.type.strip().lower()
 
                 _found = (
@@ -212,6 +220,24 @@ def build_harmony_plan(
                         section.id, _recipe_name, _mode, _sec_type,
                         " ".join(numerals),
                     )
+
+                # Recipe-provided harmonic rhythm: consume params.chord_rate
+                # when the user left chord_rate at its default.
+                _user_left_default = bool(
+                    (section.harmony.extra or {}).get("_chord_rate_default")
+                )
+                _recipe_rate = (_recipe.get("params", {}) or {}).get("chord_rate")
+                if _user_left_default and _recipe_rate is not None:
+                    try:
+                        _rate = float(_recipe_rate)
+                        if _rate > 0:
+                            chord_rate = _rate
+                            logger.debug(
+                                "Section '%s': using recipe '%s' chord_rate=%.2f",
+                                section.id, _recipe_name, chord_rate,
+                            )
+                    except (TypeError, ValueError):
+                        pass
 
         # Fall back to presets if no recipe matched.
         if not numerals:

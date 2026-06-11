@@ -29,6 +29,37 @@ from .paths import default_produzre_config_dir
 logger = logging.getLogger(__name__)
 
 
+def merge_recipe_params(extra: Dict[str, Any], recipe_params: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge resolved recipe params into an instrument's effective params.
+
+    Honors the documented precedence `persona < recipe < user`: keys tagged
+    as persona-sourced (``_persona_keys``, set by the config loader) may be
+    overridden by the recipe, but explicit user params always win.
+
+    Args:
+        extra: The instrument's effective params (InstrumentConfig.extra or a
+            raw params dict), possibly carrying a ``_persona_keys`` tag.
+        recipe_params: Params from the resolved recipe.
+
+    Returns:
+        A new merged dict (inputs are not mutated). The ``_persona_keys`` tag
+        is updated to only list keys still persona-sourced after the merge.
+    """
+    if not isinstance(extra, dict):
+        return dict(recipe_params or {})
+    recipe_params = recipe_params or {}
+    persona_keys = set(extra.get("_persona_keys") or ())
+    user = {k: v for k, v in extra.items()
+            if k not in persona_keys and k != "_persona_keys"}
+    persona = {k: v for k, v in extra.items() if k in persona_keys}
+    merged = {**persona, **recipe_params, **user}
+    remaining = sorted(k for k in persona_keys
+                       if k not in recipe_params and k not in user)
+    if remaining:
+        merged["_persona_keys"] = remaining
+    return merged
+
+
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
@@ -287,8 +318,11 @@ def _auto_select_recipe(
         tags = recipe.get("tags", {})
         score = 0.0
 
-        # Genre match (required for any score).
+        # Genre match (required for any score). An empty recipe genre must
+        # never match ("" is a substring of everything).
         recipe_genre = str(tags.get("genre", "")).strip().lower()
+        if not recipe_genre or not genre_lower:
+            continue
         if recipe_genre == genre_lower:
             score += 10.0
         elif genre_lower in recipe_genre or recipe_genre in genre_lower:

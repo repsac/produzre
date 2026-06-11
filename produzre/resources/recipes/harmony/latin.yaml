@@ -9,17 +9,18 @@ tags:
   section_types: [verse, chorus, bridge]
   bpm_range: [80, 160]
 
+# Dominants spelled V7 (2026-06-10): bossa/salsa cadential V is a dominant 7th.
 progressions:
   minor:
-    verse: ["i", "bVII", "bVI", "V"]
-    chorus: ["bVI", "bVII", "i", "V"]
+    verse: ["i", "bVII", "bVI", "V7"]
+    chorus: ["bVI", "bVII", "i", "V7"]
     bridge: ["iv", "bVII", "bIII", "bVI"]
-    default: ["i", "bVII", "bVI", "V"]
+    default: ["i", "bVII", "bVI", "V7"]
   major:
-    verse: ["I", "vi", "ii", "V"]
-    chorus: ["IV", "V", "I", "vi"]
-    bridge: ["ii", "V", "iii", "vi"]
-    default: ["I", "vi", "ii", "V"]
+    verse: ["I", "vi", "ii", "V7"]
+    chorus: ["IV", "V7", "I", "vi"]
+    bridge: ["ii", "V7", "iii", "vi"]
+    default: ["I", "vi", "ii", "V7"]
   dorian:
     verse: ["i", "IV", "bVII", "bIII"]
     chorus: ["IV", "bVII", "i", "i"]

@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0] — 2026-06-11 — Correctness Release
+
+Large bug-fix and feature pass driven by a full-codebase review (~80 findings, all resolved).
+
+### Fixed
+
+- **Parameter plumbing** — persona, recipe, and user `params` now actually reach the engines; the merge chain (persona < recipe < global params < section params) is applied end-to-end instead of silently falling back to engine defaults.
+- **Harmony spelling** — `V7` and other seventh chords spell the dominant b7 correctly (G7 renders G–B–D–F, not F#); borrowed-chord spelling fixed.
+- **Timing** — per-engine timing fixes for drums, guitars, and bass; turnaround/fill material stays inside its section window instead of spilling past section ends.
+- **Bass cadences** — `root_cadence` resolution now fires on the last selected slot of a section's final chord; approach tones resolve directly into the next chord.
+- **Trainer/analysis tooling** — fixes to the MIDI analysis pipeline feeding recipe generation.
+
+### Added
+
+- **Meter support** — non-4/4 time signatures flow through planning, engines, and MIDI export.
+- **Macro-dynamics** — section-level intensity arc derives per-section energy so verses and choruses differ dynamically by default.
+- **Shared groove clock** (`produzre/groove.py`) — one resolved groove feel (swing, push/pull pockets) shared by all engines; a config with no groove indications is a strict no-op on the straight grid.
+- **Re-authored genre recipes** — recipe parameter sets rewritten against the corrected parameter plumbing.
+- **Integration regression tests** (`tests/test_integration_e2e.py`) — end-to-end nets for param plumbing, V7 spelling, section bounds, persona precedence, and groove no-op.
+
+---
+
 ## [0.8.0] — 2026-03-11 — First Public Release
 
 **Produzre** is a deterministic, section-based procedural MIDI engine. Describe your song in YAML and get a fully-produced multi-track MIDI arrangement — drums, bass, guitars, harmony — reproducibly, every time.

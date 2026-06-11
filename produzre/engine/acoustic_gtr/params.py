@@ -69,12 +69,18 @@ def resolve_params(section, instrument_cfg, rhythm_grid) -> AcousticGuitarParams
     sec_type = (section.type or "").strip().lower()
     bpb = rhythm_grid.beats_per_bar
 
-    # Extract intensity and offset from instrument config
-    intensity = 1.0
+    # Extract intensity and offset from instrument config.
+    # Intensity precedence: instrument > resolved section intensity
+    # (orchestrate.plan.resolve_section_intensity) > engine default.
+    _raw_intensity = None
     offset_beats = 0.0
     if instrument_cfg is not None:
-        intensity = float(getattr(instrument_cfg, "intensity", 1.0))
-        offset_beats = float(getattr(instrument_cfg, "offset_beats", 0.0))
+        _raw_intensity = getattr(instrument_cfg, "intensity", None)
+        _raw_offset = getattr(instrument_cfg, "offset_beats", None)
+        offset_beats = float(_raw_offset) if _raw_offset is not None else 0.0
+    if _raw_intensity is None:
+        _raw_intensity = getattr(section, "intensity", None)
+    intensity = float(_raw_intensity) if _raw_intensity is not None else 1.0
     intensity = _clamp(intensity, 0.0, 2.0)
 
     # Unwrap nested extra dict (config loader wraps section extra params)

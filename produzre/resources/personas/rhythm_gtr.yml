@@ -43,7 +43,6 @@ personas:
       downbeat_boost: 0.35
       strum_ms: 8.0
       sustain_cut_rate: 0.15
-      velocity_curve: "exponential"
 
   funky:
     params:

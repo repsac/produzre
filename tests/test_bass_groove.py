@@ -44,27 +44,38 @@ def test_octave_jumps_produce_variation():
         if len(parts) >= 12:
             pitches.append(int(parts[6]))
 
-    # Exact event count (deterministic with seed)
-    assert len(pitches) == 5, f"Expected 5 events, got {len(pitches)}"
+    # Seeded-deterministic exact count (seed=600). The old expectation of 5
+    # events dated from when user params were dropped and the engine ran on
+    # sparse defaults; with density=0.8/rest_rate=0.1 actually reaching the
+    # engine, the syncopated pattern now yields 41 events.
+    assert len(pitches) == 41, f"Expected 41 events, got {len(pitches)}"
 
+    # Musical intent: octave_jump_rate=0.6 must produce real octave spread.
+    # At least one octave (12 semitones) of range; seeded run spans B1..A3.
     pitch_range = max(pitches) - min(pitches)
-    assert pitch_range == 7, \
-        f"Expected pitch range of 7 with octave_jump_rate=0.6, got range={pitch_range}. Pitches: {pitches}"
+    assert pitch_range >= 12, \
+        f"Expected pitch range >= 12 with octave_jump_rate=0.6, got range={pitch_range}. Pitches: {pitches}"
+    assert pitch_range == 22, \
+        f"Seeded-deterministic pitch range changed: expected 22, got {pitch_range}"
 
-    # Check for groove-related voice labels in TSV (deterministic)
+    # Octave-jump events carry an "_octave" voice label (e.g. root_octave,
+    # fifth_octave_slap_pop). Fill labels (fill_octave_*) are the fill
+    # generator's own octave runs, not groove jumps, so exclude them.
     voice_labels = []
     for line in lines[1:]:
         parts = line.split("\t")
         if len(parts) >= 12:
             voice_labels.append(parts[11])
 
-    fifth_drop_count = sum(1 for l in voice_labels if "fifth_drop" in l)
-    assert fifth_drop_count == 3, \
-        f"Expected 3 fifth_drop labels, got {fifth_drop_count}. Labels: {voice_labels}"
+    octave_jump_count = sum(
+        1 for l in voice_labels if "octave" in l and not l.startswith("fill")
+    )
+    assert octave_jump_count == 7, \
+        f"Expected 7 groove octave-jump labels (seeded-deterministic), got {octave_jump_count}. Labels: {voice_labels}"
 
     # Check log for groove statistics (format: groove=[oct=N, 5th=N, pedal=N])
-    has_groove_log = "groove=" in result.stderr or "5th=" in result.stderr
-    assert has_groove_log, "Log should show groove statistics"
+    assert "oct=7" in result.stderr, \
+        "Log should show groove statistics with oct=7 octave jumps"
 
     print(f"✓ Groove features produce variation (range={pitch_range}, pitches={pitches})")
 
@@ -92,25 +103,46 @@ def test_fifth_drops_on_chord_changes():
     content = tsv_path.read_text()
     lines = content.strip().split("\n")
 
-    # Count events and fifth drops in voice labels (deterministic with seed)
+    # Seeded-deterministic exact count (seed=601). The old expectation of 4
+    # events predates the param-plumbing fix; density=0.9/rest_rate=0.05 with
+    # the drive pattern now yields 54 events.
     event_count = len(lines) - 1
-    assert event_count == 4, f"Expected 4 events, got {event_count}"
+    assert event_count == 54, f"Expected 54 events, got {event_count}"
 
-    fifth_drop_count = 0
+    # Collect fifth_drop events specifically (the groove feature under test).
+    # Plain "fifth" labels are ordinary chord-tone selection, not drops.
+    fifth_drops = []
     for line in lines[1:]:  # Skip header
         parts = line.split("\t")
-        if len(parts) >= 12:
-            voice_label = parts[11]
-            if "fifth" in voice_label.lower():
-                fifth_drop_count += 1
+        if len(parts) >= 12 and parts[11].startswith("fifth_drop"):
+            fifth_drops.append({
+                "bar": int(parts[2]),
+                "beat": float(parts[3]),
+                "pitch": int(parts[6]),
+            })
 
-    assert fifth_drop_count == 1, \
-        f"Expected 1 fifth drop with fifth_jump_rate=0.7, got {fifth_drop_count}"
+    assert len(fifth_drops) == 4, \
+        f"Expected 4 fifth drops with fifth_jump_rate=0.7 (seeded-deterministic), got {len(fifth_drops)}"
+
+    # Musical intent: each fifth_drop must actually BE the fifth of the chord
+    # active in its bar. Progression I IV V I in C: bar chords C, F, G, C
+    # whose fifths have pitch classes G=7, C=0, D=2, G=7.
+    fifth_pc_by_bar = {1: 7, 2: 0, 3: 2, 4: 7}
+    for fd in fifth_drops:
+        expected_pc = fifth_pc_by_bar[fd["bar"]]
+        assert fd["pitch"] % 12 == expected_pc, \
+            f"fifth_drop in bar {fd['bar']} has pitch {fd['pitch']} (pc {fd['pitch'] % 12}), expected pc {expected_pc}"
+
+    # Fifth drops fire on the first rendered note of a chord; bars 2-4 are
+    # chord changes and their drops land on beat 1 (the change itself).
+    on_change_downbeats = [fd for fd in fifth_drops if fd["bar"] >= 2 and fd["beat"] == 1.0]
+    assert len(on_change_downbeats) == 3, \
+        f"Expected 3 fifth drops on chord-change downbeats, got {len(on_change_downbeats)}"
 
     # Check log for fifth drop statistics
-    assert "5th=" in result.stderr, "Log should show fifth drop statistics"
+    assert "5th=4" in result.stderr, "Log should show fifth drop statistics (5th=4)"
 
-    print(f"✓ Fifth drops present on chord changes ({fifth_drop_count} fifth drops found)")
+    print(f"✓ Fifth drops present on chord changes ({len(fifth_drops)} fifth drops found)")
 
 
 def test_pedal_tones_across_changes():
@@ -223,13 +255,19 @@ def test_accent_strength_affects_velocity():
         if len(parts) >= 12:
             velocities.append(int(parts[8]))
 
-    # Exact event count (deterministic with seed)
-    assert len(velocities) == 5, f"Expected 5 velocity values, got {len(velocities)}"
+    # Seeded-deterministic exact count (seed=600); matches
+    # test_octave_jumps_produce_variation which builds the same example.
+    assert len(velocities) == 41, f"Expected 41 velocity values, got {len(velocities)}"
 
-    # With accent_strength=1.25, expect velocity variation
+    # Musical intent: accent_strength=1.25 (plus slap pops/ghosts) must yield
+    # a real velocity spread between accented and unaccented notes — not a
+    # flat dynamic. Seeded run spans 26..101 (range 75, was 6 before the
+    # param-plumbing fix when accents never reached the engine).
     velocity_variance = max(velocities) - min(velocities)
-    assert velocity_variance == 6, \
-        f"Expected velocity range of 6 with accent_strength, got range {velocity_variance}"
+    assert velocity_variance >= 20, \
+        f"Expected meaningful velocity spread with accent_strength=1.25, got range {velocity_variance}"
+    assert velocity_variance == 75, \
+        f"Seeded-deterministic velocity range changed: expected 75, got {velocity_variance}"
 
     print(f"✓ Accent strength affects velocity (range: {min(velocities)}-{max(velocities)})")
 

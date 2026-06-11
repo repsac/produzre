@@ -89,6 +89,10 @@ class InstrumentTimeline:
     Attributes:
         instrument: Instrument key (e.g., "drums", "bass").
         events: List of `NoteEvent` entries in song-relative beat time.
+        default_channel: Optional MIDI channel sourced from the engine spec
+            (`engines.yml` `channel:`). When set, it takes precedence over the
+            built-in instrument-name map for events added without an explicit
+            channel.
 
     Notes:
         Events may be appended in any order. Call `sort_events()` after
@@ -96,6 +100,7 @@ class InstrumentTimeline:
     """
     instrument: str
     events: List[NoteEvent] = field(default_factory=list)
+    default_channel: Optional[int] = None
 
     def add_note(
         self,
@@ -156,6 +161,12 @@ class InstrumentTimeline:
         """
         if channel is not None:
             return channel
+
+        # Prefer the engine-spec channel (engines.yml `channel:`), plumbed in
+        # by the orchestrator when the timeline is created.
+        if self.default_channel is not None:
+            return int(self.default_channel)
+
         # Assign distinct channels per instrument so GM program changes and
         # DAWs can distinguish parts more easily.
 
@@ -170,6 +181,7 @@ class InstrumentTimeline:
             "lead_gtr": 4,
             "lead": 4,
             "harmony": 5,
+            "arpeggiator": 6,
         }
 
         return mapping.get(self.instrument, 0)

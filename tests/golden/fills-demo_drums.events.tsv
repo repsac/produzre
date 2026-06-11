@@ -1,516 +1,423 @@
-instrument	section_id	bar	beat	start_beat_abs	duration_beats	pitch	note	velocity	channel	program
-drums	verse_no_fills	1	1.000	0.000	0.250	36	C2	81	9	0
-drums	verse_no_fills	1	1.000	0.000	0.250	42	F#2	79	9	0
-drums	verse_no_fills	1	1.500	0.500	0.250	42	F#2	76	9	0
-drums	verse_no_fills	1	2.000	1.000	0.250	38	D2	77	9	0
-drums	verse_no_fills	1	2.000	1.000	0.250	42	F#2	77	9	0
-drums	verse_no_fills	1	2.500	1.500	0.250	42	F#2	75	9	0
-drums	verse_no_fills	1	2.750	1.750	0.250	38	D2	25	9	0
-drums	verse_no_fills	1	3.000	2.000	0.250	36	C2	80	9	0
-drums	verse_no_fills	1	3.000	2.000	0.250	42	F#2	75	9	0
-drums	verse_no_fills	1	3.500	2.500	0.250	42	F#2	72	9	0
-drums	verse_no_fills	1	4.000	3.000	0.250	38	D2	78	9	0
-drums	verse_no_fills	1	4.000	3.000	0.250	42	F#2	81	9	0
-drums	verse_no_fills	1	4.500	3.500	0.250	42	F#2	73	9	0
-drums	verse_no_fills	2	1.000	4.000	0.250	36	C2	81	9	0
-drums	verse_no_fills	2	1.000	4.000	0.250	42	F#2	77	9	0
-drums	verse_no_fills	2	1.500	4.500	0.250	42	F#2	72	9	0
-drums	verse_no_fills	2	2.000	5.000	0.250	38	D2	80	9	0
-drums	verse_no_fills	2	2.000	5.000	0.250	42	F#2	76	9	0
-drums	verse_no_fills	2	2.500	5.500	0.250	42	F#2	78	9	0
-drums	verse_no_fills	2	3.000	6.000	0.250	36	C2	77	9	0
-drums	verse_no_fills	2	3.000	6.000	0.250	42	F#2	72	9	0
-drums	verse_no_fills	2	3.500	6.500	0.250	42	F#2	72	9	0
-drums	verse_no_fills	2	4.000	7.000	0.250	38	D2	77	9	0
-drums	verse_no_fills	2	4.000	7.000	0.250	42	F#2	73	9	0
-drums	verse_no_fills	2	4.500	7.500	0.250	42	F#2	72	9	0
-drums	verse_no_fills	2	4.750	7.750	0.250	36	C2	79	9	0
-drums	verse_no_fills	3	1.000	8.000	0.250	36	C2	78	9	0
-drums	verse_no_fills	3	1.000	8.000	0.250	42	F#2	73	9	0
-drums	verse_no_fills	3	1.500	8.500	0.250	42	F#2	75	9	0
-drums	verse_no_fills	3	2.000	9.000	0.250	38	D2	80	9	0
-drums	verse_no_fills	3	2.000	9.000	0.250	42	F#2	74	9	0
-drums	verse_no_fills	3	2.500	9.500	0.250	42	F#2	71	9	0
-drums	verse_no_fills	3	2.750	9.750	0.250	38	D2	25	9	0
-drums	verse_no_fills	3	3.000	10.000	0.250	36	C2	79	9	0
-drums	verse_no_fills	3	3.000	10.000	0.250	42	F#2	77	9	0
-drums	verse_no_fills	3	3.500	10.500	0.250	42	F#2	76	9	0
-drums	verse_no_fills	3	4.000	11.000	0.250	38	D2	76	9	0
-drums	verse_no_fills	3	4.000	11.000	0.250	42	F#2	76	9	0
-drums	verse_no_fills	3	4.500	11.500	0.250	42	F#2	70	9	0
-drums	verse_no_fills	4	1.000	12.000	0.250	36	C2	79	9	0
-drums	verse_no_fills	4	1.000	12.000	0.250	42	F#2	75	9	0
-drums	verse_no_fills	4	1.500	12.500	0.250	42	F#2	74	9	0
-drums	verse_no_fills	4	2.000	13.000	0.250	38	D2	81	9	0
-drums	verse_no_fills	4	2.000	13.000	0.250	42	F#2	76	9	0
-drums	verse_no_fills	4	2.500	13.500	0.250	42	F#2	80	9	0
-drums	verse_no_fills	4	3.000	14.000	0.250	36	C2	78	9	0
-drums	verse_no_fills	4	3.000	14.000	0.062	38	D2	52	9	0
-drums	verse_no_fills	4	3.000	14.000	0.250	42	F#2	74	9	0
-drums	verse_no_fills	4	3.062	14.062	0.062	38	D2	55	9	0
-drums	verse_no_fills	4	3.125	14.125	0.062	38	D2	51	9	0
-drums	verse_no_fills	4	3.188	14.188	0.062	38	D2	52	9	0
-drums	verse_no_fills	4	3.250	14.250	0.062	38	D2	59	9	0
-drums	verse_no_fills	4	3.312	14.312	0.062	38	D2	56	9	0
-drums	verse_no_fills	4	3.375	14.375	0.062	38	D2	57	9	0
-drums	verse_no_fills	4	3.438	14.438	0.062	38	D2	62	9	0
-drums	verse_no_fills	4	3.500	14.500	0.062	38	D2	61	9	0
-drums	verse_no_fills	4	3.500	14.500	0.250	42	F#2	73	9	0
-drums	verse_no_fills	4	3.562	14.562	0.062	38	D2	62	9	0
-drums	verse_no_fills	4	3.625	14.625	0.062	38	D2	62	9	0
-drums	verse_no_fills	4	3.688	14.688	0.062	38	D2	61	9	0
-drums	verse_no_fills	4	3.750	14.750	0.062	38	D2	62	9	0
-drums	verse_no_fills	4	3.812	14.812	0.062	38	D2	62	9	0
-drums	verse_no_fills	4	3.875	14.875	0.062	38	D2	64	9	0
-drums	verse_no_fills	4	3.938	14.938	0.062	38	D2	70	9	0
-drums	verse_no_fills	4	4.000	15.000	0.250	38	D2	75	9	0
-drums	verse_no_fills	4	4.000	15.000	0.062	38	D2	68	9	0
-drums	verse_no_fills	4	4.000	15.000	0.250	42	F#2	73	9	0
-drums	verse_no_fills	4	4.062	15.062	0.062	38	D2	71	9	0
-drums	verse_no_fills	4	4.125	15.125	0.062	38	D2	71	9	0
-drums	verse_no_fills	4	4.188	15.188	0.062	38	D2	72	9	0
-drums	verse_no_fills	4	4.250	15.250	0.062	38	D2	68	9	0
-drums	verse_no_fills	4	4.312	15.312	0.062	38	D2	73	9	0
-drums	verse_no_fills	4	4.375	15.375	0.062	38	D2	75	9	0
-drums	verse_no_fills	4	4.438	15.438	0.062	38	D2	74	9	0
-drums	verse_no_fills	4	4.500	15.500	0.062	38	D2	73	9	0
-drums	verse_no_fills	4	4.500	15.500	0.250	42	F#2	81	9	0
-drums	verse_no_fills	4	4.562	15.562	0.062	38	D2	78	9	0
-drums	verse_no_fills	4	4.625	15.625	0.062	38	D2	78	9	0
-drums	verse_no_fills	4	4.688	15.688	0.062	38	D2	75	9	0
-drums	verse_no_fills	4	4.750	15.750	0.062	38	D2	82	9	0
-drums	verse_no_fills	4	4.812	15.812	0.062	38	D2	77	9	0
-drums	verse_no_fills	4	4.875	15.875	0.062	38	D2	77	9	0
-drums	verse_no_fills	4	4.938	15.938	0.062	38	D2	78	9	0
-drums	chorus_short_fills	5	1.000	16.000	0.250	36	C2	81	9	0
-drums	chorus_short_fills	5	1.000	16.000	0.250	42	F#2	75	9	0
-drums	chorus_short_fills	5	1.000	16.000	0.500	49	C#3	96	9	0
-drums	chorus_short_fills	5	1.500	16.500	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	5	2.000	17.000	0.250	38	D2	76	9	0
-drums	chorus_short_fills	5	2.000	17.000	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	5	2.500	17.500	0.250	36	C2	76	9	0
-drums	chorus_short_fills	5	2.500	17.500	0.250	42	F#2	73	9	0
-drums	chorus_short_fills	5	2.750	17.750	0.250	38	D2	24	9	0
-drums	chorus_short_fills	5	3.000	18.000	0.250	36	C2	79	9	0
-drums	chorus_short_fills	5	3.000	18.000	0.250	42	F#2	79	9	0
-drums	chorus_short_fills	5	3.500	18.500	0.250	42	F#2	74	9	0
-drums	chorus_short_fills	5	4.000	19.000	0.250	38	D2	81	9	0
-drums	chorus_short_fills	5	4.000	19.000	0.250	42	F#2	81	9	0
-drums	chorus_short_fills	5	4.500	19.500	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	5	4.750	19.750	0.250	38	D2	23	9	0
-drums	chorus_short_fills	6	1.000	20.000	0.250	36	C2	84	9	0
-drums	chorus_short_fills	6	1.000	20.000	0.250	42	F#2	75	9	0
-drums	chorus_short_fills	6	1.500	20.500	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	6	2.000	21.000	0.250	38	D2	76	9	0
-drums	chorus_short_fills	6	2.000	21.000	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	6	2.500	21.500	0.250	36	C2	84	9	0
-drums	chorus_short_fills	6	2.500	21.500	0.250	42	F#2	78	9	0
-drums	chorus_short_fills	6	3.000	22.000	0.250	36	C2	83	9	0
-drums	chorus_short_fills	6	3.000	22.000	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	6	3.500	22.500	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	6	4.000	23.000	0.250	38	D2	81	9	0
-drums	chorus_short_fills	6	4.000	23.000	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	6	4.500	23.500	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	7	1.000	24.000	0.250	36	C2	79	9	0
-drums	chorus_short_fills	7	1.000	24.000	0.250	42	F#2	80	9	0
-drums	chorus_short_fills	7	1.500	24.500	0.250	42	F#2	75	9	0
-drums	chorus_short_fills	7	2.000	25.000	0.250	38	D2	80	9	0
-drums	chorus_short_fills	7	2.000	25.000	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	7	2.500	25.500	0.250	36	C2	81	9	0
-drums	chorus_short_fills	7	2.500	25.500	0.250	42	F#2	72	9	0
-drums	chorus_short_fills	7	2.750	25.750	0.250	38	D2	26	9	0
-drums	chorus_short_fills	7	3.000	26.000	0.250	36	C2	86	9	0
-drums	chorus_short_fills	7	3.000	26.000	0.250	42	F#2	75	9	0
-drums	chorus_short_fills	7	3.500	26.500	0.250	42	F#2	76	9	0
-drums	chorus_short_fills	7	4.000	27.000	0.250	38	D2	84	9	0
-drums	chorus_short_fills	7	4.000	27.000	0.250	42	F#2	83	9	0
-drums	chorus_short_fills	7	4.500	27.500	0.500	46	A#2	89	9	0
-drums	chorus_short_fills	8	1.000	28.000	0.250	36	C2	79	9	0
-drums	chorus_short_fills	8	1.000	28.000	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	8	1.500	28.500	0.250	42	F#2	71	9	0
-drums	chorus_short_fills	8	2.000	29.000	0.250	38	D2	83	9	0
-drums	chorus_short_fills	8	2.000	29.000	0.250	42	F#2	74	9	0
-drums	chorus_short_fills	8	2.500	29.500	0.250	36	C2	81	9	0
-drums	chorus_short_fills	8	2.500	29.500	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	8	2.750	29.750	0.250	38	D2	26	9	0
-drums	chorus_short_fills	8	3.000	30.000	0.250	36	C2	81	9	0
-drums	chorus_short_fills	8	3.000	30.000	0.250	42	F#2	75	9	0
-drums	chorus_short_fills	8	3.500	30.500	0.250	38	D2	79	9	0
-drums	chorus_short_fills	8	3.500	30.500	0.250	42	F#2	78	9	0
-drums	chorus_short_fills	8	3.750	30.750	0.250	38	D2	82	9	0
-drums	chorus_short_fills	8	4.000	31.000	0.250	38	D2	74	9	0
-drums	chorus_short_fills	8	4.000	31.000	0.250	38	D2	83	9	0
-drums	chorus_short_fills	8	4.000	31.000	0.250	42	F#2	77	9	0
-drums	chorus_short_fills	8	4.250	31.250	0.250	38	D2	82	9	0
-drums	chorus_short_fills	8	4.500	31.500	0.250	38	D2	81	9	0
-drums	chorus_short_fills	8	4.500	31.500	0.500	46	A#2	83	9	0
-drums	chorus_short_fills	8	4.750	31.750	0.250	38	D2	82	9	0
-drums	bridge_medium_fills	9	1.000	32.000	0.250	36	C2	86	9	0
-drums	bridge_medium_fills	9	1.000	32.000	0.250	42	F#2	81	9	0
-drums	bridge_medium_fills	9	1.000	32.000	0.500	49	C#3	70	9	0
-drums	bridge_medium_fills	9	2.000	33.000	0.250	38	D2	77	9	0
-drums	bridge_medium_fills	9	2.000	33.000	0.250	42	F#2	78	9	0
-drums	bridge_medium_fills	9	2.750	33.750	0.250	36	C2	75	9	0
-drums	bridge_medium_fills	9	3.000	34.000	0.250	42	F#2	78	9	0
-drums	bridge_medium_fills	9	4.000	35.000	0.250	38	D2	77	9	0
-drums	bridge_medium_fills	9	4.000	35.000	0.250	42	F#2	73	9	0
-drums	bridge_medium_fills	9	4.750	35.750	0.250	36	C2	76	9	0
-drums	bridge_medium_fills	10	1.000	36.000	0.250	36	C2	81	9	0
-drums	bridge_medium_fills	10	1.000	36.000	0.250	42	F#2	72	9	0
-drums	bridge_medium_fills	10	2.000	37.000	0.250	38	D2	78	9	0
-drums	bridge_medium_fills	10	2.000	37.000	0.250	42	F#2	79	9	0
-drums	bridge_medium_fills	10	3.000	38.000	0.250	42	F#2	75	9	0
-drums	bridge_medium_fills	10	4.000	39.000	0.250	38	D2	78	9	0
-drums	bridge_medium_fills	10	4.000	39.000	0.250	42	F#2	76	9	0
-drums	bridge_medium_fills	11	1.000	40.000	0.250	36	C2	83	9	0
-drums	bridge_medium_fills	11	1.000	40.000	0.250	42	F#2	81	9	0
-drums	bridge_medium_fills	11	2.000	41.000	0.250	38	D2	80	9	0
-drums	bridge_medium_fills	11	2.000	41.000	0.250	42	F#2	81	9	0
-drums	bridge_medium_fills	11	3.000	42.000	0.250	42	F#2	75	9	0
-drums	bridge_medium_fills	11	4.000	43.000	0.250	38	D2	80	9	0
-drums	bridge_medium_fills	11	4.000	43.000	0.250	42	F#2	83	9	0
-drums	bridge_medium_fills	12	1.000	44.000	0.250	36	C2	83	9	0
-drums	bridge_medium_fills	12	1.000	44.000	0.250	42	F#2	78	9	0
-drums	bridge_medium_fills	12	1.000	44.000	0.500	49	C#3	97	9	0
-drums	bridge_medium_fills	12	2.000	45.000	0.250	38	D2	77	9	0
-drums	bridge_medium_fills	12	2.000	45.000	0.250	38	D2	79	9	0
-drums	bridge_medium_fills	12	2.000	45.000	0.250	42	F#2	83	9	0
-drums	bridge_medium_fills	12	2.250	45.250	0.250	38	D2	83	9	0
-drums	bridge_medium_fills	12	2.500	45.500	0.250	38	D2	73	9	0
-drums	bridge_medium_fills	12	2.750	45.750	0.250	38	D2	82	9	0
-drums	bridge_medium_fills	12	3.000	46.000	0.250	38	D2	85	9	0
-drums	bridge_medium_fills	12	3.000	46.000	0.062	38	D2	49	9	0
-drums	bridge_medium_fills	12	3.000	46.000	0.250	42	F#2	80	9	0
-drums	bridge_medium_fills	12	3.062	46.062	0.062	38	D2	50	9	0
-drums	bridge_medium_fills	12	3.125	46.125	0.062	38	D2	57	9	0
-drums	bridge_medium_fills	12	3.188	46.188	0.062	38	D2	58	9	0
-drums	bridge_medium_fills	12	3.250	46.250	0.250	38	D2	80	9	0
-drums	bridge_medium_fills	12	3.250	46.250	0.062	38	D2	59	9	0
-drums	bridge_medium_fills	12	3.312	46.312	0.062	38	D2	57	9	0
-drums	bridge_medium_fills	12	3.375	46.375	0.062	38	D2	57	9	0
-drums	bridge_medium_fills	12	3.438	46.438	0.062	38	D2	56	9	0
-drums	bridge_medium_fills	12	3.500	46.500	0.250	38	D2	82	9	0
-drums	bridge_medium_fills	12	3.500	46.500	0.062	38	D2	59	9	0
-drums	bridge_medium_fills	12	3.562	46.562	0.062	38	D2	60	9	0
-drums	bridge_medium_fills	12	3.625	46.625	0.062	38	D2	64	9	0
-drums	bridge_medium_fills	12	3.688	46.688	0.062	38	D2	60	9	0
-drums	bridge_medium_fills	12	3.750	46.750	0.250	38	D2	82	9	0
-drums	bridge_medium_fills	12	3.750	46.750	0.062	38	D2	65	9	0
-drums	bridge_medium_fills	12	3.812	46.812	0.062	38	D2	63	9	0
-drums	bridge_medium_fills	12	3.875	46.875	0.062	38	D2	69	9	0
-drums	bridge_medium_fills	12	3.938	46.938	0.062	38	D2	64	9	0
-drums	bridge_medium_fills	12	4.000	47.000	0.250	38	D2	88	9	0
-drums	bridge_medium_fills	12	4.000	47.000	0.250	38	D2	85	9	0
-drums	bridge_medium_fills	12	4.000	47.000	0.062	38	D2	70	9	0
-drums	bridge_medium_fills	12	4.000	47.000	0.250	42	F#2	76	9	0
-drums	bridge_medium_fills	12	4.062	47.062	0.062	38	D2	69	9	0
-drums	bridge_medium_fills	12	4.125	47.125	0.062	38	D2	66	9	0
-drums	bridge_medium_fills	12	4.188	47.188	0.062	38	D2	66	9	0
-drums	bridge_medium_fills	12	4.250	47.250	0.250	38	D2	88	9	0
-drums	bridge_medium_fills	12	4.250	47.250	0.062	38	D2	67	9	0
-drums	bridge_medium_fills	12	4.312	47.312	0.062	38	D2	76	9	0
-drums	bridge_medium_fills	12	4.375	47.375	0.062	38	D2	72	9	0
-drums	bridge_medium_fills	12	4.438	47.438	0.062	38	D2	70	9	0
-drums	bridge_medium_fills	12	4.500	47.500	0.250	38	D2	86	9	0
-drums	bridge_medium_fills	12	4.500	47.500	0.062	38	D2	77	9	0
-drums	bridge_medium_fills	12	4.562	47.562	0.062	38	D2	75	9	0
-drums	bridge_medium_fills	12	4.625	47.625	0.062	38	D2	79	9	0
-drums	bridge_medium_fills	12	4.688	47.688	0.062	38	D2	81	9	0
-drums	bridge_medium_fills	12	4.750	47.750	0.250	38	D2	92	9	0
-drums	bridge_medium_fills	12	4.750	47.750	0.062	38	D2	78	9	0
-drums	bridge_medium_fills	12	4.812	47.812	0.062	38	D2	79	9	0
-drums	bridge_medium_fills	12	4.875	47.875	0.062	38	D2	79	9	0
-drums	bridge_medium_fills	12	4.938	47.938	0.062	38	D2	78	9	0
-drums	prechorus_long_fills	13	1.000	48.000	0.250	36	C2	79	9	0
-drums	prechorus_long_fills	13	1.000	48.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	13	1.000	48.000	0.500	49	C#3	71	9	0
-drums	prechorus_long_fills	13	1.500	48.500	0.250	42	F#2	77	9	0
-drums	prechorus_long_fills	13	2.000	49.000	0.250	38	D2	81	9	0
-drums	prechorus_long_fills	13	2.000	49.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	13	2.500	49.500	0.250	42	F#2	74	9	0
-drums	prechorus_long_fills	13	3.000	50.000	0.250	36	C2	81	9	0
-drums	prechorus_long_fills	13	3.000	50.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	13	3.500	50.500	0.250	42	F#2	70	9	0
-drums	prechorus_long_fills	13	4.000	51.000	0.250	38	D2	78	9	0
-drums	prechorus_long_fills	13	4.000	51.000	0.250	42	F#2	76	9	0
-drums	prechorus_long_fills	13	4.500	51.500	0.250	42	F#2	74	9	0
-drums	prechorus_long_fills	14	1.000	52.000	0.250	36	C2	81	9	0
-drums	prechorus_long_fills	14	1.000	52.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	14	1.500	52.500	0.250	42	F#2	74	9	0
-drums	prechorus_long_fills	14	2.000	53.000	0.250	38	D2	78	9	0
-drums	prechorus_long_fills	14	2.000	53.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	14	2.500	53.500	0.250	42	F#2	75	9	0
-drums	prechorus_long_fills	14	2.750	53.750	0.250	38	D2	25	9	0
-drums	prechorus_long_fills	14	3.000	54.000	0.250	36	C2	82	9	0
-drums	prechorus_long_fills	14	3.000	54.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	14	3.500	54.500	0.250	42	F#2	75	9	0
-drums	prechorus_long_fills	14	4.000	55.000	0.250	38	D2	80	9	0
-drums	prechorus_long_fills	14	4.000	55.000	0.250	42	F#2	76	9	0
-drums	prechorus_long_fills	14	4.500	55.500	0.250	42	F#2	72	9	0
-drums	prechorus_long_fills	15	1.000	56.000	0.250	36	C2	79	9	0
-drums	prechorus_long_fills	15	1.000	56.000	0.250	42	F#2	76	9	0
-drums	prechorus_long_fills	15	1.500	56.500	0.250	42	F#2	76	9	0
-drums	prechorus_long_fills	15	2.000	57.000	0.250	38	D2	79	9	0
-drums	prechorus_long_fills	15	2.000	57.000	0.250	42	F#2	81	9	0
-drums	prechorus_long_fills	15	2.500	57.500	0.250	42	F#2	77	9	0
-drums	prechorus_long_fills	15	3.000	58.000	0.250	36	C2	84	9	0
-drums	prechorus_long_fills	15	3.000	58.000	0.250	42	F#2	81	9	0
-drums	prechorus_long_fills	15	3.500	58.500	0.250	42	F#2	72	9	0
-drums	prechorus_long_fills	15	4.000	59.000	0.250	38	D2	81	9	0
-drums	prechorus_long_fills	15	4.000	59.000	0.250	42	F#2	77	9	0
-drums	prechorus_long_fills	15	4.500	59.500	0.250	42	F#2	71	9	0
-drums	prechorus_long_fills	16	1.000	60.000	0.250	36	C2	83	9	0
-drums	prechorus_long_fills	16	1.000	60.000	0.250	36	C2	81	9	0
-drums	prechorus_long_fills	16	1.000	60.000	0.250	42	F#2	78	9	0
-drums	prechorus_long_fills	16	1.250	60.250	0.250	36	C2	73	9	0
-drums	prechorus_long_fills	16	1.500	60.500	0.250	38	D2	82	9	0
-drums	prechorus_long_fills	16	1.500	60.500	0.250	42	F#2	71	9	0
-drums	prechorus_long_fills	16	1.750	60.750	0.250	36	C2	86	9	0
-drums	prechorus_long_fills	16	2.000	61.000	0.250	36	C2	83	9	0
-drums	prechorus_long_fills	16	2.000	61.000	0.250	38	D2	79	9	0
-drums	prechorus_long_fills	16	2.000	61.000	0.250	42	F#2	80	9	0
-drums	prechorus_long_fills	16	2.250	61.250	0.250	36	C2	79	9	0
-drums	prechorus_long_fills	16	2.500	61.500	0.250	38	D2	78	9	0
-drums	prechorus_long_fills	16	2.500	61.500	0.250	42	F#2	76	9	0
-drums	prechorus_long_fills	16	2.750	61.750	0.250	36	C2	83	9	0
-drums	prechorus_long_fills	16	3.000	62.000	0.250	36	C2	73	9	0
-drums	prechorus_long_fills	16	3.000	62.000	0.250	36	C2	85	9	0
-drums	prechorus_long_fills	16	3.000	62.000	0.250	42	F#2	75	9	0
-drums	prechorus_long_fills	16	3.250	62.250	0.250	36	C2	77	9	0
-drums	prechorus_long_fills	16	3.500	62.500	0.250	38	D2	86	9	0
-drums	prechorus_long_fills	16	3.500	62.500	0.250	42	F#2	75	9	0
-drums	prechorus_long_fills	16	3.750	62.750	0.250	36	C2	83	9	0
-drums	prechorus_long_fills	16	4.000	63.000	0.250	36	C2	77	9	0
-drums	prechorus_long_fills	16	4.000	63.000	0.250	38	D2	83	9	0
-drums	prechorus_long_fills	16	4.000	63.000	0.250	42	F#2	73	9	0
-drums	prechorus_long_fills	16	4.250	63.250	0.250	36	C2	80	9	0
-drums	prechorus_long_fills	16	4.500	63.500	0.250	38	D2	88	9	0
-drums	prechorus_long_fills	16	4.500	63.500	0.250	42	F#2	72	9	0
-drums	prechorus_long_fills	16	4.750	63.750	0.250	36	C2	86	9	0
-drums	verse_with_chatter	17	1.000	64.000	0.250	36	C2	84	9	0
-drums	verse_with_chatter	17	1.000	64.000	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	17	1.000	64.000	0.500	49	C#3	76	9	0
-drums	verse_with_chatter	17	1.500	64.500	0.250	42	F#2	73	9	0
-drums	verse_with_chatter	17	2.000	65.000	0.250	38	D2	77	9	0
-drums	verse_with_chatter	17	2.000	65.000	0.250	42	F#2	75	9	0
-drums	verse_with_chatter	17	2.500	65.500	0.250	42	F#2	80	9	0
-drums	verse_with_chatter	17	3.000	66.000	0.250	36	C2	77	9	0
-drums	verse_with_chatter	17	3.000	66.000	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	17	3.500	66.500	0.250	42	F#2	78	9	0
-drums	verse_with_chatter	17	4.000	67.000	0.250	38	D2	75	9	0
-drums	verse_with_chatter	17	4.000	67.000	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	17	4.500	67.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	18	1.000	68.000	0.250	36	C2	85	9	0
-drums	verse_with_chatter	18	1.000	68.000	0.250	42	F#2	83	9	0
-drums	verse_with_chatter	18	1.500	68.500	0.250	42	F#2	80	9	0
-drums	verse_with_chatter	18	2.000	69.000	0.250	38	D2	77	9	0
-drums	verse_with_chatter	18	2.000	69.000	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	18	2.500	69.500	0.250	42	F#2	73	9	0
-drums	verse_with_chatter	18	3.000	70.000	0.250	36	C2	82	9	0
-drums	verse_with_chatter	18	3.000	70.000	0.250	42	F#2	72	9	0
-drums	verse_with_chatter	18	3.500	70.500	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	18	4.000	71.000	0.250	38	D2	73	9	0
-drums	verse_with_chatter	18	4.000	71.000	0.250	38	D2	81	9	0
-drums	verse_with_chatter	18	4.000	71.000	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	18	4.250	71.250	0.250	38	D2	69	9	0
-drums	verse_with_chatter	18	4.500	71.500	0.250	38	D2	73	9	0
-drums	verse_with_chatter	18	4.500	71.500	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	18	4.750	71.750	0.250	38	D2	73	9	0
-drums	verse_with_chatter	19	1.000	72.000	0.250	36	C2	81	9	0
-drums	verse_with_chatter	19	1.000	72.000	0.250	42	F#2	80	9	0
-drums	verse_with_chatter	19	1.500	72.500	0.250	42	F#2	71	9	0
-drums	verse_with_chatter	19	2.000	73.000	0.250	38	D2	73	9	0
-drums	verse_with_chatter	19	2.000	73.000	0.250	42	F#2	73	9	0
-drums	verse_with_chatter	19	2.500	73.500	0.250	42	F#2	73	9	0
-drums	verse_with_chatter	19	2.750	73.750	0.250	38	D2	24	9	0
-drums	verse_with_chatter	19	3.000	74.000	0.250	36	C2	84	9	0
-drums	verse_with_chatter	19	3.000	74.000	0.250	42	F#2	84	9	0
-drums	verse_with_chatter	19	3.500	74.500	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	19	4.000	75.000	0.250	38	D2	79	9	0
-drums	verse_with_chatter	19	4.000	75.000	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	19	4.250	75.250	0.250	36	C2	79	9	0
-drums	verse_with_chatter	19	4.500	75.500	0.250	42	F#2	78	9	0
-drums	verse_with_chatter	20	1.000	76.000	0.250	36	C2	85	9	0
-drums	verse_with_chatter	20	1.000	76.000	0.250	42	F#2	72	9	0
-drums	verse_with_chatter	20	1.000	76.000	0.500	49	C#3	97	9	0
-drums	verse_with_chatter	20	1.500	76.500	0.250	42	F#2	78	9	0
-drums	verse_with_chatter	20	2.000	77.000	0.250	38	D2	76	9	0
-drums	verse_with_chatter	20	2.000	77.000	0.250	42	F#2	75	9	0
-drums	verse_with_chatter	20	2.500	77.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	20	3.000	78.000	0.250	36	C2	83	9	0
-drums	verse_with_chatter	20	3.000	78.000	0.250	38	D2	77	9	0
-drums	verse_with_chatter	20	3.000	78.000	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	20	3.250	78.250	0.250	38	D2	73	9	0
-drums	verse_with_chatter	20	3.500	78.500	0.250	38	D2	77	9	0
-drums	verse_with_chatter	20	3.500	78.500	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	20	3.750	78.750	0.250	38	D2	82	9	0
-drums	verse_with_chatter	20	4.000	79.000	0.250	38	D2	82	9	0
-drums	verse_with_chatter	20	4.000	79.000	0.250	38	D2	76	9	0
-drums	verse_with_chatter	20	4.000	79.000	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	20	4.250	79.250	0.250	38	D2	84	9	0
-drums	verse_with_chatter	20	4.500	79.500	0.250	38	D2	88	9	0
-drums	verse_with_chatter	20	4.500	79.500	0.250	42	F#2	73	9	0
-drums	verse_with_chatter	20	4.750	79.750	0.250	38	D2	83	9	0
-drums	verse_with_chatter	21	1.000	80.000	0.250	36	C2	80	9	0
-drums	verse_with_chatter	21	1.000	80.000	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	21	1.500	80.500	0.250	42	F#2	75	9	0
-drums	verse_with_chatter	21	2.000	81.000	0.250	38	D2	83	9	0
-drums	verse_with_chatter	21	2.000	81.000	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	21	2.250	81.250	0.250	36	C2	74	9	0
-drums	verse_with_chatter	21	2.500	81.500	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	21	3.000	82.000	0.250	36	C2	82	9	0
-drums	verse_with_chatter	21	3.000	82.000	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	21	3.500	82.500	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	21	4.000	83.000	0.250	38	D2	77	9	0
-drums	verse_with_chatter	21	4.000	83.000	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	21	4.500	83.500	0.250	42	F#2	75	9	0
-drums	verse_with_chatter	22	1.000	84.000	0.250	36	C2	78	9	0
-drums	verse_with_chatter	22	1.000	84.000	0.250	42	F#2	78	9	0
-drums	verse_with_chatter	22	1.500	84.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	22	2.000	85.000	0.250	38	D2	80	9	0
-drums	verse_with_chatter	22	2.000	85.000	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	22	2.500	85.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	22	2.750	85.750	0.250	38	D2	24	9	0
-drums	verse_with_chatter	22	3.000	86.000	0.250	36	C2	85	9	0
-drums	verse_with_chatter	22	3.000	86.000	0.250	42	F#2	78	9	0
-drums	verse_with_chatter	22	3.500	86.500	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	22	4.000	87.000	0.250	38	D2	78	9	0
-drums	verse_with_chatter	22	4.000	87.000	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	22	4.500	87.500	0.250	42	F#2	72	9	0
-drums	verse_with_chatter	23	1.000	88.000	0.250	36	C2	83	9	0
-drums	verse_with_chatter	23	1.000	88.000	0.250	42	F#2	80	9	0
-drums	verse_with_chatter	23	1.500	88.500	0.250	42	F#2	72	9	0
-drums	verse_with_chatter	23	2.000	89.000	0.250	38	D2	73	9	0
-drums	verse_with_chatter	23	2.000	89.000	0.250	42	F#2	83	9	0
-drums	verse_with_chatter	23	2.500	89.500	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	23	3.000	90.000	0.250	36	C2	81	9	0
-drums	verse_with_chatter	23	3.000	90.000	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	23	3.500	90.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	23	4.000	91.000	0.250	38	D2	82	9	0
-drums	verse_with_chatter	23	4.000	91.000	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	23	4.500	91.500	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	24	1.000	92.000	0.250	36	C2	83	9	0
-drums	verse_with_chatter	24	1.000	92.000	0.250	42	F#2	79	9	0
-drums	verse_with_chatter	24	1.000	92.000	0.500	49	C#3	94	9	0
-drums	verse_with_chatter	24	1.500	92.500	0.250	42	F#2	75	9	0
-drums	verse_with_chatter	24	2.000	93.000	0.250	38	D2	77	9	0
-drums	verse_with_chatter	24	2.000	93.000	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	24	2.000	93.000	0.250	50	D3	86	9	0
-drums	verse_with_chatter	24	2.250	93.250	0.250	47	B2	81	9	0
-drums	verse_with_chatter	24	2.500	93.500	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	24	2.500	93.500	0.250	45	A2	83	9	0
-drums	verse_with_chatter	24	2.750	93.750	0.250	38	D2	89	9	0
-drums	verse_with_chatter	24	2.750	93.750	0.250	38	D2	23	9	0
-drums	verse_with_chatter	24	3.000	94.000	0.250	36	C2	83	9	0
-drums	verse_with_chatter	24	3.000	94.000	0.062	38	D2	51	9	0
-drums	verse_with_chatter	24	3.000	94.000	0.250	42	F#2	76	9	0
-drums	verse_with_chatter	24	3.000	94.000	0.250	50	D3	84	9	0
-drums	verse_with_chatter	24	3.062	94.062	0.062	38	D2	51	9	0
-drums	verse_with_chatter	24	3.125	94.125	0.062	38	D2	55	9	0
-drums	verse_with_chatter	24	3.188	94.188	0.062	38	D2	57	9	0
-drums	verse_with_chatter	24	3.250	94.250	0.062	38	D2	59	9	0
-drums	verse_with_chatter	24	3.250	94.250	0.250	47	B2	85	9	0
-drums	verse_with_chatter	24	3.312	94.312	0.062	38	D2	59	9	0
-drums	verse_with_chatter	24	3.375	94.375	0.062	38	D2	60	9	0
-drums	verse_with_chatter	24	3.438	94.438	0.062	38	D2	57	9	0
-drums	verse_with_chatter	24	3.500	94.500	0.062	38	D2	63	9	0
-drums	verse_with_chatter	24	3.500	94.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	24	3.500	94.500	0.250	45	A2	92	9	0
-drums	verse_with_chatter	24	3.562	94.562	0.062	38	D2	64	9	0
-drums	verse_with_chatter	24	3.625	94.625	0.062	38	D2	59	9	0
-drums	verse_with_chatter	24	3.688	94.688	0.062	38	D2	63	9	0
-drums	verse_with_chatter	24	3.750	94.750	0.250	38	D2	88	9	0
-drums	verse_with_chatter	24	3.750	94.750	0.062	38	D2	66	9	0
-drums	verse_with_chatter	24	3.812	94.812	0.062	38	D2	67	9	0
-drums	verse_with_chatter	24	3.875	94.875	0.062	38	D2	69	9	0
-drums	verse_with_chatter	24	3.938	94.938	0.062	38	D2	64	9	0
-drums	verse_with_chatter	24	4.000	95.000	0.250	38	D2	83	9	0
-drums	verse_with_chatter	24	4.000	95.000	0.062	38	D2	68	9	0
-drums	verse_with_chatter	24	4.000	95.000	0.250	42	F#2	77	9	0
-drums	verse_with_chatter	24	4.000	95.000	0.250	50	D3	90	9	0
-drums	verse_with_chatter	24	4.062	95.062	0.062	38	D2	70	9	0
-drums	verse_with_chatter	24	4.125	95.125	0.062	38	D2	68	9	0
-drums	verse_with_chatter	24	4.188	95.188	0.062	38	D2	73	9	0
-drums	verse_with_chatter	24	4.250	95.250	0.062	38	D2	68	9	0
-drums	verse_with_chatter	24	4.250	95.250	0.250	47	B2	95	9	0
-drums	verse_with_chatter	24	4.312	95.312	0.062	38	D2	69	9	0
-drums	verse_with_chatter	24	4.375	95.375	0.062	38	D2	71	9	0
-drums	verse_with_chatter	24	4.438	95.438	0.062	38	D2	72	9	0
-drums	verse_with_chatter	24	4.500	95.500	0.062	38	D2	79	9	0
-drums	verse_with_chatter	24	4.500	95.500	0.250	42	F#2	74	9	0
-drums	verse_with_chatter	24	4.500	95.500	0.250	45	A2	86	9	0
-drums	verse_with_chatter	24	4.562	95.562	0.062	38	D2	80	9	0
-drums	verse_with_chatter	24	4.625	95.625	0.062	38	D2	80	9	0
-drums	verse_with_chatter	24	4.688	95.688	0.062	38	D2	80	9	0
-drums	verse_with_chatter	24	4.750	95.750	0.250	38	D2	96	9	0
-drums	verse_with_chatter	24	4.750	95.750	0.062	38	D2	77	9	0
-drums	verse_with_chatter	24	4.812	95.812	0.062	38	D2	79	9	0
-drums	verse_with_chatter	24	4.875	95.875	0.062	38	D2	85	9	0
-drums	verse_with_chatter	24	4.938	95.938	0.062	38	D2	86	9	0
-drums	solo_loose_persona	25	1.000	96.000	0.250	36	C2	83	9	0
-drums	solo_loose_persona	25	1.000	96.000	0.250	42	F#2	78	9	0
-drums	solo_loose_persona	25	1.000	96.000	0.500	49	C#3	98	9	0
-drums	solo_loose_persona	25	1.500	96.500	0.250	42	F#2	73	9	0
-drums	solo_loose_persona	25	2.000	97.000	0.250	38	D2	77	9	0
-drums	solo_loose_persona	25	2.000	97.000	0.250	42	F#2	79	9	0
-drums	solo_loose_persona	25	2.500	97.500	0.250	42	F#2	74	9	0
-drums	solo_loose_persona	25	3.000	98.000	0.250	36	C2	77	9	0
-drums	solo_loose_persona	25	3.000	98.000	0.250	42	F#2	75	9	0
-drums	solo_loose_persona	25	3.500	98.500	0.250	42	F#2	79	9	0
-drums	solo_loose_persona	25	4.000	99.000	0.250	38	D2	75	9	0
-drums	solo_loose_persona	25	4.000	99.000	0.250	42	F#2	76	9	0
-drums	solo_loose_persona	25	4.500	99.500	0.250	42	F#2	74	9	0
-drums	solo_loose_persona	26	1.000	100.000	0.250	36	C2	82	9	0
-drums	solo_loose_persona	26	1.000	100.000	0.250	42	F#2	75	9	0
-drums	solo_loose_persona	26	1.500	100.500	0.250	42	F#2	75	9	0
-drums	solo_loose_persona	26	2.000	101.000	0.250	38	D2	79	9	0
-drums	solo_loose_persona	26	2.000	101.000	0.250	42	F#2	84	9	0
-drums	solo_loose_persona	26	2.250	101.250	0.250	36	C2	80	9	0
-drums	solo_loose_persona	26	2.500	101.500	0.250	42	F#2	78	9	0
-drums	solo_loose_persona	26	3.000	102.000	0.250	36	C2	78	9	0
-drums	solo_loose_persona	26	3.000	102.000	0.250	42	F#2	82	9	0
-drums	solo_loose_persona	26	3.500	102.500	0.250	42	F#2	79	9	0
-drums	solo_loose_persona	26	4.000	103.000	0.250	38	D2	76	9	0
-drums	solo_loose_persona	26	4.000	103.000	0.250	42	F#2	82	9	0
-drums	solo_loose_persona	26	4.500	103.500	0.250	42	F#2	75	9	0
-drums	solo_loose_persona	27	1.000	104.000	0.250	36	C2	86	9	0
-drums	solo_loose_persona	27	1.000	104.000	0.250	42	F#2	74	9	0
-drums	solo_loose_persona	27	1.500	104.500	0.250	42	F#2	76	9	0
-drums	solo_loose_persona	27	2.000	105.000	0.250	38	D2	79	9	0
-drums	solo_loose_persona	27	2.000	105.000	0.250	42	F#2	77	9	0
-drums	solo_loose_persona	27	2.500	105.500	0.250	42	F#2	78	9	0
-drums	solo_loose_persona	27	3.000	106.000	0.250	36	C2	77	9	0
-drums	solo_loose_persona	27	3.000	106.000	0.250	42	F#2	82	9	0
-drums	solo_loose_persona	27	3.500	106.500	0.250	42	F#2	75	9	0
-drums	solo_loose_persona	27	4.000	107.000	0.250	38	D2	78	9	0
-drums	solo_loose_persona	27	4.000	107.000	0.250	42	F#2	80	9	0
-drums	solo_loose_persona	27	4.500	107.500	0.250	42	F#2	76	9	0
-drums	solo_loose_persona	28	1.000	108.000	0.250	36	C2	82	9	0
-drums	solo_loose_persona	28	1.000	108.000	0.250	38	D2	82	9	0
-drums	solo_loose_persona	28	1.000	108.000	0.250	42	F#2	79	9	0
-drums	solo_loose_persona	28	1.000	108.000	0.500	49	C#3	95	9	0
-drums	solo_loose_persona	28	1.250	108.250	0.250	38	D2	81	9	0
-drums	solo_loose_persona	28	1.500	108.500	0.250	38	D2	81	9	0
-drums	solo_loose_persona	28	1.500	108.500	0.250	42	F#2	71	9	0
-drums	solo_loose_persona	28	1.750	108.750	0.250	38	D2	74	9	0
-drums	solo_loose_persona	28	2.000	109.000	0.250	38	D2	80	9	0
-drums	solo_loose_persona	28	2.000	109.000	0.250	38	D2	76	9	0
-drums	solo_loose_persona	28	2.000	109.000	0.250	42	F#2	80	9	0
-drums	solo_loose_persona	28	2.250	109.250	0.250	38	D2	80	9	0
-drums	solo_loose_persona	28	2.500	109.500	0.250	38	D2	80	9	0
-drums	solo_loose_persona	28	2.500	109.500	0.250	42	F#2	76	9	0
-drums	solo_loose_persona	28	2.750	109.750	0.250	38	D2	80	9	0
-drums	solo_loose_persona	28	3.000	110.000	0.250	36	C2	78	9	0
-drums	solo_loose_persona	28	3.000	110.000	0.250	38	D2	87	9	0
-drums	solo_loose_persona	28	3.000	110.000	0.250	42	F#2	75	9	0
-drums	solo_loose_persona	28	3.250	110.250	0.250	38	D2	84	9	0
-drums	solo_loose_persona	28	3.500	110.500	0.250	38	D2	80	9	0
-drums	solo_loose_persona	28	3.500	110.500	0.250	42	F#2	78	9	0
-drums	solo_loose_persona	28	3.750	110.750	0.250	38	D2	89	9	0
-drums	solo_loose_persona	28	4.000	111.000	0.250	38	D2	85	9	0
-drums	solo_loose_persona	28	4.000	111.000	0.250	38	D2	80	9	0
-drums	solo_loose_persona	28	4.000	111.000	0.250	42	F#2	81	9	0
-drums	solo_loose_persona	28	4.250	111.250	0.250	38	D2	81	9	0
-drums	solo_loose_persona	28	4.500	111.500	0.250	38	D2	85	9	0
-drums	solo_loose_persona	28	4.500	111.500	0.250	42	F#2	72	9	0
-drums	solo_loose_persona	28	4.750	111.750	0.250	38	D2	85	9	0
+instrument	section_id	bar	beat	start_beat_abs	duration_beats	pitch	note	velocity	channel	program	kind
+drums	verse_no_fills	1	1.000	0.000	0.250	36	C2	82	9	0	kick
+drums	verse_no_fills	1	1.000	0.000	0.250	42	F#2	77	9	0	hat
+drums	verse_no_fills	1	1.500	0.500	0.250	42	F#2	73	9	0	hat
+drums	verse_no_fills	1	2.000	1.000	0.250	38	D2	79	9	0	snare
+drums	verse_no_fills	1	2.000	1.000	0.250	42	F#2	79	9	0	hat
+drums	verse_no_fills	1	2.500	1.500	0.250	42	F#2	77	9	0	hat
+drums	verse_no_fills	1	3.000	2.000	0.250	36	C2	76	9	0	kick
+drums	verse_no_fills	1	3.000	2.000	0.250	42	F#2	76	9	0	hat
+drums	verse_no_fills	1	3.500	2.500	0.250	42	F#2	81	9	0	hat
+drums	verse_no_fills	1	4.000	3.000	0.250	38	D2	76	9	0	snare
+drums	verse_no_fills	1	4.000	3.000	0.250	42	F#2	76	9	0	hat
+drums	verse_no_fills	1	4.250	3.250	0.250	36	C2	74	9	0	kick_extra
+drums	verse_no_fills	1	4.500	3.500	0.250	42	F#2	83	9	0	hat
+drums	verse_no_fills	2	1.000	4.000	0.250	36	C2	82	9	0	kick
+drums	verse_no_fills	2	1.000	4.000	0.250	42	F#2	82	9	0	hat
+drums	verse_no_fills	2	1.500	4.500	0.250	42	F#2	74	9	0	hat
+drums	verse_no_fills	2	2.000	5.000	0.250	38	D2	83	9	0	snare
+drums	verse_no_fills	2	2.000	5.000	0.250	42	F#2	75	9	0	hat
+drums	verse_no_fills	2	2.500	5.500	0.250	42	F#2	73	9	0	hat
+drums	verse_no_fills	2	3.000	6.000	0.250	36	C2	76	9	0	kick
+drums	verse_no_fills	2	3.000	6.000	0.250	42	F#2	83	9	0	hat
+drums	verse_no_fills	2	3.500	6.500	0.250	42	F#2	69	9	0	hat
+drums	verse_no_fills	2	4.000	7.000	0.250	38	D2	79	9	0	snare
+drums	verse_no_fills	2	4.000	7.000	0.250	42	F#2	77	9	0	hat
+drums	verse_no_fills	2	4.500	7.500	0.250	42	F#2	74	9	0	hat
+drums	verse_no_fills	3	1.000	8.000	0.250	36	C2	81	9	0	kick
+drums	verse_no_fills	3	1.000	8.000	0.250	42	F#2	76	9	0	hat
+drums	verse_no_fills	3	1.500	8.500	0.250	42	F#2	75	9	0	hat
+drums	verse_no_fills	3	2.000	9.000	0.250	38	D2	81	9	0	snare
+drums	verse_no_fills	3	2.000	9.000	0.250	42	F#2	76	9	0	hat
+drums	verse_no_fills	3	2.500	9.500	0.250	42	F#2	78	9	0	hat
+drums	verse_no_fills	3	2.750	9.750	0.250	38	D2	23	9	0	snare_ghost
+drums	verse_no_fills	3	3.000	10.000	0.250	36	C2	79	9	0	kick
+drums	verse_no_fills	3	3.000	10.000	0.250	42	F#2	77	9	0	hat
+drums	verse_no_fills	3	3.500	10.500	0.250	42	F#2	77	9	0	hat
+drums	verse_no_fills	3	4.000	11.000	0.250	38	D2	76	9	0	snare
+drums	verse_no_fills	3	4.000	11.000	0.250	42	F#2	83	9	0	hat
+drums	verse_no_fills	3	4.500	11.500	0.250	42	F#2	72	9	0	hat
+drums	verse_no_fills	4	1.000	12.000	0.250	36	C2	80	9	0	kick
+drums	verse_no_fills	4	1.000	12.000	0.250	42	F#2	78	9	0	hat
+drums	verse_no_fills	4	1.500	12.500	0.250	42	F#2	79	9	0	hat
+drums	verse_no_fills	4	2.000	13.000	0.250	38	D2	84	9	0	snare
+drums	verse_no_fills	4	2.000	13.000	0.250	42	F#2	80	9	0	hat
+drums	verse_no_fills	4	2.500	13.500	0.250	42	F#2	75	9	0	hat
+drums	verse_no_fills	4	2.750	13.750	0.250	38	D2	26	9	0	snare_ghost
+drums	verse_no_fills	4	3.000	14.000	0.250	36	C2	86	9	0	kick
+drums	verse_no_fills	4	3.000	14.000	0.250	42	F#2	82	9	0	hat
+drums	verse_no_fills	4	3.500	14.500	0.250	42	F#2	73	9	0	hat
+drums	verse_no_fills	4	3.503	14.503	0.250	50	D3	53	9	0	tom_pickup
+drums	verse_no_fills	4	3.753	14.753	0.250	50	D3	59	9	0	tom_pickup
+drums	verse_no_fills	4	4.000	15.000	0.250	38	D2	84	9	0	snare
+drums	verse_no_fills	4	4.000	15.000	0.250	42	F#2	77	9	0	hat
+drums	verse_no_fills	4	4.246	15.246	0.250	45	A2	68	9	0	tom_pickup
+drums	verse_no_fills	4	4.500	15.500	0.250	42	F#2	76	9	0	hat
+drums	verse_no_fills	4	4.503	15.503	0.250	45	A2	79	9	0	tom_pickup
+drums	verse_no_fills	4	4.750	15.750	0.250	49	C#3	88	9	0	crash_pickup
+drums	verse_no_fills	4	4.753	15.753	0.250	38	D2	88	9	0	snare_pickup
+drums	chorus_short_fills	5	1.000	16.000	0.250	36	C2	83	9	0	kick
+drums	chorus_short_fills	5	1.000	16.000	0.500	49	C#3	94	9	0	crash
+drums	chorus_short_fills	5	1.000	16.000	0.500	51	D#3	80	9	0	ride
+drums	chorus_short_fills	5	1.500	16.500	0.500	51	D#3	80	9	0	ride
+drums	chorus_short_fills	5	1.750	16.750	0.250	36	C2	80	9	0	kick_extra
+drums	chorus_short_fills	5	2.000	17.000	0.250	38	D2	77	9	0	snare
+drums	chorus_short_fills	5	2.000	17.000	0.500	51	D#3	75	9	0	ride
+drums	chorus_short_fills	5	2.500	17.500	0.250	36	C2	86	9	0	kick
+drums	chorus_short_fills	5	2.500	17.500	0.500	51	D#3	74	9	0	ride
+drums	chorus_short_fills	5	3.000	18.000	0.250	36	C2	79	9	0	kick
+drums	chorus_short_fills	5	3.000	18.000	0.500	51	D#3	81	9	0	ride
+drums	chorus_short_fills	5	3.250	18.250	0.250	36	C2	79	9	0	kick_extra
+drums	chorus_short_fills	5	3.500	18.500	0.500	51	D#3	76	9	0	ride
+drums	chorus_short_fills	5	4.000	19.000	0.250	38	D2	81	9	0	snare
+drums	chorus_short_fills	5	4.000	19.000	0.500	51	D#3	80	9	0	ride
+drums	chorus_short_fills	5	4.500	19.500	0.500	51	D#3	76	9	0	ride
+drums	chorus_short_fills	5	4.750	19.750	0.250	36	C2	77	9	0	kick_extra
+drums	chorus_short_fills	6	1.000	20.000	0.250	36	C2	81	9	0	kick
+drums	chorus_short_fills	6	1.000	20.000	0.500	51	D#3	74	9	0	ride
+drums	chorus_short_fills	6	1.250	20.250	0.250	36	C2	72	9	0	kick_extra
+drums	chorus_short_fills	6	1.500	20.500	0.500	51	D#3	74	9	0	ride
+drums	chorus_short_fills	6	2.000	21.000	0.250	38	D2	82	9	0	snare
+drums	chorus_short_fills	6	2.000	21.000	0.500	51	D#3	75	9	0	ride
+drums	chorus_short_fills	6	2.250	21.250	0.250	36	C2	76	9	0	kick_extra
+drums	chorus_short_fills	6	2.500	21.500	0.250	36	C2	83	9	0	kick
+drums	chorus_short_fills	6	2.500	21.500	0.500	51	D#3	79	9	0	ride
+drums	chorus_short_fills	6	3.000	22.000	0.250	36	C2	86	9	0	kick
+drums	chorus_short_fills	6	3.000	22.000	0.500	51	D#3	83	9	0	ride
+drums	chorus_short_fills	6	3.500	22.500	0.500	51	D#3	74	9	0	ride
+drums	chorus_short_fills	6	4.000	23.000	0.250	38	D2	77	9	0	snare
+drums	chorus_short_fills	6	4.000	23.000	0.500	51	D#3	79	9	0	ride
+drums	chorus_short_fills	6	4.250	23.250	0.250	36	C2	82	9	0	kick_double
+drums	chorus_short_fills	6	4.500	23.500	0.250	36	C2	75	9	0	kick_double
+drums	chorus_short_fills	6	4.500	23.500	0.500	51	D#3	76	9	0	ride
+drums	chorus_short_fills	6	4.750	23.750	0.250	38	D2	22	9	0	snare_ghost
+drums	chorus_short_fills	7	1.000	24.000	0.250	36	C2	81	9	0	kick
+drums	chorus_short_fills	7	1.000	24.000	0.500	51	D#3	75	9	0	ride
+drums	chorus_short_fills	7	1.500	24.500	0.500	51	D#3	76	9	0	ride
+drums	chorus_short_fills	7	1.750	24.750	0.250	36	C2	73	9	0	kick_extra
+drums	chorus_short_fills	7	2.000	25.000	0.250	38	D2	83	9	0	snare
+drums	chorus_short_fills	7	2.000	25.000	0.500	51	D#3	77	9	0	ride
+drums	chorus_short_fills	7	2.500	25.500	0.250	36	C2	84	9	0	kick
+drums	chorus_short_fills	7	2.500	25.500	0.500	51	D#3	73	9	0	ride
+drums	chorus_short_fills	7	3.000	26.000	0.250	36	C2	81	9	0	kick
+drums	chorus_short_fills	7	3.000	26.000	0.500	51	D#3	77	9	0	ride
+drums	chorus_short_fills	7	3.500	26.500	0.500	51	D#3	72	9	0	ride
+drums	chorus_short_fills	7	4.000	27.000	0.250	38	D2	80	9	0	snare
+drums	chorus_short_fills	7	4.000	27.000	0.500	51	D#3	77	9	0	ride
+drums	chorus_short_fills	7	4.500	27.500	0.500	51	D#3	75	9	0	ride
+drums	chorus_short_fills	8	1.000	28.000	0.250	36	C2	79	9	0	kick
+drums	chorus_short_fills	8	1.000	28.000	0.500	51	D#3	79	9	0	ride
+drums	chorus_short_fills	8	1.500	28.500	0.500	51	D#3	76	9	0	ride
+drums	chorus_short_fills	8	2.000	29.000	0.250	38	D2	80	9	0	fill
+drums	chorus_short_fills	8	2.000	29.000	0.250	38	D2	78	9	0	snare
+drums	chorus_short_fills	8	2.250	29.250	0.250	36	C2	78	9	0	kick_extra
+drums	chorus_short_fills	8	2.292	29.292	0.250	47	B2	78	9	0	fill
+drums	chorus_short_fills	8	2.500	29.500	0.250	36	C2	78	9	0	kick
+drums	chorus_short_fills	8	2.500	29.500	0.500	51	D#3	73	9	0	ride
+drums	chorus_short_fills	8	2.578	29.578	0.250	38	D2	87	9	0	fill
+drums	chorus_short_fills	8	2.750	29.750	0.250	38	D2	28	9	0	snare_ghost
+drums	chorus_short_fills	8	2.856	29.856	0.250	50	D3	79	9	0	fill
+drums	chorus_short_fills	8	3.000	30.000	0.250	36	C2	83	9	0	kick
+drums	chorus_short_fills	8	3.000	30.000	0.500	51	D#3	79	9	0	ride
+drums	chorus_short_fills	8	3.124	30.124	0.250	38	D2	88	9	0	fill
+drums	chorus_short_fills	8	3.250	30.250	0.250	36	C2	83	9	0	kick_extra
+drums	chorus_short_fills	8	3.377	30.377	0.250	47	B2	85	9	0	fill
+drums	chorus_short_fills	8	3.500	30.500	0.500	51	D#3	70	9	0	ride
+drums	chorus_short_fills	8	3.630	30.630	0.250	38	D2	85	9	0	fill
+drums	chorus_short_fills	8	3.876	30.876	0.250	50	D3	86	9	0	fill
+drums	chorus_short_fills	8	4.000	31.000	0.250	38	D2	74	9	0	snare
+drums	chorus_short_fills	8	4.000	31.000	0.500	51	D#3	77	9	0	ride
+drums	chorus_short_fills	8	4.114	31.114	0.250	38	D2	88	9	0	fill
+drums	chorus_short_fills	8	4.250	31.250	0.250	36	C2	78	9	0	kick_extra
+drums	chorus_short_fills	8	4.343	31.343	0.250	47	B2	92	9	0	fill
+drums	chorus_short_fills	8	4.500	31.500	0.250	36	C2	75	9	0	kick_double
+drums	chorus_short_fills	8	4.500	31.500	0.500	51	D#3	75	9	0	ride
+drums	chorus_short_fills	8	4.568	31.568	0.250	38	D2	83	9	0	fill
+drums	chorus_short_fills	8	4.750	31.750	0.250	36	C2	79	9	0	kick_extra
+drums	chorus_short_fills	8	4.789	31.789	0.250	50	D3	93	9	0	fill
+drums	bridge_medium_fills	9	1.000	32.000	0.250	36	C2	79	9	0	kick
+drums	bridge_medium_fills	9	1.000	32.000	0.250	42	F#2	76	9	0	hat
+drums	bridge_medium_fills	9	2.000	33.000	0.250	38	D2	80	9	0	snare
+drums	bridge_medium_fills	9	2.000	33.000	0.250	42	F#2	75	9	0	hat
+drums	bridge_medium_fills	9	3.000	34.000	0.250	42	F#2	78	9	0	hat
+drums	bridge_medium_fills	9	4.000	35.000	0.250	38	D2	81	9	0	snare
+drums	bridge_medium_fills	9	4.000	35.000	0.250	42	F#2	81	9	0	hat
+drums	bridge_medium_fills	10	1.000	36.000	0.250	36	C2	80	9	0	kick
+drums	bridge_medium_fills	10	1.000	36.000	0.250	42	F#2	81	9	0	hat
+drums	bridge_medium_fills	10	1.750	36.750	0.250	36	C2	78	9	0	kick_extra
+drums	bridge_medium_fills	10	2.000	37.000	0.250	38	D2	83	9	0	snare
+drums	bridge_medium_fills	10	2.000	37.000	0.250	42	F#2	76	9	0	hat
+drums	bridge_medium_fills	10	3.000	38.000	0.250	42	F#2	78	9	0	hat
+drums	bridge_medium_fills	10	4.000	39.000	0.250	38	D2	79	9	0	snare
+drums	bridge_medium_fills	10	4.000	39.000	0.250	42	F#2	77	9	0	hat
+drums	bridge_medium_fills	11	1.000	40.000	0.250	36	C2	85	9	0	kick
+drums	bridge_medium_fills	11	1.000	40.000	0.250	42	F#2	73	9	0	hat
+drums	bridge_medium_fills	11	2.000	41.000	0.250	38	D2	82	9	0	snare
+drums	bridge_medium_fills	11	2.000	41.000	0.250	42	F#2	79	9	0	hat
+drums	bridge_medium_fills	11	2.750	41.750	0.250	38	D2	25	9	0	snare_ghost
+drums	bridge_medium_fills	11	3.000	42.000	0.250	42	F#2	72	9	0	hat
+drums	bridge_medium_fills	11	3.750	42.750	0.250	36	C2	78	9	0	kick_extra
+drums	bridge_medium_fills	11	4.000	43.000	0.250	38	D2	78	9	0	snare
+drums	bridge_medium_fills	11	4.000	43.000	0.250	42	F#2	76	9	0	hat
+drums	bridge_medium_fills	12	1.000	44.000	0.275	36	C2	61	9	0	kick
+drums	bridge_medium_fills	12	1.000	44.000	0.275	42	F#2	65	9	0	hat
+drums	bridge_medium_fills	12	2.000	45.000	0.275	38	D2	62	9	0	snare
+drums	bridge_medium_fills	12	2.250	45.250	0.550	49	C#3	67	9	0	fill
+drums	bridge_medium_fills	12	2.750	45.750	0.550	49	C#3	64	9	0	fill
+drums	bridge_medium_fills	12	3.000	46.000	0.550	49	C#3	65	9	0	fill
+drums	bridge_medium_fills	12	3.500	46.500	0.550	49	C#3	69	9	0	fill
+drums	bridge_medium_fills	12	4.000	47.000	0.275	38	D2	64	9	0	snare
+drums	bridge_medium_fills	12	4.250	47.250	0.550	49	C#3	66	9	0	fill
+drums	bridge_medium_fills	12	4.500	47.500	0.550	49	C#3	69	9	0	fill
+drums	bridge_medium_fills	12	4.750	47.750	0.550	49	C#3	76	9	0	fill
+drums	prechorus_long_fills	13	1.000	48.000	0.250	36	C2	82	9	0	kick
+drums	prechorus_long_fills	13	1.000	48.000	0.250	42	F#2	80	9	0	hat
+drums	prechorus_long_fills	13	1.000	48.000	0.500	49	C#3	77	9	0	crash_transition
+drums	prechorus_long_fills	13	1.500	48.500	0.250	42	F#2	83	9	0	hat
+drums	prechorus_long_fills	13	1.750	48.750	0.250	36	C2	79	9	0	kick_extra
+drums	prechorus_long_fills	13	2.000	49.000	0.250	38	D2	77	9	0	snare
+drums	prechorus_long_fills	13	2.000	49.000	0.250	42	F#2	79	9	0	hat
+drums	prechorus_long_fills	13	2.500	49.500	0.250	42	F#2	84	9	0	hat
+drums	prechorus_long_fills	13	3.000	50.000	0.250	36	C2	85	9	0	kick
+drums	prechorus_long_fills	13	3.000	50.000	0.250	42	F#2	83	9	0	hat
+drums	prechorus_long_fills	13	3.500	50.500	0.250	42	F#2	78	9	0	hat
+drums	prechorus_long_fills	13	4.000	51.000	0.250	38	D2	78	9	0	snare
+drums	prechorus_long_fills	13	4.000	51.000	0.250	42	F#2	79	9	0	hat
+drums	prechorus_long_fills	13	4.500	51.500	0.250	42	F#2	71	9	0	hat
+drums	prechorus_long_fills	14	1.000	52.000	0.250	36	C2	81	9	0	kick
+drums	prechorus_long_fills	14	1.000	52.000	0.250	42	F#2	77	9	0	hat
+drums	prechorus_long_fills	14	1.500	52.500	0.250	42	F#2	72	9	0	hat
+drums	prechorus_long_fills	14	2.000	53.000	0.250	38	D2	74	9	0	snare
+drums	prechorus_long_fills	14	2.000	53.000	0.250	42	F#2	79	9	0	hat
+drums	prechorus_long_fills	14	2.500	53.500	0.250	42	F#2	74	9	0	hat
+drums	prechorus_long_fills	14	3.000	54.000	0.250	36	C2	80	9	0	kick
+drums	prechorus_long_fills	14	3.000	54.000	0.250	42	F#2	80	9	0	hat
+drums	prechorus_long_fills	14	3.500	54.500	0.250	42	F#2	72	9	0	hat
+drums	prechorus_long_fills	14	3.750	54.750	0.250	36	C2	82	9	0	kick_extra
+drums	prechorus_long_fills	14	4.000	55.000	0.250	38	D2	79	9	0	snare
+drums	prechorus_long_fills	14	4.000	55.000	0.250	42	F#2	77	9	0	hat
+drums	prechorus_long_fills	14	4.500	55.500	0.250	42	F#2	73	9	0	hat
+drums	prechorus_long_fills	15	1.000	56.000	0.250	36	C2	82	9	0	kick
+drums	prechorus_long_fills	15	1.000	56.000	0.250	42	F#2	78	9	0	hat
+drums	prechorus_long_fills	15	1.250	56.250	0.250	36	C2	79	9	0	kick_extra
+drums	prechorus_long_fills	15	1.500	56.500	0.500	46	A#2	82	9	0	open_hat
+drums	prechorus_long_fills	15	2.000	57.000	0.250	38	D2	75	9	0	snare
+drums	prechorus_long_fills	15	2.000	57.000	0.250	42	F#2	84	9	0	hat
+drums	prechorus_long_fills	15	2.500	57.500	0.250	42	F#2	77	9	0	hat
+drums	prechorus_long_fills	15	3.000	58.000	0.250	36	C2	78	9	0	kick
+drums	prechorus_long_fills	15	3.000	58.000	0.250	42	F#2	78	9	0	hat
+drums	prechorus_long_fills	15	3.500	58.500	0.250	42	F#2	86	9	0	hat
+drums	prechorus_long_fills	15	4.000	59.000	0.250	38	D2	78	9	0	snare
+drums	prechorus_long_fills	15	4.000	59.000	0.250	42	F#2	83	9	0	hat
+drums	prechorus_long_fills	15	4.250	59.250	0.250	36	C2	79	9	0	kick_extra
+drums	prechorus_long_fills	15	4.500	59.500	0.500	46	A#2	81	9	0	open_hat
+drums	prechorus_long_fills	15	4.750	59.750	0.250	36	C2	82	9	0	kick_extra
+drums	prechorus_long_fills	16	1.000	60.000	0.250	36	C2	81	9	0	kick
+drums	prechorus_long_fills	16	1.000	60.000	0.250	42	F#2	79	9	0	hat_close
+drums	prechorus_long_fills	16	1.500	60.500	0.500	46	A#2	93	9	0	open_hat
+drums	prechorus_long_fills	16	2.000	61.000	0.250	36	C2	79	9	0	fill
+drums	prechorus_long_fills	16	2.000	61.000	0.250	38	D2	80	9	0	snare
+drums	prechorus_long_fills	16	2.000	61.000	0.250	42	F#2	78	9	0	hat
+drums	prechorus_long_fills	16	2.250	61.250	0.250	36	C2	81	9	0	kick_extra
+drums	prechorus_long_fills	16	2.500	61.500	0.250	36	C2	81	9	0	fill
+drums	prechorus_long_fills	16	2.500	61.500	0.250	42	F#2	72	9	0	hat
+drums	prechorus_long_fills	16	3.000	62.000	0.250	36	C2	82	9	0	kick
+drums	prechorus_long_fills	16	3.000	62.000	0.250	38	D2	88	9	0	fill
+drums	prechorus_long_fills	16	3.000	62.000	0.250	42	F#2	73	9	0	hat
+drums	prechorus_long_fills	16	3.500	62.500	0.250	36	C2	80	9	0	fill
+drums	prechorus_long_fills	16	3.500	62.500	0.500	46	A#2	79	9	0	open_hat
+drums	prechorus_long_fills	16	4.000	63.000	0.250	36	C2	85	9	0	fill
+drums	prechorus_long_fills	16	4.000	63.000	0.250	38	D2	77	9	0	snare
+drums	prechorus_long_fills	16	4.000	63.000	0.250	42	F#2	80	9	0	hat
+drums	prechorus_long_fills	16	4.498	63.498	0.250	38	D2	72	9	0	snare_pickup
+drums	prechorus_long_fills	16	4.500	63.500	0.250	36	C2	75	9	0	fill
+drums	prechorus_long_fills	16	4.500	63.500	0.250	42	F#2	86	9	0	hat
+drums	prechorus_long_fills	16	4.753	63.753	0.250	38	D2	82	9	0	snare_pickup
+drums	verse_with_chatter	17	1.000	64.000	0.250	36	C2	86	9	0	kick
+drums	verse_with_chatter	17	1.000	64.000	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	17	1.500	64.500	0.250	42	F#2	82	9	0	hat
+drums	verse_with_chatter	17	2.000	65.000	0.250	38	D2	75	9	0	snare
+drums	verse_with_chatter	17	2.000	65.000	0.250	42	F#2	83	9	0	hat
+drums	verse_with_chatter	17	2.500	65.500	0.250	42	F#2	79	9	0	hat
+drums	verse_with_chatter	17	3.000	66.000	0.250	36	C2	78	9	0	kick
+drums	verse_with_chatter	17	3.000	66.000	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	17	3.500	66.500	0.250	42	F#2	83	9	0	hat
+drums	verse_with_chatter	17	4.000	67.000	0.250	38	D2	78	9	0	snare
+drums	verse_with_chatter	17	4.000	67.000	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	17	4.500	67.500	0.250	42	F#2	72	9	0	hat
+drums	verse_with_chatter	18	1.000	68.000	0.250	36	C2	85	9	0	kick
+drums	verse_with_chatter	18	1.000	68.000	0.250	42	F#2	80	9	0	hat
+drums	verse_with_chatter	18	1.500	68.500	0.250	42	F#2	71	9	0	hat
+drums	verse_with_chatter	18	2.000	69.000	0.250	38	D2	77	9	0	snare
+drums	verse_with_chatter	18	2.000	69.000	0.250	42	F#2	73	9	0	hat
+drums	verse_with_chatter	18	2.500	69.500	0.250	42	F#2	89	9	0	hat
+drums	verse_with_chatter	18	3.000	70.000	0.250	36	C2	83	9	0	kick
+drums	verse_with_chatter	18	3.000	70.000	0.250	42	F#2	74	9	0	hat
+drums	verse_with_chatter	18	3.500	70.500	0.250	42	F#2	85	9	0	hat
+drums	verse_with_chatter	18	4.000	71.000	0.250	38	D2	78	9	0	snare
+drums	verse_with_chatter	18	4.000	71.000	0.250	42	F#2	81	9	0	hat
+drums	verse_with_chatter	18	4.500	71.500	0.250	42	F#2	73	9	0	hat
+drums	verse_with_chatter	19	1.000	72.000	0.250	36	C2	80	9	0	kick
+drums	verse_with_chatter	19	1.000	72.000	0.250	42	F#2	82	9	0	hat
+drums	verse_with_chatter	19	1.500	72.500	0.250	42	F#2	81	9	0	hat
+drums	verse_with_chatter	19	2.000	73.000	0.250	38	D2	78	9	0	snare
+drums	verse_with_chatter	19	2.000	73.000	0.250	42	F#2	79	9	0	hat
+drums	verse_with_chatter	19	2.500	73.500	0.250	42	F#2	81	9	0	hat
+drums	verse_with_chatter	19	3.000	74.000	0.250	36	C2	76	9	0	kick
+drums	verse_with_chatter	19	3.000	74.000	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	19	3.500	74.500	0.250	42	F#2	74	9	0	hat
+drums	verse_with_chatter	19	4.000	75.000	0.250	38	D2	78	9	0	snare
+drums	verse_with_chatter	19	4.000	75.000	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	19	4.500	75.500	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	20	1.000	76.000	0.250	36	C2	77	9	0	kick
+drums	verse_with_chatter	20	1.000	76.000	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	20	1.500	76.500	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	20	2.000	77.000	0.250	38	D2	79	9	0	snare
+drums	verse_with_chatter	20	2.000	77.000	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	20	2.500	77.500	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	20	2.750	77.750	0.250	36	C2	71	9	0	kick_extra
+drums	verse_with_chatter	20	3.000	78.000	0.250	36	C2	79	9	0	kick
+drums	verse_with_chatter	20	3.000	78.000	0.250	38	D2	66	9	0	fill
+drums	verse_with_chatter	20	3.000	78.000	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	20	3.500	78.500	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	20	3.578	78.578	0.250	38	D2	70	9	0	fill
+drums	verse_with_chatter	20	4.000	79.000	0.250	38	D2	79	9	0	snare
+drums	verse_with_chatter	20	4.000	79.000	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	20	4.106	79.106	0.250	38	D2	86	9	0	fill
+drums	verse_with_chatter	20	4.250	79.250	0.250	36	C2	77	9	0	kick_extra
+drums	verse_with_chatter	20	4.500	79.500	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	20	4.597	79.597	0.250	38	D2	90	9	0	fill
+drums	verse_with_chatter	21	1.000	80.000	0.250	36	C2	77	9	0	kick
+drums	verse_with_chatter	21	1.000	80.000	0.250	42	F#2	83	9	0	hat
+drums	verse_with_chatter	21	1.000	80.000	0.500	49	C#3	95	9	0	crash
+drums	verse_with_chatter	21	1.500	80.500	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	21	2.000	81.000	0.250	38	D2	82	9	0	snare
+drums	verse_with_chatter	21	2.000	81.000	0.250	42	F#2	73	9	0	hat
+drums	verse_with_chatter	21	2.500	81.500	0.250	42	F#2	84	9	0	hat
+drums	verse_with_chatter	21	3.000	82.000	0.250	36	C2	83	9	0	kick
+drums	verse_with_chatter	21	3.000	82.000	0.250	42	F#2	81	9	0	hat
+drums	verse_with_chatter	21	3.500	82.500	0.250	42	F#2	75	9	0	hat
+drums	verse_with_chatter	21	4.000	83.000	0.250	38	D2	83	9	0	snare
+drums	verse_with_chatter	21	4.000	83.000	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	21	4.500	83.500	0.250	42	F#2	86	9	0	hat
+drums	verse_with_chatter	22	1.000	84.000	0.250	36	C2	82	9	0	kick
+drums	verse_with_chatter	22	1.000	84.000	0.250	42	F#2	74	9	0	hat
+drums	verse_with_chatter	22	1.500	84.500	0.250	42	F#2	71	9	0	hat
+drums	verse_with_chatter	22	2.000	85.000	0.250	38	D2	77	9	0	snare
+drums	verse_with_chatter	22	2.000	85.000	0.250	42	F#2	79	9	0	hat
+drums	verse_with_chatter	22	2.500	85.500	0.250	42	F#2	72	9	0	hat
+drums	verse_with_chatter	22	2.750	85.750	0.250	36	C2	80	9	0	kick_extra
+drums	verse_with_chatter	22	3.000	86.000	0.250	36	C2	79	9	0	kick
+drums	verse_with_chatter	22	3.000	86.000	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	22	3.500	86.500	0.250	42	F#2	80	9	0	hat
+drums	verse_with_chatter	22	4.000	87.000	0.250	38	D2	77	9	0	snare
+drums	verse_with_chatter	22	4.000	87.000	0.250	42	F#2	72	9	0	hat
+drums	verse_with_chatter	22	4.500	87.500	0.250	42	F#2	75	9	0	hat
+drums	verse_with_chatter	23	1.000	88.000	0.250	36	C2	84	9	0	kick
+drums	verse_with_chatter	23	1.000	88.000	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	23	1.500	88.500	0.250	42	F#2	78	9	0	hat
+drums	verse_with_chatter	23	2.000	89.000	0.250	38	D2	76	9	0	snare
+drums	verse_with_chatter	23	2.000	89.000	0.250	42	F#2	79	9	0	hat
+drums	verse_with_chatter	23	2.250	89.250	0.250	36	C2	82	9	0	kick_extra
+drums	verse_with_chatter	23	2.500	89.500	0.250	42	F#2	85	9	0	hat
+drums	verse_with_chatter	23	3.000	90.000	0.250	36	C2	81	9	0	kick
+drums	verse_with_chatter	23	3.000	90.000	0.250	38	D2	75	9	0	chatter
+drums	verse_with_chatter	23	3.000	90.000	0.250	42	F#2	73	9	0	hat
+drums	verse_with_chatter	23	3.500	90.500	0.250	42	F#2	74	9	0	hat
+drums	verse_with_chatter	23	3.500	90.500	0.250	47	B2	74	9	0	chatter
+drums	verse_with_chatter	23	4.000	91.000	0.250	38	D2	78	9	0	snare
+drums	verse_with_chatter	23	4.000	91.000	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	23	4.500	91.500	0.250	42	F#2	84	9	0	hat
+drums	verse_with_chatter	24	1.000	92.000	0.250	36	C2	80	9	0	kick
+drums	verse_with_chatter	24	1.000	92.000	0.250	42	F#2	79	9	0	hat
+drums	verse_with_chatter	24	1.500	92.500	0.250	42	F#2	74	9	0	hat
+drums	verse_with_chatter	24	2.000	93.000	0.250	38	D2	80	9	0	snare
+drums	verse_with_chatter	24	2.000	93.000	0.250	42	F#2	74	9	0	hat
+drums	verse_with_chatter	24	2.500	93.500	0.250	42	F#2	80	9	0	hat
+drums	verse_with_chatter	24	2.997	93.997	0.250	38	D2	55	9	0	snare_pickup
+drums	verse_with_chatter	24	3.000	94.000	0.250	36	C2	85	9	0	kick
+drums	verse_with_chatter	24	3.000	94.000	0.250	42	F#2	76	9	0	hat
+drums	verse_with_chatter	24	3.252	94.252	0.250	38	D2	54	9	0	snare_pickup
+drums	verse_with_chatter	24	3.497	94.497	0.250	38	D2	63	9	0	snare_pickup
+drums	verse_with_chatter	24	3.500	94.500	0.250	42	F#2	72	9	0	hat
+drums	verse_with_chatter	24	3.754	94.754	0.250	38	D2	64	9	0	snare_pickup
+drums	verse_with_chatter	24	4.000	95.000	0.250	38	D2	77	9	0	snare
+drums	verse_with_chatter	24	4.000	95.000	0.250	42	F#2	82	9	0	hat
+drums	verse_with_chatter	24	4.251	95.251	0.250	47	B2	75	9	0	tom_pickup
+drums	verse_with_chatter	24	4.500	95.500	0.250	42	F#2	77	9	0	hat
+drums	verse_with_chatter	24	4.500	95.500	0.250	45	A2	80	9	0	tom_pickup
+drums	verse_with_chatter	24	4.754	95.754	0.250	38	D2	88	9	0	snare_pickup
+drums	solo_loose_persona	25	1.000	96.000	0.250	36	C2	81	9	0	kick
+drums	solo_loose_persona	25	1.000	96.000	0.500	49	C#3	87	9	0	crash
+drums	solo_loose_persona	25	1.000	96.000	0.500	51	D#3	84	9	0	ride
+drums	solo_loose_persona	25	1.250	96.250	0.250	36	C2	79	9	0	kick_extra
+drums	solo_loose_persona	25	1.500	96.500	0.500	51	D#3	76	9	0	ride
+drums	solo_loose_persona	25	2.000	97.000	0.250	38	D2	81	9	0	snare
+drums	solo_loose_persona	25	2.000	97.000	0.500	51	D#3	77	9	0	ride
+drums	solo_loose_persona	25	2.500	97.500	0.500	51	D#3	72	9	0	ride
+drums	solo_loose_persona	25	2.750	97.750	0.250	36	C2	78	9	0	kick_extra
+drums	solo_loose_persona	25	3.000	98.000	0.250	36	C2	77	9	0	kick
+drums	solo_loose_persona	25	3.000	98.000	0.500	51	D#3	78	9	0	ride
+drums	solo_loose_persona	25	3.250	98.250	0.250	36	C2	73	9	0	kick_extra
+drums	solo_loose_persona	25	3.500	98.500	0.500	51	D#3	75	9	0	ride
+drums	solo_loose_persona	25	4.000	99.000	0.250	38	D2	79	9	0	snare
+drums	solo_loose_persona	25	4.000	99.000	0.500	51	D#3	75	9	0	ride
+drums	solo_loose_persona	25	4.500	99.500	0.500	51	D#3	72	9	0	ride
+drums	solo_loose_persona	25	4.750	99.750	0.250	36	C2	80	9	0	kick_extra
+drums	solo_loose_persona	25	4.750	99.750	0.250	38	D2	24	9	0	snare_ghost
+drums	solo_loose_persona	26	1.000	100.000	0.250	36	C2	86	9	0	kick
+drums	solo_loose_persona	26	1.000	100.000	0.500	51	D#3	75	9	0	ride
+drums	solo_loose_persona	26	1.500	100.500	0.500	51	D#3	78	9	0	ride
+drums	solo_loose_persona	26	2.000	101.000	0.250	38	D2	81	9	0	snare
+drums	solo_loose_persona	26	2.000	101.000	0.500	51	D#3	79	9	0	ride
+drums	solo_loose_persona	26	2.500	101.500	0.500	51	D#3	73	9	0	ride
+drums	solo_loose_persona	26	3.000	102.000	0.250	36	C2	87	9	0	kick
+drums	solo_loose_persona	26	3.000	102.000	0.500	51	D#3	83	9	0	ride
+drums	solo_loose_persona	26	3.250	102.250	0.250	36	C2	73	9	0	kick_extra
+drums	solo_loose_persona	26	3.500	102.500	0.500	51	D#3	74	9	0	ride
+drums	solo_loose_persona	26	4.000	103.000	0.250	38	D2	80	9	0	snare
+drums	solo_loose_persona	26	4.000	103.000	0.500	51	D#3	76	9	0	ride
+drums	solo_loose_persona	26	4.250	103.250	0.250	36	C2	80	9	0	kick_double
+drums	solo_loose_persona	26	4.500	103.500	0.250	36	C2	81	9	0	kick_double
+drums	solo_loose_persona	26	4.500	103.500	0.500	51	D#3	71	9	0	ride
+drums	solo_loose_persona	27	1.000	104.000	0.250	36	C2	79	9	0	kick
+drums	solo_loose_persona	27	1.000	104.000	0.500	51	D#3	78	9	0	ride
+drums	solo_loose_persona	27	1.250	104.250	0.250	36	C2	78	9	0	kick_extra
+drums	solo_loose_persona	27	1.500	104.500	0.500	51	D#3	73	9	0	ride
+drums	solo_loose_persona	27	2.000	105.000	0.250	38	D2	79	9	0	snare
+drums	solo_loose_persona	27	2.000	105.000	0.500	51	D#3	78	9	0	ride
+drums	solo_loose_persona	27	2.500	105.500	0.500	51	D#3	75	9	0	ride
+drums	solo_loose_persona	27	3.000	106.000	0.250	36	C2	82	9	0	kick
+drums	solo_loose_persona	27	3.000	106.000	0.500	51	D#3	74	9	0	ride
+drums	solo_loose_persona	27	3.500	106.500	0.500	51	D#3	74	9	0	ride
+drums	solo_loose_persona	27	4.000	107.000	0.250	36	C2	77	9	0	kick_double
+drums	solo_loose_persona	27	4.000	107.000	0.250	38	D2	81	9	0	snare
+drums	solo_loose_persona	27	4.000	107.000	0.500	51	D#3	80	9	0	ride
+drums	solo_loose_persona	27	4.250	107.250	0.250	36	C2	77	9	0	kick_extra
+drums	solo_loose_persona	27	4.500	107.500	0.500	51	D#3	79	9	0	ride
+drums	solo_loose_persona	28	1.000	108.000	0.250	36	C2	81	9	0	kick
+drums	solo_loose_persona	28	1.000	108.000	0.500	51	D#3	73	9	0	ride
+drums	solo_loose_persona	28	1.250	108.250	0.250	36	C2	74	9	0	kick_extra
+drums	solo_loose_persona	28	1.500	108.500	0.500	51	D#3	76	9	0	ride
+drums	solo_loose_persona	28	2.000	109.000	0.250	38	D2	79	9	0	snare
+drums	solo_loose_persona	28	2.000	109.000	0.250	50	D3	80	9	0	fill
+drums	solo_loose_persona	28	2.250	109.250	0.250	36	C2	79	9	0	kick_extra
+drums	solo_loose_persona	28	2.250	109.250	0.250	47	B2	81	9	0	fill
+drums	solo_loose_persona	28	2.500	109.500	0.250	45	A2	82	9	0	fill
+drums	solo_loose_persona	28	2.500	109.500	0.500	51	D#3	69	9	0	ride
+drums	solo_loose_persona	28	2.750	109.750	0.250	36	C2	77	9	0	kick_extra
+drums	solo_loose_persona	28	2.750	109.750	0.250	38	D2	79	9	0	fill
+drums	solo_loose_persona	28	3.000	110.000	0.250	36	C2	79	9	0	kick
+drums	solo_loose_persona	28	3.000	110.000	0.250	50	D3	83	9	0	fill
+drums	solo_loose_persona	28	3.000	110.000	0.500	51	D#3	77	9	0	ride
+drums	solo_loose_persona	28	3.250	110.250	0.250	47	B2	84	9	0	fill
+drums	solo_loose_persona	28	3.500	110.500	0.250	45	A2	92	9	0	fill
+drums	solo_loose_persona	28	3.500	110.500	0.500	51	D#3	78	9	0	ride
+drums	solo_loose_persona	28	3.750	110.750	0.250	38	D2	83	9	0	fill
+drums	solo_loose_persona	28	4.000	111.000	0.250	38	D2	77	9	0	snare
+drums	solo_loose_persona	28	4.000	111.000	0.250	50	D3	94	9	0	fill
+drums	solo_loose_persona	28	4.250	111.250	0.250	47	B2	89	9	0	fill
+drums	solo_loose_persona	28	4.500	111.500	0.250	45	A2	98	9	0	fill
+drums	solo_loose_persona	28	4.500	111.500	0.500	51	D#3	74	9	0	ride
+drums	solo_loose_persona	28	4.750	111.750	0.250	36	C2	73	9	0	kick_extra
+drums	solo_loose_persona	28	4.750	111.750	0.250	38	D2	91	9	0	fill

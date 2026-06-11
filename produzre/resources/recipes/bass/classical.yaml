@@ -1,3 +1,6 @@
+# Classical bass — tuned 2026-06-10.
+# lock_to_kick zeroed: there are no drums in classical, so locking to a
+# (nonexistent) kick pattern was meaningless mined noise.
 id: classical
 instrument: bass
 tags:
@@ -20,6 +23,6 @@ params:
   root_bias: 0.66
   motion_style: "stepwise"
   swing: 0.05
-  lock_to_kick: 0.57
+  lock_to_kick: 0.0
   accent_strength: 1.11
   syncopation: 0.29

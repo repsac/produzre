@@ -194,7 +194,12 @@ def _write_pattern_midi(
     track = mido.MidiTrack()
     mid.tracks.append(track)
 
-    add_tempo_and_name(track, float(cfg.song.bpm), f"{inst_name}_{pid}")
+    add_tempo_and_name(
+        track,
+        float(cfg.song.bpm),
+        f"{inst_name}_{pid}",
+        meter=str(getattr(cfg.song, "meter", "4/4") or "4/4"),
+    )
 
     prog = program_for_instrument(cfg, inst_name)
     if prog is not None and getattr(pat_tl, "events", None):

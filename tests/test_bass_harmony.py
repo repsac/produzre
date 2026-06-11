@@ -50,28 +50,40 @@ def test_bass_follows_chord_changes():
             "kind": parts[11] if len(parts) > 11 else "",
         })
 
-    # Engine now produces fewer events due to MIDI-learned defaults
-    # (density=0.57, rest_rate=0.24), so we just check we have some events
-    assert len(events) >= 2, f"Expected at least 2 events, got {len(events)}"
+    # Seeded-deterministic (seed=200): the anchor pattern with density=0.70
+    # selects 4 of 8 anchor slots (bars 1 and 3); the cadence guarantee then
+    # re-adds the final chord's downbeat so the section resolves — bar 4
+    # closes with root_cadence even when the density filter empties it.
+    assert len(events) == 5, f"Expected 5 events, got {len(events)}"
+    assert events[-1]["kind"] == "root_cadence" and events[-1]["bar"] == 4, \
+        f"Section must close with a bar-4 root_cadence, got {events[-1]}"
 
-    # Progression: I IV V I in C major
-    # With sparse density, not every bar will have events.
-    # Check that the notes present are valid chord tones for C major context.
-    all_notes = [e["note"] for e in events]
+    # Musical intent: every note must be a chord tone of the chord ACTIVE in
+    # its bar — this is stronger than a key-diatonic check and proves the
+    # engine tracks the changes. Progression I IV V I in C major:
+    chord_pcs_by_bar = {
+        1: {0, 4, 7},   # C major (C E G)
+        2: {5, 9, 0},   # F major (F A C)
+        3: {7, 11, 2},  # G major (G B D)
+        4: {0, 4, 7},   # C major
+    }
+    for e in events:
+        pc = e["pitch"] % 12
+        assert pc in chord_pcs_by_bar[e["bar"]], \
+            f"Bar {e['bar']} note {e['note']} (pc {pc}) is not a chord tone of the active chord"
 
-    # All notes should be diatonic to C major (C D E F G A B in any octave)
-    c_major_letters = {"C", "D", "E", "F", "G", "A", "B"}
-    for note in all_notes:
-        # Strip octave number and accidentals for basic check
-        letter = note[0]
-        assert letter in c_major_letters, \
-            f"Note {note} not diatonic to C major"
-
-    # Check bar 1 - if present, should be C notes (root of I chord)
-    bar1_events = [e for e in events if e["bar"] == 1]
-    if bar1_events:
-        assert any(e["note"].startswith("C") for e in bar1_events), \
-            f"Bar 1 should have at least one C note (I chord), got: {[e['note'] for e in bar1_events]}"
+    # The voice labels must track the changes: the section opens on the
+    # bar-1 C root (the engine never substitutes the fifth on a section's
+    # first downbeat), G2 is "root" under the bar-3 G chord, and the cadence
+    # guarantee closes bar 4 on the root.
+    pinned = [(e["bar"], e["note"], e["kind"]) for e in events]
+    assert pinned == [
+        (1, "C2", "root"),
+        (1, "E2", "third"),
+        (3, "G2", "root"),
+        (3, "B2", "third"),
+        (4, "C2", "root_cadence"),
+    ], f"Seeded-deterministic events changed: {pinned}"
 
     print(f"✓ Bass follows chord changes correctly")
 
@@ -215,6 +227,10 @@ def test_bass_no_chromatic_accidents():
         "third_octave",
         "approach", "approach_diatonic", "approach_chromatic",
         "pedal",
+        # Fills (persona/recipe params now reach the engine, enabling fills)
+        "fill_run_diatonic", "fill_run_chromatic",
+        "fill_octave", "fill_octave_passing",
+        "fill_pickup", "fill_pickup_approach",
     ]
 
     for kind in kinds:
@@ -228,58 +244,117 @@ def test_bass_no_chromatic_accidents():
     print(f"✓ No chromatic accidents. Note kinds: {kind_counts}")
 
 
-def test_bass_cadence_resolution():
-    """Verify cadences resolve to root correctly."""
+CADENCE_YAML = """\
+version: 1
+song:
+  title: "BassCadenceResolution"
+  bpm: 100
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 200
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+exports:
+  midi_text:
+    enabled: true
+    views: [events]
+    subdiv: 16
+instruments:
+  bass:
+    enabled: true
+    persona: tight
+    intensity: 0.7
+    params:
+      density: 1.0
+      rest_rate: 0.0
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+arrangement:
+  - verse1
+"""
+
+
+def test_bass_cadence_resolution(tmp_path):
+    """Verify cadences resolve to root correctly.
+
+    Uses density=1.0 / rest_rate=0.0 so every anchor slot renders and the
+    final chord slot is guaranteed to be selected — the cadence-detection fix
+    (root_cadence fires on the LAST SELECTED slot of the final chord) is then
+    deterministic rather than at the mercy of the density filter.
+    """
+    yaml_file = tmp_path / "cadence-resolution.yaml"
+    yaml_file.write_text(CADENCE_YAML)
+
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/baseline/chord-changes-demo.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", str(yaml_file)],
         capture_output=True,
         text=True,
         timeout=30,
     )
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Build failed: {result.stderr}"
 
     # Extract export root
     export_lines = [l for l in result.stderr.splitlines() if "Export root:" in l]
     export_root = export_lines[0].split("Export root:")[1].strip()
 
     # Read TSV
-    tsv_path = Path(export_root) / "analysis" / "bass" / "BassChordChanges_Demo_bass.events.tsv"
+    tsv_path = Path(export_root) / "analysis" / "bass" / "BassCadenceResolution_bass.events.tsv"
+    assert tsv_path.exists(), f"TSV not found: {tsv_path}"
     content = tsv_path.read_text()
     lines = content.strip().split("\n")
 
-    # Find cadence events or root events near end of piece
-    # Engine may label cadence as "root_cadence" or "root_octave" or just "root"
-    cadence_events = []
-    root_events = []
+    events = []
     for line in lines[1:]:
         parts = line.split("\t")
         if len(parts) > 11:
-            kind = parts[11]
-            event_data = {
+            events.append({
                 "bar": int(parts[2]),
                 "beat": float(parts[3]),
                 "pitch": int(parts[6]),
                 "note": parts[7],
-                "kind": kind,
-            }
-            if kind == "root_cadence":
-                cadence_events.append(event_data)
-            if kind in ("root", "root_octave") and event_data["note"].startswith("C"):
-                root_events.append(event_data)
+                "kind": parts[11],
+            })
 
-    # With sparse density, cadence events may not always appear.
-    # Check that we have at least some C root notes in the output.
-    assert len(cadence_events) >= 1 or len(root_events) >= 1, \
-        "Should have at least one cadence or root C event"
+    assert len(events) >= 8, f"Dense config should fill all bars, got {len(events)} events"
 
-    # If cadence events exist, verify they resolve to C
-    for event in cadence_events:
-        note_letter = event["note"][0]
-        assert note_letter == "C", \
-            f"Cadence should resolve to C in C major, got: {event['note']}"
+    # The tonic must be established: bar 1, beat 1 is a root C (I chord).
+    first = events[0]
+    assert (first["bar"], first["beat"]) == (1, 1.0), \
+        f"First event should be on bar 1 beat 1, got bar {first['bar']} beat {first['beat']}"
+    assert first["kind"] == "root" and first["pitch"] % 12 == 0, \
+        f"Section should open on root C, got {first['note']} ({first['kind']})"
 
-    total_found = len(cadence_events) + len(root_events)
-    print(f"✓ Found {len(cadence_events)} cadence + {len(root_events)} root C events")
+    # Exactly one cadence event, in the final bar, resolving to root C.
+    cadence_events = [e for e in events if e["kind"] == "root_cadence"]
+    assert len(cadence_events) == 1, \
+        f"Expected exactly 1 root_cadence event, got {len(cadence_events)}"
+    cadence = cadence_events[0]
+    assert cadence["bar"] == 4, f"Cadence should be in bar 4, got bar {cadence['bar']}"
+    assert cadence["pitch"] % 12 == 0, \
+        f"Cadence should resolve to C in C major, got: {cadence['note']}"
+
+    # Nothing after the cadence except fill notes (the pickup run into the
+    # next loop) — the cadence is the last structural note.
+    after_cadence = [
+        e for e in events
+        if (e["bar"], e["beat"]) > (cadence["bar"], cadence["beat"])
+    ]
+    for e in after_cadence:
+        assert e["kind"].startswith("fill"), \
+            f"Non-fill event after cadence: {e}"
+
+    print(f"✓ Cadence resolves to {cadence['note']} in bar {cadence['bar']}")
 
 
 if __name__ == "__main__":

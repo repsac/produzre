@@ -687,6 +687,11 @@ def _resolve_simple_persona(
     raw["_effective"]["instruments"].setdefault(instrument, {})
     raw["_effective"]["instruments"][instrument]["persona"] = effective_persona
     raw["_effective"]["instruments"][instrument]["params"] = _deep_merge_dict(persona_params, inst_params)
+    # Track which keys came from the persona (and weren't overridden by the
+    # user) so recipes can sit between them: persona < recipe < user.
+    raw["_effective"]["instruments"][instrument]["persona_keys"] = sorted(
+        k for k in (persona_params or {}) if k not in inst_params
+    )
 
 
 def load_root_config(path: str) -> RootConfig:
@@ -796,6 +801,11 @@ def load_root_config(path: str) -> RootConfig:
     raw["_effective"]["instruments"].setdefault("drums", {})
     raw["_effective"]["instruments"]["drums"]["persona"] = effective_drums_persona
     raw["_effective"]["instruments"]["drums"]["params"] = _deep_merge_dict(persona_params, inst_params)
+    # Persona-sourced keys (not overridden by the user): recipes may override
+    # these but never explicit user params (persona < recipe < user).
+    raw["_effective"]["instruments"]["drums"]["persona_keys"] = sorted(
+        k for k in (persona_params or {}) if k not in inst_params
+    )
     # Carry voice defaults forward: persona voices < instrument voices
     # Sections that specify `drums: {}` will inherit these voice-specific params.
     effective_voices = _deep_merge_dict(persona_voices, inst_voices)
@@ -831,6 +841,11 @@ def load_root_config(path: str) -> RootConfig:
     raw["_effective"]["instruments"].setdefault("bass", {})
     raw["_effective"]["instruments"]["bass"]["persona"] = effective_bass_persona
     raw["_effective"]["instruments"]["bass"]["params"] = _deep_merge_dict(bass_persona_params, bass_inst_params)
+    # Persona-sourced keys (not overridden by the user): recipes may override
+    # these but never explicit user params (persona < recipe < user).
+    raw["_effective"]["instruments"]["bass"]["persona_keys"] = sorted(
+        k for k in (bass_persona_params or {}) if k not in bass_inst_params
+    )
 
     # === Rhythm guitar persona resolution ===
     _resolve_simple_persona(raw, instruments_raw, rhythm_gtr_personas, "rhythm_gtr", "tight")
@@ -874,10 +889,15 @@ def load_root_config(path: str) -> RootConfig:
 
     # Phase 1: resolve per-user project seed and compute effective seed.
     reg = load_projects_registry()
+    # Snapshot before normalization so we only persist when something actually
+    # changed (loading a config is otherwise a read-only operation).
+    import copy as _copy
+    reg_before = _copy.deepcopy(reg)
     pname, pseed = resolve_project_seed(reg, getattr(song, "project", None))
-    # Persist default project creation if needed.
+    # Persist default project creation/normalization only when it changed the registry.
     ensure_default_project(reg)
-    save_projects_registry(reg)
+    if reg != reg_before:
+        save_projects_registry(reg)
 
     song_seed = int(song.seed)
     effective_seed = compute_effective_seed(pseed, song_seed)

@@ -217,9 +217,15 @@ def render_into_timeline(
 
     # Effective intensity with style bias.
     raw_intensity = instrument_cfg.intensity
-    style_bias = getattr(instrument_cfg, "style_bias", 0.0)
+    style_bias = getattr(instrument_cfg, "style_bias", None)
+    if raw_intensity is None:
+        # Macro-dynamics: fall back to the section's resolved intensity
+        # (orchestrate.plan.resolve_section_intensity) before the default.
+        raw_intensity = getattr(section, "intensity", None)
     if raw_intensity is None:
         raw_intensity = 1.0
+    if style_bias is None:
+        style_bias = 0.0
     intensity = raw_intensity + style_bias
     intensity = max(0.0, min(intensity, 2.0))
 
@@ -401,7 +407,10 @@ def render_into_timeline(
         if not resolved_notes:
             continue
 
-        # Phase LG3: choose grid-aligned start positions that breathe with the groove.
+        # Phase LG3: choose grid positions that breathe with the groove.
+        # These are used as a MASK over the motif's own rhythm (rest/breathing
+        # decisions) — the realized motif keeps its beat offsets and durations
+        # so its rhythmic identity stays audible.
         note_starts = choose_note_starts(
             grid=rhythm_grid,
             accent_beats=accent_beats,
@@ -416,22 +425,34 @@ def render_into_timeline(
         if not note_starts:
             continue
 
+        allowed_slots = {round(s, 2) for s in note_starts}
+
+        # Mask motif notes through the chosen grid slots. The first and last
+        # notes of the phrase are always kept: the first anchors the motif,
+        # the last carries the vary_last chord-tone resolution.
+        emit_notes = []
+        for rn_idx, rn in enumerate(resolved_notes):
+            start_local = phrase_start + rn.beat_offset
+            if start_local >= phrase_end - eps:
+                continue
+            is_edge = rn_idx == 0 or rn_idx == len(resolved_notes) - 1
+            if not is_edge and round(start_local, 2) not in allowed_slots:
+                continue
+            emit_notes.append(rn)
+        if not emit_notes:
+            emit_notes = [resolved_notes[0]]
+
         # Phase LG4: apply chorus lift on the first phrase of a chorus section.
         is_first_phrase = (phrase_start < eps)
         lift_this_phrase = chorus_lift and is_first_phrase
 
-        # Map motif pitches onto the chosen grid positions.
-        # Pitch sequence cycles if there are more starts than resolved notes.
-        for note_idx, start_beat in enumerate(note_starts):
-            rn = resolved_notes[note_idx % len(resolved_notes)]
-            local_beat = start_beat
+        # Emit motif notes at their own beat offsets/durations within the phrase.
+        for note_idx, rn in enumerate(emit_notes):
+            local_beat = phrase_start + rn.beat_offset
 
-            # Duration fills to the next chosen start or phrase end.
-            if note_idx + 1 < len(note_starts):
-                raw_dur = note_starts[note_idx + 1] - start_beat
-            else:
-                raw_dur = phrase_end - start_beat
-            duration = min(raw_dur * dur_scale, phrase_end - start_beat)
+            # The motif's own duration, scaled for articulation space and
+            # clamped to the phrase (and therefore section) bounds.
+            duration = min(rn.duration * dur_scale, phrase_end - local_beat)
             duration = max(0.1, duration)
 
             song_beat = section_start_beat + local_beat + offset_beats
@@ -466,27 +487,39 @@ def render_into_timeline(
 
             vel = max(20, min(127, vel))
 
-            # Emit grace note first if slide_hint produced one.
-            if arted.grace_pitch is not None:
-                grace_pitch = octave_wrap_if_needed(arted.grace_pitch, reg_min, reg_max)
-                grace_vel = max(20, min(127, int(vel * 0.70)))
-                grace_beat, grace_dur, grace_vel = humanize_note(
-                    song_beat, arted.grace_duration, grace_vel, section_rng, intensity
-                )
-                timeline.add_note(
-                    start_beat=grace_beat,
-                    duration_beats=grace_dur,
-                    pitch=grace_pitch,
-                    velocity=grace_vel,
-                    channel=None,
-                )
-                # Main note follows the grace.
-                song_beat = grace_beat + grace_dur
+            # Slide grace note handling. At the register bottom there is no
+            # lower neighbour to slide from — skip the slide instead of
+            # octave-wrapping the grace 11 semitones ABOVE the target.
+            grace_pitch = arted.grace_pitch
+            main_dur = arted.duration
+            if grace_pitch is not None and pitch <= reg_min:
+                grace_pitch = None
+                main_dur = arted.duration + arted.grace_duration
+            if grace_pitch is not None:
+                # Clamp (never wrap) the grace below the main note.
+                grace_pitch = max(reg_min, grace_pitch)
+                # The grace no longer eats into the main note's span: it is
+                # played BEFORE the beat so the main note lands on the beat.
+                main_dur = arted.duration + arted.grace_duration
 
             # Phase LG5: humanize main note timing + velocity.
             song_beat, h_dur, vel = humanize_note(
-                song_beat, arted.duration, vel, section_rng, intensity
+                song_beat, main_dur, vel, section_rng, intensity
             )
+
+            # Emit the grace note leading INTO the (humanized) main note.
+            if grace_pitch is not None:
+                grace_start = max(section_start_beat, song_beat - arted.grace_duration)
+                grace_dur = song_beat - grace_start
+                if grace_dur > 0.01:
+                    grace_vel = max(20, min(127, int(vel * 0.70)))
+                    timeline.add_note(
+                        start_beat=grace_start,
+                        duration_beats=grace_dur,
+                        pitch=grace_pitch,
+                        velocity=grace_vel,
+                        channel=None,
+                    )
 
             timeline.add_note(
                 start_beat=song_beat,

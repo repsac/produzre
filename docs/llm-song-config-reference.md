@@ -118,16 +118,44 @@ Each genre auto-loads appropriate recipes for drums, bass, rhythm guitar, and ha
 
 Any string works, but these have special behavior (recipe matching, auto-defaults):
 
-| Type | Energy | Typical Use |
-|------|--------|-------------|
-| `intro` | Low | Opening, build anticipation |
-| `verse` | Moderate | Main lyrical sections |
-| `prechorus` | Moderate-High | Build tension before chorus |
-| `chorus` | High | Hook, maximum energy |
-| `bridge` | Moderate | Contrast, new harmonic territory |
-| `solo` | High | Instrumental showcase |
-| `breakdown` | Low-Moderate | Sparse, stripped-down |
-| `outro` | Low | Ending, fade out |
+| Type | Energy | Default Intensity | Typical Use |
+|------|--------|-------------------|-------------|
+| `intro` | Low | 0.55 | Opening, build anticipation |
+| `verse` | Moderate | 0.65 | Main lyrical sections |
+| `prechorus` | Moderate-High | 0.75 | Build tension before chorus |
+| `chorus` | High | 0.90 | Hook, maximum energy |
+| `bridge` | Moderate | 0.70 | Contrast, new harmonic territory |
+| `solo` | High | 0.85 | Instrumental showcase |
+| `breakdown` | Low-Moderate | 0.45 | Sparse, stripped-down |
+| `outro` | Low | 0.50 | Ending, fade out |
+
+(Unknown types default to intensity 0.65.)
+
+### Section Intensity (macro-dynamics)
+
+When a section omits `intensity:`, the planner derives it from the table above so
+un-tweaked songs still have a dynamic shape. Repeats escalate: the Nth arrangement
+occurrence of the same section *type* gets +0.05 per repeat, capped at +0.10
+(chorus 1 = 0.90, chorus 2 = 0.95, chorus 3+ = 1.00). Builds log the resolved
+shape as one line, e.g.:
+
+```
+intensity arc: intro 0.55 → verse 0.65 → chorus 0.90 → verse 0.70 → chorus 0.95 → outro 0.50
+```
+
+Set it explicitly to take control — explicit values are never modified and never
+escalate on repeats:
+
+```yaml
+sections:
+  chorus1:
+    type: chorus
+    bars: 8
+    intensity: 0.8     # section-level macro-dynamics (0.0-1.0+)
+```
+
+This is separate from per-instrument `intensity:` (under `instruments:`), which
+scales a single instrument within the section.
 
 ---
 

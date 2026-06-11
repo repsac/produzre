@@ -115,28 +115,37 @@ def classify_pitch(pitch: int) -> Optional[str]:
 # MIDI Loading & Quantization
 # ---------------------------------------------------------------------------
 
-def _detect_ticks_per_bar(mid: mido.MidiFile) -> int:
-    """Detect ticks per bar from MIDI file.
+def _detect_ticks_per_bar(mid: mido.MidiFile) -> Tuple[int, Optional[str]]:
+    """Detect ticks per bar and the meter from a MIDI file.
 
-    Scans for time signature meta messages. Defaults to 4/4.
-    Returns ticks per bar based on ticks_per_beat and time signature.
+    Scans for time signature meta messages. Defaults to 4/4 for the tick
+    grid when no meta message is present, but reports the meter as ``None``
+    in that case so callers can distinguish "explicit 4/4" from "assumed".
+
+    Returns
+    -------
+    tuple
+        ``(ticks_per_bar, time_signature_or_None)`` where the time signature
+        is a string like ``"4/4"`` only when an explicit meta message exists.
     """
     tpb = mid.ticks_per_beat or 480
     numerator = 4
     denominator = 4
+    explicit: Optional[str] = None
 
     for track in mid.tracks:
         for msg in track:
             if msg.type == "time_signature":
                 numerator = msg.numerator
                 denominator = msg.denominator
+                explicit = f"{numerator}/{denominator}"
                 break
         else:
             continue
         break
 
     # ticks_per_bar = tpb * numerator * (4 / denominator)
-    return int(tpb * numerator * 4 / denominator)
+    return int(tpb * numerator * 4 / denominator), explicit
 
 
 def quantize_midi(
@@ -155,34 +164,56 @@ def quantize_midi(
 
     Returns
     -------
-    dict or None
-        Maps instrument class to a list of bars, where each bar is a list
-        of ``(step_index, velocity)`` tuples.  Returns ``None`` on parse error.
+    tuple or None
+        ``(grid, time_signature)`` where ``grid`` maps instrument class to a
+        list of bars (each bar a list of ``(step_index, velocity)`` tuples)
+        and ``time_signature`` is e.g. ``"4/4"`` when the file carries an
+        explicit time-signature meta message, else ``None``.
+        Returns ``None`` on parse error or when no drum events are found.
     """
     try:
         mid = mido.MidiFile(str(filepath))
     except Exception:
         return None
 
-    ticks_per_bar = _detect_ticks_per_bar(mid)
+    ticks_per_bar, time_signature = _detect_ticks_per_bar(mid)
 
     if ticks_per_bar <= 0:
         return None
 
     ticks_per_step = ticks_per_bar / steps_per_bar
 
-    # Collect all note_on events across all tracks.
-    # We scan all channels since drum tracks may not always be on ch10.
-    events: Dict[str, List[Tuple[float, int]]] = defaultdict(list)
+    # Collect note_on events, preferring the GM percussion channel (9).
+    # Only fall back to scanning all channels when channel 9 carries zero
+    # note_ons — otherwise melodic tracks pollute the drum statistics.
+    ch9_note_ons = 0
+    ch9_events: Dict[str, List[Tuple[float, int]]] = defaultdict(list)
+    all_events: Dict[str, List[Tuple[float, int]]] = defaultdict(list)
 
     for track in mid.tracks:
         abs_tick = 0
         for msg in track:
             abs_tick += msg.time
             if msg.type == "note_on" and msg.velocity > 0:
+                on_ch9 = getattr(msg, "channel", None) == 9
+                if on_ch9:
+                    ch9_note_ons += 1
                 inst_class = classify_pitch(msg.note)
                 if inst_class:
-                    events[inst_class].append((abs_tick, msg.velocity))
+                    all_events[inst_class].append((abs_tick, msg.velocity))
+                    if on_ch9:
+                        ch9_events[inst_class].append((abs_tick, msg.velocity))
+
+    if ch9_note_ons > 0:
+        events = ch9_events
+    else:
+        if all_events:
+            logger.info(
+                "No channel-9 (GM percussion) note_ons in %s; "
+                "falling back to all-channel scan.",
+                filepath.name,
+            )
+        events = all_events
 
     if not events:
         return None
@@ -208,7 +239,7 @@ def quantize_midi(
                 bars[bar_idx].append((step, vel))
         result[inst_class] = bars
 
-    return result
+    return result, time_signature
 
 
 # ---------------------------------------------------------------------------
@@ -231,23 +262,64 @@ class GrooveProfile:
         self.total_bars = 0
         self.files_loaded = 0
         self.files_failed = 0
+        # Votes for explicit time signatures seen in the corpus.
+        self.meters: Dict[str, int] = defaultdict(int)
 
-    def add_file(self, quantized: Dict[str, List[List[Tuple[int, int]]]]) -> None:
-        """Add quantized data from one MIDI file."""
-        bar_count = 0
+    def add_file(
+        self,
+        quantized: Dict[str, List[List[Tuple[int, int]]]],
+        time_signature: Optional[str] = None,
+    ) -> None:
+        """Add quantized data from one MIDI file.
+
+        A ``(step, instrument-class)`` pair is counted at most once per bar
+        (set semantics) so per-step probabilities stay <= 1.0 even when a
+        file stacks multiple hits (flams, layered kits) on the same step.
+
+        ``total_bars`` counts only the span from the first to the last bar
+        that contains any drum hit: leading/trailing silence is excluded,
+        while interior empty bars (legitimate rests between active bars)
+        still count.
+        """
+        # Union of active bar indices across all instrument classes.
+        active_bars: set[int] = set()
+        for bars in quantized.values():
+            for bar_idx, bar in enumerate(bars):
+                if bar:
+                    active_bars.add(bar_idx)
+
+        if not active_bars:
+            self.files_loaded += 1
+            return
+
+        first_active = min(active_bars)
+        last_active = max(active_bars)
+
         for inst_class, bars in quantized.items():
-            for bar in bars:
+            for bar_idx in range(first_active, min(last_active + 1, len(bars))):
+                bar = bars[bar_idx]
                 if not bar:
                     continue
-                bar_count = max(bar_count, 1)
+                # De-duplicate: one count per (step, class) per bar; keep the
+                # loudest hit as the velocity representative.
+                step_vel: Dict[int, int] = {}
                 for step, vel in bar:
+                    if step not in step_vel or vel > step_vel[step]:
+                        step_vel[step] = vel
+                for step, vel in step_vel.items():
                     self.hits[inst_class][step] += 1
                     self.vel_sums[inst_class][step] += vel
 
-        # Count bars from the longest instrument track.
-        max_bars = max((len(bars) for bars in quantized.values()), default=0)
-        self.total_bars += max_bars
+        self.total_bars += last_active - first_active + 1
         self.files_loaded += 1
+        if time_signature:
+            self.meters[time_signature] += 1
+
+    def dominant_meter(self) -> Optional[str]:
+        """Return the most common explicit time signature, or None."""
+        if not self.meters:
+            return None
+        return max(self.meters, key=lambda k: self.meters[k])
 
     def step_probability(self, inst_class: str, step: int) -> float:
         """Return the probability of a hit at this step (0.0 to 1.0)."""
@@ -277,6 +349,7 @@ def derive_recipe(
     genre: str,
     bpm_range: Optional[Tuple[int, int]] = None,
     feel: Optional[str] = None,
+    time_signature: str = "4/4",
 ) -> Dict[str, Any]:
     """Derive a recipe YAML structure from a :class:`GrooveProfile`.
 
@@ -293,6 +366,8 @@ def derive_recipe(
         ``(min_bpm, max_bpm)`` for recipe tags.
     feel : str, optional
         Feel descriptor (e.g. ``"shuffle"``, ``"straight"``).
+    time_signature : str
+        Dominant meter for the recipe tags (default: ``"4/4"``).
 
     Returns
     -------
@@ -369,7 +444,7 @@ def derive_recipe(
     # --- Build tags ---
     tags: Dict[str, Any] = {
         "genre": genre,
-        "time_signature": "4/4",
+        "time_signature": time_signature or "4/4",
         "section_types": ["verse", "chorus"],
     }
     if bpm_range:
@@ -508,6 +583,18 @@ def collect_feel(folders: List[Dict[str, Any]]) -> Optional[str]:
     return max(feels, key=feels.get)
 
 
+def collect_time_signature(folders: List[Dict[str, Any]]) -> Optional[str]:
+    """Detect the dominant time signature from folder metadata."""
+    meters: Dict[str, int] = defaultdict(int)
+    for folder in folders:
+        ts = folder.get("time_signature")
+        if ts:
+            meters[str(ts).strip()] += 1
+    if not meters:
+        return None
+    return max(meters, key=lambda k: meters[k])
+
+
 # ---------------------------------------------------------------------------
 # Main Training Pipeline
 # ---------------------------------------------------------------------------
@@ -543,6 +630,7 @@ def train_genre(
     archive_root: Path,
     *,
     max_files: int = 2000,
+    min_files: int = 3,
     verbose: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Train a recipe for a single genre from its MIDI files.
@@ -557,6 +645,8 @@ def train_genre(
         Root path of the MIDI archive.
     max_files : int
         Maximum number of MIDI files to process per genre.
+    min_files : int
+        Minimum number of successfully loaded files required to emit a recipe.
     verbose : bool
         If True, print raw probability grids.
 
@@ -589,13 +679,14 @@ def train_genre(
                 profile.files_failed += 1
                 continue
 
-            profile.add_file(quantized)
+            grid, file_meter = quantized
+            profile.add_file(grid, time_signature=file_meter)
             files_processed += 1
 
-    if profile.files_loaded < 3:
+    if profile.files_loaded < min_files:
         logger.warning(
-            "Genre '%s': only %d files loaded (need >= 3), skipping.",
-            genre, profile.files_loaded,
+            "Genre '%s': only %d files loaded (need >= %d), skipping.",
+            genre, profile.files_loaded, min_files,
         )
         return None
 
@@ -610,7 +701,21 @@ def train_genre(
     bpm_range = collect_bpm_range(folders)
     feel = collect_feel(folders)
 
-    recipe = derive_recipe(profile, genre=genre, bpm_range=bpm_range, feel=feel)
+    # Dominant meter: prefer explicit time signatures found in the MIDI
+    # files themselves, then manifest metadata, then assume 4/4.
+    time_signature = (
+        profile.dominant_meter()
+        or collect_time_signature(folders)
+        or "4/4"
+    )
+
+    recipe = derive_recipe(
+        profile,
+        genre=genre,
+        bpm_range=bpm_range,
+        feel=feel,
+        time_signature=time_signature,
+    )
 
     # Add training stats (stripped before writing to YAML).
     recipe["_stats"] = {
@@ -751,6 +856,7 @@ Examples:
         recipe = train_genre(
             genre, folders, args.archive_dir,
             max_files=args.max_files,
+            min_files=args.min_files,
             verbose=args.verbose,
         )
 

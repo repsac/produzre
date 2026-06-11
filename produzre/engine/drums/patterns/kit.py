@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from ..groove import GrooveTemplate, hat_steps_for_mode
 from .cymbals import generate_crash_events, generate_ride_bell_events, generate_splash_china_events
-from .grid import bars_total, step_beats, steps_per_bar_default
+from .grid import bars_total, step_beats
 from .hats import generate_top_cymbal_events
 from .kick import eligible_double_kick_steps, eligible_syncopation_steps, generate_kick_events
 from .snare import generate_snare_events
@@ -125,8 +125,10 @@ def _apply_transition_effects(
         pickup_length = rng.choice(pickup_lengths)
         pickup_window_start = max(0.0, total_beats - pickup_length)
 
-        # 16th-note subdivisions within the window
-        step_16th = sb / 4
+        # 16th-note subdivisions within the window.
+        # `sb` is already one 16th-note step (bar / 16-step grid), so use it
+        # directly. Dividing again would produce 64th-note machine-gun pickups.
+        step_16th = sb
         num_16ths = max(1, int(pickup_length / step_16th))
         tom_cycle = [
             pitches.get("tom_high", pitches.get("snare", 38)),
@@ -251,7 +253,9 @@ def events_for_section_from_template(
         base_velocity: Base velocity for the section before accents.
         accent_strength: 0..1 accent influence.
         hat_density: 0..1 probability for placing top cymbal steps.
-        steps_per_bar: Internal step grid resolution. Defaults to 16.
+        steps_per_bar: Internal step grid resolution. Defaults to the
+            meter-derived grid (4 steps per quarter-note beat: 16 in 4/4,
+            12 in 3/4).
         kick_density: Multiplier for kick drum density (0.5-1.5 typical). Defaults to 1.0.
         snare_density: Multiplier for snare drum density (0.5-1.5 typical). Defaults to 1.0.
         ghost_rate: Optional override for ghost probability (0..1). If None, uses template.ghost_rate.
@@ -271,10 +275,18 @@ def events_for_section_from_template(
             "events_for_section_from_template requires a non-None RNG. "
             "The drums engine entrypoint must pass the per-section RNG into patterns."
         )
-    spb = int(steps_per_bar_default() if steps_per_bar is None else steps_per_bar)
+    bpb = float(beats_per_bar)
+
+    # Default to the meter-derived grid (4 steps per quarter-note beat:
+    # 16 in 4/4, 12 in 3/4 and 6/8) when no explicit resolution is given.
+    if steps_per_bar is None:
+        from ..groove import steps_per_bar_for_meter
+
+        spb = steps_per_bar_for_meter(bpb)
+    else:
+        spb = int(steps_per_bar)
     spb = max(1, spb)
 
-    bpb = float(beats_per_bar)
     sb = step_beats(bpb, steps_per_bar=spb)
     bars = bars_total(float(total_beats), bpb)
 
@@ -287,9 +299,11 @@ def events_for_section_from_template(
     prev_bar_open_hat = False
 
     # Decide which backbeats apply if half-time is enabled.
+    # Standard half-time puts the lone snare on beat 3 (the bar midpoint),
+    # matching the half_time section intent in the engine entrypoint.
     backbeats: tuple[int, ...] = tuple(template.snare_backbeat_steps)
     if template.half_time and backbeats:
-        backbeats = (max(backbeats),)
+        backbeats = (spb // 2,)
 
     # Resolve ghost rate and steps
     effective_ghost_rate = template.ghost_rate if ghost_rate is None else float(ghost_rate)

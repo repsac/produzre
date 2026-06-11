@@ -108,9 +108,15 @@ def humanize_start(
         t += _beats_from_ms(PUSH_PULL_MS * float(push_pull), bpm)
 
     # Swing: delay the eighth off-beat (beat + 0.5) by up to ~0.25 beats at swing=1.
+    #
+    # Meter note: the check is on the *fraction of the quarter-note beat*, so
+    # it works in any meter — the drum grid places steps at exact multiples of
+    # 0.25 beats (4 steps per quarter beat), so 8th offbeats land exactly on
+    # x.5 in 3/4 and 6/8 just like in 4/4. (The legacy fixed 16-step grid put
+    # 3/4 steps at multiples of 0.1875, which made swing a silent no-op.)
     s = float(swing)
     if s != 0.0:
-        frac = float(beat_in_bar) - float(int(beat_in_bar))
+        frac = float(beat_in_bar) % 1.0
         # Detect the "&" (0.5) within a tolerance.
         if abs(frac - 0.5) < 1e-6:
             t += 0.25 * s

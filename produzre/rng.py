@@ -85,9 +85,19 @@ def stable_seed_int(*parts: Any) -> int:
     Example:
         >>> seed = stable_seed_int("drums", "verse", 42, 0)
         >>> rng = random.Random(seed)
+
+    Notes:
+        Each part is hashed individually (length-prefixed) so a literal "|"
+        inside a part (e.g. a section id like "a|b") cannot collide with the
+        part separator: ("a|b",) and ("a", "b") produce different seeds.
     """
-    payload = "|".join(str(p) for p in parts).encode("utf-8")
-    digest = hashlib.sha256(payload).digest()
+    hasher = hashlib.sha256()
+    for p in parts:
+        encoded = str(p).encode("utf-8")
+        # Length-prefix each part so part boundaries are unambiguous.
+        hasher.update(len(encoded).to_bytes(8, "big"))
+        hasher.update(encoded)
+    digest = hasher.digest()
     return int.from_bytes(digest[:8], "big", signed=False)
 
 
@@ -120,7 +130,26 @@ def make_section_rng(
         - Pass to make_instrument_rng() for instrument-specific decisions
     """
     seed = stable_seed_int("section", project_seed, song_seed, take, section_id, section_type)
-    return random.Random(seed)
+    rng = random.Random(seed)
+    # Stash the stable seed so child scopes (instrument/voice/bar) can derive
+    # their seeds from stable components instead of the mutable RNG state.
+    rng._produzre_seed = seed  # type: ignore[attr-defined]
+    return rng
+
+
+def _parent_seed_material(parent_rng: random.Random) -> Any:
+    """Return stable seed material for deriving a child RNG.
+
+    Prefers the stable seed stashed by the factory functions in this module
+    (project/song/take/section components), so deriving a child RNG does NOT
+    depend on how many draws were made from the parent. Falls back to the
+    parent's current state for RNGs created outside this module (keeps
+    backward compatibility for tests/mocks passing raw `random.Random`).
+    """
+    stable = getattr(parent_rng, "_produzre_seed", None)
+    if stable is not None:
+        return stable
+    return str(parent_rng.getstate())
 
 
 def make_instrument_rng(
@@ -129,8 +158,10 @@ def make_instrument_rng(
 ) -> random.Random:
     """Create a deterministic RNG for an instrument within a section.
 
-    Derives seed from the section RNG state plus instrument name, ensuring
-    each instrument in the section gets an independent RNG stream.
+    Derives seed from the section RNG's *stable seed components* (project,
+    song, take, section — stashed by make_section_rng) plus the instrument
+    name, ensuring each instrument in the section gets an independent RNG
+    stream that does not reshuffle if the section RNG is drawn from first.
 
     Args:
         section_rng: The parent section RNG (from make_section_rng).
@@ -140,15 +171,16 @@ def make_instrument_rng(
         random.Random: Deterministic RNG for this section-instrument pair.
 
     Notes:
-        - Uses section_rng.getstate() to capture current RNG state
         - Different instruments in the same section get different streams
         - This RNG should be used for instrument-level orchestration decisions
         - Pass to make_voice_rng() for voice-specific decisions
+        - RNGs not created by this module fall back to getstate()-based
+          derivation (backward compatible for tests/mocks)
     """
-    # Convert section RNG state to bytes for deterministic seed derivation
-    state_bytes = str(section_rng.getstate()).encode("utf-8")
-    seed = stable_seed_int("instrument", state_bytes, instrument_name)
-    return random.Random(seed)
+    seed = stable_seed_int("instrument", _parent_seed_material(section_rng), instrument_name)
+    rng = random.Random(seed)
+    rng._produzre_seed = seed  # type: ignore[attr-defined]
+    return rng
 
 
 def make_voice_rng(
@@ -176,9 +208,12 @@ def make_voice_rng(
         - Use for voice-specific decisions like note placement, accents
         - For bar/step-level decisions, use make_event_seed()
     """
-    state_bytes = str(instrument_rng.getstate()).encode("utf-8")
-    seed = stable_seed_int("voice", state_bytes, section_id, instrument_name, voice_name)
-    return random.Random(seed)
+    seed = stable_seed_int(
+        "voice", _parent_seed_material(instrument_rng), section_id, instrument_name, voice_name
+    )
+    rng = random.Random(seed)
+    rng._produzre_seed = seed  # type: ignore[attr-defined]
+    return rng
 
 
 def make_event_seed(

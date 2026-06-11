@@ -11,6 +11,8 @@ The arpeggiator plays ascending/descending patterns through chord tones
 based on the harmony plan.
 """
 
+import re
+from collections.abc import Mapping
 from typing import Any, Optional
 import logging
 
@@ -51,17 +53,34 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     rng = kwargs.get("rng")
     logger = kwargs.get("logger")
 
+    # Fail fast on a missing RNG instead of crashing mid-render.
+    if rng is None:
+        raise TypeError(
+            "arpeggiator.render_into_timeline requires an 'rng' (random.Random); got None"
+        )
+
     # Check if we have harmony to arpeggiate
     if harmony_plan is None or not harmony_plan.chord_slots:
         if logger:
             logger.debug("arpeggiator: no harmony plan, skipping")
         return
 
-    # Get configuration parameters
-    intensity = float(getattr(instrument_cfg, "intensity", 0.5))
+    # Get configuration parameters. The orchestrator may deliver either an
+    # InstrumentConfig dataclass or a plain dict (e.g. merged _effective
+    # configs) — support both like other engines.
+    if isinstance(instrument_cfg, Mapping):
+        intensity = instrument_cfg.get("intensity")
+        extra = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
+        if not isinstance(extra, Mapping):
+            extra = {}
+    else:
+        intensity = getattr(instrument_cfg, "intensity", None)
+        extra = getattr(instrument_cfg, "extra", {}) or {}
+        if not isinstance(extra, Mapping):
+            extra = {}
 
-    # Get extra params for arpeggiator-specific settings
-    extra = getattr(instrument_cfg, "extra", {})
+    intensity = float(intensity) if intensity is not None else 0.5
+
     pattern = extra.get("pattern", "up")  # "up", "down", "up_down"
     note_duration_beats = float(extra.get("note_duration", 0.25))  # 16th note default
 
@@ -70,13 +89,17 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
     event_count = 0
 
+    # Resolve key/mode with section overrides falling back to song defaults.
+    key = getattr(section, "key", None) or cfg.song.key
+    mode = getattr(section, "mode", None) or cfg.song.mode
+
     # Process each chord slot
     for slot in harmony_plan.chord_slots:
         # Get chord tones for this slot
         chord_tones = _get_chord_tones_from_numeral(
             slot.numeral,
-            cfg.song.key,
-            cfg.song.mode,
+            key,
+            mode,
         )
 
         # Determine arpeggio pattern
@@ -133,7 +156,9 @@ def _get_chord_tones_from_numeral(
     Returns:
         List of MIDI note numbers for the chord (root, third, fifth)
     """
-    # Simple key-to-MIDI mapping (bass register)
+    # Simple key-to-MIDI mapping (bass register).
+    # Keys are normalized: note letter uppercased, accidental lowercased, so
+    # flat keys like "Eb"/"eb"/"EB" all resolve correctly.
     KEY_TO_MIDI = {
         "C": 48, "C#": 49, "Db": 49,
         "D": 50, "D#": 51, "Eb": 51,
@@ -144,24 +169,36 @@ def _get_chord_tones_from_numeral(
         "B": 59,
     }
 
-    # Major scale degree offsets
+    # Major scale degree offsets (accidentals are resolved against major).
     DEGREE_OFFSETS = [0, 2, 4, 5, 7, 9, 11]
 
-    # Parse Roman numeral to degree (simplified)
-    numeral_clean = numeral.strip().upper().lstrip("B#")
     roman_map = {"I": 0, "II": 1, "III": 2, "IV": 3,
                  "V": 4, "VI": 5, "VII": 6}
 
-    degree_index = roman_map.get(numeral_clean, 0)
+    # Parse the numeral: optional leading accidentals (b/#), then the Roman
+    # digits; trailing quality suffixes (7, sus4, dim, ...) are ignored here.
+    raw = str(numeral).strip()
+    m = re.match(r"^([b#]*)([ivIV]+)", raw)
+    if m:
+        accidentals, roman = m.group(1), m.group(2)
+    else:
+        accidentals, roman = "", "I"
 
-    # Get tonic MIDI note
-    tonic = KEY_TO_MIDI.get(key.strip().upper(), 48)
+    accidental_offset = accidentals.count("#") - accidentals.count("b")
+    degree_index = roman_map.get(roman.upper(), 0)
 
-    # Calculate root pitch
-    root = tonic + DEGREE_OFFSETS[degree_index]
+    # Get tonic MIDI note (normalize "eb"/"EB" -> "Eb").
+    key_norm = str(key or "").strip()
+    if key_norm:
+        key_norm = key_norm[0].upper() + key_norm[1:].lower()
+    tonic = KEY_TO_MIDI.get(key_norm, 48)
 
-    # Determine chord quality (major/minor)
-    is_minor = numeral.strip().lower() == numeral.strip()
+    # Calculate root pitch: major-scale degree, then apply the accidental
+    # (e.g., bVII = major VII - 1 semitone = 10 semitones above the tonic).
+    root = tonic + DEGREE_OFFSETS[degree_index] + accidental_offset
+
+    # Determine chord quality (major/minor) from the Roman casing.
+    is_minor = roman == roman.lower()
     third_offset = 3 if is_minor else 4
 
     # Build triad

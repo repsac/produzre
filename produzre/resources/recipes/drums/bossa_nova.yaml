@@ -1,38 +1,39 @@
+# Bossa nova drum recipe — hand-tuned 2026-06-10.
+# The mined recipe placed full-velocity snare backbeats on clave-ish steps.
+# Idiom: rim clicks (cross-stick) on the bossa clave over steady 8th hats,
+# surdo-style kick on 1, 2&, 3, 4& — no real backbeat, no crashes.
+# The schema has no per-step snare velocity, but routing all snare hits to
+# cross-stick (GM 37, voices.snare.articulation) gives the quiet rim-click
+# timbre the style needs.
+
 id: bossa_nova
 instrument: drums
 tags:
   genre: bossa_nova
-  time_signature: 4/4
-  section_types:
-  - verse
-  - chorus
+  feel: straight
+  time_signature: "4/4"
+  section_types: [verse, chorus, bridge]
+  bpm_range: [100, 160]
+
 groove:
-  hat_mode: quarter
-  use_ride: true
-  kick_base:
-  - 0
-  - 6
-  - 8
-  - 14
+  hat_mode: "8th"
+  use_ride: false
+  # Surdo pattern: 1, "&" of 2, 3, "&" of 4 (dotted-quarter pulse).
+  kick_base: [0, 6, 8, 14]
   kick_extra_rate: 0.0
   double_kick_rate: 0.0
-  snare_backbeat_steps:
-  - 0
-  - 2
-  - 6
-  - 10
-  - 12
-  ghost_rate: 0.24
-  ghost_steps:
-  - 3
-  - 4
-  - 8
-  - 11
-  - 14
-  - 15
+  # Bossa clave (3-2 side) as cross-stick: 1, 1a, 2&, 3e, 4e
+  snare_backbeat_steps: [0, 3, 6, 10, 13]
+  ghost_rate: 0.0
+  ghost_steps: []
   open_hat_rate: 0.0
   crash_start: false
   crash_phrase_end_rate: 0.0
+
 params:
-  fill_rate: 0.2
-voices: {}
+  fill_rate: 0.08
+
+voices:
+  snare:
+    # All snare hits as rim clicks — bossa never plays open backbeat snare.
+    articulation: { default: crossstick }

@@ -206,9 +206,10 @@ _MOVABLE_FORMS: List[ChordForm] = [
     ChordForm("A-form_sus2",     "sus2",      1, (-1, 0, 2, 2, 0, 0), min_strings=4),
     ChordForm("A-form_sus4",     "sus4",      1, (-1, 0, 2, 2, 3, 0), min_strings=4),
 
-    # D-form shapes (root on string 2)
-    ChordForm("D-form_major",    "major",     2, (-1, -1, 0, 2, 2, 1), min_strings=4),
-    ChordForm("D-form_minor",    "minor",     2, (-1, -1, 0, 2, 2, 0), min_strings=4),
+    # D-form shapes (root on string 2) — mirror the open D shapes:
+    # major = x-x-0-2-3-2 (root, 5th, root, 3rd), minor = x-x-0-2-3-1
+    ChordForm("D-form_major",    "major",     2, (-1, -1, 0, 2, 3, 2), min_strings=4),
+    ChordForm("D-form_minor",    "minor",     2, (-1, -1, 0, 2, 3, 1), min_strings=4),
 ]
 
 
@@ -308,8 +309,14 @@ def _try_open_shape(
     root_pc: int,
     quality: str,
     profile: InstrumentProfile,
+    capo: int = 0,
 ) -> Optional[ResolvedVoicing]:
-    """Return a ResolvedVoicing for an open-position shape, or None."""
+    """Return a ResolvedVoicing for an open-position shape, or None.
+
+    ``root_pc`` is the *pre-capo* pitch class (what the player fingers at the
+    nut). The capo is carried through to the returned voicing so sounding
+    pitches are transposed correctly (e.g. a C shape with capo 2 sounds as D).
+    """
     # Open shapes are only defined for standard tuning
     if profile.open_tuning != GUITAR_STANDARD.open_tuning:
         return None
@@ -325,7 +332,7 @@ def _try_open_shape(
     return ResolvedVoicing(
         profile=profile,
         frets=shape.frets,
-        capo=0,
+        capo=capo,
         shape_name=shape.name,
     )
 
@@ -339,8 +346,14 @@ def _resolve_movable(
     quality: str,
     profile: InstrumentProfile,
     capo: int,
+    allow_quality_fallback: bool = True,
 ) -> Optional[ResolvedVoicing]:
-    """Find a movable barre form that fits this root and quality."""
+    """Find a movable barre form that fits this root and quality.
+
+    With ``allow_quality_fallback=False`` only exact-quality forms are tried,
+    so callers can prefer an exact movable match (e.g. min7 barre) over a
+    quality-degraded open shape.
+    """
     if not profile.barre_capable:
         return None
 
@@ -348,7 +361,7 @@ def _resolve_movable(
     candidates = [f for f in _MOVABLE_FORMS if f.quality == quality]
 
     # Also try quality fallback if no exact match
-    if not candidates:
+    if not candidates and allow_quality_fallback:
         fallback_q = _QUALITY_FALLBACK.get(quality)
         if fallback_q:
             candidates = [f for f in _MOVABLE_FORMS if f.quality == fallback_q]
@@ -417,6 +430,7 @@ def _fallback_voicing(
 
     frets_list = [-1] * profile.num_strings
     min_fret_used: Optional[int] = None
+    max_fret_used: Optional[int] = None
     notes_placed = 0
 
     for i, open_pitch in enumerate(profile.open_tuning):
@@ -424,24 +438,28 @@ def _fallback_voicing(
         # Find lowest fret giving a chord tone
         for fret in range(0, profile.num_frets + 1):
             pitch_pc = (effective_open + fret) % 12
-            if pitch_pc in tone_pcs:
-                # Check fret span constraint
-                if min_fret_used is None or fret == 0:
-                    frets_list[i] = fret
-                    if fret > 0 and min_fret_used is None:
-                        min_fret_used = fret
-                    elif fret > 0:
-                        min_fret_used = min(min_fret_used, fret)
-                    notes_placed += 1
-                    break
-                else:
-                    max_allowed = min_fret_used + profile.max_fret_span
-                    if fret <= max_allowed:
-                        frets_list[i] = fret
-                        min_fret_used = min(min_fret_used, fret)
-                        notes_placed += 1
-                        break
-                # If fret exceeds span, leave this string muted
+            if pitch_pc not in tone_pcs:
+                continue
+            # Open strings never constrain the finger span.
+            if fret == 0:
+                frets_list[i] = fret
+                notes_placed += 1
+                break
+            # Check the fret span constraint on BOTH sides: the new fret must
+            # not stretch the assignment beyond max_fret_span either above the
+            # current minimum or below the current maximum.
+            new_min = fret if min_fret_used is None else min(min_fret_used, fret)
+            new_max = fret if max_fret_used is None else max(max_fret_used, fret)
+            if new_max - new_min > profile.max_fret_span:
+                if min_fret_used is not None and fret > min_fret_used + profile.max_fret_span:
+                    break  # frets only increase from here — give up on this string
+                continue  # too far below the current cluster; try a higher fret
+            frets_list[i] = fret
+            min_fret_used = new_min
+            max_fret_used = new_max
+            notes_placed += 1
+            break
+            # If no fret fits the span, the string stays muted
 
     # Ensure at least root is present (place root on lowest string if nothing)
     if notes_placed == 0:
@@ -496,15 +514,17 @@ def _apply_voice_leading(
     for delta in (-12, +12):
         # Convert semitone delta to fret delta (same for all strings: 1 semitone = 1 fret)
         fret_delta = delta
+        # Skip the candidate if ANY fretted string would land below fret 1:
+        # negative/zero frets would silently turn fretted strings into muted or
+        # open strings, corrupting the chord (e.g. barre shapes near the nut).
+        if any(f + fret_delta < 1 for f in candidate.frets if f > 0):
+            continue
         new_frets = tuple(
             f + fret_delta if f > 0 else f  # don't move muted (-1) or open (0) strings
             for f in candidate.frets
         )
         # Validate
         if not _is_valid_shape(new_frets, profile):
-            continue
-        # All frets must be positive (no accidental open strings)
-        if any(0 < f + fret_delta < 1 for f in candidate.frets if f > 0):
             continue
 
         test = ResolvedVoicing(
@@ -536,9 +556,10 @@ def select_voicing(
     """Select a physically playable chord voicing for the given parameters.
 
     Resolution order:
-      1) Open-position shape (if prefer_open and root_pc has a known shape)
-      2) Movable barre form (E-form, A-form, or D-form)
-      3) Fallback greedy assignment (always succeeds)
+      1) Open-position shape with the exact quality (if prefer_open)
+      2) Movable barre form with the exact quality (E-form, A-form, or D-form)
+      3) Quality-degraded open shape, then quality-degraded movable form
+      4) Fallback greedy assignment (always succeeds)
 
     Voice leading is applied at the end: for movable shapes, the nearest
     neck position to prev_voicing is preferred.
@@ -562,18 +583,26 @@ def select_voicing(
 
     result: Optional[ResolvedVoicing] = None
 
-    # Step 1: Open shapes (only when preferred and we have a shape for this key)
+    # Step 1: Open shape with the EXACT quality (when preferred)
     if prefer_open:
-        result = _try_open_shape(root_pc, quality, profile)
-        if result is None and quality in _QUALITY_FALLBACK:
-            fallback_q = _QUALITY_FALLBACK[quality]
-            result = _try_open_shape(root_pc, fallback_q, profile)
+        result = _try_open_shape(root_pc, quality, profile, capo)
 
-    # Step 2: Movable barre forms
+    # Step 2: Movable barre form with the EXACT quality (e.g. min7 barre)
+    # — exact quality always beats a quality-degraded simplification.
     if result is None:
-        result = _resolve_movable(root_midi, quality, profile, capo)
+        result = _resolve_movable(
+            root_midi, quality, profile, capo, allow_quality_fallback=False
+        )
 
-    # Step 3: Greedy fallback (always succeeds)
+    # Step 3: Quality-degraded open shape, then quality-degraded movable form
+    if result is None and quality in _QUALITY_FALLBACK:
+        fallback_q = _QUALITY_FALLBACK[quality]
+        if prefer_open:
+            result = _try_open_shape(root_pc, fallback_q, profile, capo)
+        if result is None:
+            result = _resolve_movable(root_midi, quality, profile, capo)
+
+    # Step 4: Greedy fallback (always succeeds)
     if result is None:
         logger.debug(
             "chord_shapes: using fallback voicing for root_pc=%d quality=%s",

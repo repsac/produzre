@@ -370,14 +370,36 @@ def _normalize(text: str) -> str:
     return t
 
 
+def _tokenize(text: str) -> list[str]:
+    """Split normalized text into alphanumeric tokens."""
+    return [t for t in re.split(r"[^a-z0-9]+", _normalize(text)) if t]
+
+
 def _match_keywords(text: str, keyword_map: dict[str, str]) -> list[str]:
-    """Find all matching keywords in text, return unique canonical values."""
-    norm = _normalize(text)
+    """Find all matching keywords in text, return unique canonical values.
+
+    Matching is done on word boundaries: the text is split into alphanumeric
+    tokens, single-word keywords must equal a token exactly, and multi-word
+    keywords must match a contiguous token subsequence.  This prevents
+    substring false positives like "dublin" -> "dub" or "house" matching
+    inside "warehouse".
+    """
+    tokens = _tokenize(text)
+    if not tokens:
+        return []
     found: list[str] = []
     # Sort by length descending so longer matches take priority
     for kw, canonical in sorted(keyword_map.items(), key=lambda x: -len(x[0])):
-        if kw in norm and canonical not in found:
-            found.append(canonical)
+        if canonical in found:
+            continue
+        kw_tokens = _tokenize(kw)
+        if not kw_tokens:
+            continue
+        n = len(kw_tokens)
+        for i in range(len(tokens) - n + 1):
+            if tokens[i:i + n] == kw_tokens:
+                found.append(canonical)
+                break
     return found
 
 
@@ -443,8 +465,9 @@ def _extract_gm_genres(path_parts: list[str]) -> list[str]:
                             genres.append(g)
         else:
             # Sub-genre folders like "Blues Rock", "Latin"
-            for kw, canonical in GENRE_KEYWORDS.items():
-                if kw in norm and canonical not in genres:
+            # (word-boundary matching; see _match_keywords)
+            for canonical in _match_keywords(norm, GENRE_KEYWORDS):
+                if canonical not in genres:
                     genres.append(canonical)
     return genres
 
