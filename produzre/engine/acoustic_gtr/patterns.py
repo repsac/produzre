@@ -174,6 +174,22 @@ ROLL = PickPattern(
 )
 
 
+# Spacious thumb-and-finger pattern. Syncopated upper-string arrivals leave
+# room for the shared melody guide instead of filling every eighth note.
+CINEMATIC = PickPattern(
+    name="cinematic",
+    beats_per_bar=4,
+    hits=(
+        PickHit(0.0, 0, 1.00, True),
+        PickHit(0.75, 4, 0.74, False),
+        PickHit(1.5, 1, 0.84, True),
+        PickHit(2.0, 3, 0.70, False),
+        PickHit(2.75, 5, 0.80, False),
+        PickHit(3.5, 4, 0.68, False),
+    ),
+)
+
+
 # =============================================================================
 # Pattern registry
 # =============================================================================
@@ -184,6 +200,7 @@ PATTERNS: Dict[str, PickPattern] = {
     "broken_chord": BROKEN_CHORD,
     "waltz":        WALTZ,
     "roll":         ROLL,
+    "cinematic":    CINEMATIC,
 }
 
 

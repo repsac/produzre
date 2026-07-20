@@ -62,6 +62,7 @@ from .register import get_register_bounds, octave_wrap_if_needed, apply_lift
 # Phase LG5: Articulation + humanisation
 from .articulation import choose_articulation, apply_articulation
 from .humanize import humanize_note
+from ...melody import guide_pitch_at
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,9 @@ def contribute_plan(
 
     # Sprint 4: Contribute rest_ratio for inverse density coordination
     plan = kwargs.get("plan")
+    section_ctx = kwargs.get("section_ctx", {})
+    section = section or section_ctx.get("section")
+    instrument_cfg = instrument_cfg or section_ctx.get("instrument_cfg")
     if plan is not None and section is not None and instrument_cfg is not None:
         ensemble = plan.get(f"ensemble.{section.id}", {})
         planned_rest = ensemble.get("lead_rest_ratio") if isinstance(ensemble, dict) else None
@@ -320,9 +324,12 @@ def render_into_timeline(
 
     # Phase LG3: extract accent beats from plan for grid-aware placement.
     plan = kwargs.get("plan", None)
+    melody_guide = None
     accent_beats: List[float] = []
     density_multiplier = 1.0
     if plan is not None:
+        if hasattr(plan, "get"):
+            melody_guide = plan.get(f"melody.guide.{section.id}") or plan.get("melody.guide")
         accents_data = plan.get("rhythm.accents") if hasattr(plan, "get") else {}
         if isinstance(accents_data, dict):
             accent_beats = accents_data.get("accent_beats", [])
@@ -387,6 +394,7 @@ def render_into_timeline(
     phrases = _group_slots_by_phrase(harmony_plan.chord_slots, phrase_len_beats)
 
     base_motif = make_motif(section_rng, intensity, genre=song_genre)
+    previous_guide_pitch: Optional[int] = None
 
     for phrase_idx, (phrase_start, phrase_end, slots_in_phrase) in enumerate(phrases):
         phrase_beats = phrase_end - phrase_start
@@ -487,6 +495,19 @@ def render_into_timeline(
             if lift_this_phrase:
                 pitch = apply_lift(pitch, reg_min, reg_max)
             pitch = octave_wrap_if_needed(pitch, reg_min, reg_max)
+
+            # Phrase boundaries lock to the shared melodic spine. Interior
+            # motif notes remain idiomatic lead-guitar development, avoiding
+            # doubled unison lines with acoustic guitar or arpeggiator.
+            is_phrase_anchor = note_idx == 0 or note_idx == len(emit_notes) - 1
+            if is_phrase_anchor and melody_guide is not None:
+                guided = guide_pitch_at(
+                    melody_guide, local_beat, reg_min, reg_max,
+                    previous=previous_guide_pitch or pitch,
+                )
+                if guided is not None:
+                    pitch = guided
+                    previous_guide_pitch = guided
 
             # Phase LG5: articulation — shape duration, optional grace note.
             art = choose_articulation(section_rng, intensity)

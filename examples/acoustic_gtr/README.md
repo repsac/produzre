@@ -34,6 +34,13 @@ acoustic_gtr/
   - `"broken_chord"`: Arpeggiated chord tones in sequence
   - `"waltz"`: 3/4 time bass-chord-chord pattern
   - `"roll"`: Continuous rolling arpeggios (banjo-influenced)
+  - `"cinematic"`: Spacious syncopated thumb pattern with a moving treble melody
+
+### Melodic Fingerstyle
+- **melody_amount** (0.0-1.0): How strongly treble fingers follow the shared melody guide
+- **phrase_variation** (0.0-1.0): Introduces small omissions so each bar does not repeat mechanically
+- The thumb and supporting fingers remain tied to the selected guitar voicing;
+  only treble melody notes are reharmonized into a playable nearby register.
 
 ### Density & Muting
 - **strum_density** (0.0-1.0): How many strings are struck per strum
@@ -118,6 +125,7 @@ done
 - **Broken chord** is versatile and works across most genres
 - **Waltz** is designed for 3/4 time signatures
 - **Roll** adds energy and continuous motion to upbeat songs
+- **Cinematic** leaves room for a voice-led top line in intros, bridges, and interludes
 
 ### Humanization
 - Always use some `timing_variation` (0.01-0.02) to avoid a mechanical feel

@@ -48,6 +48,7 @@ from .articulation import (
     strum_spread_offsets,
 )
 from .strum import place_strum_hits
+from ...melody import guide_pitch_at
 
 
 __all__ = [
@@ -149,6 +150,10 @@ def contribute_plan(
         logger = logging.getLogger("produzre.acoustic_gtr")
 
     plan = kwargs.get("plan")
+    section_ctx = kwargs.get("section_ctx", {})
+    section = section or section_ctx.get("section")
+    instrument_cfg = instrument_cfg or section_ctx.get("instrument_cfg")
+    rhythm_grid = rhythm_grid or section_ctx.get("rhythm_grid")
     if plan is None or section is None or instrument_cfg is None:
         return None
 
@@ -156,6 +161,14 @@ def contribute_plan(
         params = resolve_params(section, instrument_cfg, rhythm_grid or _NullGrid())
         rest_ratio = max(0.0, min(0.95, 1.0 - params.strum_density))
         plan.set(f"acoustic_rest_ratio.{section.id}", rest_ratio)
+        texture = {
+            "technique": params.technique,
+            "pattern": params.picking_pattern,
+            "melody_amount": params.melody_amount,
+            "rest_ratio": rest_ratio,
+        }
+        plan.set(f"acoustic_gtr.texture.{section.id}", texture)
+        plan.set("acoustic_gtr.texture", texture)
         logger.debug(
             "[ACOUSTIC_PLAN] Section '%s': rest_ratio=%.2f technique=%s",
             section.id, rest_ratio, params.technique,
@@ -209,6 +222,9 @@ def render_into_timeline(
 
     rng: random.Random = kwargs.get("rng") or random.Random(42)
     plan = kwargs.get("plan")
+    melody_guide = None
+    if plan is not None and section is not None and hasattr(plan, "get"):
+        melody_guide = plan.get(f"melody.guide.{section.id}") or plan.get("melody.guide")
 
     # --- Guard conditions ---
     if instrument_cfg is None or getattr(instrument_cfg, "enabled", None) is False:
@@ -279,7 +295,7 @@ def render_into_timeline(
         _render_fingerpicking(
             params, harmony_plan, chord_voicings,
             section_start_beat, total_beats, bpb,
-            timeline, rng, coordinated_accent_beats,
+            timeline, rng, coordinated_accent_beats, melody_guide,
         )
     elif params.technique == "strumming":
         _render_strumming(
@@ -291,7 +307,7 @@ def render_into_timeline(
         _render_hybrid(
             params, harmony_plan, chord_voicings,
             section_start_beat, total_beats, bpb,
-            timeline, rng, coordinated_accent_beats,
+            timeline, rng, coordinated_accent_beats, melody_guide,
         )
     elif params.technique == "percussive":
         _render_percussive(
@@ -315,9 +331,11 @@ def _render_fingerpicking(
     timeline: InstrumentTimeline,
     rng: random.Random,
     accent_beats: set,
+    melody_guide: Optional[dict] = None,
 ) -> None:
     """Render arpeggiated fingerpicking bar by bar using a PickPattern."""
     pattern = get_pattern(params.picking_pattern, int(bpb))
+    previous_melody: Optional[int] = None
 
     bar_start = 0.0
     while bar_start < total_beats:
@@ -336,6 +354,11 @@ def _render_fingerpicking(
             local_beat = bar_start + hit.beat
             if local_beat >= total_beats:
                 break
+            if (
+                not hit.is_bass and hit.string_idx <= 3
+                and rng.random() < params.phrase_variation * 0.12
+            ):
+                continue
 
             # Chord boundary: if this hit crosses into the next chord, update cs
             if local_beat >= cs.end_beat:
@@ -354,6 +377,25 @@ def _render_fingerpicking(
             pitch = _pitch_for_pattern_hit(rv, hit)
             if pitch is None:
                 continue
+
+            # The thumb remains attached to the physical chord shape. Treble
+            # fingers may carry the shared melodic spine in a playable range
+            # close to the current voicing's top string.
+            is_melody = (
+                not hit.is_bass
+                and melody_guide is not None
+                and (hit.string_idx >= 4 or rng.random() < params.melody_amount * 0.45)
+                and rng.random() < params.melody_amount
+            )
+            if is_melody:
+                top = max(rv.pitches) if rv.pitches else pitch
+                guided = guide_pitch_at(
+                    melody_guide, local_beat, max(55, top - 5), min(88, top + 9),
+                    previous=previous_melody or pitch,
+                )
+                if guided is not None:
+                    pitch = guided
+                    previous_melody = guided
 
             # Legato duration: sustain until next hit on the SAME string
             next_same_beat = _next_same_string_beat(
@@ -387,7 +429,7 @@ def _render_fingerpicking(
                 pitch=pitch,
                 velocity=max(20, min(127, vel)),
                 channel=None,
-                kind="acoustic_pick",
+                kind="acoustic_melody" if is_melody else "acoustic_pick",
             )
 
         # Occasional body tap (very rare in fingerpicking — just texture)
@@ -521,6 +563,7 @@ def _render_hybrid(
     timeline: InstrumentTimeline,
     rng: random.Random,
     accent_beats: set,
+    melody_guide: Optional[dict] = None,
 ) -> None:
     """Render hybrid technique: arpeggio in first bar half, strum in second half.
 
@@ -530,6 +573,7 @@ def _render_hybrid(
     half = bpb / 2.0
     pattern = get_pattern(params.picking_pattern, int(bpb))
     prev_cs_numeral: Optional[str] = None
+    previous_melody: Optional[int] = None
 
     bar_start = 0.0
     while bar_start < total_beats:
@@ -552,6 +596,11 @@ def _render_hybrid(
                 break
             if local_beat >= total_beats:
                 break
+            if (
+                not hit.is_bass and hit.string_idx <= 3
+                and rng.random() < params.phrase_variation * 0.10
+            ):
+                continue
 
             # Mid-bar chord change: switch to the chord covering this hit.
             if local_beat >= cs.end_beat:
@@ -568,6 +617,21 @@ def _render_hybrid(
             pitch = _pitch_for_pattern_hit(rv, hit)
             if pitch is None:
                 continue
+
+            is_melody = (
+                not hit.is_bass and melody_guide is not None
+                and (hit.string_idx >= 4 or rng.random() < params.melody_amount * 0.35)
+                and rng.random() < params.melody_amount
+            )
+            if is_melody:
+                top = max(rv.pitches) if rv.pitches else pitch
+                guided = guide_pitch_at(
+                    melody_guide, local_beat, max(55, top - 5), min(88, top + 9),
+                    previous=previous_melody or pitch,
+                )
+                if guided is not None:
+                    pitch = guided
+                    previous_melody = guided
 
             # Duration caps at the midpoint (where the strum takes over)
             next_same = bar_start + half
@@ -589,7 +653,7 @@ def _render_hybrid(
                 pitch=pitch,
                 velocity=max(20, min(127, vel)),
                 channel=None,
-                kind="acoustic_hybrid_pick",
+                kind="acoustic_melody" if is_melody else "acoustic_hybrid_pick",
             )
 
         # ---- Second half: strum hit at the bar midpoint ----

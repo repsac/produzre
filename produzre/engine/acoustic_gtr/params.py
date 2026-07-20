@@ -38,6 +38,8 @@ class AcousticGuitarParams:
     strum_density:    float  # 0.0-1.0 — fraction of quarter-note positions to strum
     mute_ratio:       float  # 0.0-1.0 — probability of dampened strum hit
     body_tap_ratio:   float  # 0.0-1.0 — probability of body percussion per bar
+    melody_amount:    float  # 0.0-1.0 — treble hits shaped into a melodic top voice
+    phrase_variation: float  # 0.0-1.0 — bar-to-bar picking variation
 
     # Voicing
     voicing_style:    str    # "open" | "barre" | "auto"
@@ -134,6 +136,17 @@ def resolve_params(section, instrument_cfg, rhythm_grid) -> AcousticGuitarParams
         body_tap_ratio = 0.0
     body_tap_ratio = _clamp(body_tap_ratio, 0.0, 0.5)
 
+    # Fingerstyle defaults to a clearly audible, but not continuous, top voice.
+    melody_amount = extra.get("melody_amount", 0.72 if technique in ("fingerpicking", "hybrid") else 0.0)
+    phrase_variation = extra.get("phrase_variation", 0.35)
+    try:
+        melody_amount = float(melody_amount)
+        phrase_variation = float(phrase_variation)
+    except (TypeError, ValueError):
+        melody_amount, phrase_variation = 0.72, 0.35
+    melody_amount = _clamp(melody_amount, 0.0, 1.0)
+    phrase_variation = _clamp(phrase_variation, 0.0, 1.0)
+
     # ---- Voicing style ----
     voicing_style = extra.get("voicing_style", "auto")
     if isinstance(voicing_style, str):
@@ -175,6 +188,8 @@ def resolve_params(section, instrument_cfg, rhythm_grid) -> AcousticGuitarParams
         strum_density=strum_density,
         mute_ratio=mute_ratio,
         body_tap_ratio=body_tap_ratio,
+        melody_amount=melody_amount,
+        phrase_variation=phrase_variation,
         voicing_style=voicing_style,
         capo=capo,
         intensity=intensity,

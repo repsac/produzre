@@ -30,6 +30,7 @@ from .scaffold import build_section_scaffold as _build_section_scaffold
 PLAN_KEY_RHYTHM_GRID = "rhythm.grid"
 PLAN_KEY_RHYTHM_ACCENTS = "rhythm.accents"
 PLAN_KEY_HARMONY_PLAN = "harmony.plan"
+PLAN_KEY_MELODY_GUIDE = "melody.guide"
 PLAN_KEY_TRANSITIONS_MAP = "transitions.map"
 PLAN_KEY_GROOVE_CUES = "groove.cues"
 PLAN_KEY_FILL_WINDOWS = "groove.fill_windows"

@@ -69,14 +69,14 @@ STRUM_DENSITY_DEFAULT = 0.50
 # =============================================================================
 
 PICKING_PATTERN_DEFAULTS: Dict[str, str] = {
-    "intro":      "broken_chord",
+    "intro":      "cinematic",
     "verse":      "travis",
     "prechorus":  "roll",
     "pre_chorus": "roll",
-    "bridge":     "pima",
+    "bridge":     "cinematic",
     "solo":       "broken_chord",
-    "interlude":  "broken_chord",
-    "outro":      "broken_chord",
+    "interlude":  "cinematic",
+    "outro":      "cinematic",
 }
 PICKING_PATTERN_DEFAULT_FALLBACK = "travis"
 

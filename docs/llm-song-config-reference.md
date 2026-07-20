@@ -420,12 +420,18 @@ Set in `params:` or `extra:` block. Use instead of or alongside rhythm_gtr.
 |-----------|--------|---------|-------------|
 | `persona` | `natural`, `precise`, `expressive`, `percussive`, `delicate` | `natural` | Preset character |
 | `technique` | `fingerpicking`, `strumming`, `hybrid`, `percussive` | auto by section | Playing technique |
-| `picking_pattern` | `travis`, `pima`, `broken_chord`, `waltz`, `roll` | `travis` | Fingerpick pattern |
+| `picking_pattern` | `travis`, `pima`, `broken_chord`, `waltz`, `roll`, `cinematic` | varies | Fingerpick pattern |
+| `melody_amount` | 0.0-1.0 | 0.72 when picked | Moving top-voice prominence |
+| `phrase_variation` | 0.0-1.0 | 0.35 | Picking omissions and bar variation |
 | `voicing_style` | `open`, `barre`, `auto` | `auto` | Chord voicing |
 | `capo` | 0-12 | 0 | Capo fret position |
 | `strum_density` | 0.05-1.0 | varies | Strum frequency |
 | `mute_ratio` | 0.0-0.5 | 0.08 | Dampened strum probability |
 | `body_tap_ratio` | 0.0-0.5 | 0.0 | Body percussion probability |
+
+For cinematic fingerstyle, use `picking_pattern: "cinematic"` and
+`melody_amount: 0.8-1.0`. The shared melody guide provides phrase contour and
+cadence notes while the acoustic engine retains playable bass and chord shapes.
 
 ### Acoustic Guitar Persona Quick Reference
 

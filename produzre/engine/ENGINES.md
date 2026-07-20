@@ -323,6 +323,7 @@ The PerformancePlan is a shared key-value store for engine communication. Keys u
 | Key | Provided By | Description |
 |-----|-------------|-------------|
 | `harmony.plan` | harmony | Chord structure (HarmonySectionPlan) |
+| `melody.guide` | orchestrator | Voice-led phrase targets shared by melodic engines |
 | `rhythm.grid` | drums | Step grid (16th note resolution) |
 | `rhythm.accents` | drums | Strong beat positions |
 | `transitions.map` | orchestrator | Section-level transition directives |

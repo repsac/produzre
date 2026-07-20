@@ -640,12 +640,20 @@ Use instead of or alongside rhythm_gtr. Set parameters in `params:` or `extra:`.
 |-----------|--------|---------|-------------|
 | `persona` | `natural`, `precise`, `expressive`, `percussive`, `delicate` | `natural` | Character preset |
 | `technique` | `fingerpicking`, `strumming`, `hybrid`, `percussive` | auto | Playing technique |
-| `picking_pattern` | `travis`, `pima`, `broken_chord`, `waltz`, `roll` | `travis` | Fingerpick pattern |
+| `picking_pattern` | `travis`, `pima`, `broken_chord`, `waltz`, `roll`, `cinematic` | varies | Fingerpick pattern |
+| `melody_amount` | 0.0-1.0 | 0.72 when picked | Strength of the moving treble melody |
+| `phrase_variation` | 0.0-1.0 | 0.35 | Bar-to-bar picking space and variation |
 | `voicing_style` | `open`, `barre`, `auto` | `auto` | Chord voicing |
 | `capo` | 0-12 | 0 | Capo fret position |
 | `strum_density` | 0.05-1.0 | varies | Strum frequency |
 | `mute_ratio` | 0.0-0.5 | 0.08 | Dampened strum probability |
 | `body_tap_ratio` | 0.0-0.5 | 0.0 | Body percussion probability |
+
+Lead guitar, fingerpicked acoustic guitar, and arpeggiator share a section-level
+melody guide. It supplies voice-led chord targets, phrase contours, and cadence
+points; each engine realizes those targets differently. Acoustic guitar keeps
+its physical chord shape and thumb pattern while selected treble notes carry the
+guide. The `cinematic` pattern leaves more space for that top voice.
 
 **Acoustic guitar personas:**
 

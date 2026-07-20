@@ -16,6 +16,7 @@ subsystem once timelines are fully rendered.
 """
 
 import logging
+import random
 from collections.abc import Mapping
 from dataclasses import fields
 from typing import Any, Optional, List
@@ -27,6 +28,7 @@ from ..config.errors import ConfigError
 from ..groove import apply_feel, effective_params_dict, resolve_groove_feel
 from .negotiation import create_feedback_collector, EngineFeedback
 from .ensemble import build_ensemble_section_plan
+from ..melody import build_melody_guide
 
 
 def _find_providers_for_requirement(cfg: RootConfig, requirement: str) -> list[str]:
@@ -478,6 +480,7 @@ def render_section_instruments(
     if performance_plan is not None:
         try:
             performance_plan.data.pop("harmony.plan", None)
+            performance_plan.data.pop("melody.guide", None)
         except Exception:
             pass
 
@@ -586,7 +589,6 @@ def render_section_instruments(
         )
         if inst_seed is not None:
             inst_rng_seed = stable_seed_int("inst_override", inst_seed, sec.id, inst_name)
-            import random
             engine_rng = random.Random(inst_rng_seed)
             logger.debug(
                 "Section '%s': instrument '%s' using seed override %d",
@@ -637,6 +639,25 @@ def render_section_instruments(
                 rng=engine_rng,
                 logger=logger,
             )
+
+    # Derive melodic intent after harmony and all instrument planning hooks,
+    # but before any engine renders.  A dedicated RNG keeps engine streams
+    # stable when the melody planner evolves.
+    if performance_plan is not None and hplan is not None:
+        melody_rng = random.Random(stable_seed_int(
+            "melody_guide", getattr(cfg.song, "seed", 42), sec.id,
+            section_start_beat, getattr(cfg.song, "genre", ""),
+        ))
+        melody_guide = build_melody_guide(
+            hplan,
+            key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+            mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+            section_type=getattr(sec, "type", ""),
+            genre=getattr(cfg.song, "genre", ""),
+            rng=melody_rng,
+        ).to_dict()
+        performance_plan.set(f"melody.guide.{sec.id}", melody_guide)
+        performance_plan.set("melody.guide", melody_guide)
 
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
