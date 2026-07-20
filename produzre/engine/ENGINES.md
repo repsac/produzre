@@ -116,8 +116,11 @@ def render_into_timeline(*args, **kwargs):
 def contribute_plan(*args, **kwargs):
     """Export structural data to the PerformancePlan (optional).
 
-    Called before render_into_timeline. Use this to share derived data
-    with other engines (e.g., groove patterns, phrase boundaries).
+Called during an ordered planning pass before any engine renders MIDI. Earlier
+providers in priority order are available to later planning hooks, and all
+completed planning hooks are visible to every render call. Use this to share
+derived data such as roles, activity windows, groove patterns, and phrase
+boundaries.
 
     Args (all via kwargs):
         plan: PerformancePlan - Central data store

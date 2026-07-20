@@ -148,6 +148,8 @@ def contribute_plan(
     # Sprint 4: Contribute rest_ratio for inverse density coordination
     plan = kwargs.get("plan")
     if plan is not None and section is not None and instrument_cfg is not None:
+        ensemble = plan.get(f"ensemble.{section.id}", {})
+        planned_rest = ensemble.get("lead_rest_ratio") if isinstance(ensemble, dict) else None
         # Read rest_probability from config (same logic as render)
         rest_probability = getattr(instrument_cfg, "rest_probability", None)
         if rest_probability is None:
@@ -155,6 +157,7 @@ def contribute_plan(
 
         # Use rest_probability as a proxy for rest_ratio
         # This is the configured "target" rest ratio that lead will aim for
+        rest_probability = planned_rest if planned_rest is not None else rest_probability
         if rest_probability is not None:
             try:
                 rest_ratio = float(rest_probability)
@@ -289,11 +292,13 @@ def render_into_timeline(
 
     phrase_len_beats = float(phrase_len_bars) * float(bpb)
 
-    # Phase LG1: resolve key/mode and create section-scoped RNG.
+    # Resolve key/mode and use the orchestrator's instrument RNG so take,
+    # variation, arrangement occurrence, and instrument seed all participate.
     song_key = (section.key or cfg.song.key or "C").strip()
     song_mode = getattr(cfg.song, "mode", None) or "minor"
     song_seed = getattr(cfg.song, "seed", 42)
-    section_rng = random.Random(_stable_u32(f"lead:{section.id}:{song_seed}"))
+    section_rng = kwargs.get("rng") or random.Random(_stable_u32(f"lead:{section.id}:{song_seed}"))
+    song_genre = str(getattr(cfg.song, "genre", "") or "")
 
     # Resolution behavior: encourage landing on chord tones at chord/phrase ends.
     resolution_strength = getattr(instrument_cfg, "resolution_strength", None)
@@ -316,10 +321,23 @@ def render_into_timeline(
     # Phase LG3: extract accent beats from plan for grid-aware placement.
     plan = kwargs.get("plan", None)
     accent_beats: List[float] = []
+    density_multiplier = 1.0
     if plan is not None:
         accents_data = plan.get("rhythm.accents") if hasattr(plan, "get") else {}
         if isinstance(accents_data, dict):
             accent_beats = accents_data.get("accent_beats", [])
+        try:
+            from ...orchestrate import EngineCoordinator
+            coordinator = EngineCoordinator(plan, logger=logger)
+            actual_accents = coordinator.get_accent_beats(section.id)
+            if actual_accents:
+                accent_beats = sorted(actual_accents)
+            density_multiplier = coordinator.get_density_multiplier(section.id, "lead_gtr")
+            lead_activity_windows = coordinator.get_lead_activity_windows(section.id)
+        except Exception:
+            lead_activity_windows = []
+    else:
+        lead_activity_windows = []
 
     # Density: how many grid positions to fill (scales with intensity).
     # Solo sections use a higher base multiplier and bigger boost.
@@ -327,6 +345,7 @@ def render_into_timeline(
         density = intensity * 0.65 + 0.25
     else:
         density = intensity * 0.55 + 0.15
+    density *= density_multiplier
     density = max(0.10, min(density, 0.90))
 
     # prefer_offbeat: chorus / high-intensity sections contrast the downbeat grid.
@@ -367,7 +386,7 @@ def render_into_timeline(
     # Phase LG2: group chord slots into phrase-length windows.
     phrases = _group_slots_by_phrase(harmony_plan.chord_slots, phrase_len_beats)
 
-    base_motif = make_motif(section_rng, intensity)
+    base_motif = make_motif(section_rng, intensity, genre=song_genre)
 
     for phrase_idx, (phrase_start, phrase_end, slots_in_phrase) in enumerate(phrases):
         phrase_beats = phrase_end - phrase_start
@@ -388,7 +407,7 @@ def render_into_timeline(
         pools = []
         for cs in slots_in_phrase:
             pool = allowed_pitches_for_slot(
-                cs.numeral, song_key, song_mode, register or DEFAULT_REGISTER
+                cs.numeral, song_key, song_mode, register or DEFAULT_REGISTER, genre=song_genre
             )
             pools.append(pool)
 
@@ -420,6 +439,7 @@ def render_into_timeline(
             phrase_end=phrase_end,
             prefer_offbeat=prefer_offbeat,
             rest_rate=rest_probability,
+            genre=song_genre,
         )
 
         if not note_starts:
@@ -449,6 +469,11 @@ def render_into_timeline(
         # Emit motif notes at their own beat offsets/durations within the phrase.
         for note_idx, rn in enumerate(emit_notes):
             local_beat = phrase_start + rn.beat_offset
+
+            if lead_activity_windows and not any(
+                start <= local_beat < end for start, end in lead_activity_windows
+            ):
+                continue
 
             # The motif's own duration, scaled for articulation space and
             # clamped to the phrase (and therefore section) bounds.

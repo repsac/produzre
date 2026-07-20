@@ -75,8 +75,40 @@ _RHYTHM_4_SYNCOPATED = (0.5, 1.5, 0.5, 1.5)
 _RHYTHM_6_EIGHTH = (0.5, 0.5, 1.0, 0.5, 0.5, 1.0)
 _RHYTHM_6_MIXED = (1.0, 0.5, 0.5, 1.0, 0.5, 0.5)
 
+_GENRE_MOTIFS: dict[str, List[Tuple[int, ...]]] = {
+    "blues": [(0, 3, 5, 6, 5, 3), (0, -2, 0, 3), (0, 3, 5, 3)],
+    "rock": [(0, 3, 5, 7), (0, 7, 5, 3), (0, 3, 0, -2)],
+    "metal": [(0, 1, 3, 6, 5, 3), (0, 7, 6, 3, 1, 0), (0, 3, 6, 7, 6, 3)],
+    "funk": [(0, 0, 3, 0, -2, 0), (0, 3, 0, 5), (0, 0, -2, 0)],
+    "jazz": [(0, 2, 3, -1, 0), (0, -1, 2, 4, 3), (0, 4, 2, 1, -1)],
+    "country": [(0, 4, 7, 4), (0, 2, 4, 7), (0, 7, 4, 2)],
+    "pop": [(0, 2, 4, 2), (0, 4, 2, -1), (0, 2, 0, -2)],
+}
 
-def make_motif(rng: random.Random, intensity: float) -> Motif:
+_GENRE_RHYTHMS: dict[str, List[Tuple[float, ...]]] = {
+    "blues": [(2 / 3, 1 / 3, 1.0, 0.5, 1.5, 1.0), (1.0, 0.5, 0.5, 2.0)],
+    "rock": [(0.5, 0.5, 1.0, 2.0), (1.0, 0.5, 0.5, 2.0)],
+    "metal": [(0.25, 0.25, 0.5, 0.25, 0.75, 2.0), (0.5, 0.25, 0.25, 0.5, 0.5, 2.0)],
+    "funk": [(0.25, 0.75, 0.5, 0.25, 0.75, 1.5), (0.5, 0.25, 0.75, 2.5)],
+    "jazz": [(2 / 3, 1 / 3, 1.0, 0.5, 1.5), (1.0, 0.5, 0.5, 1.0, 1.0)],
+    "country": [(0.5, 0.5, 1.0, 2.0), (0.5, 0.5, 0.5, 2.5)],
+    "pop": [(1.0, 0.5, 0.5, 2.0), (0.5, 1.0, 0.5, 2.0)],
+}
+
+
+def _genre_family(genre: str | None) -> str:
+    value = str(genre or "").lower()
+    aliases = (("r&b", "funk"), ("soul", "funk"), ("hard rock", "rock"), ("punk", "rock"))
+    for token, family in aliases:
+        if token in value:
+            return family
+    for family in _GENRE_MOTIFS:
+        if family in value:
+            return family
+    return ""
+
+
+def make_motif(rng: random.Random, intensity: float, genre: str | None = None) -> Motif:
     """Generate a short melodic motif scaled to intensity.
 
     intensity < 0.4  -> sparse: 2-note motifs, longer durations
@@ -90,7 +122,11 @@ def make_motif(rng: random.Random, intensity: float) -> Motif:
     Returns:
         Motif with matched intervals and durations
     """
-    if intensity < 0.4:
+    family = _genre_family(genre)
+    if family and rng.random() < 0.78:
+        shape = rng.choice(_GENRE_MOTIFS[family])
+        rhythm = rng.choice(_GENRE_RHYTHMS[family])
+    elif intensity < 0.4:
         shape = _SHAPES_SPARSE[rng.randrange(len(_SHAPES_SPARSE))]
         rhythm = _RHYTHM_2_LONG if rng.random() < 0.4 else _RHYTHM_2_HALF
     elif intensity < 0.7:

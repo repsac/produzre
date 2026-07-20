@@ -70,6 +70,22 @@ def build_bar_pattern(
         pattern = _build_syncopated(density, beats_per_bar, rng)
     elif style == "half_time":
         pattern = _build_half_time(density, beats_per_bar, rng)
+    elif style == "rock_riff":
+        pattern = _build_idiom_pattern("rock_riff", 2, [0, 1, 3, 4, 6, 7], [0, 4], density, beats_per_bar, rng)
+    elif style == "pop_push":
+        pattern = _build_idiom_pattern("pop_push", 2, [0, 2, 3, 4, 6, 7], [0, 3, 7], density, beats_per_bar, rng)
+    elif style == "funk_chanks":
+        pattern = _build_idiom_pattern("funk_chanks", 4, [2, 5, 7, 10, 13, 15], [2, 10, 15], density, beats_per_bar, rng)
+    elif style == "jazz_comp":
+        pattern = _build_idiom_pattern("jazz_comp", 3, [0, 4, 7, 10], [0, 7], density, beats_per_bar, rng)
+    elif style == "blues_shuffle":
+        pattern = _build_idiom_pattern("blues_shuffle", 3, [0, 2, 3, 5, 6, 8, 9, 11], [0, 6], density, beats_per_bar, rng)
+    elif style == "country_boom_chuck":
+        pattern = _build_idiom_pattern("country_boom_chuck", 2, [0, 2, 3, 4, 6, 7], [2, 6], density, beats_per_bar, rng)
+    elif style == "reggae_skank":
+        pattern = _build_idiom_pattern("reggae_skank", 2, [1, 3, 5, 7], [1, 3, 5, 7], density, beats_per_bar, rng)
+    elif style == "latin_clave":
+        pattern = _build_idiom_pattern("latin_clave", 4, [0, 3, 6, 10, 12], [0, 6, 12], density, beats_per_bar, rng)
     else:
         # Fallback to straight_8s for unknown styles
         pattern = _build_straight_8s(density, beats_per_bar, rng)
@@ -83,6 +99,56 @@ def build_bar_pattern(
     pattern = _apply_palm_mutes(pattern, pm_bias, rng)
 
     return pattern
+
+
+def _build_idiom_pattern(
+    name: str,
+    subdivision: int,
+    source_hits: List[int],
+    source_accents: List[int],
+    density: float,
+    beats_per_bar: float,
+    rng: random.Random,
+) -> GtrPattern:
+    """Build a recognizable genre cell while allowing controlled omissions."""
+    total_slots = max(1, int(beats_per_bar * subdivision))
+    hits = [hit for hit in source_hits if hit < total_slots]
+    accents = {hit for hit in source_accents if hit in hits}
+    keep_probability = 0.45 + (0.55 * density)
+    kept = [hit for hit in hits if hit in accents or rng.random() < keep_probability]
+    if not kept and hits:
+        kept = [hits[0]]
+    directions = ["down" if (hit % subdivision) == 0 else "up" for hit in kept]
+    return GtrPattern(
+        name=f"{name}_d{int(density * 100)}",
+        subdivision=subdivision,
+        hits=sorted(kept),
+        accents=sorted(hit for hit in accents if hit in kept),
+        palm_mutes=[],
+        strum_directions=directions,
+        density=density,
+    )
+
+
+def apply_density_budget(pattern: GtrPattern, multiplier: float, rng: random.Random) -> GtrPattern:
+    """Thin weak strums while retaining the cell's defining accents."""
+    multiplier = max(0.0, min(1.0, float(multiplier)))
+    if multiplier >= 0.999 or len(pattern.hits) <= 1:
+        return pattern
+    accents = set(pattern.accents)
+    hits = [hit for hit in pattern.hits if hit in accents or rng.random() < multiplier]
+    if not hits:
+        hits = [pattern.hits[0]]
+    directions = ["down" if hit % pattern.subdivision == 0 else "up" for hit in hits]
+    return GtrPattern(
+        name=f"{pattern.name}_space{int(multiplier * 100)}",
+        subdivision=pattern.subdivision,
+        hits=hits,
+        accents=[hit for hit in pattern.accents if hit in hits],
+        palm_mutes=[hit for hit in pattern.palm_mutes if hit in hits],
+        strum_directions=directions,
+        density=pattern.density * multiplier,
+    )
 
 
 def develop_bar_pattern(

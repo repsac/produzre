@@ -103,3 +103,32 @@ def apply_drum_locking(
             locked_slots.add(quantized_beat)
 
     return locked_slots
+
+
+def apply_motif_repetition(
+    slots: set[float],
+    beats_per_bar: float,
+    total_beats: float,
+    repeat_rate: float,
+    rng,
+) -> set[float]:
+    """Repeat a two-bar onset cell later in each four-bar phrase."""
+    if repeat_rate <= 0.0 or beats_per_bar <= 0.0 or not slots:
+        return set(slots)
+    result = set(slots)
+    phrase_beats = beats_per_bar * 4.0
+    cell_beats = beats_per_bar * 2.0
+    phrase_start = 0.0
+    while phrase_start < total_beats - 1e-9:
+        source = sorted(
+            beat - phrase_start
+            for beat in result
+            if phrase_start <= beat < min(total_beats, phrase_start + cell_beats)
+        )
+        if source and rng.random() < repeat_rate:
+            target_start = phrase_start + cell_beats
+            target_end = min(total_beats, phrase_start + phrase_beats)
+            result = {beat for beat in result if not (target_start <= beat < target_end)}
+            result.update(target_start + offset for offset in source if target_start + offset < target_end)
+        phrase_start += phrase_beats
+    return result

@@ -10,7 +10,7 @@ tags:
   bpm_range: [90, 160]
 
 params:
-  style: straight_8s
+  style: rock_riff
   density: 0.7
   palm_mute: 0.2
   voicing: power

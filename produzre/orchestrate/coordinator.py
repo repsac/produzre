@@ -85,21 +85,52 @@ class EngineCoordinator:
 
         lead_rest = float(lead_rest_ratio)
 
-        # Inverse relationship
-        if lead_rest > lead_rest_threshold:
-            adjustment = 1.3  # Lead rests → rhythm fills
+        # Use a restrained continuous relationship. Extreme 30% jumps made
+        # accompaniment change density more than role and caused choruses with
+        # modest lead rests to become busier, not clearer.
+        if lead_rest >= 0.55:
+            adjustment = 1.12
             self.logger.debug(
-                f"[COORDINATION] Lead rest {lead_rest:.2f} > {lead_rest_threshold:.2f} "
+                f"[COORDINATION] Lead rest {lead_rest:.2f} is spacious "
                 f"in '{section_id}': rhythm boost {adjustment:.2f}x"
             )
-        else:
-            adjustment = 0.7  # Lead busy → rhythm pulls back
+        elif lead_rest <= 0.25:
+            adjustment = 0.82
             self.logger.debug(
-                f"[COORDINATION] Lead rest {lead_rest:.2f} <= {lead_rest_threshold:.2f} "
+                f"[COORDINATION] Lead rest {lead_rest:.2f} is active "
                 f"in '{section_id}': rhythm reduce {adjustment:.2f}x"
             )
+        else:
+            # Interpolate 0.82..1.12 across the useful middle range.
+            adjustment = 0.82 + ((lead_rest - 0.25) / 0.30) * 0.30
 
         return adjustment
+
+    def get_instrument_role(self, section_id: str, instrument: str) -> str:
+        """Return the section-level role assigned to an instrument."""
+        section_plan = self.plan.get(f"ensemble.{section_id}", {})
+        return str(section_plan.get("roles", {}).get(instrument, {}).get("role", ""))
+
+    def get_density_multiplier(self, section_id: str, instrument: str) -> float:
+        """Return the density budget assigned by the ensemble planner."""
+        section_plan = self.plan.get(f"ensemble.{section_id}", {})
+        value = section_plan.get("roles", {}).get(instrument, {}).get("density_multiplier", 1.0)
+        try:
+            return max(0.0, min(1.25, float(value)))
+        except (TypeError, ValueError):
+            return 1.0
+
+    def get_lead_activity_windows(self, section_id: str) -> List[tuple[float, float]]:
+        """Return section-local windows where lead guitar owns foreground space."""
+        section_plan = self.plan.get(f"ensemble.{section_id}", {})
+        windows = section_plan.get("lead_activity_windows", [])
+        return [(float(start), float(end)) for start, end in windows]
+
+    def get_fill_owner(self, section_id: str) -> Optional[str]:
+        """Return the instrument assigned to play the section transition fill."""
+        section_plan = self.plan.get(f"ensemble.{section_id}", {})
+        owner = section_plan.get("fill_owner")
+        return str(owner) if owner else None
 
     # =========================================================================
     # Rule 2: Rhythmic Pocket Alignment (Bass-Kick)

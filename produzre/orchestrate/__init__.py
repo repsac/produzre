@@ -11,6 +11,7 @@ from .plan import (
     PLAN_KEY_FILL_WINDOWS,
 )
 from .coordinator import EngineCoordinator
+from .ensemble import build_ensemble_section_plan
 
 __all__ = [
     "BuildResult",
@@ -24,4 +25,5 @@ __all__ = [
     "PLAN_KEY_GROOVE_CUES",
     "PLAN_KEY_FILL_WINDOWS",
     "EngineCoordinator",
+    "build_ensemble_section_plan",
 ]

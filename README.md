@@ -427,6 +427,12 @@ Setting `genre:` in the song block auto-loads appropriate recipes for drums, bas
 rhythm guitar, and harmony. You don't need to manually configure parameters — the
 genre handles defaults.
 
+Before MIDI rendering, Produzre now assigns section-level ensemble roles and
+foreground windows. Bass, rhythm guitar, and lead guitar therefore receive
+complementary jobs such as anchor, comp, answer, hook, counterline, or support.
+Drums own transition fills when present; bass avoids those fill windows, and
+rhythm guitar leaves additional space during planned lead phrases.
+
 | Family | Genres |
 |--------|--------|
 | Rock | `rock`, `hard_rock`, `soft_rock`, `alt_rock`, `prog_rock`, `arena_rock`, `blues_rock`, `pop_rock`, `grunge`, `emo` |
@@ -477,7 +483,7 @@ you only need to override when you want something specific.
 |-----------|--------|---------|-------------|
 | `persona` | `tight`, `pocket`, `loose`, `funk`, `metal`, `walking`, `dub` | `tight` | Character preset |
 | `density` | 0.0-1.0 | 0.57 | Notes per bar density |
-| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated` | `anchor` | Rhythmic feel |
+| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths` | `anchor` | Rhythmic feel |
 | `articulation_style` | `finger`, `pick`, `slap`, `mute` | `finger` | Playing technique |
 | `approach_rate` | 0.0-0.5 | 0.24 | Chromatic approach tones |
 | `rest_rate` | 0.0-0.4 | 0.24 | Probability of rests |
@@ -490,6 +496,7 @@ you only need to override when you want something specific.
 | `phrase_len_bars` | 1-8 | 4 | Phrase boundary spacing for fills |
 | `section_role_variation` | true/false | false | Let section type bias bass rhythm role |
 | `chromatic_rate` | 0.0-0.3 | 0.0 | Chromatic passing tones |
+| `motif_repeat_rate` | 0.0-1.0 | recipe | Repeat a two-bar `rock_riff` or `funk_16ths` onset cell |
 
 When `section_role_variation` is enabled and `rhythm_pattern` is left at
 `anchor`, choruses lean toward drive patterns and bridges lean toward
@@ -525,6 +532,8 @@ syncopation. Phrase fills target the next chord or section resolution.
 
 Drum transitions are energy-aware: lifts into high-energy sections favor longer
 snare/tom/kick pickups, while drops use shorter stop-time pickups with more space.
+Phrase fills use genre-weighted setup, tom, kick/snare, cymbal, and roll cells.
+Their structural spacing never accelerates below the active drum subdivision.
 
 **Drum personas:**
 
@@ -561,7 +570,7 @@ drums:
 | Parameter | Values | Default | Description |
 |-----------|--------|---------|-------------|
 | `persona` | `tight`, `loose`, `aggressive`, `funky`, `jangly` | `tight` | Character preset |
-| `style` | `chug`, `strum`, `syncopated`, `half_time`, `auto` | `auto` | Strumming pattern |
+| `style` | `auto`, `straight_8s`, `chugs`, `syncopated`, `half_time`, `rock_riff`, `pop_push`, `funk_chanks`, `jazz_comp`, `blues_shuffle`, `country_boom_chuck`, `reggae_skank`, `latin_clave` | `auto` | Strumming pattern |
 | `voicing` | `power`, `triad`, `shell`, `octaves`, `auto` | `auto` | Chord voicing type |
 | `palm_mute` | 0.0-1.0 | 0.06 | Palm mute probability |
 | `register` | `low`, `mid`, `high` | `mid` | Pitch register |
@@ -598,7 +607,9 @@ Set parameters in `extra:` block.
 
 Lead motifs now develop across phrases automatically: later phrases reuse the
 opening contour with inversion, interval, rhythm, or cadence variation instead
-of restarting with unrelated licks.
+of restarting with unrelated licks. Rock, blues, metal, funk, jazz, country,
+and pop select distinct interval and rhythm vocabularies. The ensemble planner
+also limits lead notes to foreground windows so accompaniment can answer them.
 
 Use `solo: true` on the instrument for solo sections (denser playing, wider range):
 

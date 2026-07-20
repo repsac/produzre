@@ -135,3 +135,33 @@ def get_rhythm_pattern_syncopated(
             eligible.add(slot)
 
     return eligible
+
+
+def get_rhythm_pattern_rock_riff(
+    slots: list[float], beats_per_bar: float, subdivisions_per_beat: int = 4
+) -> set[float]:
+    """Two-bar rock cell with pedal anchors and anticipations."""
+    first_bar = {0.0, 0.5, 1.5, 2.0, 3.5}
+    second_bar = {0.0, 1.0, 1.5, 2.5, 3.0, 3.5}
+    eligible = set()
+    for slot in slots:
+        bar = int(slot // beats_per_bar)
+        position = round(slot % beats_per_bar, 3)
+        if position in (first_bar if bar % 2 == 0 else second_bar):
+            eligible.add(slot)
+    return eligible
+
+
+def get_rhythm_pattern_funk_16ths(
+    slots: list[float], beats_per_bar: float, subdivisions_per_beat: int = 4
+) -> set[float]:
+    """Two-bar syncopated funk cell with deliberate holes around backbeats."""
+    first_bar = {0.0, 0.75, 1.5, 2.25, 3.5}
+    second_bar = {0.0, 0.5, 1.75, 2.75, 3.25}
+    eligible = set()
+    for slot in slots:
+        bar = int(slot // beats_per_bar)
+        position = round(slot % beats_per_bar, 3)
+        if position in (first_bar if bar % 2 == 0 else second_bar):
+            eligible.add(slot)
+    return eligible

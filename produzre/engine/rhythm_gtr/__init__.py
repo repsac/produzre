@@ -44,6 +44,7 @@ from .types import ChordShape
 from .rhythm import (
     build_bar_pattern,
     develop_bar_pattern,
+    apply_density_budget,
     apply_microtiming,
     _apply_accents as _apply_accent_beats,
 )
@@ -346,17 +347,23 @@ def contribute_plan(*args: Any, **kwargs: Any) -> None:
     Returns:
         None
     """
-    # Phase RG0: No-op for now
-    # Future phases could export:
-    # - rhythm.texture: Strumming pattern density/timing
-    # - rhythm.chords: Chord voicings for other instruments
-    # - rhythm.accents: Additional accent suggestions
-
     if args:
         raise TypeError("rhythm_gtr.contribute_plan only supports keyword arguments")
-
-    # kwargs accepted for future compatibility but not used in Phase RG0
-    _ = kwargs  # Suppress unused warning
+    plan = kwargs.get("plan")
+    section_ctx = kwargs.get("section_ctx") or {}
+    section = section_ctx.get("section")
+    if plan is None or section is None:
+        return
+    ensemble = plan.get(f"ensemble.{section.id}", {})
+    role_data = ensemble.get("roles", {}).get("rhythm_gtr", {}) if isinstance(ensemble, dict) else {}
+    payload = {
+        "section_id": section.id,
+        "role": role_data.get("role", "comp"),
+        "density_multiplier": role_data.get("density_multiplier", 1.0),
+        "lead_activity_windows": ensemble.get("lead_activity_windows", []) if isinstance(ensemble, dict) else [],
+    }
+    plan.set("rhythm.texture", payload)
+    plan.set("rhythm.chords", {"section_id": section.id, "source": "harmony.plan"})
 
 
 def render_into_timeline(
@@ -528,7 +535,8 @@ def render_into_timeline(
             solo_adjustment = coordinator.get_rhythm_simplification_factor(section.id)
 
             # Combine adjustments (multiplicative)
-            combined_adjustment = intensity_adjustment * solo_adjustment
+            role_adjustment = coordinator.get_density_multiplier(section.id, "rhythm_gtr")
+            combined_adjustment = intensity_adjustment * solo_adjustment * role_adjustment
 
             if abs(combined_adjustment - 1.0) > 0.01:  # Only apply if adjusted
                 # Modify the density parameter in instrument_cfg.extra
@@ -648,6 +656,13 @@ def _render_pattern_based_guitar(
     accent_beats = []
     if rhythm_accents_data and "accent_beats" in rhythm_accents_data:
         accent_beats = rhythm_accents_data["accent_beats"]
+    try:
+        from ...orchestrate import EngineCoordinator
+        actual_accents = EngineCoordinator(plan, logger=logger).get_accent_beats(section.id)
+        if actual_accents:
+            accent_beats = sorted(actual_accents)
+    except Exception:
+        pass
 
     # Phase RG3: Resolve parameters using section-type-aware defaults
     extra = instrument_cfg.extra if instrument_cfg is not None else {}
@@ -739,6 +754,12 @@ def _render_pattern_based_guitar(
 
     # Phase RG5: Extract transition directive for this section
     transition_directive = get_transition_directive(plan, section.id)
+    lead_activity_windows = []
+    try:
+        from ...orchestrate import EngineCoordinator
+        lead_activity_windows = EngineCoordinator(plan, logger=logger).get_lead_activity_windows(section.id)
+    except Exception:
+        lead_activity_windows = []
     if logger and transition_directive:
         logger.debug(
             "Section '%s': transition directive found - energy_ramp=%.2f, density_ramp=%.2f, turnaround=%s",
@@ -812,6 +833,12 @@ def _render_pattern_based_guitar(
                 beats_per_bar=beats_per_bar,
                 rng=rng,
             )
+
+        # During a lead statement retain only the comping cell's defining
+        # accents. In the answer spaces the full pattern returns.
+        bar_end_beat = bar_start_beat + beats_per_bar
+        if any(start < bar_end_beat and end > bar_start_beat for start, end in lead_activity_windows):
+            pattern = apply_density_budget(pattern, 0.58, rng)
 
         # Phase RG5: Adjust pattern for transitions (builds, turnarounds, pickups)
         pattern = adjust_pattern_for_transition(

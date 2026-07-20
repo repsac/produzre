@@ -10,7 +10,7 @@ tags:
   bpm_range: [80, 120]
 
 params:
-  style: syncopated
+  style: funk_chanks
   density: 0.7
   palm_mute: 0.1
   voicing: triad

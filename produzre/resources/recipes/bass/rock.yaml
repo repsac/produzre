@@ -7,7 +7,7 @@ tags:
   section_types: [verse, chorus, bridge, default]
 params:
   density: 0.5
-  rhythm_pattern: "push"
+  rhythm_pattern: "rock_riff"
   articulation_style: "finger"
   register_low: 28
   register_high: 52
@@ -23,3 +23,4 @@ params:
   lock_to_kick: 0.44
   accent_strength: 1.31
   syncopation: 0.45
+  motif_repeat_rate: 0.62

@@ -26,6 +26,7 @@ from ..timeline import InstrumentTimeline
 from ..config.errors import ConfigError
 from ..groove import apply_feel, effective_params_dict, resolve_groove_feel
 from .negotiation import create_feedback_collector, EngineFeedback
+from .ensemble import build_ensemble_section_plan
 
 
 def _find_providers_for_requirement(cfg: RootConfig, requirement: str) -> list[str]:
@@ -533,6 +534,12 @@ def render_section_instruments(
     groove_feel = None
     groove_feel_resolved = False
 
+    if performance_plan is not None:
+        performance_plan.set(
+            f"ensemble.{sec.id}",
+            build_ensemble_section_plan(cfg, sec, rgrid, transition_context),
+        )
+
     def _resolve_section_groove_feel():
         """Resolve the section's groove feel once (drums params from plan)."""
         drum_params = None
@@ -568,32 +575,12 @@ def render_section_instruments(
             )
         return feel
 
-    # Render instruments in priority order
+    # Prepare deterministic per-instrument state, then run every planning hook
+    # before rendering any MIDI. This makes current-section intent available to
+    # earlier render priorities (notably rhythm guitar before lead guitar).
+    prepared_engines = []
     for inst_name, inst_cfg, engine in instruments_with_engines:
-        # Phase N3: Validate engine dependencies before execution
-        _validate_engine_dependencies(inst_name, engine, performance_plan, cfg, logger)
-
         effective_cfg = effective_cfgs[inst_name]
-
-        timeline = timelines.get(inst_name)
-        if timeline is None:
-            timeline = InstrumentTimeline(
-                instrument=inst_name,
-                default_channel=_engine_channel(cfg, inst_name),
-            )
-            timelines[inst_name] = timeline
-
-        # Log engine execution order for debugging (Phase N2)
-        logger.debug(
-            "Section '%s': rendering %s (priority=%d)",
-            sec.id,
-            inst_name,
-            engine.priority,
-        )
-
-        # Instrument-level seed override: if the instrument declares its own
-        # seed, derive a unique RNG for this instrument instead of using
-        # the shared section_rng.
         inst_seed = getattr(effective_cfg, "seed", None) if hasattr(effective_cfg, "seed") else (
             effective_cfg.get("seed") if isinstance(effective_cfg, dict) else None
         )
@@ -628,7 +615,10 @@ def render_section_instruments(
             elif isinstance(effective_cfg, dict):
                 effective_cfg.setdefault("_variation", engine_variation)
 
-        # Phase N4: Call contribute_plan if present (before render)
+        prepared_engines.append((inst_name, effective_cfg, engine, engine_rng))
+
+    for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
+        _validate_engine_dependencies(inst_name, engine, performance_plan, cfg, logger)
         if engine.contribute_plan is not None:
             section_ctx = {
                 "cfg": cfg,
@@ -648,9 +638,26 @@ def render_section_instruments(
                 logger=logger,
             )
 
+    # Render instruments in priority order after the complete intent prepass.
+    for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
+        timeline = timelines.get(inst_name)
+        if timeline is None:
+            timeline = InstrumentTimeline(
+                instrument=inst_name,
+                default_channel=_engine_channel(cfg, inst_name),
+            )
+            timelines[inst_name] = timeline
+
+        logger.debug(
+            "Section '%s': rendering %s (priority=%d)",
+            sec.id,
+            inst_name,
+            engine.priority,
+        )
+
         events_before = len(timeline.events)
 
-        engine.render(
+        render_result = engine.render(
             cfg=cfg,
             section=sec,
             instrument_name=inst_name,
@@ -718,6 +725,35 @@ def render_section_instruments(
                         timing_jitter_ms=jitter_ms,
                         velocity_humanize=vel_humanize,
                     )
+
+        new_events = timeline.events[events_before:]
+        if render_result is not None:
+            rhythm_features[inst_name] = render_result
+        if performance_plan is not None and new_events:
+            local_onsets = sorted({
+                round(float(event.start_beat) - float(section_start_beat), 4)
+                for event in new_events
+            })
+            pitches = [int(event.pitch) for event in new_events]
+            performance = {
+                "section_id": sec.id,
+                "event_count": len(new_events),
+                "onsets": local_onsets,
+                "register": [min(pitches), max(pitches)],
+            }
+            performance_plan.set(f"performance.{inst_name}.{sec.id}", performance)
+            if inst_name == "bass":
+                performance_plan.set("bass.line", performance)
+            elif inst_name == "rhythm_gtr":
+                performance_plan.set("rhythm.texture.actual", performance)
+            elif inst_name == "lead_gtr":
+                performance_plan.set("melody.line", performance)
+                performance_plan.set("lead.phrases", {
+                    "section_id": sec.id,
+                    "activity_windows": performance_plan.get(
+                        f"ensemble.{sec.id}", {}
+                    ).get("lead_activity_windows", []),
+                })
 
     # Phase N8: Return collected feedback for negotiation between sections
     return feedback_collector.get_feedback()

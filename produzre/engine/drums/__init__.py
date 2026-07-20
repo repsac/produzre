@@ -1140,6 +1140,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             steps_per_bar=steps_per_bar,
             phrase_len_bars=phrase_len_bars,
             phrase_end_emphasis=phrase_end_emphasis,
+            genre=str(_get_attr_or_key(_get_attr_or_key(cfg, "song", None), "genre", "") or ""),
         )
 
     # Add performance ornaments (chokes, flams, drags) before humanization.

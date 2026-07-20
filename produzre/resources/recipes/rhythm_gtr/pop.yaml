@@ -10,7 +10,7 @@ tags:
   bpm_range: [90, 140]
 
 params:
-  style: straight_8s
+  style: pop_push
   density: 0.6
   palm_mute: 0.15
   voicing: triad

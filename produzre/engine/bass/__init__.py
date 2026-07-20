@@ -26,9 +26,12 @@ from .patterns import (
     get_rhythm_pattern_push,
     get_rhythm_pattern_drive,
     get_rhythm_pattern_syncopated,
+    get_rhythm_pattern_rock_riff,
+    get_rhythm_pattern_funk_16ths,
     apply_density_filter,
     apply_rest_filter,
     apply_drum_locking,
+    apply_motif_repetition,
 )
 
 # Import from harmony module
@@ -230,6 +233,27 @@ _apply_rest_filter = apply_rest_filter
 _apply_drum_locking = apply_drum_locking
 
 
+def contribute_plan(*args, **kwargs) -> None:
+    """Publish the bass role selected by the ensemble prepass."""
+    if args:
+        raise TypeError("bass.contribute_plan only supports keyword arguments")
+    plan = kwargs.get("plan")
+    section_ctx = kwargs.get("section_ctx") or {}
+    section = section_ctx.get("section")
+    if plan is None or section is None:
+        return
+    ensemble = plan.get(f"ensemble.{section.id}", {})
+    role_data = ensemble.get("roles", {}).get("bass", {}) if isinstance(ensemble, dict) else {}
+    payload = {
+        "section_id": section.id,
+        "role": role_data.get("role", "anchor"),
+        "density_multiplier": role_data.get("density_multiplier", 1.0),
+        "fill_owner": ensemble.get("fill_owner") if isinstance(ensemble, dict) else None,
+    }
+    plan.set("bass.foundation", payload)
+    plan.set("bass.line", {"section_id": section.id, "status": "planned"})
+
+
 # =============================================================================
 # Phase B4: Articulation Style Engine (moved to articulation.py)
 # =============================================================================
@@ -362,6 +386,7 @@ def render_into_timeline(
 
     rhythm_features_map = kwargs.get("rhythm_features", {})
     rng = kwargs.get("rng")
+    plan = kwargs.get("plan")
 
     # Check if rhythm locking is enabled
     instrument_cfg = kwargs.get("instrument_cfg") or kwargs.get("instrument")
@@ -452,6 +477,20 @@ def render_into_timeline(
 
     # If rhythm locking is enabled and we have drum features, use rhythm lock mode
     drum_features = rhythm_features_map.get("drums") if rhythm_features_map else None
+    if rhythm_intent is None and plan is not None and section is not None:
+        try:
+            from ...orchestrate import EngineCoordinator
+            coordinator = EngineCoordinator(plan, logger=logger)
+            rhythm_intent = RhythmIntent(
+                accent_beats=coordinator.get_accent_beats(section.id),
+                space_budget=None,
+                fill_windows=list(getattr(drum_features, "fill_windows", []) or []),
+                extra={
+                    "role": coordinator.get_instrument_role(section.id, "bass"),
+                },
+            )
+        except Exception:
+            rhythm_intent = None
     if lock_to_kicks and drum_features is not None and rng is not None:
         return _render_rhythm_locked_bass(
             cfg=cfg,
@@ -754,6 +793,10 @@ def _render_legacy_bass(
         eligible_slots = _get_rhythm_pattern_drive(all_slots, bpb, subdivisions_per_beat)
     elif rhythm_pattern == "syncopated":
         eligible_slots = _get_rhythm_pattern_syncopated(all_slots, bpb, subdivisions_per_beat)
+    elif rhythm_pattern == "rock_riff":
+        eligible_slots = get_rhythm_pattern_rock_riff(all_slots, bpb, subdivisions_per_beat)
+    elif rhythm_pattern == "funk_16ths":
+        eligible_slots = get_rhythm_pattern_funk_16ths(all_slots, bpb, subdivisions_per_beat)
     else:
         # Default to anchor pattern
         eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat, walking_quarters=is_walking_persona)
@@ -763,6 +806,15 @@ def _render_legacy_bass(
 
     # Apply rest filtering
     selected_slots = _apply_rest_filter(selected_slots, rest_rate, rng)
+
+    if rhythm_pattern in ("rock_riff", "funk_16ths"):
+        selected_slots = apply_motif_repetition(
+            selected_slots,
+            beats_per_bar=bpb,
+            total_beats=total_beats,
+            repeat_rate=float(motif_repeat_rate),
+            rng=rng,
+        )
 
     # Drum locking: pull bass onto drum hits per lock_to_kick / lock_to_snare /
     # lock_to_hat. RhythmFeatures exposes kick strong beats and snare/crash
@@ -882,9 +934,14 @@ def _render_legacy_bass(
             is_fill_zone, zone_type = _is_fill_zone(local_beat, total_beats, bpb, phrase_length_bars)
 
             if is_fill_zone and fill_rate > 0:
-                # Check if drums are filling (placeholder for future drum negotiation)
-                # For now, assume drums not filling
-                is_drum_filling = False
+                # Avoid competing with drum fills anywhere in this bar. Drum
+                # features are available because drums render before bass.
+                bar_end = local_beat + bpb
+                drum_fill_windows = getattr(drum_features, "fill_windows", []) if drum_features is not None else []
+                is_drum_filling = any(
+                    float(fill_start) < bar_end and float(fill_end) > local_beat
+                    for fill_start, fill_end in drum_fill_windows
+                )
 
                 # Decide if we should generate a fill
                 should_fill = _should_generate_fill(fill_rate, fill_avoid_drums, is_drum_filling, rng)

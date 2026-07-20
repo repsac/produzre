@@ -247,7 +247,7 @@ Set in `params:` block. Genre recipes provide good defaults — only override wh
 |-----------|--------|---------|-------------|
 | `persona` | `tight`, `pocket`, `loose`, `funk`, `metal`, `walking`, `dub` | `tight` | Preset character bundle |
 | `density` | 0.0-1.0 | 0.57 | Notes per bar density |
-| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated` | `anchor` | Rhythmic feel |
+| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths` | `anchor` | Rhythmic feel |
 | `articulation_style` | `finger`, `pick`, `slap`, `mute` | `finger` | Playing technique |
 | `approach_rate` | 0.0-0.5 | 0.24 | Chromatic approach tones |
 | `rest_rate` | 0.0-0.4 | 0.24 | Probability of rests |
@@ -261,6 +261,7 @@ Set in `params:` block. Genre recipes provide good defaults — only override wh
 | `phrase_len_bars` | 1-8 | 4 | Phrase boundary spacing for fills |
 | `section_role_variation` | true/false | false | Let section type bias bass rhythm role |
 | `chromatic_rate` | 0.0-0.3 | 0.0 | Chromatic passing tones |
+| `motif_repeat_rate` | 0.0-1.0 | recipe | Repeat a two-bar `rock_riff` or `funk_16ths` cell later in the phrase |
 
 When `section_role_variation` is enabled and `rhythm_pattern` remains `anchor`,
 chorus/hook sections bias toward `drive`, while bridge/breakdown/solo sections
@@ -302,6 +303,10 @@ Set in `params:` block.
 Transition pickups are energy-aware. Lifts into higher-energy sections can use
 longer snare, tom, kick/snare, and crash pickups; drops use shorter stop-time
 gestures.
+
+Phrase fills use genre-weighted setup, tom, alternating, kick/snare, cymbal,
+and roll cells. The fill generator does not accelerate below its configured
+subdivision.
 
 ### Drum Voice Overrides (advanced)
 
@@ -346,7 +351,7 @@ Set in `params:` or `extra:` block.
 | Parameter | Values | Default | Description |
 |-----------|--------|---------|-------------|
 | `persona` | `tight`, `loose`, `aggressive`, `funky`, `jangly` | `tight` | Preset character |
-| `style` | `chug`, `strum`, `syncopated`, `half_time`, `auto` | `auto` | Strumming pattern |
+| `style` | `auto`, `straight_8s`, `chugs`, `syncopated`, `half_time`, `rock_riff`, `pop_push`, `funk_chanks`, `jazz_comp`, `blues_shuffle`, `country_boom_chuck`, `reggae_skank`, `latin_clave` | `auto` | Strumming pattern |
 | `strum_style` | `balanced`, `downbeat_heavy`, `upbeat_heavy` | `balanced` | Strum emphasis |
 | `voicing` | `power`, `triad`, `shell`, `octaves`, `auto` | `auto` | Chord voicing type |
 | `palm_mute` | 0.0-1.0 | 0.06 | Palm mute probability |
@@ -390,6 +395,8 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 
 Lead guitar develops a section motif across phrases automatically, using related
 inversions, small interval changes, rhythm rotation, and final-phrase resolution.
+Genre selects a dedicated phrase vocabulary, and the ensemble planner assigns
+foreground windows that rhythm guitar leaves partially open.
 
 Use `solo: true` on the instrument to enable solo mode (denser playing, wider range).
 

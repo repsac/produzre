@@ -205,12 +205,17 @@ def humanize_events(
         rt_e = random.Random(_seed_from_rng_state(rt, "timing|" + ek))
         rv_e = random.Random(_seed_from_rng_state(rv, "velocity|" + ek))
 
+        # Fill and pickup cells already encode their rhythmic feel. Applying
+        # the groove's offbeat swing again can compress an offbeat stroke into
+        # the following stroke and recreate an unintended roll burst.
+        structural_gesture = kind in ("fill", "chatter") or kind.endswith("_pickup")
+        event_swing = 0.0 if structural_gesture else swing
         start_abs = humanize_start(
             start_beat=float(section_start_beat) + rel,
             beat_in_bar=beat_in_bar,
             bpm=bpm,
             timing_jitter_ms=timing_jitter_ms,
-            swing=swing,
+            swing=event_swing,
             push_pull=push_pull,
             rng=rt_e,
         )
