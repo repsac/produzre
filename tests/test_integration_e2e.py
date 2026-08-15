@@ -120,6 +120,7 @@ def test_param_plumbing_user_params_reach_engine(caplog):
 V7_YAML = """\
 version: 1
 song:
+  themes_auto: false  # isolate bass harmony test from theme coupling
   title: "E2E_V7"
   bpm: 100
   key: C
