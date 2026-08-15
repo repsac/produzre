@@ -34,6 +34,11 @@ exports:                 # Optional
     views: ["events", "grid"]
     subdiv: 16
 
+themes:                  # Optional: song-level hooks & riffs (see Themes section)
+  main_riff:
+    role: riff
+    events: "1:.5 .:.25 1:.25 b3:.5 4:.5 b5:.25 4:.25 5:1.5"
+
 instruments:             # Optional global instrument defaults
   drums:
     persona: "rock"
@@ -201,6 +206,105 @@ harmony:
 
 ---
 
+## Themes (Hooks, Riffs & Motifs)
+
+Themes are song-level musical ideas — a riff, a chorus hook, a bass motif —
+defined once and quoted across instruments. This is what gives a generated song
+a recognizable identity instead of per-phrase noodling. When no `themes:` block
+is present, a riff and a hook are composed from the song seed automatically;
+set `themes_auto: false` in the `song:` block to disable that.
+
+```yaml
+themes:
+  main_riff:                       # Name is free-form
+    role: riff                     # riff | melody | bass_motif
+    register: [40, 55]             # Optional MIDI range (defaults by role)
+    events: "1:.5 .:.25 1:.25 b3:.5 4:.5 b5:.25 4:.25 5:1.5"
+
+  chorus_hook:
+    role: melody
+    allow_development: false       # Optional: quote verbatim, never transform
+    events: "5:.5 5:.5 6:.5 5:.5 4:1 b3:.5 2:.5 1:4"
+```
+
+### Event Shorthand
+
+Each token is `degree:duration` — a key-relative scale degree (1 = tonic) and a
+length in quarter-note beats. Durations must sum to the theme length.
+
+| Token | Meaning |
+|-------|---------|
+| `1:.5` | Scale degree 1 (tonic), half a beat |
+| `b3:.5` / `#4:.5` | Flattened / sharpened degree (blue notes, tensions) |
+| `5+:1` / `1-:2` | Degree displaced up / down one octave |
+| `.:.5` or `r:.5` | Rest |
+
+Explicit-list alternative (same theme as the shorthand above it):
+
+```yaml
+    degrees: [5, 5, 6, 5, 4, "b3", 2, 1]
+    rhythm:  [0.5, 0.5, 0.5, 0.5, 1.0, 0.5, 0.5, 4.0]
+```
+
+Use `null`, `.`, or `r` as a degree for a rest.
+
+### Roles
+
+| Role | Consumed by | Default register |
+|------|-------------|------------------|
+| `riff` | Rhythm guitar accents, bass onset locking, kick-drum accents | 40-55 |
+| `melody` | Lead guitar quoting, section melody guide | 64-79 |
+| `bass_motif` | Parsed and realized per section; engine coupling not wired yet | 28-48 |
+
+### How Themes Adapt to the Harmony
+
+- Degrees are key-relative, so a theme transposes with section key/mode overrides.
+- A note one semitone off the active chord snaps to the nearest chord tone,
+  preferring the direction of recent melodic motion.
+- Blue notes (`b3`, `b5`, `b7`) survive snapping in blues-family genres:
+  blues, rock, metal, punk, grunge, funk, soul, rnb, hard_rock, alt.
+
+### Arrangement Arc
+
+Each theme is developed per section type. All transforms are pure functions, so
+a fully developed arrangement is still bit-for-bit reproducible from the seed.
+
+| Section type | Treatment |
+|--------------|-----------|
+| `intro` | First half only (fragment) |
+| `verse`, `chorus`, `hook` | Quote (exact restatement) |
+| `prechorus` | Rhythm displaced half a beat |
+| `bridge` | Melodic inversion |
+| `solo` | Sequence up two diatonic steps |
+| `breakdown` | Thinned (downbeats and accents only) |
+| `outro` | Last half only |
+| 2nd+ `chorus` / `hook` | Melody lifted one octave |
+
+Set `allow_development: false` on a theme to make it quote verbatim everywhere —
+authored material is treated as intent, not clay.
+
+### Writing a Good Theme
+
+- **Rhythm is the identity.** A distinctive rhythm with plain degrees is a hook;
+  a plain rhythm with fancy degrees is noodling. Mix durations and use rests.
+- Keep themes 2-4 bars (8-16 beats); looped short cells beat long meanders.
+- 5-9 sounded notes is the sweet spot; past that nothing sticks.
+- Anchor phrase start/end on strong degrees (1, 3, 5); put color tones
+  (b3, b5, 6, 2) in between.
+
+### Theme Coupling Knobs
+
+- `lead_gtr` extra `theme_quote_rate` (0.0-1.0, default 0.65) — how often lead
+  phrases quote the melody theme instead of free phrasing.
+- `bass` param `lock_to_riff` (0.0-1.0, default 0.5 when a riff exists) — how
+  often bass notes land on riff onsets.
+- `drums` param `riff_accent_rate` (0.0-1.0, default 0.5) — how often the kick
+  adds accents on riff attacks.
+
+See `examples/themes_demo.yaml` for a complete themed song.
+
+---
+
 ## Instruments
 
 ### Per-Section Instrument Block
@@ -254,6 +358,7 @@ Set in `params:` block. Genre recipes provide good defaults — only override wh
 | `octave_jump_rate` | 0.0-0.35 | 0.15 | Octave jump probability |
 | `fifth_jump_rate` | 0.0-0.3 | 0.10 | Fifth interval probability |
 | `lock_to_kick` | 0.0-1.0 | 0.8 | Bass-to-kick drum locking |
+| `lock_to_riff` | 0.0-1.0 | 0.5 when a riff theme exists | Bass notes land on riff theme onsets |
 | `syncopation` | 0.0-0.6 | 0.0 | Off-beat emphasis |
 | `swing` | 0.0-0.35 | 0.0 | Swing feel |
 | `fill_rate` | 0.0-0.6 | 0.2 | Fill probability at boundaries |
@@ -299,6 +404,7 @@ Set in `params:` block.
 | `phrase_len_bars` | 1-8 | auto | Phrase boundary spacing for fills |
 | `pickup_rate` | 0.0-1.0 | 0.7 | Transition pickup probability |
 | `downbeat_rate` | 0.0-1.0 | 0.8 | Section downbeat crash/kick probability |
+| `riff_accent_rate` | 0.0-1.0 | 0.5 | Kick accents on riff theme attacks |
 
 Transition pickups are energy-aware. Lifts into higher-energy sections can use
 longer snare, tom, kick/snare, and crash pickups; drops use shorter stop-time
@@ -392,6 +498,11 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 | `syncopation` | 0.0-1.0 | 0.0 | Off-beat emphasis |
 | `leap_probability` | 0.0-1.0 | 0.0 | Large interval jumps |
 | `register` | `low`, `mid`, `high`, `very_high`, `full` | `mid` | Melodic range |
+| `theme_quote_rate` | 0.0-1.0 | 0.65 | How often phrases quote the melody theme |
+
+When the song defines a `melody` theme, the lead guitar quotes it at
+`theme_quote_rate`; remaining phrases are free phrasing guided by the section
+contour.
 
 Lead guitar develops a section motif across phrases automatically, using related
 inversions, small interval changes, rhythm rotation, and final-phrase resolution.
@@ -871,6 +982,7 @@ arrangement:
 | "slap bass" | `articulation_style: "slap"`, `funk` persona |
 | "walking bass" | `walking` persona, `jazz` genre |
 | "guitar solo" | `lead_gtr` with `solo: true`, low `rest_probability` |
+| "catchy riff" / "memorable hook" | Define it in `themes:` with a distinctive rhythm (see Themes) |
 | "shredding" | `shredder` lead persona, `leaping` contour |
 | "melodic" | `melodic` lead persona, `stepwise` contour |
 | "build up" / "crescendo" | Increase intensity across sections (0.5 → 0.8 → 1.0) |
@@ -915,3 +1027,5 @@ Map `intensity:` values to follow this arc for each instrument.
 5. **All instruments at max** — Vary intensity across instruments and sections for dynamics
 6. **No arrangement contrast** — Use different section types and intensities for interest
 7. **Lead guitar everywhere** — Lead guitar works best in specific sections (solos, fills), not all sections
+8. **Themes with uniform rhythm** — A theme of equal-length notes has no identity; mix durations and include rests
+9. **Overlong themes** — Past 2-4 bars a theme stops being memorable; loop a short cell instead

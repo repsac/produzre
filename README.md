@@ -19,6 +19,7 @@ and analysis — all reproducible, every time.
   - [Instruments](#instruments)
   - [Arrangement](#arrangement)
   - [Harmony & Progressions](#harmony--progressions)
+  - [Themes (Hooks & Riffs)](#themes-hooks--riffs)
   - [Exports Block](#exports-block)
 - [Genres (31)](#genres-31)
 - [Personas](#personas)
@@ -261,6 +262,7 @@ arrangement:                 # Playback order
 | `humanize_timing` | float | `0.0` | Global timing humanization (0.0-0.2) |
 | `exports_root` | string | `"exports"` | Root directory for output |
 | `pattern_bars` | int | `1` | Bars per pattern window |
+| `themes_auto` | bool | `true` | Auto-compose a riff + hook when no `themes:` block is defined |
 
 **Valid Modes:**
 
@@ -402,6 +404,50 @@ harmony:
 - `8.0` — One chord every two bars (slow harmonic rhythm)
 - `1.0` — One chord per beat (very fast, jazz)
 
+### Themes (Hooks & Riffs)
+
+Themes are song-level musical ideas — a riff, a chorus hook, a bass motif —
+defined once and quoted across the whole arrangement. This is what gives a
+generated song a recognizable identity: the lead guitar quotes the hook, the
+bass locks onto the riff's rhythm, and the kick drum accents its attacks.
+When no `themes:` block is defined, a riff and a hook are composed from the
+song seed automatically (disable with `themes_auto: false` in `song:`).
+
+```yaml
+themes:
+  main_riff:
+    role: riff                     # riff | melody | bass_motif
+    register: [40, 55]             # optional MIDI range (defaults by role)
+    events: "1:.5 .:.25 1:.25 b3:.5 4:.5 b5:.25 4:.25 5:1.5"
+
+  chorus_hook:
+    role: melody
+    allow_development: false       # quote verbatim in every section
+    events: "5:.5 5:.5 6:.5 5:.5 4:1 b3:.5 2:.5 1:4"
+```
+
+Each event token is `degree:duration` — a key-relative scale degree
+(1 = tonic) and a length in beats. `b3`/`#4` are flattened/sharpened degrees,
+`5+` displaces up an octave, and `.` or `r` is a rest. An explicit-list form
+(`degrees:` + `rhythm:`) is also accepted.
+
+Themes are not static loops. Each section applies a deterministic treatment:
+intros play only the first half, prechoruses displace the rhythm, bridges
+invert the melody, breakdowns thin it out, and a repeated chorus lifts the
+hook an octave. Notes that clash with the active chord snap to the nearest
+chord tone, while blue notes (`b3`, `b5`, `b7`) survive in blues-family
+genres. Set `allow_development: false` to quote a theme verbatim everywhere.
+
+**Writing a good theme:** rhythm is the identity — a distinctive rhythm with
+plain degrees is a hook, while a plain rhythm with fancy degrees is noodling.
+Keep it 2-4 bars, use 5-9 sounded notes, mix durations, and include rests.
+
+Per-instrument coupling knobs: `theme_quote_rate` (lead guitar),
+`lock_to_riff` (bass), `riff_accent_rate` (drums) — see
+[Instrument Parameters](#instrument-parameters). A complete themed song lives
+at [examples/themes_demo.yaml](examples/themes_demo.yaml), and the full design
+rationale at [docs/design/theme-bank-architecture.md](docs/design/theme-bank-architecture.md).
+
 ### Exports Block
 
 Control which text analysis views are generated alongside the MIDI:
@@ -490,6 +536,7 @@ you only need to override when you want something specific.
 | `octave_jump_rate` | 0.0-0.35 | 0.15 | Octave jump probability |
 | `fifth_jump_rate` | 0.0-0.3 | 0.10 | Fifth interval probability |
 | `lock_to_kick` | 0.0-1.0 | 0.8 | Bass-to-kick drum locking |
+| `lock_to_riff` | 0.0-1.0 | 0.5 when a riff theme exists | Bass notes land on riff theme onsets |
 | `syncopation` | 0.0-0.6 | 0.0 | Off-beat emphasis |
 | `swing` | 0.0-0.35 | 0.0 | Swing feel |
 | `fill_rate` | 0.0-0.6 | 0.2 | Fill probability |
@@ -529,6 +576,7 @@ syncopation. Phrase fills target the next chord or section resolution.
 | `phrase_len_bars` | 1-8 | auto | Phrase boundary spacing for fills |
 | `pickup_rate` | 0.0-1.0 | 0.7 | Transition pickup probability |
 | `downbeat_rate` | 0.0-1.0 | 0.8 | Section downbeat crash/kick probability |
+| `riff_accent_rate` | 0.0-1.0 | 0.5 | Kick accents on riff theme attacks |
 
 Drum transitions are energy-aware: lifts into high-energy sections favor longer
 snare/tom/kick pickups, while drops use shorter stop-time pickups with more space.
@@ -604,6 +652,10 @@ Set parameters in `extra:` block.
 | `resolution_strength` | 0.0-1.0 | 0.45 | Chord tone emphasis |
 | `contour_style` | `stepwise`, `balanced`, `leaping` | `balanced` | Melodic motion |
 | `register` | `low`, `mid`, `high`, `very_high`, `full` | `mid` | Melodic range |
+| `theme_quote_rate` | 0.0-1.0 | 0.65 | How often phrases quote the melody theme |
+
+When the song defines a `melody` theme, the lead guitar quotes it at
+`theme_quote_rate`; the rest is free phrasing guided by the section contour.
 
 Lead motifs now develop across phrases automatically: later phrases reuse the
 opening contour with inversion, interval, rhythm, or cadence variation instead
