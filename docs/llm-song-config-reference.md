@@ -254,7 +254,7 @@ Use `null`, `.`, or `r` as a degree for a rest.
 |------|-------------|------------------|
 | `riff` | Rhythm guitar accents, bass onset locking, kick-drum accents | 40-55 |
 | `melody` | Lead guitar quoting, section melody guide | 64-79 |
-| `bass_motif` | Parsed and realized per section; engine coupling not wired yet | 28-48 |
+| `bass_motif` | Bass quotes its pitches and plays its onsets | 28-48 |
 
 ### How Themes Adapt to the Harmony
 
@@ -298,6 +298,9 @@ authored material is treated as intent, not clay.
   phrases quote the melody theme instead of free phrasing.
 - `bass` param `lock_to_riff` (0.0-1.0, default 0.5 when a riff exists) — how
   often bass notes land on riff onsets.
+- `bass` param `motif_quote_rate` (0.0-1.0, default 0.7 when a bass_motif
+  exists) — how strongly the bass follows the motif: playing its onsets and
+  quoting its pitches.
 - `drums` param `riff_accent_rate` (0.0-1.0, default 0.5) — how often the kick
   adds accents on riff attacks.
 
@@ -359,6 +362,7 @@ Set in `params:` block. Genre recipes provide good defaults — only override wh
 | `fifth_jump_rate` | 0.0-0.3 | 0.10 | Fifth interval probability |
 | `lock_to_kick` | 0.0-1.0 | 0.8 | Bass-to-kick drum locking |
 | `lock_to_riff` | 0.0-1.0 | 0.5 when a riff theme exists | Bass notes land on riff theme onsets |
+| `motif_quote_rate` | 0.0-1.0 | 0.7 when a bass_motif theme exists | Bass quotes the motif's pitches and plays its onsets |
 | `syncopation` | 0.0-0.6 | 0.0 | Off-beat emphasis |
 | `swing` | 0.0-0.35 | 0.0 | Swing feel |
 | `fill_rate` | 0.0-0.6 | 0.2 | Fill probability at boundaries |

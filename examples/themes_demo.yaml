@@ -9,6 +9,12 @@ song:
   seed: 7
   exports_root: "exports"
 
+exports:
+  midi_text:
+    enabled: true
+    views: [events]
+    subdiv: 16
+
 # ---------------------------------------------------------------------------
 # Song-level thematic DNA (prototype: docs/design/theme-bank-architecture.md)
 # Degrees are key-relative (E major): 1=E 2=F# 3=G# 4=A 5=B 6=C# 7=D#
@@ -27,6 +33,11 @@ themes:
     role: melody
     register: [64, 79]          # E4..G5
     events: "5:.5 5:.5 6:.5 5:.5 4:1 b3:.5 2:.5 1:4"
+
+  bass_hook:
+    role: bass_motif
+    register: [36, 52]          # C2..E3
+    events: "1:1 1:.5 b3:.5 4:1 5:1"
 
 sections:
   intro:

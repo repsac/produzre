@@ -22,6 +22,7 @@ import pytest
 from produzre.config.errors import ConfigError
 from produzre.harmony.plan import ChordSlot
 from produzre.themes.compose import compose_theme_bank
+from produzre.themes.coupling import get_theme_notes
 from produzre.themes.io import parse_themes_block
 from produzre.themes.model import Theme, ThemeEvent, ThemeRole
 from produzre.themes.realize import degree_to_pitch_class, realize_theme
@@ -279,3 +280,118 @@ class TestThemedBuild:
         assert result.returncode == 0, result.stderr[-2000:]
         assert "melody guide from theme" not in result.stderr
         assert "Auto-composed" not in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# M4b: bass_motif coupling (bass quotes the motif's pitches and rhythm)
+# ---------------------------------------------------------------------------
+
+class TestCouplingHelpers:
+    def test_get_theme_notes_sorted_pairs(self):
+        plan = {"themes.realized.s1": {"bass_motif": [
+            {"beat": 2.0, "pitch": 45},
+            {"beat": 0.5, "pitch": 40},
+        ]}}
+        assert get_theme_notes(plan, "s1") == [(0.5, 40), (2.0, 45)]
+
+    def test_get_theme_notes_missing(self):
+        assert get_theme_notes(None, "s1") == []
+        assert get_theme_notes({}, "s1") == []
+        assert get_theme_notes({"themes.realized.s1": {}}, "s1") == []
+
+
+MOTIF_YAML = """\
+version: 1
+song:
+  title: "MotifQuote"
+  bpm: 100
+  key: E
+  mode: ionian
+  meter: "4/4"
+  genre: rock
+  seed: 11
+  exports_root: "{exports_root}"
+exports:
+  midi_text:
+    enabled: true
+    views: [events]
+    subdiv: 16
+themes:
+  bass_hook:
+    role: bass_motif
+    allow_development: false
+    register: [36, 52]
+    events: "1:.5 1:.5 b3:.5 5:.5 4:1 b3:1"
+sections:
+  verse:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I I IV I"
+    instruments:
+      harmony: {{}}
+      bass:
+        intensity: 0.8
+        params:
+          rhythm_pattern: drive
+          density: 0.9
+          rest_rate: 0.0
+          motif_quote_rate: {rate}
+arrangement:
+  - verse
+"""
+
+
+def _write_motif_cfg(tmp_path, rate):
+    cfg_path = tmp_path / "motif.yaml"
+    cfg_path.write_text(
+        MOTIF_YAML.format(exports_root=(tmp_path / "exports").as_posix(), rate=rate),
+        encoding="utf-8",
+    )
+    return cfg_path
+
+
+def _read_bass_rows(exports_root: Path):
+    tsvs = list(exports_root.glob("*/analysis/bass/*_bass.events.tsv"))
+    assert tsvs, "no bass events export found"
+    lines = tsvs[0].read_text(encoding="utf-8").splitlines()
+    header = lines[0].split("\t")
+    return [dict(zip(header, ln.split("\t"))) for ln in lines[1:] if ln.strip()]
+
+
+@pytest.mark.integration
+class TestBassMotifCoupling:
+    def test_full_quote_rate_matches_motif_pitches(self, tmp_path):
+        result = _build([str(_write_motif_cfg(tmp_path, 1.0))])
+        assert result.returncode == 0, result.stderr[-2000:]
+        rows = _read_bass_rows(tmp_path / "exports")
+        motif_rows = [r for r in rows if r["kind"] == "motif"]
+        # 24 looped motif notes over 4 bars; most should land under rate 1.0.
+        assert len(motif_rows) >= 12
+
+        # Expected pitches: realize the same theme through the same pipeline.
+        theme = parse_themes_block({
+            "bass_hook": {
+                "role": "bass_motif",
+                "register": [36, 52],
+                "events": "1:.5 1:.5 b3:.5 5:.5 4:1 b3:1",
+            }
+        }).themes["bass_hook"]
+        expected = realize_theme(
+            theme, slots("I I IV I", rate=4.0), key="E", mode="ionian", genre="rock",
+        )
+        pc_by_beat = {round(n.beat, 3): n.pitch % 12 for n in expected}
+        for r in motif_rows:
+            beat = round(float(r["start_beat_abs"]), 3)
+            assert int(r["pitch"]) % 12 == pc_by_beat[beat]
+
+    def test_zero_quote_rate_no_motif_notes(self, tmp_path):
+        result = _build([str(_write_motif_cfg(tmp_path, 0.0))])
+        assert result.returncode == 0, result.stderr[-2000:]
+        rows = _read_bass_rows(tmp_path / "exports")
+        assert rows and all(r["kind"] != "motif" for r in rows)
+
+    def test_motif_build_strictly_deterministic(self, tmp_path):
+        result = _build([str(_write_motif_cfg(tmp_path, 0.7)), "--strict-determinism"])
+        assert result.returncode == 0, result.stderr[-2000:]
+        assert "Determinism check PASSED" in result.stderr

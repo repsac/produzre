@@ -443,7 +443,7 @@ plain degrees is a hook, while a plain rhythm with fancy degrees is noodling.
 Keep it 2-4 bars, use 5-9 sounded notes, mix durations, and include rests.
 
 Per-instrument coupling knobs: `theme_quote_rate` (lead guitar),
-`lock_to_riff` (bass), `riff_accent_rate` (drums) — see
+`lock_to_riff` and `motif_quote_rate` (bass), `riff_accent_rate` (drums) — see
 [Instrument Parameters](#instrument-parameters). A complete themed song lives
 at [examples/themes_demo.yaml](examples/themes_demo.yaml), and the full design
 rationale at [docs/design/theme-bank-architecture.md](docs/design/theme-bank-architecture.md).
@@ -537,6 +537,7 @@ you only need to override when you want something specific.
 | `fifth_jump_rate` | 0.0-0.3 | 0.10 | Fifth interval probability |
 | `lock_to_kick` | 0.0-1.0 | 0.8 | Bass-to-kick drum locking |
 | `lock_to_riff` | 0.0-1.0 | 0.5 when a riff theme exists | Bass notes land on riff theme onsets |
+| `motif_quote_rate` | 0.0-1.0 | 0.7 when a bass_motif theme exists | Bass quotes the motif's pitches and plays its onsets |
 | `syncopation` | 0.0-0.6 | 0.0 | Off-beat emphasis |
 | `swing` | 0.0-0.35 | 0.0 | Swing feel |
 | `fill_rate` | 0.0-0.6 | 0.2 | Fill probability |
