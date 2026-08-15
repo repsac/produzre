@@ -325,11 +325,17 @@ def render_into_timeline(
     # Phase LG3: extract accent beats from plan for grid-aware placement.
     plan = kwargs.get("plan", None)
     melody_guide = None
+    theme_notes: List[Dict[str, Any]] = []
     accent_beats: List[float] = []
     density_multiplier = 1.0
     if plan is not None:
         if hasattr(plan, "get"):
             melody_guide = plan.get(f"melody.guide.{section.id}") or plan.get("melody.guide")
+            # Theme bank (design: docs/design/theme-bank-architecture.md):
+            # realized MELODY-theme notes for this section, used for quoting.
+            themes_realized = plan.get(f"themes.realized.{section.id}")
+            if isinstance(themes_realized, dict):
+                theme_notes = themes_realized.get("melody") or []
         accents_data = plan.get("rhythm.accents") if hasattr(plan, "get") else {}
         if isinstance(accents_data, dict):
             accent_beats = accents_data.get("accent_beats", [])
@@ -374,6 +380,20 @@ def render_into_timeline(
     else:
         # Default behavior: wider leaps in solo sections
         phrase_leap_limit = 8 if solo else 5
+
+    # Theme quoting strength (M2): probability that an interior note near a
+    # realized theme note adopts the theme pitch, so the lead paraphrases the
+    # hook instead of wandering the pitch pools. Only active when the song
+    # defines themes.
+    theme_quote_rate = getattr(instrument_cfg, "theme_quote_rate", None)
+    if theme_quote_rate is None:
+        theme_quote_rate = instrument_cfg.extra.get("theme_quote_rate", None)
+    if theme_quote_rate is None:
+        theme_quote_rate = 0.65
+    try:
+        theme_quote_rate = max(0.0, min(float(theme_quote_rate), 1.0))
+    except (TypeError, ValueError):
+        theme_quote_rate = 0.65
 
     # Phase LG4: resolve register bounds and chorus-lift flag.
     reg_min, reg_max = get_register_bounds(register or DEFAULT_REGISTER)
@@ -508,6 +528,23 @@ def render_into_timeline(
                 if guided is not None:
                     pitch = guided
                     previous_guide_pitch = guided
+
+            # Theme quoting (design: theme-bank-architecture.md §4.4): an
+            # interior note close to a realized theme note may adopt the
+            # theme's pitch, so the line paraphrases the song's hook. The RNG
+            # draw happens for every interior note while themes are active,
+            # keeping the stream stable regardless of theme proximity.
+            if theme_notes and not is_phrase_anchor:
+                quote_draw = section_rng.random()
+                if quote_draw < theme_quote_rate:
+                    nearest = min(
+                        theme_notes,
+                        key=lambda tn: abs(float(tn["beat"]) - local_beat),
+                    )
+                    if abs(float(nearest["beat"]) - local_beat) <= 0.75:
+                        pitch = octave_wrap_if_needed(
+                            int(nearest["pitch"]), reg_min, reg_max
+                        )
 
             # Phase LG5: articulation — shape duration, optional grace note.
             art = choose_articulation(section_rng, intensity)

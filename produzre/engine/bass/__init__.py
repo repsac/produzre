@@ -491,6 +491,31 @@ def render_into_timeline(
             )
         except Exception:
             rhythm_intent = None
+    # Theme coupling (M3): resolve riff onsets and lock strength before dispatch.
+    riff_onsets: list = []
+    if plan is not None and section is not None:
+        from ...themes.coupling import get_theme_onsets
+
+        riff_onsets = get_theme_onsets(plan, section.id, "riff")
+
+    lock_to_riff = None
+    if isinstance(params, dict):
+        lock_to_riff = params.get("lock_to_riff")
+    if lock_to_riff is None:
+        lock_to_riff = getattr(params, "lock_to_riff", None)
+    if lock_to_riff is None:
+        lock_to_riff = 0.5 if riff_onsets else 0.0
+    try:
+        lock_to_riff = max(0.0, min(float(lock_to_riff), 1.0))
+    except (TypeError, ValueError):
+        lock_to_riff = 0.5 if riff_onsets else 0.0
+
+    # Riff attacks count as accent targets so placed notes punch with the theme.
+    if riff_onsets and rhythm_intent is not None:
+        rhythm_intent.accent_beats = set(rhythm_intent.accent_beats or set()) | set(
+            riff_onsets
+        )
+
     if lock_to_kicks and drum_features is not None and rng is not None:
         return _render_rhythm_locked_bass(
             cfg=cfg,
@@ -503,6 +528,8 @@ def render_into_timeline(
             instrument_cfg=instrument_cfg,
             rng=rng,
             rhythm_intent=rhythm_intent,
+            riff_onsets=riff_onsets,
+            lock_to_riff=lock_to_riff,
             logger=logger,
         )
 
@@ -518,6 +545,8 @@ def render_into_timeline(
         rng=rng,
         rhythm_intent=rhythm_intent,
         drum_features=drum_features,  # Rule 2: kick-bass alignment
+        riff_onsets=riff_onsets,
+        lock_to_riff=lock_to_riff,
         logger=logger,
     )
 
@@ -534,6 +563,8 @@ def _render_legacy_bass(
     rhythm_intent: Optional[RhythmIntent],
     logger: logging.Logger,
     drum_features=None,  # Rule 2: RhythmFeatures from drums for kick alignment
+    riff_onsets=None,    # M3: section-relative riff attack beats (theme coupling)
+    lock_to_riff: float = 0.0,
 ) -> InstrumentNegotiationFeatures:
     """Legacy bass rendering using rhythm grid cells (original implementation).
 
@@ -865,6 +896,26 @@ def _render_legacy_bass(
                     "[COORDINATION] Section '%s': kick-bass alignment added %d beats",
                     section.id,
                     len(additions),
+                )
+
+    # Theme coupling (M3): like kick alignment, but for the song's riff
+    # attacks — bass notes are re-added at riff onsets the density pass dropped.
+    if riff_onsets and rng is not None and lock_to_riff > 0:
+        eligible_set = set(round(b, 3) for b in eligible_slots)
+        selected_set = set(round(b, 3) for b in selected_slots)
+        riff_adds: set = set()
+        for onset in riff_onsets:
+            draw = rng.random()  # unconditional: stream independent of placement
+            o_r = round(float(onset), 3)
+            if o_r in eligible_set and o_r not in selected_set and draw < lock_to_riff:
+                riff_adds.add(float(onset))
+        if riff_adds:
+            selected_slots = set(selected_slots) | riff_adds
+            if logger:
+                logger.debug(
+                    "[THEMES] Section '%s': riff-bass alignment added %d beats",
+                    section.id,
+                    len(riff_adds),
                 )
 
     # Guarantee a cadence anchor: the density/rest filters can stochastically
@@ -1472,6 +1523,8 @@ def _render_rhythm_locked_bass(
     rng,
     rhythm_intent: Optional[RhythmIntent],
     logger: logging.Logger,
+    riff_onsets=None,    # M3: section-relative riff attack beats (theme coupling)
+    lock_to_riff: float = 0.0,
 ) -> InstrumentNegotiationFeatures:
     """Render bass line that locks to drum kick patterns.
 
@@ -1547,6 +1600,18 @@ def _render_rhythm_locked_bass(
         "[BASS]   Locking to %d kick strong beats",
         len(strong_beats),
     )
+
+    # Theme coupling (M3): riff attacks join the lock targets so the bassline
+    # doubles the song's riff even where the kick doesn't play it.
+    if riff_onsets and rng is not None and lock_to_riff > 0:
+        combined = set(strong_beats)
+        for onset in riff_onsets:
+            draw = rng.random()  # unconditional: stream independent of coverage
+            if draw < lock_to_riff and not any(
+                abs(float(onset) - b) <= 0.15 for b in combined
+            ):
+                combined.add(float(onset))
+        strong_beats = sorted(combined)
 
     # Pre-round intent accent beats so membership checks don't depend on
     # exact float equality (matches kick-alignment rounding).

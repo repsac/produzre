@@ -522,6 +522,21 @@ def render_into_timeline(
 
             # Rule 4: Coordinated accents — read actual drum accent beats from plan
             coordinated_accent_beats = coordinator.get_accent_beats(section.id)
+
+            # Theme coupling (M3): the song's riff attacks act as accent
+            # positions, so strums punch where the theme hits (Rule 4 ext.).
+            from ...themes.coupling import get_theme_onsets as _theme_onsets
+
+            _riff_onsets = _theme_onsets(plan, section.id, "riff")
+            if _riff_onsets:
+                coordinated_accent_beats = set(coordinated_accent_beats) | set(
+                    _riff_onsets
+                )
+                if logger:
+                    logger.debug(
+                        f"[THEMES] Section '{section.id}': {len(_riff_onsets)} "
+                        f"riff attacks added to rhythm_gtr accents"
+                    )
             if coordinated_accent_beats and logger:
                 logger.debug(
                     f"[COORDINATION] Section '{section.id}': {len(coordinated_accent_beats)} "
@@ -663,6 +678,15 @@ def _render_pattern_based_guitar(
             accent_beats = sorted(actual_accents)
     except Exception:
         pass
+
+    # Theme coupling (M3): riff attacks act as accent positions so strums
+    # punch where the song's theme hits (Rule 4 extension, pattern mode).
+    if plan is not None:
+        from ...themes.coupling import get_theme_onsets as _theme_onsets
+
+        _riff = _theme_onsets(plan, section.id, "riff")
+        if _riff:
+            accent_beats = sorted(set(accent_beats) | set(_riff))
 
     # Phase RG3: Resolve parameters using section-type-aware defaults
     extra = instrument_cfg.extra if instrument_cfg is not None else {}

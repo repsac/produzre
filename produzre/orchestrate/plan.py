@@ -314,12 +314,15 @@ class BuildPlan:
         section_timings: Ordered tuple of timing windows matching the
             arrangement order.
         total_beats: Total song length in quarter-note beats.
+        theme_bank: Song-level theme bank parsed from the top-level
+            ``themes:`` block (None when absent). See produzre/themes/.
     """
 
     song_name: str
     planned_sections: tuple[PlannedSection, ...]
     section_timings: tuple[SectionTiming, ...]
     total_beats: float
+    theme_bank: Optional[object] = None
 
 
 def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
@@ -349,6 +352,31 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
         KeyError: If an arrangement entry references a missing section.
     """
     song_name = cfg.get_effective_song_name()
+
+    # Song-level theme bank (design: docs/design/theme-bank-architecture.md).
+    # Built once per song, before any section planning; malformed themes are a
+    # config error and abort the build. When the song defines no `themes:`
+    # block, a riff + hook are composed from the song seed (M4) so every song
+    # has thematic identity; set `song.themes_auto: false` to opt out.
+    from ..themes.io import parse_themes_block
+
+    theme_bank = parse_themes_block(
+        cfg.raw.get("themes") if isinstance(getattr(cfg, "raw", None), dict) else None,
+        logger,
+    )
+    if not theme_bank.themes:
+        song_raw = cfg.raw.get("song", {}) if isinstance(getattr(cfg, "raw", None), dict) else {}
+        if isinstance(song_raw, dict) and song_raw.get("themes_auto", True):
+            from ..themes.compose import compose_theme_bank
+
+            theme_bank = compose_theme_bank(cfg, logger)
+    if theme_bank.themes:
+        logger.info(
+            "Theme bank: %d theme(s) [%s], hash %s",
+            len(theme_bank.themes),
+            ", ".join(sorted(theme_bank.themes)),
+            theme_bank.seed_material_hash,
+        )
 
     song_beat_cursor = 0.0
     planned_sections: list[PlannedSection] = []
@@ -423,4 +451,5 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
         planned_sections=tuple(planned_sections),
         section_timings=tuple(section_timings),
         total_beats=song_beat_cursor,
+        theme_bank=theme_bank,
     )

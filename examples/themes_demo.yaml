@@ -1,0 +1,69 @@
+version: 1
+song:
+  title: "ThemeBankDemo"
+  bpm: 120
+  key: E
+  mode: ionian
+  meter: "4/4"
+  genre: rock
+  seed: 7
+  exports_root: "exports"
+
+# ---------------------------------------------------------------------------
+# Song-level thematic DNA (prototype: docs/design/theme-bank-architecture.md)
+# Degrees are key-relative (E major): 1=E 2=F# 3=G# 4=A 5=B 6=C# 7=D#
+# The b3/b5 (G/Bb against E) are rock blue notes and survive chord-tone
+# snapping; other semitone clashes snap to the nearest chord tone.
+# Borrowed numerals (bVII, bVI, iv) are spelled relative to the major scale,
+# matching the bass engine's convention.
+# ---------------------------------------------------------------------------
+themes:
+  main_riff:
+    role: riff
+    register: [40, 55]          # E2..G3
+    events: "1:.5 .:.25 1:.25 b3:.5 4:.5 b5:.25 4:.25 5:1.5"
+
+  chorus_hook:
+    role: melody
+    register: [64, 79]          # E4..G5
+    events: "5:.5 5:.5 6:.5 5:.5 4:1 b3:.5 2:.5 1:4"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: { progression: "I I I I" }
+    instruments: { harmony: {}, drums: {}, bass: {} }
+  verse1:
+    type: verse
+    bars: 8
+    harmony: { progression: "I bVII IV I" }
+    instruments: { harmony: {}, drums: {}, bass: {}, rhythm_gtr: {} }
+  chorus1:
+    type: chorus
+    bars: 8
+    harmony: { progression: "bVI bVII I I" }
+    instruments: { harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {} }
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: { progression: "iv iv bVII bVII" }
+    instruments: { harmony: {}, drums: {}, bass: {}, rhythm_gtr: {} }
+  chorus2:
+    type: chorus
+    bars: 8
+    harmony: { progression: "bVI bVII I I" }
+    instruments: { harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {} }
+  outro:
+    type: outro
+    bars: 4
+    harmony: { progression: "I I I I" }
+    instruments: { harmony: {}, bass: {}, rhythm_gtr: {} }
+
+arrangement:
+  - intro
+  - verse1
+  - chorus1
+  - bridge
+  - chorus2
+  - outro

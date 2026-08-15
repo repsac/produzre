@@ -1182,6 +1182,58 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             logger=logger,
         )
 
+    # Theme coupling (M3): the kit acknowledges the song's riff. Existing
+    # kick/snare/tom hits landing on riff attacks get a velocity accent, and
+    # uncovered attacks may gain a kick hit so the groove doubles the theme.
+    if plan is not None:
+        from ...themes.coupling import get_theme_onsets, nearest_onset
+
+        _riff_onsets = get_theme_onsets(plan, section_id, "riff")
+        if _riff_onsets:
+            riff_accent_rate = float(params_m.get("riff_accent_rate", 0.5))
+            riff_accent_boost = float(params_m.get("riff_accent_boost", 1.12))
+            kick_pitch = int(pitches.get("kick", 36))
+            rng_theme = _derive_rng(rng, "drums.theme_lock")
+            from dataclasses import replace as _dc_replace
+
+            accented: list = []
+            for ev in events:
+                hit = nearest_onset(_riff_onsets, float(ev.beat), 0.12)
+                if hit is not None and ev.pitch != kick_pitch and "hat" not in ev.kind:
+                    accented.append(
+                        _dc_replace(
+                            ev, velocity=min(127, int(ev.velocity * riff_accent_boost))
+                        )
+                    )
+                else:
+                    accented.append(ev)
+            events = accented
+
+            added_kicks = 0
+            for onset in _riff_onsets:
+                # Draw unconditionally so the stream doesn't depend on kit content.
+                draw = rng_theme.random()
+                has_kick = any(
+                    ev.pitch == kick_pitch and abs(float(ev.beat) - onset) <= 0.12
+                    for ev in events
+                )
+                if not has_kick and draw < riff_accent_rate:
+                    events.append(
+                        DrumEvent(
+                            beat=float(onset),
+                            duration_beats=0.25,
+                            pitch=kick_pitch,
+                            velocity=min(127, int(base_velocity * 1.05)),
+                            kind="kick_theme_lock",
+                        )
+                    )
+                    added_kicks += 1
+            if logger and added_kicks:
+                logger.debug(
+                    "Section '%s': theme lock added %d kick hit(s) on riff attacks",
+                    section_id, added_kicks,
+                )
+
     # Humanization params (defaults are persona/tight-friendly).
     timing_jitter_ms = float(params_m.get("timing_jitter_ms", 0.0))
     swing = float(params_m.get("swing", 0.0))

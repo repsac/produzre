@@ -132,6 +132,13 @@ def _create_performance_plan(
         f"[PERFORMANCE_PLAN] Added transitions map with {len(transitions_map)} section directives"
     )
 
+    # Theme bank (design: docs/design/theme-bank-architecture.md): publish the
+    # song-level themes so the render phase can build themed melody guides and
+    # engines can quote realized material.
+    theme_bank = getattr(plan, "theme_bank", None)
+    if theme_bank is not None and getattr(theme_bank, "themes", None):
+        performance_plan.set("themes.bank", theme_bank)
+
     return performance_plan
 
 

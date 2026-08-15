@@ -644,20 +644,78 @@ def render_section_instruments(
     # but before any engine renders.  A dedicated RNG keeps engine streams
     # stable when the melody planner evolves.
     if performance_plan is not None and hplan is not None:
-        melody_rng = random.Random(stable_seed_int(
-            "melody_guide", getattr(cfg.song, "seed", 42), sec.id,
-            section_start_beat, getattr(cfg.song, "genre", ""),
-        ))
-        melody_guide = build_melody_guide(
-            hplan,
-            key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
-            mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
-            section_type=getattr(sec, "type", ""),
-            genre=getattr(cfg.song, "genre", ""),
-            rng=melody_rng,
-        ).to_dict()
-        performance_plan.set(f"melody.guide.{sec.id}", melody_guide)
-        performance_plan.set("melody.guide", melody_guide)
+        guide_dict = None
+
+        # Theme-driven guide (design: docs/design/theme-bank-architecture.md).
+        # When the song defines themes, the guide is built from the realized
+        # MELODY theme under this section's arc treatment, and realized notes
+        # for every role are published so engines can quote them directly.
+        theme_bank = performance_plan.get("themes.bank")
+        if theme_bank is not None and getattr(theme_bank, "themes", None):
+            from ..themes.arc import treatment_for
+            from ..themes.guide import (
+                build_themed_guide,
+                realize_for_section,
+                realized_to_dicts,
+            )
+            from ..themes.model import ThemeRole
+
+            sec_key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+            sec_mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+            sec_genre = str(getattr(cfg.song, "genre", "") or "")
+            arrangement_index = 0
+            if isinstance(transition_context, dict):
+                arrangement_index = int(
+                    transition_context.get("arrangement_index", 0) or 0
+                )
+            # Occurrence count of this section *type* up to this arrangement
+            # index (drives repeat-statement escalation, e.g. chorus 2 lift).
+            sec_type_key = str(getattr(sec, "type", "") or "").strip().lower()
+            occurrence = sum(
+                1
+                for meta in list(getattr(performance_plan, "sections", []))[:arrangement_index]
+                if str(getattr(meta, "type", "") or "").strip().lower() == sec_type_key
+            )
+
+            realized_payload: dict[str, list] = {}
+            total_beats = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+            for theme in theme_bank.themes.values():
+                t_name, t_params = treatment_for(theme, sec_type_key, occurrence)
+                notes = realize_for_section(
+                    theme, t_name, t_params, hplan.chord_slots,
+                    key=sec_key, mode=sec_mode, genre=sec_genre,
+                    total_beats=total_beats,
+                )
+                realized_payload[theme.role.value] = realized_to_dicts(notes)
+                if theme.role is ThemeRole.MELODY and guide_dict is None:
+                    guide_dict = build_themed_guide(
+                        theme, hplan,
+                        key=sec_key, mode=sec_mode, genre=sec_genre,
+                        total_beats=total_beats,
+                        transform_name=t_name, transform_params=t_params,
+                    ).to_dict()
+                    logger.info(
+                        "Section '%s': melody guide from theme '%s' "
+                        "(%s, occurrence %d, %d notes)",
+                        sec.id, theme.name, t_name, occurrence + 1, len(notes),
+                    )
+            performance_plan.set(f"themes.realized.{sec.id}", realized_payload)
+
+        if guide_dict is None:
+            melody_rng = random.Random(stable_seed_int(
+                "melody_guide", getattr(cfg.song, "seed", 42), sec.id,
+                section_start_beat, getattr(cfg.song, "genre", ""),
+            ))
+            guide_dict = build_melody_guide(
+                hplan,
+                key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+                mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+                section_type=getattr(sec, "type", ""),
+                genre=getattr(cfg.song, "genre", ""),
+                rng=melody_rng,
+            ).to_dict()
+        performance_plan.set(f"melody.guide.{sec.id}", guide_dict)
+        performance_plan.set("melody.guide", guide_dict)
 
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:

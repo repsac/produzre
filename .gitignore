@@ -30,3 +30,6 @@ _analysis/
 .vscode/
 .idea/
 *.swp
+
+# Local demo dependency shim (PyYAML/mido for managed runtimes)
+.demo_deps/
