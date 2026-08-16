@@ -411,6 +411,8 @@ Set in `params:` block. Genre recipes provide good defaults — only override wh
 | `section_role_variation` | true/false | false | Let section type bias bass rhythm role |
 | `chromatic_rate` | 0.0-0.3 | 0.0 | Chromatic passing tones |
 | `motif_repeat_rate` | 0.0-1.0 | recipe | Repeat a two-bar `rock_riff` or `funk_16ths` cell later in the phrase |
+| `slide_rate` | 0.0-1.0 | 0.20 | Chance a note is slid into from 1-2 semitones below (pitchwheel) |
+| `vibrato_rate` | 0.0-1.0 | 0.35 | Chance a note held 0.5+ beats gets a gentle pitchwheel vibrato |
 
 When `section_role_variation` is enabled and `rhythm_pattern` remains `anchor`,
 chorus/hook sections bias toward `drive`, while bridge/breakdown/solo sections
@@ -516,6 +518,7 @@ Set in `params:` or `extra:` block.
 | `accent_strength` | 0.0-1.0 | 0.5 | Accent emphasis |
 | `sustain_cut_rate` | 0.0-1.0 | 0.0 | Staccato stab probability |
 | `downbeat_boost` | 0.0-1.0 | 0.2 | Downbeat emphasis |
+| `vibrato_rate` | 0.0-1.0 | 0.40 | Chance a chord sustained 0.75+ beats gets a pitchwheel vibrato (whole chord wobbles, like a fretting hand) |
 
 ### Rhythm Guitar Persona Quick Reference
 

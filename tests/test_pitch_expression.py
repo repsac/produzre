@@ -170,6 +170,45 @@ def test_expression_never_leaks_to_drum_channel():
     assert not [m for m in track if m.type == "pitchwheel" and m.channel == 9]
 
 
+def test_newer_expression_window_wins_the_wheel():
+    """Pitchwheel is channel-wide: when two expression-tagged notes overlap on
+    one channel (e.g. a sustained chord ringing into the next strum), the
+    older window must stop at the newer note's start instead of fighting."""
+    tl = InstrumentTimeline(instrument="rhythm_gtr")
+    tl.add_note(
+        start_beat=0.0,
+        duration_beats=4.0,
+        pitch=52,
+        velocity=90,
+        channel=2,
+        expression={
+            "vibrato": {"depth_cents": 25.0, "period_beats": 0.25, "delay_beats": 0.2}
+        },
+    )
+    tl.add_note(
+        start_beat=2.0,
+        duration_beats=2.0,
+        pitch=55,
+        velocity=90,
+        channel=2,
+        expression={
+            "vibrato": {"depth_cents": 25.0, "period_beats": 0.25, "delay_beats": 0.2}
+        },
+    )
+    msgs = _abs_msgs(_write(tl))
+    pw = [(t, m) for t, m in msgs if m.type == "pitchwheel"]
+
+    # First window's samples stop at tick 960 (second note's start) even
+    # though its note sustains to tick 1920, and the wheel is re-centered
+    # there before the second window begins.
+    first = [(t, m.pitch) for t, m in pw if t < 960]
+    assert first, "first vibrato window should render before truncation"
+    resets = [m.pitch for t, m in pw if t == 960]
+    assert resets and resets[0] == 0, "wheel must re-center where the newer window begins"
+    second = [(t, m.pitch) for t, m in pw if 960 < t < 1920]
+    assert second, "second vibrato window should render after the handoff"
+
+
 # ---------------------------------------------------------------------------
 # Integration: the demo song renders wheel data only on the lead channel, and
 # transition material (pickups/turnarounds) stays off the piano channel (0).
@@ -206,5 +245,8 @@ def test_demo_build_expression_and_channels(tmp_path):
             elif m.type == "note_on" and m.velocity > 0:
                 note_channels.add(m.channel)
 
-    assert pw_channels == {3}, f"pitchwheel only on lead channel, got {pw_channels}"
+    # Lead vibrato/bend-ins (3), bass slide-ins (1), rhythm chord vibrato (2);
+    # seed 23 deterministically lights up all three.
+    assert pw_channels == {1, 2, 3}, f"pitchwheel on bass/rhythm/lead, got {pw_channels}"
+    assert 9 not in pw_channels, "drums must never get pitch expression"
     assert 0 not in note_channels, "no notes may leak onto the piano channel"

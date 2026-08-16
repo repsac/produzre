@@ -324,14 +324,35 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
             deduped.append((start_tick, end_tick, pitch, vel, ch, expr))
 
     msgs: list[_MidiMsg] = []
+    expr_spans: list[tuple[int, int, int, Any]] = []
     for start_tick, end_tick, pitch, vel, ch, expr in deduped:
         # Order: note_off first at the same tick to avoid overlaps/stuck notes.
         msgs.append(_MidiMsg(start_tick, 1, mido.Message("note_on", note=pitch, velocity=vel, channel=ch, time=0)))
         msgs.append(_MidiMsg(end_tick, 0, mido.Message("note_off", note=pitch, velocity=0, channel=ch, time=0)))
-        # Pitch expression (vibrato / bend-in) rides the note's channel using
-        # the final, de-overlapped tick span. order=0 keeps wheel moves ahead
-        # of the note_on at the same tick.
-        msgs.extend(_expression_msgs(start_tick, end_tick, ch, expr, ppq=ppq))
+        # Pitch expression (vibrato / bend-in) is rendered after a per-channel
+        # conflict pass below, using the final, de-overlapped tick span.
+        if expr:
+            expr_spans.append((start_tick, end_tick, ch, expr))
+
+    # Pitchwheel is channel-wide: two overlapping expression windows on the
+    # same channel would fight over the wheel. Resolve like a player would —
+    # the newer note wins; the older window stops (re-centered) where the
+    # newer one begins. This matters for polyphonic parts (e.g. sustained
+    # rhythm-guitar chords ringing into the next strum).
+    by_ch: dict[int, list[tuple[int, int, Any]]] = {}
+    for st, en, ch, expr in expr_spans:
+        by_ch.setdefault(ch, []).append((st, en, expr))
+    for ch, spans in by_ch.items():
+        spans.sort(key=lambda s: s[0])
+        for i, (st, en, expr) in enumerate(spans):
+            eff_end = en
+            if i + 1 < len(spans):
+                eff_end = min(en, spans[i + 1][0])
+            if eff_end <= st:
+                continue
+            # _expression_msgs resets the wheel to 0 at eff_end, which also
+            # covers the truncation point.
+            msgs.extend(_expression_msgs(st, eff_end, ch, expr, ppq=ppq))
 
     # Note: pitchwheel messages have no `.note` attribute — tolerate that.
     msgs.sort(key=lambda m: (m.tick, m.order, m.msg.type, m.msg.channel, getattr(m.msg, "note", 0)))

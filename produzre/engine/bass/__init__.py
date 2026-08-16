@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import random
 from collections import namedtuple
 from typing import Optional, Dict
 
@@ -729,6 +731,50 @@ def _render_legacy_bass(
         # Inner-beat root inclusion probability (None = legacy default 0.65)
         root_bias = getattr(effective_params, "root_bias", None)
 
+    # Pitch expression (rendered as pitchwheel at export): slide-ins scoop up
+    # to the note from below; sustained notes may get a gentle vibrato. Draws
+    # use a private seeded stream so the shared RNG stream — and every pinned
+    # regression value derived from it — is left untouched.
+    def _expr_param(name, default):
+        if isinstance(effective_params, dict):
+            v = effective_params.get(name, default)
+        else:
+            v = getattr(effective_params, name, default)
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            v = default
+        return max(0.0, min(v, 1.0))
+
+    slide_rate = _expr_param("slide_rate", 0.20)
+    vibrato_rate = _expr_param("vibrato_rate", 0.35)
+
+    _song = getattr(cfg, "song", None)
+    _song_seed = getattr(_song, "seed", 42) if _song is not None else 42
+    _song_bpm = float(getattr(_song, "bpm", 120.0) or 120.0) if _song is not None else 120.0
+    _expr_seed = int.from_bytes(
+        hashlib.md5(f"bass_expr:{section.id}:{_song_seed}".encode()).digest()[:4], "big"
+    )
+    expr_rng = random.Random(_expr_seed)
+
+    def _draw_expression(dur_beats: float) -> Optional[dict]:
+        """Seeded per-note pitch expression. Fixed draw order (slide gate,
+        then vibrato gate) keeps the private stream stable across rate tweaks."""
+        expr: dict = {}
+        if slide_rate > 0 and expr_rng.random() < slide_rate:
+            semis = expr_rng.choice([1, 2, 2])  # whole-step slides dominate
+            ramp = min(expr_rng.uniform(0.15, 0.35), max(0.05, dur_beats * 0.8))
+            expr["bend_in"] = {"semitones": semis, "ramp_beats": ramp}
+        if dur_beats >= 0.5 and vibrato_rate > 0 and expr_rng.random() < vibrato_rate:
+            depth = expr_rng.uniform(20.0, 40.0)
+            hz = expr_rng.uniform(4.5, 6.0)
+            expr["vibrato"] = {
+                "depth_cents": depth,
+                "period_beats": 60.0 / (_song_bpm * hz),
+                "delay_beats": expr_rng.uniform(0.15, 0.30),
+            }
+        return expr or None
+
     # Phase B4: Apply style-based pattern bias if rhythm_pattern wasn't explicitly set
     # (Only if user didn't override rhythm_pattern in persona or config)
     style_pattern_bias = _get_style_pattern_bias(articulation_style)
@@ -1325,6 +1371,7 @@ def _render_legacy_bass(
                     velocity=final_velocity,
                     channel=None,
                     kind=note_kind,
+                    expression=_draw_expression(styled_duration),
                 )
 
                 # Phase B11: Track negotiation features for fill notes
@@ -1529,6 +1576,7 @@ def _render_legacy_bass(
             velocity=final_velocity,
             channel=None,  # resolved by timeline (instrument-aware)
             kind=note_kind,  # Voice label for TSV analysis
+            expression=_draw_expression(styled_duration),
         )
 
         # Phase B11: Track negotiation features
