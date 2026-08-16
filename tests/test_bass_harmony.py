@@ -51,16 +51,20 @@ def test_bass_follows_chord_changes():
         })
 
     # Seeded-deterministic (seed=200): the anchor pattern with density=0.70
-    # selects 4 of 8 anchor slots (bars 1 and 3); the cadence guarantee then
-    # re-adds the final chord's downbeat so the section resolves — bar 4
-    # closes with root_cadence even when the density filter empties it.
-    assert len(events) == 5, f"Expected 5 events, got {len(events)}"
-    assert events[-1]["kind"] == "root_cadence" and events[-1]["bar"] == 4, \
-        f"Section must close with a bar-4 root_cadence, got {events[-1]}"
+    # plants roots on each chord's downbeat (and beat 3), the cadence
+    # guarantee closes bar 4 with a root_cadence, and phrase development
+    # (b1244b5) appends a three-note diatonic fill run walking down to the
+    # loop point. Re-pinned at 10 events.
+    assert len(events) == 10, f"Expected 10 events, got {len(events)}"
+    cadences = [e for e in events if e["kind"] == "root_cadence"]
+    assert cadences and cadences[0]["bar"] == 4, \
+        f"Section must close with a bar-4 root_cadence, got {events}"
 
-    # Musical intent: every note must be a chord tone of the chord ACTIVE in
-    # its bar — this is stronger than a key-diatonic check and proves the
-    # engine tracks the changes. Progression I IV V I in C major:
+    # Musical intent: every STRUCTURAL note must be a chord tone of the chord
+    # ACTIVE in its bar — this is stronger than a key-diatonic check and
+    # proves the engine tracks the changes. Fill runs (fill_run_*) are
+    # approach-note passing figures and may legitimately leave the chord.
+    # Progression I IV V I in C major:
     chord_pcs_by_bar = {
         1: {0, 4, 7},   # C major (C E G)
         2: {5, 9, 0},   # F major (F A C)
@@ -68,21 +72,28 @@ def test_bass_follows_chord_changes():
         4: {0, 4, 7},   # C major
     }
     for e in events:
+        if e["kind"].startswith("fill_run"):
+            continue
         pc = e["pitch"] % 12
         assert pc in chord_pcs_by_bar[e["bar"]], \
             f"Bar {e['bar']} note {e['note']} (pc {pc}) is not a chord tone of the active chord"
 
-    # The voice labels must track the changes: the section opens on the
-    # bar-1 C root (the engine never substitutes the fifth on a section's
-    # first downbeat), G2 is "root" under the bar-3 G chord, and the cadence
-    # guarantee closes bar 4 on the root.
+    # The voice labels must track the changes: roots land on each chord's
+    # downbeat (the engine never substitutes the fifth on a section's first
+    # downbeat), the cadence guarantee closes bar 4 on the root, and the
+    # fill run walks F E D back toward the loop point.
     pinned = [(e["bar"], e["note"], e["kind"]) for e in events]
     assert pinned == [
         (1, "C2", "root"),
-        (1, "E2", "third"),
+        (2, "F2", "root"),
+        (2, "F2", "root"),
         (3, "G2", "root"),
-        (3, "B2", "third"),
+        (3, "G2", "root"),
+        (4, "C2", "root"),
         (4, "C2", "root_cadence"),
+        (4, "F2", "fill_run_diatonic"),
+        (4, "E2", "fill_run_diatonic"),
+        (4, "D2", "fill_run_diatonic"),
     ], f"Seeded-deterministic events changed: {pinned}"
 
     print(f"✓ Bass follows chord changes correctly")

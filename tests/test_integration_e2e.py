@@ -108,9 +108,9 @@ def test_param_plumbing_user_params_reach_engine(caplog):
     assert "rest_rate=0.15" in gen, f"Expected user rest_rate=0.15 in: {gen}"
 
     # Seeded-deterministic (seed=301): the drive pattern at these settings
-    # renders 41 bass events.
-    assert result.events_per_instrument.get("bass") == 41, \
-        f"Expected 41 bass events, got {result.events_per_instrument}"
+    # renders 42 bass events (re-pinned after phrase development, b1244b5).
+    assert result.events_per_instrument.get("bass") == 42, \
+        f"Expected 42 bass events, got {result.events_per_instrument}"
 
 
 # ---------------------------------------------------------------------------

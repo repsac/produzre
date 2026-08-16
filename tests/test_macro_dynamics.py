@@ -164,7 +164,7 @@ arrangement:
 
 
 def test_untweaked_config_resolves_documented_arc(tmp_path, caplog):
-    cfg = _load_cfg(tmp_path, UNTWEAKED_SONG.format(exports_root=tmp_path / "exports"))
+    cfg = _load_cfg(tmp_path, UNTWEAKED_SONG.format(exports_root=(tmp_path / "exports").as_posix()))
 
     with caplog.at_level(logging.INFO):
         plan = plan_song(cfg=cfg, logger=logging.getLogger("test"))
@@ -226,7 +226,7 @@ arrangement:
 
 
 def test_user_set_intensity_never_overridden(tmp_path):
-    cfg = _load_cfg(tmp_path, USER_SET_SONG.format(exports_root=tmp_path / "exports"))
+    cfg = _load_cfg(tmp_path, USER_SET_SONG.format(exports_root=(tmp_path / "exports").as_posix()))
 
     # Parsed into the typed field, not dropped into extras.
     assert cfg.sections["verse1"].intensity == pytest.approx(0.42)
@@ -282,7 +282,7 @@ arrangement:
 
 
 def test_explicit_flat_intensity_produces_flat_plan(tmp_path):
-    cfg = _load_cfg(tmp_path, FLAT_SONG.format(exports_root=tmp_path / "exports"))
+    cfg = _load_cfg(tmp_path, FLAT_SONG.format(exports_root=(tmp_path / "exports").as_posix()))
     plan = plan_song(cfg=cfg, logger=logging.getLogger("test"))
     resolved = [ps.sec.intensity for ps in plan.planned_sections]
     assert resolved == pytest.approx([0.5, 0.5, 0.5, 0.5, 0.5])
@@ -321,19 +321,19 @@ def test_derived_intensity_reaches_drums_engine(tmp_path):
     explicit `intensity: 0.5` (the old flat default)."""
     cfg_derived = _load_cfg(
         tmp_path / "derived",
-        CHORUS_ONLY_SONG.format(exports_root=tmp_path / "derived" / "exports", intensity_line=""),
+        CHORUS_ONLY_SONG.format(exports_root=(tmp_path / "derived" / "exports").as_posix(), intensity_line=""),
     )
     cfg_explicit = _load_cfg(
         tmp_path / "explicit",
         CHORUS_ONLY_SONG.format(
-            exports_root=tmp_path / "explicit" / "exports",
+            exports_root=(tmp_path / "explicit" / "exports").as_posix(),
             intensity_line="    intensity: 0.9",
         ),
     )
     cfg_flat = _load_cfg(
         tmp_path / "flat",
         CHORUS_ONLY_SONG.format(
-            exports_root=tmp_path / "flat" / "exports",
+            exports_root=(tmp_path / "flat" / "exports").as_posix(),
             intensity_line="    intensity: 0.5",
         ),
     )
@@ -387,7 +387,7 @@ arrangement:
 def test_default_verse_and_chorus_differ_in_drums_velocity(tmp_path):
     """With no user intensities, the resolved arc (verse 0.65 -> chorus 0.90)
     must produce audibly different drums dynamics between the two sections."""
-    cfg = _load_cfg(tmp_path, VERSE_CHORUS_SONG.format(exports_root=tmp_path / "exports"))
+    cfg = _load_cfg(tmp_path, VERSE_CHORUS_SONG.format(exports_root=(tmp_path / "exports").as_posix()))
     res = _build(cfg)
 
     events, ticks_per_beat = _note_events(res.export_root)

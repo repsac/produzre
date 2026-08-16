@@ -65,8 +65,10 @@ def test_style_changes_velocity():
 
     # Exact event counts per style (seeded-deterministic). Old counts of 2-3
     # events predate the param-plumbing fix: user density/rest_rate now reach
-    # the engine, so each style renders its full pattern.
-    expected_counts = {"finger": 10, "pick": 58, "mute": 29, "slap": 35}
+    # the engine, so each style renders its full pattern. Counts re-pinned
+    # after phrase development and the fill-scoping fix (b1244b5) changed
+    # slot selection; style ordering below is the test's real point.
+    expected_counts = {"finger": 7, "pick": 57, "mute": 31, "slap": 36}
     for style_name, expected in expected_counts.items():
         actual = velocity_stats[style_name]["count"]
         assert actual == expected, \
@@ -76,7 +78,7 @@ def test_style_changes_velocity():
     # Seeded-deterministic per-style velocity means:
     #   mute is soft (palm-muted thud), pick is hard attack,
     #   finger sits in between, slap spans wide (pops vs ghosts).
-    expected_means = {"finger": 51.3, "pick": 69.9, "mute": 35.5, "slap": 66.0}
+    expected_means = {"finger": 54.0, "pick": 76.2, "mute": 36.1, "slap": 61.4}
     for style_name, expected_mean in expected_means.items():
         actual_mean = velocity_stats[style_name]["mean"]
         assert abs(actual_mean - expected_mean) < 0.15, \
@@ -145,16 +147,16 @@ def test_style_changes_duration():
 
     # Exact event counts per style (seeded-deterministic). Old counts of 2-3
     # events predate the param-plumbing fix; see test_style_changes_velocity.
-    expected_counts = {"finger": 10, "pick": 58, "mute": 29, "slap": 35}
+    expected_counts = {"finger": 7, "pick": 57, "mute": 31, "slap": 36}
     for style_name, expected in expected_counts.items():
         actual = duration_stats[style_name]["count"]
         assert actual == expected, \
             f"{style_name} expected {expected} duration events, got {actual}"
 
     # Musical intent: styles must DIFFERENTIATE note length. Finger sustains
-    # (anchor pattern, ~1.1 beats mean); pick/mute/slap are short and choppy
+    # (anchor pattern, ~1.8 beats mean); pick/mute/slap are short and choppy
     # (staccato attacks well under half a beat). Seeded-deterministic means:
-    expected_means = {"finger": 1.100, "pick": 0.194, "mute": 0.183, "slap": 0.120}
+    expected_means = {"finger": 1.843, "pick": 0.198, "mute": 0.196, "slap": 0.111}
     for style_name, expected_mean in expected_means.items():
         actual_mean = duration_stats[style_name]["mean"]
         assert abs(actual_mean - expected_mean) < 0.005, \
