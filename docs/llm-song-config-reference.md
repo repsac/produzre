@@ -288,8 +288,10 @@ the recipe's structural crashes and fills (skipping any onset a same-pitch
 hit already covers). Arc transforms apply: a `breakdown`
 thins the kit, a `prechorus` displaces the groove. `groove_strength` (drums
 param, 0.0-1.0, default 1.0 when a groove theme exists) crossfades between
-the theme pattern and the genre pattern; 0.0 disables it. Groove themes take
-effect in sections that have a harmony plan (any section with `harmony: {}`).
+the theme pattern and the genre pattern; 0.0 disables it. Because a groove
+theme is pure rhythm + voice, it also applies in drums-only sections (no
+`harmony:` block) — the section length comes from `bars` x meter instead of
+the harmony plan. Pitched theme roles still require a harmony plan.
 
 ### How Themes Adapt to the Harmony
 

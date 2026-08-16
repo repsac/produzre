@@ -594,6 +594,90 @@ class TestDrumGrooveCoupling:
         assert "Determinism check PASSED" in result.stderr
 
 
+GROOVE_DRUMS_ONLY_YAML = """\
+version: 1
+song:
+  title: "GrooveDrumsOnly"
+  bpm: 110
+  key: E
+  mode: ionian
+  meter: "4/4"
+  genre: rock
+  seed: 5
+  exports_root: "{exports_root}"
+exports:
+  midi_text:
+    enabled: true
+    views: [events]
+    subdiv: 16
+themes:
+  kit_groove:
+    role: drum_groove
+    allow_development: false
+    events: "1:.5 3:.5 2:.5 3:.5 1:.5 3:.5 2:.5 3:.5 1:1 3:.5 2:.5 5:.5 1:.5 4:.25 7:.25 2:.5"
+sections:
+  break:
+    type: verse
+    bars: 2
+    instruments:
+      drums:
+        intensity: 0.7
+        params:
+          fill_rate: 0.0
+arrangement:
+  - break
+"""
+
+
+@pytest.mark.integration
+class TestDrumGrooveDrumsOnly:
+    """A drum_groove theme is rhythm + voice: it must apply even in sections
+    with no harmony plan (drums-only breaks), taking the section length from
+    bars x meter instead of the harmony plan."""
+
+    def test_groove_applies_without_harmony_plan(self, tmp_path):
+        cfg_path = tmp_path / "drums_only.yaml"
+        cfg_path.write_text(
+            GROOVE_DRUMS_ONLY_YAML.format(
+                exports_root=(tmp_path / "exports").as_posix()
+            ),
+            encoding="utf-8",
+        )
+        result = _build([str(cfg_path)])
+        assert result.returncode == 0, result.stderr[-2000:]
+        rows = _read_drum_rows(tmp_path / "exports")
+        assert rows
+
+        def has(pitches, abs_beat):
+            return TestDrumGrooveCoupling._has_hit(rows, pitches, abs_beat)
+
+        # The 2-bar theme's kit steps squash into the per-bar template
+        # (union semantics, same as harmony-backed sections): a bar-2-only
+        # onset like the kick at 2.5 or the snare at 1.5 proves the theme
+        # reached the engine.
+        assert has({36}, 0.0), "theme kick missing at beat 0"
+        assert has({36}, 2.5), "theme kick missing at beat 2.5"
+        assert has({37, 38, 40}, 1.5), "theme snare missing at beat 1.5"
+        # Accent voices: open hat forced on theme bar 2's step-12 onset
+        # (lands in both bars via the union), crash and tom injected.
+        assert has({46}, 3.0), "open hat missing at beat 3.0"
+        assert has({46}, 7.0), "open hat missing at beat 7.0"
+        assert has({49}, 6.0), "crash missing at beat 6.0"
+        assert has({45, 47, 50}, 7.25), "tom missing at beat 7.25"
+
+    def test_drums_only_groove_strictly_deterministic(self, tmp_path):
+        cfg_path = tmp_path / "drums_only.yaml"
+        cfg_path.write_text(
+            GROOVE_DRUMS_ONLY_YAML.format(
+                exports_root=(tmp_path / "exports").as_posix()
+            ),
+            encoding="utf-8",
+        )
+        result = _build([str(cfg_path), "--strict-determinism"])
+        assert result.returncode == 0, result.stderr[-2000:]
+        assert "Determinism check PASSED" in result.stderr
+
+
 # ---------------------------------------------------------------------------
 # Lead presence: quoted hooks sustain and sit above the band
 # ---------------------------------------------------------------------------
