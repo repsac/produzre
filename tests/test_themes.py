@@ -428,17 +428,19 @@ class TestGrooveRealize:
         g = realize_groove(theme, "quote", {}, 12.0)
         assert g["kick"] == [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
 
-    def test_reserved_degrees_and_rests_skipped(self):
+    def test_accent_degrees_map_and_rests_skipped(self):
         theme = Theme(
             name="g", role=ThemeRole.DRUM_GROOVE, length_beats=2.0,
             events=(
-                ThemeEvent(0.0, 0.5, 4),     # open hat: reserved
+                ThemeEvent(0.0, 0.5, 4),     # open hat
                 ThemeEvent(0.5, 0.5, None),  # rest
-                ThemeEvent(1.0, 1.0, 5),     # crash: reserved
+                ThemeEvent(1.0, 0.5, 5),     # crash
+                ThemeEvent(1.5, 0.5, 7),     # tom
             ),
         )
         assert realize_groove(theme, "quote", {}, 2.0) == {
-            "kick": [], "snare": [], "hat": [], "ride": [],
+            "kick": [], "snare": [], "hat": [], "open_hat": [0.0],
+            "crash": [1.0], "ride": [], "tom": [1.5],
         }
 
     def test_arc_transforms_apply(self):
@@ -486,7 +488,7 @@ themes:
   kit_groove:
     role: drum_groove
     allow_development: false
-    events: "1:.5 3:.5 2:.5 3:.5 1:.5 3:.5 2:.5 3:.5 1:1 3:.5 2:.5 3:.5 1:.5 3:.5 2:.5"
+    events: "1:.5 3:.5 2:.5 3:.5 1:.5 3:.5 2:.5 3:.5 1:1 3:.5 2:.5 5:.5 1:.5 4:.25 7:.25 2:.5"
 sections:
   verse:
     type: verse
@@ -529,14 +531,15 @@ def _read_drum_rows(exports_root: Path):
 @pytest.mark.integration
 class TestDrumGrooveCoupling:
     # The 2-bar groove theme quantizes to (section-relative, per bar):
-    #   odd bars:  kick {0, 2}    snare {1, 3}      hats {0.5, 1.5, 2.5, 3.5}
-    #   even bars: kick {0, 2.5}  snare {1.5, 3.5}  hats {1.0, 2.0, 3.0}
+    #   theme bar 1 (bars 1,3): kick {0, 2}    snare {1, 3}     hats {0.5, 1.5, 2.5, 3.5}
+    #   theme bar 2 (bars 2,4): kick {0, 2.5}  snare {1.5, 3.5} hat line {1.0, 3.0}
+    #                           crash @2.0  open hat @3.0  tom @3.25
     @staticmethod
     def _expected(bar_index: int):
         if bar_index % 2 == 0:
             return {"kick": [0.0, 2.0], "snare": [1.0, 3.0],
                     "hat": [0.5, 1.5, 2.5, 3.5]}
-        return {"kick": [0.0, 2.5], "snare": [1.5, 3.5], "hat": [1.0, 2.0, 3.0]}
+        return {"kick": [0.0, 2.5], "snare": [1.5, 3.5], "hat": [1.0, 3.0]}
 
     @staticmethod
     def _has_hit(rows, pitches, abs_beat):
@@ -563,6 +566,14 @@ class TestDrumGrooveCoupling:
             for b in expected["hat"]:
                 assert self._has_hit(rows, {42, 46, 51}, base + b), \
                     f"hat missing at bar {bar + 1} beat {b}"
+            if bar % 2 == 1:
+                # Theme bar 2 accent voices (injected alongside the pattern).
+                assert self._has_hit(rows, {49}, base + 2.0), \
+                    f"crash missing at bar {bar + 1} beat 2.0"
+                assert self._has_hit(rows, {46}, base + 3.0), \
+                    f"open hat missing at bar {bar + 1} beat 3.0"
+                assert self._has_hit(rows, {45, 47, 50}, base + 3.25), \
+                    f"tom missing at bar {bar + 1} beat 3.25"
 
     def test_groove_strength_zero_keeps_genre_pattern(self, tmp_path):
         on_dir = tmp_path / "on"

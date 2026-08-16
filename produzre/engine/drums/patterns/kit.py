@@ -398,6 +398,7 @@ def events_for_section_from_template(
             accent_strength=accent_strength,
             rng=rng,
             pitches=pitches,
+            forced_open_steps=set(template.open_hat_steps) or None,
         )
         events.extend(hat_events)
 

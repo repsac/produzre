@@ -36,6 +36,7 @@ def generate_top_cymbal_events(
     accent_strength: float,
     rng: random.Random,
     pitches: Dict[str, int],
+    forced_open_steps: Optional[Set[int]] = None,
 ) -> Tuple[List, bool, Set[int]]:
     """Generate top cymbal (hat/ride) and pedal hat events for a single bar.
 
@@ -223,7 +224,13 @@ def generate_top_cymbal_events(
         pitch = top_pitch
         kind = "ride" if template.use_ride else "hat"
 
-        if (not template.use_ride) and open_rate > 0.0 and (step_i in eligible_open_steps):
+        if (not template.use_ride) and forced_open_steps and step_i in forced_open_steps:
+            # Theme-authored open hat: hard intent, bypasses the rate lottery
+            # and the offbeat eligibility rules.
+            pitch = hat_open
+            kind = "open_hat"
+            open_hat_in_this_bar = True
+        elif (not template.use_ride) and open_rate > 0.0 and (step_i in eligible_open_steps):
             # If the user sets open_rate to 1.0, treat it as a hard intent:
             # every eligible step becomes an open hat (subject only to density gating).
             if open_rate >= 0.999:

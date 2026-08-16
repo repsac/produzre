@@ -267,10 +267,12 @@ Degrees select the voice; the event rhythm is the groove:
 | `1` | Kick |
 | `2` | Snare |
 | `3` | Closed hat |
+| `4` | Open hat (also joins the hat line, forced open) |
+| `5` | Crash (injected as an extra hit) |
 | `6` | Ride (moves the whole top-cymbal line to ride) |
+| `7` | Tom (injected as an extra hit, cycling high/mid/low) |
 
-Degrees 4 (open hat), 5 (crash), and 7 (tom) are reserved and currently
-skipped. Example — a rock beat with a signature double kick:
+Example — a rock beat with a signature double kick:
 
 ```yaml
   kit_groove:
@@ -280,7 +282,10 @@ skipped. Example — a rock beat with a signature double kick:
 
 The theme replaces the recipe's kick/snare/hat steps (voices the theme does
 not use stay on the recipe), while genre/persona still control velocities,
-ghost notes, fills, and humanization. Arc transforms apply: a `breakdown`
+ghost notes, fills, and humanization. Open-hat onsets ride the hat line and
+force the hit open; crash and tom onsets are added as extra hits alongside
+the recipe's structural crashes and fills (skipping any onset a same-pitch
+hit already covers). Arc transforms apply: a `breakdown`
 thins the kit, a `prechorus` displaces the groove. `groove_strength` (drums
 param, 0.0-1.0, default 1.0 when a groove theme exists) crossfades between
 the theme pattern and the genre pattern; 0.0 disables it. Groove themes take

@@ -432,8 +432,10 @@ Each event token is `degree:duration` — a key-relative scale degree
 (`degrees:` + `rhythm:`) is also accepted.
 
 A fourth role, `drum_groove`, uses degrees as drum voices instead of pitches:
-`1` kick, `2` snare, `3` closed hat, `6` ride. The theme becomes the kit
-pattern (see `groove_strength` under [Drums](#drums)).
+`1` kick, `2` snare, `3` closed hat, `4` open hat, `5` crash, `6` ride,
+`7` tom. The theme becomes the kit pattern (see `groove_strength` under
+[Drums](#drums)) — kick/snare/hat replace the recipe's steps, while crash
+and tom are layered in as extra accents.
 
 Themes are not static loops. Each section applies a deterministic treatment:
 intros play only the first half, prechoruses displace the rhythm, bridges

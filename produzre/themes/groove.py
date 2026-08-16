@@ -3,12 +3,16 @@
 A ``drum_groove`` theme is rhythm + *voice* instead of rhythm + pitch. Degrees
 select the drum voice; the event rhythm is the groove itself:
 
-    1 = kick    2 = snare    3 = closed hat    6 = ride
+    1 = kick    2 = snare    3 = closed hat    4 = open hat
+    5 = crash   6 = ride     7 = tom
 
-Degrees 4 (open hat), 5 (crash), and 7 (tom) are reserved for a later
-milestone and are currently skipped. Arc transforms (thin, displace, fragment,
-...) apply to groove themes exactly as to pitched themes, so a breakdown can
-thin the kit and a prechorus can re-groove it — deterministically.
+Kick, snare, and hat/ride onsets replace the recipe's kit steps (see the
+``groove_strength`` crossfade in the drums engine). Open-hat onsets join the
+hat line and force the hit open; crash and tom onsets are injected as extra
+hits alongside the recipe's structural crashes and fills. Arc transforms
+(thin, displace, fragment, ...) apply to groove themes exactly as to pitched
+themes, so a breakdown can thin the kit and a prechorus can re-groove it —
+deterministically.
 
 Like every theme realization this is a pure function: no RNG, no I/O.
 """
@@ -20,8 +24,16 @@ from typing import Dict, List, Optional
 from .model import Theme
 from .transform import apply_transform
 
-# Degree -> drum voice for drum_groove themes. Degrees 4, 5, 7 are reserved.
-VOICE_BY_DEGREE = {1: "kick", 2: "snare", 3: "hat", 6: "ride"}
+# Degree -> drum voice for drum_groove themes.
+VOICE_BY_DEGREE = {
+    1: "kick",
+    2: "snare",
+    3: "hat",
+    4: "open_hat",
+    5: "crash",
+    6: "ride",
+    7: "tom",
+}
 
 
 def realize_groove(
@@ -35,13 +47,17 @@ def realize_groove(
     The (possibly arc-transformed) theme loops to cover ``total_beats``.
 
     Returns:
-        {"kick": [...], "snare": [...], "hat": [...], "ride": [...]} with
-        sorted beat lists. A non-empty "ride" list signals the drums engine
-        to move the top-cymbal line to the ride cymbal.
+        {"kick": [...], "snare": [...], "hat": [...], "open_hat": [...],
+         "crash": [...], "ride": [...], "tom": [...]} with sorted beat lists.
+        A non-empty "ride" list signals the drums engine to move the
+        top-cymbal line to the ride cymbal.
     """
     if transform_name:
         theme = apply_transform(theme, transform_name, **(transform_params or {}))
-    out: Dict[str, List[float]] = {"kick": [], "snare": [], "hat": [], "ride": []}
+    out: Dict[str, List[float]] = {
+        "kick": [], "snare": [], "hat": [], "open_hat": [],
+        "crash": [], "ride": [], "tom": [],
+    }
     if total_beats <= 0:
         return out
     base = 0.0

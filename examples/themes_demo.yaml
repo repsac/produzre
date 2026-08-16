@@ -45,7 +45,7 @@ themes:
   kit_groove:
     role: drum_groove
     allow_development: false
-    events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 3:.5"
+    events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 4:.5"
 
 sections:
   intro:
