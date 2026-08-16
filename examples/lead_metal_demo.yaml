@@ -1,0 +1,201 @@
+version: 1
+song:
+  title: "Flying High"
+  bpm: 140
+  key: E
+  mode: aeolian
+  meter: "4/4"
+  genre: metal
+  seed: 23
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, tab]
+    subdiv: 16
+
+# Instrument defaults for the whole song: the metal personas keep the band
+# tight, picked, and aggressive so the lead can sing over it. The lead is
+# the foreground voice everywhere (instrumental track — it IS the vocalist),
+# so it owns full sections instead of call-and-answer windows.
+instruments:
+  drums: { persona: metal }
+  bass: { persona: metal }
+  rhythm_gtr: { persona: aggressive }
+  lead_gtr:
+    extra: { foreground: full }
+
+# ---------------------------------------------------------------------------
+# Instrumental metal in the Satriani direction: the lead guitar IS the
+# vocalist. E aeolian (all six strings friendly), 140 bpm.
+# Degrees: 1=E 2=F# 3=G 4=A 5=B 6=C 7=D.
+#
+#   main_riff  - locked chug riff (E E E C D E B A): quoted verbatim by the
+#                rhythm guitar, bass onsets and kick accents lock to it.
+#   lead_hook  - the singable hook. Climbs B C D to the high B, then walks
+#                all the way back down to E. Entirely playable on the high
+#                E string (frets 7-19). Develops per section: fragmented in
+#                the intro, displaced in the prechorus, sequenced up a 2nd
+#                in the solo, octave lift on the final chorus.
+#   bass_hook  - bass motif glued to the riff's roots.
+#   kit_groove - locked 2-bar metal beat: double-kick 16ths opening beats
+#                1 and 3, snare backbeat, and a crash+tom pickup at the end
+#                of bar 2.
+# ---------------------------------------------------------------------------
+themes:
+  main_riff:
+    role: riff
+    register: [40, 52]          # E2..E3
+    allow_development: false
+    events: "1:.5 1:.25 1:.25 6:.5 7:.5 1:.5 5:.5 4:1"
+
+  lead_hook:
+    role: melody
+    register: [64, 83]          # E4..B5
+    events: "5:1 6:.5 7:.5 5+:.5 6:.5 5:.5 4:1.5 3:1 2:.5 1:1.5"
+
+  bass_hook:
+    role: bass_motif
+    register: [28, 43]          # E1..G2
+    events: "1:.5 1:.5 1:.5 7:.5 5:1 6:.5 5:.5"
+
+  kit_groove:
+    role: drum_groove
+    allow_development: false
+    # bar 1: kk h s h kk h s h   (double-kick 16ths into beats 1 and 3)
+    # bar 2: same, then crash + tom pickup at the end
+    events: "1:.25 1:.25 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 5:.25 7:.25"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: { progression: "i i i i" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.55 }
+      bass: { intensity: 0.55 }
+      rhythm_gtr: { intensity: 0.5 }
+      lead_gtr:
+        intensity: 0.6
+        extra:
+          persona: melodic
+          theme_quote_rate: 0.7
+          rest_probability: 0.25
+  verse:
+    type: verse
+    bars: 8
+    harmony: { progression: "i i VI VII" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.7 }
+      bass: { intensity: 0.7 }
+      rhythm_gtr: { intensity: 0.65 }
+      lead_gtr:
+        intensity: 0.75
+        extra:
+          persona: melodic
+          theme_quote_rate: 0.9
+          rest_probability: 0.15
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: { progression: "VI VII i VII" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.8 }
+      bass: { intensity: 0.75 }
+      rhythm_gtr: { intensity: 0.7 }
+      lead_gtr:
+        intensity: 0.8
+        extra:
+          persona: melodic
+          theme_quote_rate: 0.8
+          rest_probability: 0.12
+          syncopation: 0.3
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: { progression: "VI VII i i" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.9 }
+      bass: { intensity: 0.85 }
+      rhythm_gtr: { intensity: 0.8 }
+      lead_gtr:
+        intensity: 0.9
+        extra:
+          persona: melodic
+          theme_quote_rate: 0.9
+          rest_probability: 0.1
+          register: high
+  solo:
+    type: solo
+    bars: 8
+    harmony: { progression: "i VI III VII" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.95 }
+      bass: { intensity: 0.9 }
+      rhythm_gtr: { intensity: 0.85 }
+      lead_gtr:
+        intensity: 0.95
+        extra:
+          persona: shredder
+          solo: true
+          theme_quote_rate: 0.5
+          rest_probability: 0.15
+          leap_probability: 0.3
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony: { progression: "i i i i" }
+    # Lead steps out for four bars: the riff and the double-kick groove
+    # carry it, thinned by the arc. Contrast makes the final chorus land.
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.6 }
+      bass: { intensity: 0.6 }
+      rhythm_gtr: { intensity: 0.55 }
+  chorus2:
+    type: chorus
+    bars: 8
+    harmony: { progression: "VI VII i i" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.95 }
+      bass: { intensity: 0.9 }
+      rhythm_gtr: { intensity: 0.85 }
+      lead_gtr:
+        intensity: 0.95
+        extra:
+          persona: melodic
+          theme_quote_rate: 0.9
+          rest_probability: 0.1
+          register: high
+  outro:
+    type: outro
+    bars: 4
+    harmony: { progression: "i i i i" }
+    instruments:
+      harmony: {}
+      drums: { intensity: 0.5 }
+      bass: { intensity: 0.5 }
+      rhythm_gtr: { intensity: 0.45 }
+      lead_gtr:
+        intensity: 0.6
+        extra:
+          persona: melodic
+          theme_quote_rate: 0.8
+          rest_probability: 0.25
+
+arrangement:
+  - intro
+  - verse
+  - prechorus
+  - chorus
+  - solo
+  - breakdown
+  - chorus2
+  - outro

@@ -57,6 +57,34 @@ _ROLE_PROFILES: dict[str, dict[str, tuple[str, float]]] = {
 }
 
 
+def _lead_foreground_mode(cfg: Any, section: Any) -> str:
+    """Resolve lead_gtr's `foreground` mode: "auto" (default) or "full".
+
+    "auto" gives the lead phrase-sized call-and-answer windows (vocal-song
+    arrangement). "full" makes the lead the foreground voice for the whole
+    section — the right shape for instrumental guitar music where the lead
+    IS the vocalist. Section-level extra wins over the song-level default;
+    a section can opt back out with `foreground: auto`.
+    """
+    mode = None
+    lead_cfg = (getattr(section, "instruments", None) or {}).get("lead_gtr")
+    if lead_cfg is not None:
+        extra = getattr(lead_cfg, "extra", None)
+        if isinstance(extra, dict):
+            mode = extra.get("foreground")
+    if mode is None:
+        raw = getattr(cfg, "raw", None)
+        if isinstance(raw, dict):
+            data = (raw.get("instruments") or {}).get("lead_gtr")
+            if isinstance(data, dict):
+                extra = data.get("extra")
+                if isinstance(extra, dict) and "foreground" in extra:
+                    mode = extra.get("foreground")
+                elif "foreground" in data:
+                    mode = data.get("foreground")
+    return str(mode or "auto").strip().lower()
+
+
 def _lead_windows(section_type: str, total_beats: float, beats_per_bar: float) -> list[tuple[float, float]]:
     """Return phrase-sized windows where lead guitar owns foreground space."""
     if total_beats <= 0.0:
@@ -116,7 +144,13 @@ def build_ensemble_section_plan(
         for name, (role, density) in profile.items()
         if name in instruments
     }
-    lead_windows = _lead_windows(section_type, total_beats, beats_per_bar) if "lead_gtr" in instruments else []
+    if "lead_gtr" in instruments and _lead_foreground_mode(cfg, section) == "full":
+        # Instrumental-lead mode: the lead owns the whole section. Roles and
+        # density multipliers still shape energy per section type; only the
+        # call-and-answer gating is lifted.
+        lead_windows = [(0.0, total_beats)] if total_beats > 0.0 else []
+    else:
+        lead_windows = _lead_windows(section_type, total_beats, beats_per_bar) if "lead_gtr" in instruments else []
     active_beats = sum(end - start for start, end in lead_windows)
     lead_rest_ratio = 1.0 - min(1.0, active_beats / max(total_beats, 1e-6))
 

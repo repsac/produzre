@@ -544,6 +544,7 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 | `leap_probability` | 0.0-1.0 | 0.0 | Large interval jumps |
 | `register` | `low`, `mid`, `high`, `very_high`, `full` | `mid` | Melodic range |
 | `theme_quote_rate` | 0.0-1.0 | 0.65 | How often phrases quote the melody theme |
+| `foreground` | `auto`, `full` | `auto` | `full` = lead owns the whole section (instrumental music); `auto` = call-and-answer windows |
 
 When the song defines a `melody` theme, the lead guitar quotes it at
 `theme_quote_rate`; remaining phrases are free phrasing guided by the section
@@ -559,6 +560,14 @@ Genre selects a dedicated phrase vocabulary, and the ensemble planner assigns
 foreground windows that rhythm guitar leaves partially open.
 
 Use `solo: true` on the instrument to enable solo mode (denser playing, wider range).
+
+By default the ensemble planner gives the lead phrase-sized foreground windows
+(call-and-answer against an implied vocal): in verses it owns the middle of
+each 4-bar phrase, in choruses the first three bars, in solos everything. For
+instrumental music where the lead IS the vocalist, set `foreground: full` (in
+`extra:`, per section or as a song-level instrument default) — the lead owns
+the whole section and rhythm guitar leaves space throughout. A section can opt
+back out with `foreground: auto`.
 
 ### Lead Guitar Persona Quick Reference
 
