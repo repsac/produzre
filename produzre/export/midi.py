@@ -209,6 +209,10 @@ def _expression_msgs(
         ramps the wheel to full down over drop_beats and holds it until the
         note ends. The channel's bend range is temporarily widened via RPN 0/0
         (pitch bend sensitivity) so dives can exceed the GM +/-2 default.
+      - "swell": {"from": int, "ramp_beats": float, "to": int} — feedback /
+        volume-pedal swell: channel expression (CC11) ramps from -> to over
+        ramp_beats, quieting the attack. Restored to 127 at note end if the
+        swell ends below full.
 
     Assumes the GM default pitch-bend range of +/-2 semitones (except during a
     dive, which sets and restores its own range). The wheel is always returned
@@ -299,6 +303,35 @@ def _expression_msgs(
             for ctrl, val in ((101, 0), (100, 0), (6, 2), (38, 0), (101, 127), (100, 127)):
                 out.append(_MidiMsg(end_tick, 2, mido.Message(
                     "control_change", control=ctrl, value=val, channel=ch, time=0)))
+
+    swell = expression.get("swell")
+    if isinstance(swell, dict):
+        try:
+            v_from = int(swell.get("from", 64))
+            s_ramp_beats = float(swell.get("ramp_beats", 0.0))
+            v_to = int(swell.get("to", 127))
+        except Exception:
+            v_from, s_ramp_beats, v_to = 64, 0.0, 127
+        v_from = max(0, min(127, v_from))
+        v_to = max(0, min(127, v_to))
+        ramp_ticks = min(beats_to_ticks(max(0.0, s_ramp_beats), ppq=ppq), end_tick - start_tick)
+        if ramp_ticks > 0 and v_from != v_to:
+            # Feedback swell: channel expression (CC11) fades the note in like
+            # a volume pedal. The first message lands at the start tick ahead
+            # of the note_on, so the attack is quiet.
+            t = start_tick
+            while t < start_tick + ramp_ticks:
+                frac = (t - start_tick) / ramp_ticks
+                val = int(round(v_from + (v_to - v_from) * frac))
+                out.append(_MidiMsg(t, 0, mido.Message(
+                    "control_change", control=11, value=val, channel=ch, time=0)))
+                t += step
+            out.append(_MidiMsg(start_tick + ramp_ticks, 0, mido.Message(
+                "control_change", control=11, value=v_to, channel=ch, time=0)))
+            # Restore full expression at note end if the swell ended low.
+            if v_to < 127:
+                out.append(_MidiMsg(end_tick, 0, mido.Message(
+                    "control_change", control=11, value=127, channel=ch, time=0)))
 
     if out:
         out.append(_MidiMsg(end_tick, 0, mido.Message(

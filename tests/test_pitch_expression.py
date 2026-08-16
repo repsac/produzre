@@ -261,6 +261,20 @@ def test_demo_build_expression_and_channels(tmp_path):
     # Drum channel carries an explicit Standard Kit program (FL Studio import).
     assert 9 in pc_channels, "drum channel must carry a program change"
 
+    # Feedback swells ride CC11 on the lead channel (seed 23 fires two).
+    cc11 = [
+        m for tr in mid.tracks for m in tr
+        if m.type == "control_change" and m.control == 11
+    ]
+    assert cc11 and all(m.channel == 3 for m in cc11)
+
+    # Ring-out: the lead line sustains into rests — the longest lead note
+    # exceeds the old 2.0-beat cap that grid cells imposed.
+    tsv = export_root / "analysis" / "lead_gtr" / "Flying_High_lead_gtr.events.tsv"
+    lines = tsv.read_text().strip().split("\n")[1:]
+    durations = [float(l.split("\t")[5]) for l in lines if l.strip()]
+    assert max(durations) >= 3.0, f"ring-out should sustain past 2 beats, max={max(durations)}"
+
 
 def test_dive_widens_bend_range_and_restores_it():
     """A dive bomb must set RPN pitch-bend sensitivity before the wheel moves
@@ -337,3 +351,49 @@ def test_extra_view_flattens_loader_nesting():
     assert flat["solo"] is True
     assert flat["vibrato_rate"] == 0.9, "user (nested) key must beat persona (top level)"
     assert _extra_view(InstrumentConfig(extra=None)) == {}
+
+
+def test_swell_ramps_expression_cc11():
+    """A feedback swell fades the note in via channel expression (CC11),
+    starting quiet so the attack is softened like a volume pedal."""
+    tl = InstrumentTimeline(instrument="lead_gtr")
+    tl.add_note(
+        start_beat=0.0,
+        duration_beats=2.0,
+        pitch=69,
+        velocity=110,
+        channel=3,
+        expression={"swell": {"from": 40, "ramp_beats": 1.5, "to": 127}},
+    )
+    msgs = _abs_msgs(_write(tl))
+
+    sw = [(t, m.value) for t, m in msgs
+          if m.type == "control_change" and m.control == 11]
+    assert sw, "expected CC11 ramp messages"
+    # Starts low at the note's start tick (before the note_on), rises
+    # monotonically, and lands exactly on full at the ramp end (720 ticks).
+    assert sw[0] == (0, 40)
+    vals = [v for _, v in sw]
+    assert vals == sorted(vals), "swell ramp must rise monotonically"
+    assert sw[-1] == (720, 127)
+    at_start = [m for t, m in msgs if t == 0]
+    assert at_start[0].type == "control_change", "swell must precede the attack"
+    assert any(m.type == "note_on" for m in at_start)
+
+
+def test_swell_ending_low_restores_full_expression():
+    tl = InstrumentTimeline(instrument="lead_gtr")
+    tl.add_note(
+        start_beat=0.0,
+        duration_beats=2.0,
+        pitch=69,
+        velocity=110,
+        channel=3,
+        expression={"swell": {"from": 90, "ramp_beats": 0.5, "to": 100}},
+    )
+    msgs = _abs_msgs(_write(tl))
+    sw = [(t, m.value) for t, m in msgs
+          if m.type == "control_change" and m.control == 11]
+    # Ramp tops out at 100 at tick 240, then 127 is restored at note end.
+    assert (240, 100) in sw
+    assert (960, 127) in sw

@@ -551,6 +551,9 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 | `vibrato_rate` | 0.0-1.0 | 0.65 | Chance a note held 1+ beats gets pitchwheel vibrato |
 | `bend_rate` | 0.0-1.0 | 0.15 | Chance a note is approached with a short bend-in from below |
 | `dive_rate` | 0.0-1.0 | 0.30 | Solo sections only: chance a note held 1.5+ beats ends in a whammy dive bomb (7-14 semitones). The solo's final held note always dives when this is above 0 |
+| `swell_rate` | 0.0-1.0 | 0.25 | Chance a note held 1.5+ beats fades in under a volume swell (CC11 ramp, softens the attack) |
+| `ring_out` | 0.0-1.0 | 0.85 | How much of the silence after a note the note rings into (0 = cut at grid cell, 1 = ring right up to the next note) |
+| `ring_max_beats` | 0.5+ | 4.0 | Maximum note length ring-out may create |
 
 When the song defines a `melody` theme, the lead guitar quotes it at
 `theme_quote_rate`; remaining phrases are free phrasing guided by the section
@@ -576,6 +579,21 @@ range via RPN (pitch bend sensitivity) for the dive and restores the GM default
 and degrades gracefully to a 2-semitone dip in those that don't. The solo's
 last held note always takes the dive when `dive_rate` is above 0; set
 `dive_rate: 0.0` to disable dives entirely.
+
+Ring-out (`ring_out`, on by default): generated notes otherwise cut dead at
+their grid cell even when a rest follows, which reads as clipped and nervous.
+Ring-out extends each note into the silence that follows it — 85% of the gap
+by default, leaving a small breath before the next onset — capped at
+`ring_max_beats`. Deliberate staccato notes and slide grace notes are never
+extended. Notes that grow past the vibrato threshold this way get a seeded
+makeup draw, so long ring-outs usually shimmer. Set `ring_out: 0.0` for a
+tight, fully clipped line.
+
+Feedback swells (`swell_rate`): a held note fades in from ~30-60% volume over
+half to four fifths of its duration via channel expression (CC11), like a
+volume pedal or knob swell — the attack disappears and the note blooms. A
+swell can stack with vibrato, and with a dive (swell up, pitch down) on the
+solo's final note.
 
 Pitch expression is seeded and deterministic: `vibrato_rate` controls how often
 sustained notes (1+ beats) get a pitchwheel vibrato (depth 15-45 cents, rate

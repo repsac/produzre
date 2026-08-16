@@ -361,12 +361,25 @@ def render_into_timeline(
         dive_rate = 0.30
     dive_rate = max(0.0, min(dive_rate, 1.0))
 
+    # Feedback swell: held notes fade in under a volume pedal (CC11 ramp).
+    swell_rate = getattr(instrument_cfg, "swell_rate", None)
+    if swell_rate is None:
+        swell_rate = lead_extra.get("swell_rate", None)
+    if swell_rate is None:
+        swell_rate = 0.25
+    try:
+        swell_rate = float(swell_rate)
+    except Exception:
+        swell_rate = 0.25
+    swell_rate = max(0.0, min(swell_rate, 1.0))
+
     song_bpm = float(getattr(cfg.song, "bpm", 120.0) or 120.0)
 
     def _draw_expression(dur_beats: float) -> Optional[dict]:
         """Seeded per-note pitch expression. Draw order is fixed (bend gate,
-        then vibrato gate, then dive gate) so the RNG stream stays stable
-        across rate tweaks. A dive is exclusive: it replaces bend/vibrato."""
+        vibrato gate, swell gate, then dive gate) so the RNG stream stays
+        stable across rate tweaks. A dive replaces bend/vibrato but keeps a
+        drawn swell (volume swell + whammy dive is the classic combo)."""
         expr: dict = {}
         if bend_rate > 0 and section_rng.random() < bend_rate:
             semis = section_rng.choice([1, 2])
@@ -382,16 +395,25 @@ def render_into_timeline(
                 "period_beats": period_beats,
                 "delay_beats": delay,
             }
+        if dur_beats >= 1.5 and swell_rate > 0 and section_rng.random() < swell_rate:
+            expr["swell"] = {
+                "from": section_rng.randint(30, 60),
+                "ramp_beats": dur_beats * section_rng.uniform(0.50, 0.80),
+                "to": 127,
+            }
         if solo and dur_beats >= 1.5 and dive_rate > 0 and section_rng.random() < dive_rate:
             # Dive bombs need room to fall: 7-14 semitones over most of the
             # note, held at the bottom. The writer widens the channel's bend
             # range via RPN for the dive and restores +/-2 after.
-            return {
+            dive_expr: dict = {
                 "dive": {
                     "semitones": section_rng.choice([7, 12, 14]),
                     "drop_beats": dur_beats * section_rng.uniform(0.55, 0.75),
                 }
             }
+            if "swell" in expr:
+                dive_expr["swell"] = expr["swell"]
+            return dive_expr
         return expr or None
 
     phrase_len_beats = float(phrase_len_bars) * float(bpb)
@@ -727,6 +749,7 @@ def render_into_timeline(
                         pitch=grace_pitch,
                         velocity=grace_vel,
                         channel=None,
+                        kind="slide_grace",
                     )
 
             timeline.add_note(
@@ -735,6 +758,7 @@ def render_into_timeline(
                 pitch=pitch,
                 velocity=vel,
                 channel=None,
+                kind=art,
                 expression=_draw_expression(h_dur),
             )
             emitted_beats.append(local_beat)
@@ -771,9 +795,71 @@ def render_into_timeline(
                     pitch=t_pitch,
                     velocity=t_vel,
                     channel=None,
+                    kind="theme_sustain",
                     expression=_draw_expression(t_h_dur),
                 )
                 emitted_beats.append(t_beat)
+
+    # Ring-out: notes otherwise cut dead at their grid cell while the rest
+    # that follows is silence — a player lets the note ring into the gap.
+    # Extend every note (except deliberate staccato and slide grace notes)
+    # into the following silence, leaving a small breath before the next
+    # onset. Pure post-pass over emitted events, so it adds no RNG draws.
+    ring_out = lead_extra.get("ring_out", 0.85)
+    try:
+        ring_out = max(0.0, min(float(ring_out), 1.0))
+    except (TypeError, ValueError):
+        ring_out = 0.85
+    ring_max = lead_extra.get("ring_max_beats", 4.0)
+    try:
+        ring_max = max(0.5, float(ring_max))
+    except (TypeError, ValueError):
+        ring_max = 4.0
+    if ring_out > 0:
+        section_events = sorted(
+            timeline.events[events_before:], key=lambda e: e.start_beat
+        )
+        sec_end = section_start_beat
+        if harmony_plan.chord_slots:
+            sec_end = section_start_beat + float(harmony_plan.chord_slots[-1].end_beat)
+        for i, ev in enumerate(section_events):
+            if ev.kind in ("staccato", "slide_grace"):
+                continue
+            ev_end = ev.start_beat + ev.duration_beats
+            next_start = (
+                section_events[i + 1].start_beat
+                if i + 1 < len(section_events)
+                else sec_end
+            )
+            gap = next_start - ev_end
+            if gap < 0.25:
+                continue
+            new_dur = min(
+                ev.duration_beats + gap * ring_out,
+                ring_max,
+                next_start - ev.start_beat - 0.05,
+            )
+            if new_dur > ev.duration_beats + 0.01:
+                ev.duration_beats = new_dur
+                # A note that grew past the vibrato threshold missed its gate
+                # draw at emission — give it a makeup draw. These draws happen
+                # at a fixed point (after all emission), keeping the stream
+                # deterministic.
+                expr = ev.expression or {}
+                if (
+                    new_dur >= 1.0
+                    and "vibrato" not in expr
+                    and "dive" not in expr
+                    and vibrato_rate > 0
+                    and section_rng.random() < vibrato_rate
+                ):
+                    expr = dict(expr)
+                    expr["vibrato"] = {
+                        "depth_cents": section_rng.uniform(15.0, 45.0),
+                        "period_beats": 60.0 / (song_bpm * section_rng.uniform(4.5, 6.5)),
+                        "delay_beats": section_rng.uniform(0.20, 0.35),
+                    }
+                    ev.expression = expr
 
     # Signature move: a solo's final long held note always takes the dive
     # bomb (when dives are enabled) — the last scream note is where a player
@@ -784,12 +870,16 @@ def render_into_timeline(
         held = [ev for ev in section_events if ev.duration_beats >= 1.5]
         if held:
             last_note = max(held, key=lambda ev: ev.start_beat)
-            last_note.expression = {
+            prev_expr = last_note.expression or {}
+            new_expr: dict = {
                 "dive": {
                     "semitones": section_rng.choice([7, 12, 14]),
                     "drop_beats": last_note.duration_beats * section_rng.uniform(0.55, 0.75),
                 }
             }
+            if "swell" in prev_expr:
+                new_expr["swell"] = prev_expr["swell"]
+            last_note.expression = new_expr
 
     added = len(timeline.events) - events_before
     logger.debug(
