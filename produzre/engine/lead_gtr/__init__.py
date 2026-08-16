@@ -253,8 +253,10 @@ def render_into_timeline(
     if role == "lead":
         solo = True
 
-    # Slightly boost intensity/velocity for true solo sections.
-    base_vel = int(80 * max(0.3, min(intensity, 1.5)))
+    # Lead sits above the band: scale toward the top of the velocity range so
+    # the line reads as the foreground voice (rhythm guitar choruses average
+    # in the mid-90s). Solo sections get the traditional extra push.
+    base_vel = int(100 * max(0.45, min(intensity, 1.5)))
     if solo:
         base_vel = min(118, base_vel + 10)
 
@@ -320,7 +322,10 @@ def render_into_timeline(
     vary_last = resolution_strength > 0.3
     section_type = getattr(section, "type", "") or ""
     call_and_response = (section_type.lower() == "bridge")
-    dur_scale = 0.78 if solo else 0.90
+    # Near-full sustain: hooks live or die by their long notes, and heavy
+    # trimming is what made themed lines feel lifeless. Solo keeps a small
+    # gap for articulation space in denser lines.
+    dur_scale = 0.95 if solo else 1.0
 
     # Phase LG3: extract accent beats from plan for grid-aware placement.
     plan = kwargs.get("plan", None)
@@ -494,6 +499,10 @@ def render_into_timeline(
         is_first_phrase = (phrase_start < eps)
         lift_this_phrase = chorus_lift and is_first_phrase
 
+        # Track what actually got played so theme-driven placement below can
+        # tell coverage from coincidence.
+        emitted_beats: list = []
+
         # Emit motif notes at their own beat offsets/durations within the phrase.
         for note_idx, rn in enumerate(emit_notes):
             local_beat = phrase_start + rn.beat_offset
@@ -529,12 +538,14 @@ def render_into_timeline(
                     pitch = guided
                     previous_guide_pitch = guided
 
-            # Theme quoting (design: theme-bank-architecture.md §4.4): an
-            # interior note close to a realized theme note may adopt the
-            # theme's pitch, so the line paraphrases the song's hook. The RNG
-            # draw happens for every interior note while themes are active,
-            # keeping the stream stable regardless of theme proximity.
-            if theme_notes and not is_phrase_anchor:
+            # Theme quoting (design: theme-bank-architecture.md §4.4): a note
+            # close to a realized theme note adopts the theme's pitch AND its
+            # duration — a quote that keeps the motif's short durations does
+            # not sound like the hook. The RNG draw happens for every note
+            # while themes are active, keeping the stream stable regardless
+            # of theme proximity.
+            quoted = False
+            if theme_notes:
                 quote_draw = section_rng.random()
                 if quote_draw < theme_quote_rate:
                     nearest = min(
@@ -545,9 +556,21 @@ def render_into_timeline(
                         pitch = octave_wrap_if_needed(
                             int(nearest["pitch"]), reg_min, reg_max
                         )
+                        duration = min(
+                            float(nearest["duration_beats"]) * dur_scale,
+                            phrase_end - local_beat,
+                        )
+                        duration = max(0.1, duration)
+                        quoted = True
 
             # Phase LG5: articulation — shape duration, optional grace note.
+            # Long notes (resolutions, held hooks — including quoted theme
+            # durations) always sustain: staccato-ing the money note is
+            # exactly what made themed hooks feel lifeless. The articulation
+            # draw is consumed either way, so the RNG stream is unchanged.
             art = choose_articulation(section_rng, intensity)
+            if duration >= 1.4 and art == "staccato":
+                art = "sustain"
             arted = apply_articulation(pitch, duration, art, section_rng)
 
             # Per-hit velocity shaping.
@@ -559,14 +582,18 @@ def render_into_timeline(
                     vel = int(vel * 1.06)
             if intensity_band == "low":
                 vel = int(vel * 0.9)
-            elif intensity_band == "high":
-                if note_idx == 0:
-                    vel = int(vel * 1.05)
-                else:
-                    vel = int(vel * 0.95)
+            elif intensity_band == "high" and note_idx == 0:
+                # Accent the phrase anchor only — never duck the rest of the
+                # line. A lead that gets quieter as the band gets louder
+                # disappears from the mix.
+                vel = int(vel * 1.05)
 
             if solo:
                 vel = int(vel * 1.05)
+
+            if quoted:
+                # The hook is the foreground — quote it with intent.
+                vel = int(vel * 1.08)
 
             vel = max(20, min(127, vel))
 
@@ -611,6 +638,42 @@ def render_into_timeline(
                 velocity=vel,
                 channel=None,
             )
+            emitted_beats.append(local_beat)
+
+        # Theme-driven placement: a long held note in the hook (the money
+        # note) must sound even where the generated motif rests — otherwise
+        # the hook's defining sustain is silently dropped whenever no motif
+        # note happens to land near it. No articulation draw here (always
+        # sustain); humanize consumes its usual draws only when injecting.
+        if theme_notes:
+            for tn in theme_notes:
+                t_beat = float(tn["beat"])
+                t_dur = float(tn["duration_beats"])
+                if t_dur < 2.0:
+                    continue
+                if not (phrase_start - eps <= t_beat < phrase_end - eps):
+                    continue
+                if any(abs(t_beat - eb) <= 0.25 for eb in emitted_beats):
+                    continue
+                if lead_activity_windows and not any(
+                    start <= t_beat < end for start, end in lead_activity_windows
+                ):
+                    continue
+                t_pitch = octave_wrap_if_needed(int(tn["pitch"]), reg_min, reg_max)
+                t_duration = max(0.1, min(t_dur * dur_scale, phrase_end - t_beat))
+                t_vel = max(20, min(127, int(base_vel * 1.08)))
+                t_song_beat = section_start_beat + t_beat + offset_beats
+                t_song_beat, t_h_dur, t_vel = humanize_note(
+                    t_song_beat, t_duration, t_vel, section_rng, intensity
+                )
+                timeline.add_note(
+                    start_beat=t_song_beat,
+                    duration_beats=t_h_dur,
+                    pitch=t_pitch,
+                    velocity=t_vel,
+                    channel=None,
+                )
+                emitted_beats.append(t_beat)
 
     added = len(timeline.events) - events_before
     logger.debug(

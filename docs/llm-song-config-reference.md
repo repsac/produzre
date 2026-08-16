@@ -540,7 +540,11 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 
 When the song defines a `melody` theme, the lead guitar quotes it at
 `theme_quote_rate`; remaining phrases are free phrasing guided by the section
-contour.
+contour. Quotes adopt the theme's pitch AND duration, so the hook's rhythm
+stays recognizable, and long notes (1.5+ beats) always sustain instead of
+being staccato-cut. Long held theme notes are also played even where the
+generated phrase would rest. Lead velocity scales toward the top of the range
+so the line sits above the band.
 
 Lead guitar develops a section motif across phrases automatically, using related
 inversions, small interval changes, rhythm rotation, and final-phrase resolution.

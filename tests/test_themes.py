@@ -581,3 +581,78 @@ class TestDrumGrooveCoupling:
         result = _build([str(_write_groove_cfg(tmp_path, 1.0)), "--strict-determinism"])
         assert result.returncode == 0, result.stderr[-2000:]
         assert "Determinism check PASSED" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Lead presence: quoted hooks sustain and sit above the band
+# ---------------------------------------------------------------------------
+
+LEAD_YAML = """\
+version: 1
+song:
+  title: "LeadPresence"
+  bpm: 120
+  key: E
+  mode: ionian
+  meter: "4/4"
+  genre: rock
+  seed: 7
+  exports_root: "{exports_root}"
+exports:
+  midi_text:
+    enabled: true
+    views: [events]
+    subdiv: 16
+themes:
+  chorus_hook:
+    role: melody
+    allow_development: false
+    register: [64, 79]
+    events: "5:.5 5:.5 6:.5 5:.5 4:1 b3:.5 2:.5 1:4"
+sections:
+  chorus:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: "bVI bVII I I"
+    instruments:
+      harmony: {{}}
+      lead_gtr:
+        intensity: 0.9
+        extra:
+          theme_quote_rate: 1.0
+arrangement:
+  - chorus
+"""
+
+
+@pytest.mark.integration
+class TestLeadPresence:
+    def _build_lead(self, tmp_path):
+        cfg_path = tmp_path / "lead.yaml"
+        cfg_path.write_text(
+            LEAD_YAML.format(exports_root=(tmp_path / "exports").as_posix()),
+            encoding="utf-8",
+        )
+        result = _build([str(cfg_path)])
+        assert result.returncode == 0, result.stderr[-2000:]
+        tsvs = list((tmp_path / "exports").glob("*/analysis/lead_gtr/*_lead_gtr.events.tsv"))
+        assert tsvs, "no lead events export found"
+        lines = tsvs[0].read_text(encoding="utf-8").splitlines()
+        header = lines[0].split("\t")
+        return [dict(zip(header, ln.split("\t"))) for ln in lines[1:] if ln.strip()]
+
+    def test_quoted_hook_sustains_long_notes(self, tmp_path):
+        rows = self._build_lead(tmp_path)
+        assert rows
+        durs = [float(r["duration_beats"]) for r in rows]
+        # The hook ends on a 4-beat tonic; quoting adopts theme durations, so
+        # the money note must survive articulation instead of being chopped.
+        assert max(durs) >= 3.0, f"longest lead note is {max(durs):.2f} beats"
+
+    def test_lead_sits_above_the_band(self, tmp_path):
+        rows = self._build_lead(tmp_path)
+        vels = sorted(int(r["velocity"]) for r in rows)
+        median = vels[len(vels) // 2]
+        assert median >= 85, f"lead median velocity {median} (was ~72 pre-fix)"
+        assert vels[-1] >= 100

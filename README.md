@@ -662,6 +662,8 @@ Set parameters in `extra:` block.
 
 When the song defines a `melody` theme, the lead guitar quotes it at
 `theme_quote_rate`; the rest is free phrasing guided by the section contour.
+Quotes adopt the theme's pitch and duration, long hook notes always sustain,
+and lead velocity sits above the band so the hook reads as the foreground.
 
 Lead motifs now develop across phrases automatically: later phrases reuse the
 opening contour with inversion, interval, rhythm, or cadence variation instead
