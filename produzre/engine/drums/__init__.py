@@ -466,6 +466,9 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         "timing_jitter_ms",
         "push_pull",
         "velocity_humanize",
+        "groove_strength",
+        "riff_accent_rate",
+        "riff_accent_boost",
     ):
         if k in inst_m:
             params_m[k] = inst_m[k]
@@ -1049,6 +1052,77 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
                 {k: v for k, v in template_updates.items()},
             )
         template = replace(template, **template_updates)
+
+    # Theme coupling (M4c): a drum_groove theme makes the kit pattern itself
+    # thematic — the song's own groove replaces the recipe's kick/snare/hat
+    # steps, quantized to the 16th grid. `groove_strength` crossfades between
+    # the theme pattern (1.0, the default when a groove theme exists) and the
+    # genre pattern (0.0). Voices the theme does not use keep the recipe
+    # pattern. All draws are unconditional and in sorted order, so the RNG
+    # stream stays independent of pattern content, and the derived sub-RNG
+    # leaves the base stream untouched for groove-free configs.
+    _groove_theme = None
+    _plan_for_groove = kwargs.get("plan")
+    if _plan_for_groove is not None and hasattr(_plan_for_groove, "get"):
+        _groove_theme = _plan_for_groove.get(f"themes.groove.{section_id}")
+    if _groove_theme:
+        groove_strength = params_m.get("groove_strength")
+        if groove_strength is None:
+            groove_strength = 1.0
+        groove_strength = max(0.0, min(float(groove_strength), 1.0))
+        if groove_strength > 0.0:
+            from dataclasses import replace as _tpl_replace
+            from .groove import hat_steps_for_mode as _hat_steps_for_mode
+            from .groove import step_index_in_bar as _step_in_bar
+
+            rng_groove = _derive_rng(rng, "drums.groove_theme")
+
+            def _crossfade_steps(theme_onsets, genre_steps):
+                steps = set()
+                for b in sorted(float(x) for x in theme_onsets):
+                    draw = rng_groove.random()  # unconditional per theme onset
+                    if draw < groove_strength:
+                        steps.add(
+                            _step_in_bar(b % beats_per_bar, beats_per_bar,
+                                         steps_per_bar=steps_per_bar)
+                        )
+                for s in sorted(int(x) for x in genre_steps):
+                    draw = rng_groove.random()  # unconditional per genre step
+                    if draw < (1.0 - groove_strength):
+                        steps.add(s)
+                return tuple(sorted(steps))
+
+            _gt_updates = {}
+            if _groove_theme.get("kick"):
+                _gt_updates["kick_base"] = _crossfade_steps(
+                    _groove_theme["kick"], template.kick_base
+                )
+            if _groove_theme.get("snare"):
+                _gt_updates["snare_backbeat_steps"] = _crossfade_steps(
+                    _groove_theme["snare"], template.snare_backbeat_steps
+                )
+            _hat_line = list(_groove_theme.get("hat") or []) + list(
+                _groove_theme.get("ride") or []
+            )
+            if _hat_line:
+                _gt_updates["hat_steps_override"] = _crossfade_steps(
+                    _hat_line,
+                    _hat_steps_for_mode(template.hat_mode, steps_per_bar=steps_per_bar),
+                )
+            if _groove_theme.get("ride"):
+                _gt_updates["use_ride"] = True
+            if _gt_updates:
+                template = _tpl_replace(template, **_gt_updates)
+                if logger:
+                    logger.info(
+                        "Section '%s': drum groove theme applied "
+                        "(strength=%.2f, kick=%s, snare=%s)",
+                        section_id, groove_strength,
+                        _gt_updates.get("kick_base", template.kick_base),
+                        _gt_updates.get(
+                            "snare_backbeat_steps", template.snare_backbeat_steps
+                        ),
+                    )
 
     # Augment transition_context with transition params if context exists.
     effective_transition_context = None

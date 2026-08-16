@@ -290,7 +290,12 @@ def events_for_section_from_template(
     sb = step_beats(bpb, steps_per_bar=spb)
     bars = bars_total(float(total_beats), bpb)
 
-    hat_steps = hat_steps_for_mode(template.hat_mode, steps_per_bar=spb)
+    # A drum_groove theme can pin explicit top-cymbal steps; otherwise the
+    # eligible steps come from the template's hat_mode density.
+    if template.hat_steps_override:
+        hat_steps = {int(s) for s in template.hat_steps_override}
+    else:
+        hat_steps = hat_steps_for_mode(template.hat_mode, steps_per_bar=spb)
     sync_steps = eligible_syncopation_steps(spb)
     dbl_steps = eligible_double_kick_steps(spb)
 

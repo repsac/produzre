@@ -154,6 +154,8 @@ class GrooveTemplate:
         open_hat_rate: Probability of opening hat on an "&" step (engine-defined).
         crash_start: Whether to crash on the section downbeat.
         crash_phrase_end_rate: Probability of a crash at the start of the last bar.
+        hat_steps_override: Explicit top-cymbal step indices (theme grooves).
+            Empty tuple = derive eligible steps from hat_mode as usual.
     """
 
     hat_mode: str = "8th"
@@ -173,6 +175,8 @@ class GrooveTemplate:
 
     crash_start: bool = False
     crash_phrase_end_rate: float = 0.0
+
+    hat_steps_override: Tuple[int, ...] = ()
 
 
 

@@ -681,6 +681,21 @@ def render_section_instruments(
             total_beats = float(getattr(hplan, "total_beats", 0.0) or 0.0)
             for theme in theme_bank.themes.values():
                 t_name, t_params = treatment_for(theme, sec_type_key, occurrence)
+                if theme.role is ThemeRole.DRUM_GROOVE:
+                    # Groove themes are rhythm+voice, not pitch: publish
+                    # per-voice onsets for the drums engine instead of
+                    # pitch-realized notes.
+                    from ..themes.groove import realize_groove
+
+                    performance_plan.set(
+                        f"themes.groove.{sec.id}",
+                        realize_groove(theme, t_name, t_params, total_beats),
+                    )
+                    logger.info(
+                        "Section '%s': drum groove from theme '%s' (%s)",
+                        sec.id, theme.name, t_name,
+                    )
+                    continue
                 notes = realize_for_section(
                     theme, t_name, t_params, hplan.chord_slots,
                     key=sec_key, mode=sec_mode, genre=sec_genre,

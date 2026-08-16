@@ -21,7 +21,7 @@ class ThemeRole(str, Enum):
     RIFF = "riff"
     MELODY = "melody"
     BASS_MOTIF = "bass_motif"
-    DRUM_GROOVE = "drum_groove"  # reserved (M3); not yet realized
+    DRUM_GROOVE = "drum_groove"  # rhythm+voice theme; realized via themes/groove.py
 
 
 # Default MIDI registers per role when the config does not specify one.

@@ -431,6 +431,10 @@ Each event token is `degree:duration` — a key-relative scale degree
 `5+` displaces up an octave, and `.` or `r` is a rest. An explicit-list form
 (`degrees:` + `rhythm:`) is also accepted.
 
+A fourth role, `drum_groove`, uses degrees as drum voices instead of pitches:
+`1` kick, `2` snare, `3` closed hat, `6` ride. The theme becomes the kit
+pattern (see `groove_strength` under [Drums](#drums)).
+
 Themes are not static loops. Each section applies a deterministic treatment:
 intros play only the first half, prechoruses displace the rhythm, bridges
 invert the melody, breakdowns thin it out, and a repeated chorus lifts the
@@ -578,6 +582,7 @@ syncopation. Phrase fills target the next chord or section resolution.
 | `pickup_rate` | 0.0-1.0 | 0.7 | Transition pickup probability |
 | `downbeat_rate` | 0.0-1.0 | 0.8 | Section downbeat crash/kick probability |
 | `riff_accent_rate` | 0.0-1.0 | 0.5 | Kick accents on riff theme attacks |
+| `groove_strength` | 0.0-1.0 | 1.0 when a drum_groove theme exists | Crossfade between the groove theme's kit pattern and the genre pattern |
 
 Drum transitions are energy-aware: lifts into high-energy sections favor longer
 snare/tom/kick pickups, while drops use shorter stop-time pickups with more space.

@@ -23,6 +23,7 @@ from produzre.config.errors import ConfigError
 from produzre.harmony.plan import ChordSlot
 from produzre.themes.compose import compose_theme_bank
 from produzre.themes.coupling import get_theme_notes
+from produzre.themes.groove import realize_groove
 from produzre.themes.io import parse_themes_block
 from produzre.themes.model import Theme, ThemeEvent, ThemeRole
 from produzre.themes.realize import degree_to_pitch_class, realize_theme
@@ -393,5 +394,190 @@ class TestBassMotifCoupling:
 
     def test_motif_build_strictly_deterministic(self, tmp_path):
         result = _build([str(_write_motif_cfg(tmp_path, 0.7)), "--strict-determinism"])
+        assert result.returncode == 0, result.stderr[-2000:]
+        assert "Determinism check PASSED" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# M4c: drum_groove themes (the kit pattern itself is thematic)
+# ---------------------------------------------------------------------------
+
+class TestGrooveRealize:
+    def test_degrees_map_to_voices(self):
+        theme = Theme(
+            name="g", role=ThemeRole.DRUM_GROOVE, length_beats=4.0,
+            events=(
+                ThemeEvent(0.0, 1.0, 1),    # kick
+                ThemeEvent(1.0, 1.0, 2),    # snare
+                ThemeEvent(2.0, 0.5, 3),    # hat
+                ThemeEvent(2.5, 0.5, 3),    # hat
+                ThemeEvent(3.0, 1.0, 6),    # ride
+            ),
+        )
+        g = realize_groove(theme, "quote", {}, 4.0)
+        assert g["kick"] == [0.0]
+        assert g["snare"] == [1.0]
+        assert g["hat"] == [2.0, 2.5]
+        assert g["ride"] == [3.0]
+
+    def test_loops_to_cover_section(self):
+        theme = Theme(
+            name="g", role=ThemeRole.DRUM_GROOVE, length_beats=4.0,
+            events=(ThemeEvent(0.0, 1.0, 1), ThemeEvent(2.0, 1.0, 1)),
+        )
+        g = realize_groove(theme, "quote", {}, 12.0)
+        assert g["kick"] == [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
+
+    def test_reserved_degrees_and_rests_skipped(self):
+        theme = Theme(
+            name="g", role=ThemeRole.DRUM_GROOVE, length_beats=2.0,
+            events=(
+                ThemeEvent(0.0, 0.5, 4),     # open hat: reserved
+                ThemeEvent(0.5, 0.5, None),  # rest
+                ThemeEvent(1.0, 1.0, 5),     # crash: reserved
+            ),
+        )
+        assert realize_groove(theme, "quote", {}, 2.0) == {
+            "kick": [], "snare": [], "hat": [], "ride": [],
+        }
+
+    def test_arc_transforms_apply(self):
+        theme = Theme(
+            name="g", role=ThemeRole.DRUM_GROOVE, length_beats=4.0,
+            events=(
+                ThemeEvent(0.0, 1.0, 1),
+                ThemeEvent(0.5, 0.5, 3),
+                ThemeEvent(1.0, 1.0, 2),
+                ThemeEvent(1.5, 0.5, 3),
+            ),
+        )
+        thinned = realize_groove(theme, "thin", {}, 4.0)
+        assert thinned["kick"] == [0.0]
+        assert thinned["snare"] == [1.0]
+        assert thinned["hat"] == []          # off-beat hats removed
+        displaced = realize_groove(theme, "displace", {"shift_beats": 1.0}, 4.0)
+        assert displaced["kick"] == [1.0]
+
+    def test_pure_function(self):
+        theme = Theme(
+            name="g", role=ThemeRole.DRUM_GROOVE, length_beats=2.0,
+            events=(ThemeEvent(0.0, 1.0, 1),),
+        )
+        assert realize_groove(theme, "quote", {}, 8.0) == realize_groove(theme, "quote", {}, 8.0)
+
+
+GROOVE_YAML = """\
+version: 1
+song:
+  title: "GrooveTheme"
+  bpm: 110
+  key: E
+  mode: ionian
+  meter: "4/4"
+  genre: rock
+  seed: 5
+  exports_root: "{exports_root}"
+exports:
+  midi_text:
+    enabled: true
+    views: [events]
+    subdiv: 16
+themes:
+  kit_groove:
+    role: drum_groove
+    allow_development: false
+    events: "1:.5 3:.5 2:.5 3:.5 1:.5 3:.5 2:.5 3:.5 1:1 3:.5 2:.5 3:.5 1:.5 3:.5 2:.5"
+sections:
+  verse:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I I I I"
+    instruments:
+      harmony: {{}}
+      drums:
+        intensity: 0.7
+        params:
+          groove_strength: {strength}
+          fill_rate: 0.0  # fills duck hats; keep the pattern assertion surgical
+arrangement:
+  - verse
+"""
+
+
+def _write_groove_cfg(tmp_path, strength):
+    cfg_path = tmp_path / "groove.yaml"
+    cfg_path.write_text(
+        GROOVE_YAML.format(exports_root=(tmp_path / "exports").as_posix(), strength=strength),
+        encoding="utf-8",
+    )
+    return cfg_path
+
+
+def _drum_tsv_path(exports_root: Path):
+    tsvs = list(exports_root.glob("*/analysis/drums/*_drums.events.tsv"))
+    assert tsvs, "no drums events export found"
+    return tsvs[0]
+
+
+def _read_drum_rows(exports_root: Path):
+    lines = _drum_tsv_path(exports_root).read_text(encoding="utf-8").splitlines()
+    header = lines[0].split("\t")
+    return [dict(zip(header, ln.split("\t"))) for ln in lines[1:] if ln.strip()]
+
+
+@pytest.mark.integration
+class TestDrumGrooveCoupling:
+    # The 2-bar groove theme quantizes to (section-relative, per bar):
+    #   odd bars:  kick {0, 2}    snare {1, 3}      hats {0.5, 1.5, 2.5, 3.5}
+    #   even bars: kick {0, 2.5}  snare {1.5, 3.5}  hats {1.0, 2.0, 3.0}
+    @staticmethod
+    def _expected(bar_index: int):
+        if bar_index % 2 == 0:
+            return {"kick": [0.0, 2.0], "snare": [1.0, 3.0],
+                    "hat": [0.5, 1.5, 2.5, 3.5]}
+        return {"kick": [0.0, 2.5], "snare": [1.5, 3.5], "hat": [1.0, 2.0, 3.0]}
+
+    @staticmethod
+    def _has_hit(rows, pitches, abs_beat):
+        return any(
+            int(r["pitch"]) in pitches
+            and abs(float(r["start_beat_abs"]) - abs_beat) < 0.13
+            for r in rows
+        )
+
+    def test_theme_owns_the_kit_pattern(self, tmp_path):
+        result = _build([str(_write_groove_cfg(tmp_path, 1.0))])
+        assert result.returncode == 0, result.stderr[-2000:]
+        rows = _read_drum_rows(tmp_path / "exports")
+        assert rows
+        for bar in range(4):
+            expected = self._expected(bar)
+            base = bar * 4.0
+            for b in expected["kick"]:
+                assert self._has_hit(rows, {36}, base + b), \
+                    f"kick missing at bar {bar + 1} beat {b}"
+            for b in expected["snare"]:
+                assert self._has_hit(rows, {37, 38, 40}, base + b), \
+                    f"snare missing at bar {bar + 1} beat {b}"
+            for b in expected["hat"]:
+                assert self._has_hit(rows, {42, 46, 51}, base + b), \
+                    f"hat missing at bar {bar + 1} beat {b}"
+
+    def test_groove_strength_zero_keeps_genre_pattern(self, tmp_path):
+        on_dir = tmp_path / "on"
+        off_dir = tmp_path / "off"
+        on_dir.mkdir()
+        off_dir.mkdir()
+        r_on = _build([str(_write_groove_cfg(on_dir, 1.0))])
+        r_off = _build([str(_write_groove_cfg(off_dir, 0.0))])
+        assert r_on.returncode == 0, r_on.stderr[-2000:]
+        assert r_off.returncode == 0, r_off.stderr[-2000:]
+        text_on = _drum_tsv_path(on_dir / "exports").read_text(encoding="utf-8")
+        text_off = _drum_tsv_path(off_dir / "exports").read_text(encoding="utf-8")
+        assert text_on != text_off
+
+    def test_groove_build_strictly_deterministic(self, tmp_path):
+        result = _build([str(_write_groove_cfg(tmp_path, 1.0)), "--strict-determinism"])
         assert result.returncode == 0, result.stderr[-2000:]
         assert "Determinism check PASSED" in result.stderr

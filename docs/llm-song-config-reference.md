@@ -255,6 +255,36 @@ Use `null`, `.`, or `r` as a degree for a rest.
 | `riff` | Rhythm guitar accents, bass onset locking, kick-drum accents | 40-55 |
 | `melody` | Lead guitar quoting, section melody guide | 64-79 |
 | `bass_motif` | Bass quotes its pitches and plays its onsets | 28-48 |
+| `drum_groove` | Drums play it as the kit pattern (see below) | — |
+
+### Drum Groove Themes
+
+A `drum_groove` theme is rhythm + drum voice instead of rhythm + pitch.
+Degrees select the voice; the event rhythm is the groove:
+
+| Degree | Voice |
+|--------|-------|
+| `1` | Kick |
+| `2` | Snare |
+| `3` | Closed hat |
+| `6` | Ride (moves the whole top-cymbal line to ride) |
+
+Degrees 4 (open hat), 5 (crash), and 7 (tom) are reserved and currently
+skipped. Example — a rock beat with a signature double kick:
+
+```yaml
+  kit_groove:
+    role: drum_groove
+    events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 3:.5"
+```
+
+The theme replaces the recipe's kick/snare/hat steps (voices the theme does
+not use stay on the recipe), while genre/persona still control velocities,
+ghost notes, fills, and humanization. Arc transforms apply: a `breakdown`
+thins the kit, a `prechorus` displaces the groove. `groove_strength` (drums
+param, 0.0-1.0, default 1.0 when a groove theme exists) crossfades between
+the theme pattern and the genre pattern; 0.0 disables it. Groove themes take
+effect in sections that have a harmony plan (any section with `harmony: {}`).
 
 ### How Themes Adapt to the Harmony
 
@@ -303,6 +333,9 @@ authored material is treated as intent, not clay.
   quoting its pitches.
 - `drums` param `riff_accent_rate` (0.0-1.0, default 0.5) — how often the kick
   adds accents on riff attacks.
+- `drums` param `groove_strength` (0.0-1.0, default 1.0 when a drum_groove
+  exists) — crossfade between the groove theme's kit pattern and the genre
+  pattern.
 
 See `examples/themes_demo.yaml` for a complete themed song.
 
@@ -409,6 +442,7 @@ Set in `params:` block.
 | `pickup_rate` | 0.0-1.0 | 0.7 | Transition pickup probability |
 | `downbeat_rate` | 0.0-1.0 | 0.8 | Section downbeat crash/kick probability |
 | `riff_accent_rate` | 0.0-1.0 | 0.5 | Kick accents on riff theme attacks |
+| `groove_strength` | 0.0-1.0 | 1.0 when a drum_groove theme exists | Crossfade between the groove theme's kit pattern and the genre pattern |
 
 Transition pickups are energy-aware. Lifts into higher-energy sections can use
 longer snare, tom, kick/snare, and crash pickups; drops use shorter stop-time
