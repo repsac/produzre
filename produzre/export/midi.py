@@ -146,6 +146,41 @@ def program_for_instrument(cfg: Any, instrument_name: str) -> Optional[int]:
         return None
 
 
+def add_channel_setup(
+    track: mido.MidiTrack,
+    cfg: Any,
+    instrument_name: str,
+    channel: int,
+) -> None:
+    """Write patch-selection messages at time 0 for a track's channel.
+
+    Melodic instruments get a `program_change` when their engine configures a
+    GM program. The GM percussion channel (9, 0-based) always gets an explicit
+    `program_change` 0 (Standard Kit): GM playback ignores it, but DAWs that
+    don't assume "channel 10 = drums" on import (e.g. FL Studio) otherwise
+    default the track to a melodic patch like Acoustic Piano.
+
+    Args:
+        track: Target MIDI track to mutate.
+        cfg: Configuration-like object with an `engines` mapping.
+        instrument_name: Engine/instrument key (used for program lookup).
+        channel: MIDI channel the track's notes live on.
+
+    Returns:
+        None
+    """
+    ch = max(0, min(15, int(channel)))
+    if ch == 9:
+        track.append(mido.Message("program_change", program=0, channel=ch, time=0))
+        return
+    prog = program_for_instrument(cfg, instrument_name)
+    if prog is None:
+        return
+    track.append(
+        mido.Message("program_change", program=int(prog), channel=ch, time=0)
+    )
+
+
 @dataclass(frozen=True)
 class _MidiMsg:
     tick: int
@@ -170,10 +205,15 @@ def _expression_msgs(
         down by N semitones and ramp linearly back to center.
       - "vibrato": {"depth_cents": float, "period_beats": float,
         "delay_beats": float} — sine-shaped wheel wobble after a delay.
+      - "dive": {"semitones": int, "drop_beats": float} — whammy-bar dive:
+        ramps the wheel to full down over drop_beats and holds it until the
+        note ends. The channel's bend range is temporarily widened via RPN 0/0
+        (pitch bend sensitivity) so dives can exceed the GM +/-2 default.
 
-    Assumes the GM default pitch-bend range of +/-2 semitones. The wheel is
-    always returned to center at the note's end tick so the next note on the
-    channel starts clean.
+    Assumes the GM default pitch-bend range of +/-2 semitones (except during a
+    dive, which sets and restores its own range). The wheel is always returned
+    to center at the note's end tick so the next note on the channel starts
+    clean.
     """
     out: list[_MidiMsg] = []
     if not isinstance(expression, dict) or end_tick <= start_tick:
@@ -225,6 +265,40 @@ def _expression_msgs(
                     "pitchwheel", pitch=clamp_wheel(depth_wheel * math.sin(phase)),
                     channel=ch, time=0)))
                 t += step
+
+    dive = expression.get("dive")
+    if isinstance(dive, dict):
+        try:
+            d_semis = float(dive.get("semitones", 0.0))
+            drop_beats = float(dive.get("drop_beats", 0.0))
+        except Exception:
+            d_semis, drop_beats = 0.0, 0.0
+        drop_ticks = min(beats_to_ticks(max(0.0, drop_beats), ppq=ppq), end_tick - start_tick)
+        if d_semis > 0 and drop_ticks > 0:
+            semis_i = max(1, min(24, int(round(d_semis))))
+            # Widen the channel's bend range for the dive (RPN 0/0 = pitch
+            # bend sensitivity). control_change sorts before pitchwheel at the
+            # same tick, so the range is set before the wheel moves.
+            for ctrl, val in ((101, 0), (100, 0), (6, semis_i), (38, 0)):
+                out.append(_MidiMsg(start_tick, 0, mido.Message(
+                    "control_change", control=ctrl, value=val, channel=ch, time=0)))
+            t = start_tick
+            while t < start_tick + drop_ticks:
+                frac = (t - start_tick) / drop_ticks
+                out.append(_MidiMsg(t, 0, mido.Message(
+                    "pitchwheel", pitch=clamp_wheel(-8191.0 * frac),
+                    channel=ch, time=0)))
+                t += step
+            out.append(_MidiMsg(start_tick + drop_ticks, 0, mido.Message(
+                "pitchwheel", pitch=-8191, channel=ch, time=0)))
+            # Hold at the bottom until the note ends; then re-center and
+            # restore the GM default +/-2 range (order 2 keeps the restore
+            # after the wheel reset at this tick).
+            out.append(_MidiMsg(end_tick, 0, mido.Message(
+                "pitchwheel", pitch=0, channel=ch, time=0)))
+            for ctrl, val in ((101, 0), (100, 0), (6, 2), (38, 0), (101, 127), (100, 127)):
+                out.append(_MidiMsg(end_tick, 2, mido.Message(
+                    "control_change", control=ctrl, value=val, channel=ch, time=0)))
 
     if out:
         out.append(_MidiMsg(end_tick, 0, mido.Message(

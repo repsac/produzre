@@ -238,15 +238,102 @@ def test_demo_build_expression_and_channels(tmp_path):
     mid = mido.MidiFile(str(export_root / "Flying_High.mid"))
     pw_channels = set()
     note_channels = set()
+    cc_channels = set()
+    pc_channels = set()
     for tr in mid.tracks:
         for m in tr:
             if m.type == "pitchwheel":
                 pw_channels.add(m.channel)
             elif m.type == "note_on" and m.velocity > 0:
                 note_channels.add(m.channel)
+            elif m.type == "control_change":
+                cc_channels.add(m.channel)
+            elif m.type == "program_change":
+                pc_channels.add(m.channel)
 
     # Lead vibrato/bend-ins (3), bass slide-ins (1), rhythm chord vibrato (2);
     # seed 23 deterministically lights up all three.
     assert pw_channels == {1, 2, 3}, f"pitchwheel on bass/rhythm/lead, got {pw_channels}"
     assert 9 not in pw_channels, "drums must never get pitch expression"
     assert 0 not in note_channels, "no notes may leak onto the piano channel"
+    # Solo-section dive bombs widen the lead channel's bend range via RPN.
+    assert cc_channels == {3}, f"RPN bend-range messages only on lead, got {cc_channels}"
+    # Drum channel carries an explicit Standard Kit program (FL Studio import).
+    assert 9 in pc_channels, "drum channel must carry a program change"
+
+
+def test_dive_widens_bend_range_and_restores_it():
+    """A dive bomb must set RPN pitch-bend sensitivity before the wheel moves
+    and restore the GM default (+/-2) after the note ends."""
+    tl = InstrumentTimeline(instrument="lead_gtr")
+    tl.add_note(
+        start_beat=0.0,
+        duration_beats=3.0,
+        pitch=69,
+        velocity=110,
+        channel=3,
+        expression={"dive": {"semitones": 12, "drop_beats": 2.0}},
+    )
+    msgs = _abs_msgs(_write(tl))
+
+    # RPN select + data entry (12 semitones) at the start tick, before note_on.
+    at_start = [m for t, m in msgs if t == 0]
+    cc = [m for m in at_start if m.type == "control_change"]
+    assert [(m.control, m.value) for m in cc] == [(101, 0), (100, 0), (6, 12), (38, 0)]
+    assert any(m.type == "pitchwheel" for m in at_start)
+    assert at_start[-1].type == "note_on", "range setup must precede the note"
+
+    # Wheel falls to full down by the end of the drop (2.0 beats = 960 ticks).
+    pw = [(t, m.pitch) for t, m in msgs if m.type == "pitchwheel"]
+    assert (960, -8191) in pw
+    assert min(v for _, v in pw) == -8191
+
+    # At note end (3.0 beats = 1440 ticks): wheel re-centers, then the range
+    # is restored to +/-2 and the RPN is closed (null select).
+    end_tick = 1440
+    at_end = [m for t, m in msgs if t == end_tick]
+    wheel_reset_idx = next(i for i, m in enumerate(at_end)
+                           if m.type == "pitchwheel" and m.pitch == 0)
+    restore = [m for m in at_end[wheel_reset_idx:] if m.type == "control_change"]
+    assert [(m.control, m.value) for m in restore] == [
+        (101, 0), (100, 0), (6, 2), (38, 0), (101, 127), (100, 127)
+    ]
+
+
+def test_drum_channel_gets_explicit_kit_program():
+    """FL Studio and friends don't assume channel 10 = drums on import, so the
+    drum channel must carry an explicit Standard Kit program change."""
+    from produzre.export.midi import add_channel_setup
+
+    track = mido.MidiTrack()
+    add_channel_setup(track, None, "drums", 9)
+    pc = [m for m in track if m.type == "program_change"]
+    assert [(m.channel, m.program) for m in pc] == [(9, 0)]
+
+    # Melodic channels still get their configured program (and nothing when
+    # no program is configured).
+    class _Cfg:
+        engines = {"lead_gtr": type("E", (), {"program": 30})(),
+                   "mystery": type("E", (), {"program": None})()}
+
+    track = mido.MidiTrack()
+    add_channel_setup(track, _Cfg(), "lead_gtr", 3)
+    assert [(m.channel, m.program) for m in track if m.type == "program_change"] == [(3, 30)]
+
+    track = mido.MidiTrack()
+    add_channel_setup(track, _Cfg(), "mystery", 5)
+    assert not [m for m in track if m.type == "program_change"]
+
+
+def test_extra_view_flattens_loader_nesting():
+    """The config loader can wrap user params as extra.extra; the lead engine
+    must see them flat, with user keys winning over persona-merged keys."""
+    from produzre.engine.lead_gtr import _extra_view
+    from produzre.model import InstrumentConfig
+
+    ic = InstrumentConfig(extra={"extra": {"solo": True, "vibrato_rate": 0.9},
+                                 "vibrato_rate": 0.1})
+    flat = _extra_view(ic)
+    assert flat["solo"] is True
+    assert flat["vibrato_rate"] == 0.9, "user (nested) key must beat persona (top level)"
+    assert _extra_view(InstrumentConfig(extra=None)) == {}

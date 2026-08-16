@@ -550,6 +550,7 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 | `foreground` | `auto`, `full` | `auto` | `full` = lead owns the whole section (instrumental music); `auto` = call-and-answer windows |
 | `vibrato_rate` | 0.0-1.0 | 0.65 | Chance a note held 1+ beats gets pitchwheel vibrato |
 | `bend_rate` | 0.0-1.0 | 0.15 | Chance a note is approached with a short bend-in from below |
+| `dive_rate` | 0.0-1.0 | 0.30 | Solo sections only: chance a note held 1.5+ beats ends in a whammy dive bomb (7-14 semitones). The solo's final held note always dives when this is above 0 |
 
 When the song defines a `melody` theme, the lead guitar quotes it at
 `theme_quote_rate`; remaining phrases are free phrasing guided by the section
@@ -565,6 +566,16 @@ Genre selects a dedicated phrase vocabulary, and the ensemble planner assigns
 foreground windows that rhythm guitar leaves partially open.
 
 Use `solo: true` on the instrument to enable solo mode (denser playing, wider range).
+It works both as a direct instrument key and inside the `extra:` block.
+
+Dive bombs (`dive_rate`, solo sections only): a held note drops 7-14 semitones
+over roughly two thirds of its duration and holds at the bottom — the classic
+whammy-bar finale. The writer temporarily widens the lead channel's pitch-bend
+range via RPN (pitch bend sensitivity) for the dive and restores the GM default
+±2 semitones afterwards, so playback is correct in any DAW that honors RPNs —
+and degrades gracefully to a 2-semitone dip in those that don't. The solo's
+last held note always takes the dive when `dive_rate` is above 0; set
+`dive_rate: 0.0` to disable dives entirely.
 
 Pitch expression is seeded and deterministic: `vibrato_rate` controls how often
 sustained notes (1+ beats) get a pitchwheel vibrato (depth 15-45 cents, rate

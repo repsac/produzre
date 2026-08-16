@@ -85,6 +85,25 @@ def _stable_u32(text: str) -> int:
     return int.from_bytes(hashlib.md5(text.encode("utf-8")).digest()[:4], "little")
 
 
+def _extra_view(instrument_cfg) -> dict:
+    """Return a flat params dict from an instrument config's `extra`.
+
+    The config loader can wrap user params one level deep (`extra.extra`),
+    and the persona merge then puts persona keys at the top level. Flatten so
+    every param read sees both layers, with the user's nested keys winning
+    over persona-sourced top-level keys (persona < user).
+    """
+    extra = getattr(instrument_cfg, "extra", None)
+    if not isinstance(extra, dict):
+        return {}
+    nested = extra.get("extra")
+    if isinstance(nested, dict):
+        flat = {k: v for k, v in extra.items() if k != "extra"}
+        flat.update(nested)
+        return flat
+    return extra
+
+
 
 
 
@@ -155,9 +174,10 @@ def contribute_plan(
         ensemble = plan.get(f"ensemble.{section.id}", {})
         planned_rest = ensemble.get("lead_rest_ratio") if isinstance(ensemble, dict) else None
         # Read rest_probability from config (same logic as render)
+        lead_extra = _extra_view(instrument_cfg)
         rest_probability = getattr(instrument_cfg, "rest_probability", None)
         if rest_probability is None:
-            rest_probability = instrument_cfg.extra.get("rest_probability", None)
+            rest_probability = lead_extra.get("rest_probability", None)
 
         # Use rest_probability as a proxy for rest_ratio
         # This is the configured "target" rest ratio that lead will aim for
@@ -222,6 +242,11 @@ def render_into_timeline(
         logger.debug("Section '%s': no harmony plan; skipping lead guitar.", section.id)
         return
 
+    # Flat params view: the loader can nest user params under extra.extra
+    # (with persona keys merged at the top level). Normalize once so every
+    # param read below sees both layers.
+    lead_extra = _extra_view(instrument_cfg)
+
     # Effective intensity with style bias.
     raw_intensity = instrument_cfg.intensity
     style_bias = getattr(instrument_cfg, "style_bias", None)
@@ -249,6 +274,9 @@ def render_into_timeline(
 
     register = getattr(instrument_cfg, "register", None)
     solo = bool(getattr(instrument_cfg, "solo", False))
+    # Docs put lead params in `extra:` — honor a solo flag placed there too.
+    if not solo:
+        solo = bool(lead_extra.get("solo", False))
     role = getattr(instrument_cfg, "role", None)
     if role == "lead":
         solo = True
@@ -267,7 +295,7 @@ def render_into_timeline(
     # Solo sections default to longer phrases (4 bars) for more room to breathe.
     phrase_len_bars = getattr(instrument_cfg, "phrase_len_bars", None)
     if phrase_len_bars is None:
-        phrase_len_bars = instrument_cfg.extra.get("phrase_len_bars", None)
+        phrase_len_bars = lead_extra.get("phrase_len_bars", None)
     if phrase_len_bars is None:
         phrase_len_bars = 4 if solo else 2
     try:
@@ -279,7 +307,7 @@ def render_into_timeline(
     # Rhythm feel controls (rests + syncopation).
     rest_probability = getattr(instrument_cfg, "rest_probability", None)
     if rest_probability is None:
-        rest_probability = instrument_cfg.extra.get("rest_probability", None)
+        rest_probability = lead_extra.get("rest_probability", None)
     if rest_probability is None:
         # Default: more space in verses, less space in solos.
         if solo:
@@ -301,7 +329,7 @@ def render_into_timeline(
     # short bend-in from below. Rates are probabilities, not guarantees.
     vibrato_rate = getattr(instrument_cfg, "vibrato_rate", None)
     if vibrato_rate is None:
-        vibrato_rate = instrument_cfg.extra.get("vibrato_rate", None)
+        vibrato_rate = lead_extra.get("vibrato_rate", None)
     if vibrato_rate is None:
         vibrato_rate = 0.65
     try:
@@ -312,7 +340,7 @@ def render_into_timeline(
 
     bend_rate = getattr(instrument_cfg, "bend_rate", None)
     if bend_rate is None:
-        bend_rate = instrument_cfg.extra.get("bend_rate", None)
+        bend_rate = lead_extra.get("bend_rate", None)
     if bend_rate is None:
         bend_rate = 0.15
     try:
@@ -321,11 +349,24 @@ def render_into_timeline(
         bend_rate = 0.15
     bend_rate = max(0.0, min(bend_rate, 1.0))
 
+    # Whammy-bar dive bombs: rare, solo sections only, long held notes only.
+    dive_rate = getattr(instrument_cfg, "dive_rate", None)
+    if dive_rate is None:
+        dive_rate = lead_extra.get("dive_rate", None)
+    if dive_rate is None:
+        dive_rate = 0.30
+    try:
+        dive_rate = float(dive_rate)
+    except Exception:
+        dive_rate = 0.30
+    dive_rate = max(0.0, min(dive_rate, 1.0))
+
     song_bpm = float(getattr(cfg.song, "bpm", 120.0) or 120.0)
 
     def _draw_expression(dur_beats: float) -> Optional[dict]:
         """Seeded per-note pitch expression. Draw order is fixed (bend gate,
-        then vibrato gate) so the RNG stream stays stable across rate tweaks."""
+        then vibrato gate, then dive gate) so the RNG stream stays stable
+        across rate tweaks. A dive is exclusive: it replaces bend/vibrato."""
         expr: dict = {}
         if bend_rate > 0 and section_rng.random() < bend_rate:
             semis = section_rng.choice([1, 2])
@@ -340,6 +381,16 @@ def render_into_timeline(
                 "depth_cents": depth,
                 "period_beats": period_beats,
                 "delay_beats": delay,
+            }
+        if solo and dur_beats >= 1.5 and dive_rate > 0 and section_rng.random() < dive_rate:
+            # Dive bombs need room to fall: 7-14 semitones over most of the
+            # note, held at the bottom. The writer widens the channel's bend
+            # range via RPN for the dive and restores +/-2 after.
+            return {
+                "dive": {
+                    "semitones": section_rng.choice([7, 12, 14]),
+                    "drop_beats": dur_beats * section_rng.uniform(0.55, 0.75),
+                }
             }
         return expr or None
 
@@ -356,7 +407,7 @@ def render_into_timeline(
     # Resolution behavior: encourage landing on chord tones at chord/phrase ends.
     resolution_strength = getattr(instrument_cfg, "resolution_strength", None)
     if resolution_strength is None:
-        resolution_strength = instrument_cfg.extra.get("resolution_strength", None)
+        resolution_strength = lead_extra.get("resolution_strength", None)
     if resolution_strength is None:
         resolution_strength = 0.55 if solo else 0.35
     try:
@@ -420,7 +471,7 @@ def render_into_timeline(
     # Can be overridden via contour_style parameter.
     contour_style = getattr(instrument_cfg, "contour_style", None)
     if contour_style is None:
-        contour_style = instrument_cfg.extra.get("contour_style", None)
+        contour_style = lead_extra.get("contour_style", None)
 
     # Map contour_style to leap_limit
     if contour_style == "stepwise":
@@ -439,7 +490,7 @@ def render_into_timeline(
     # defines themes.
     theme_quote_rate = getattr(instrument_cfg, "theme_quote_rate", None)
     if theme_quote_rate is None:
-        theme_quote_rate = instrument_cfg.extra.get("theme_quote_rate", None)
+        theme_quote_rate = lead_extra.get("theme_quote_rate", None)
     if theme_quote_rate is None:
         theme_quote_rate = 0.65
     try:
@@ -723,6 +774,22 @@ def render_into_timeline(
                     expression=_draw_expression(t_h_dur),
                 )
                 emitted_beats.append(t_beat)
+
+    # Signature move: a solo's final long held note always takes the dive
+    # bomb (when dives are enabled) — the last scream note is where a player
+    # reaches for the bar. This runs after all emission, so its draws sit at
+    # a fixed point in the section's RNG stream.
+    if solo and dive_rate > 0:
+        section_events = timeline.events[events_before:]
+        held = [ev for ev in section_events if ev.duration_beats >= 1.5]
+        if held:
+            last_note = max(held, key=lambda ev: ev.start_beat)
+            last_note.expression = {
+                "dive": {
+                    "semitones": section_rng.choice([7, 12, 14]),
+                    "drop_beats": last_note.duration_beats * section_rng.uniform(0.55, 0.75),
+                }
+            }
 
     added = len(timeline.events) - events_before
     logger.debug(
