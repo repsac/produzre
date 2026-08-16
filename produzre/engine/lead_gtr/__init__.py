@@ -296,6 +296,53 @@ def render_into_timeline(
         rest_probability = 0.25
     rest_probability = max(0.0, min(rest_probability, 0.85))
 
+    # Pitch-expression controls (rendered as pitchwheel at export). A note
+    # held for >= 1 beat may get a seeded vibrato; any main note may get a
+    # short bend-in from below. Rates are probabilities, not guarantees.
+    vibrato_rate = getattr(instrument_cfg, "vibrato_rate", None)
+    if vibrato_rate is None:
+        vibrato_rate = instrument_cfg.extra.get("vibrato_rate", None)
+    if vibrato_rate is None:
+        vibrato_rate = 0.65
+    try:
+        vibrato_rate = float(vibrato_rate)
+    except Exception:
+        vibrato_rate = 0.65
+    vibrato_rate = max(0.0, min(vibrato_rate, 1.0))
+
+    bend_rate = getattr(instrument_cfg, "bend_rate", None)
+    if bend_rate is None:
+        bend_rate = instrument_cfg.extra.get("bend_rate", None)
+    if bend_rate is None:
+        bend_rate = 0.15
+    try:
+        bend_rate = float(bend_rate)
+    except Exception:
+        bend_rate = 0.15
+    bend_rate = max(0.0, min(bend_rate, 1.0))
+
+    song_bpm = float(getattr(cfg.song, "bpm", 120.0) or 120.0)
+
+    def _draw_expression(dur_beats: float) -> Optional[dict]:
+        """Seeded per-note pitch expression. Draw order is fixed (bend gate,
+        then vibrato gate) so the RNG stream stays stable across rate tweaks."""
+        expr: dict = {}
+        if bend_rate > 0 and section_rng.random() < bend_rate:
+            semis = section_rng.choice([1, 2])
+            ramp = min(section_rng.uniform(0.10, 0.20), max(0.05, dur_beats * 0.5))
+            expr["bend_in"] = {"semitones": semis, "ramp_beats": ramp}
+        if dur_beats >= 1.0 and vibrato_rate > 0 and section_rng.random() < vibrato_rate:
+            depth = section_rng.uniform(15.0, 45.0)
+            hz = section_rng.uniform(4.5, 6.5)
+            period_beats = 60.0 / (song_bpm * hz)
+            delay = section_rng.uniform(0.20, 0.35)
+            expr["vibrato"] = {
+                "depth_cents": depth,
+                "period_beats": period_beats,
+                "delay_beats": delay,
+            }
+        return expr or None
+
     phrase_len_beats = float(phrase_len_bars) * float(bpb)
 
     # Resolve key/mode and use the orchestrator's instrument RNG so take,
@@ -637,6 +684,7 @@ def render_into_timeline(
                 pitch=pitch,
                 velocity=vel,
                 channel=None,
+                expression=_draw_expression(h_dur),
             )
             emitted_beats.append(local_beat)
 
@@ -672,6 +720,7 @@ def render_into_timeline(
                     pitch=t_pitch,
                     velocity=t_vel,
                     channel=None,
+                    expression=_draw_expression(t_h_dur),
                 )
                 emitted_beats.append(t_beat)
 

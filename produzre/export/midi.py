@@ -19,6 +19,8 @@ mutating `mido.MidiTrack` objects.
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
+import math
+
 import mido
 
 
@@ -151,6 +153,85 @@ class _MidiMsg:
     msg: mido.Message
 
 
+def _expression_msgs(
+    start_tick: int,
+    end_tick: int,
+    ch: int,
+    expression: Any,
+    *,
+    ppq: int = PPQ,
+) -> list[_MidiMsg]:
+    """Render a note's pitch-expression spec into pitchwheel messages.
+
+    The spec is precomputed in beat space by the engine (see
+    `NoteEvent.expression`), so this helper only needs tick coordinates.
+    Supported keys:
+      - "bend_in": {"semitones": float, "ramp_beats": float} — start bent
+        down by N semitones and ramp linearly back to center.
+      - "vibrato": {"depth_cents": float, "period_beats": float,
+        "delay_beats": float} — sine-shaped wheel wobble after a delay.
+
+    Assumes the GM default pitch-bend range of +/-2 semitones. The wheel is
+    always returned to center at the note's end tick so the next note on the
+    channel starts clean.
+    """
+    out: list[_MidiMsg] = []
+    if not isinstance(expression, dict) or end_tick <= start_tick:
+        return out
+
+    step = max(10, ppq // 16)
+    semitone_to_wheel = 8191.0 / 2.0  # GM default: +/-2 semitones
+
+    def clamp_wheel(v: float) -> int:
+        return max(-8192, min(8191, int(round(v))))
+
+    bend = expression.get("bend_in")
+    if isinstance(bend, dict):
+        try:
+            semis = float(bend.get("semitones", 0.0))
+            ramp_beats = float(bend.get("ramp_beats", 0.0))
+        except Exception:
+            semis, ramp_beats = 0.0, 0.0
+        ramp_ticks = min(beats_to_ticks(max(0.0, ramp_beats), ppq=ppq), end_tick - start_tick)
+        if semis > 0 and ramp_ticks > 0:
+            start_val = -semis * semitone_to_wheel
+            t = start_tick
+            while t < start_tick + ramp_ticks:
+                frac = (t - start_tick) / ramp_ticks
+                out.append(_MidiMsg(t, 0, mido.Message(
+                    "pitchwheel", pitch=clamp_wheel(start_val * (1.0 - frac)),
+                    channel=ch, time=0)))
+                t += step
+            out.append(_MidiMsg(start_tick + ramp_ticks, 0, mido.Message(
+                "pitchwheel", pitch=0, channel=ch, time=0)))
+
+    vib = expression.get("vibrato")
+    if isinstance(vib, dict):
+        try:
+            depth_cents = float(vib.get("depth_cents", 0.0))
+            period_beats = float(vib.get("period_beats", 0.0))
+            delay_beats = float(vib.get("delay_beats", 0.0))
+        except Exception:
+            depth_cents, period_beats, delay_beats = 0.0, 0.0, 0.0
+        delay_ticks = beats_to_ticks(max(0.0, delay_beats), ppq=ppq)
+        period_ticks = beats_to_ticks(period_beats, ppq=ppq) if period_beats > 0 else 0
+        vib_start = start_tick + delay_ticks
+        if depth_cents > 0 and period_ticks > 0 and vib_start < end_tick:
+            depth_wheel = (depth_cents / 100.0) * semitone_to_wheel
+            t = vib_start
+            while t < end_tick:
+                phase = 2.0 * math.pi * ((t - vib_start) / period_ticks)
+                out.append(_MidiMsg(t, 0, mido.Message(
+                    "pitchwheel", pitch=clamp_wheel(depth_wheel * math.sin(phase)),
+                    channel=ch, time=0)))
+                t += step
+
+    if out:
+        out.append(_MidiMsg(end_tick, 0, mido.Message(
+            "pitchwheel", pitch=0, channel=ch, time=0)))
+    return out
+
+
 def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = PPQ) -> None:
     """Write note events from a timeline into a MIDI track.
 
@@ -181,8 +262,8 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
     events: Iterable[Any] = getattr(timeline, "events", [])
 
     # First pass: collect note intervals in tick space.
-    # notes: (start_tick, end_tick, pitch, vel, ch)
-    notes: list[tuple[int, int, int, int, int]] = []
+    # notes: (start_tick, end_tick, pitch, vel, ch, expression)
+    notes: list[tuple[int, int, int, int, int, Any]] = []
 
     for ev in events:
         try:
@@ -209,7 +290,7 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
         vel = max(0, min(127, vel))
         ch = max(0, min(15, ch))
 
-        notes.append((start_tick, end_tick, pitch, vel, ch))
+        notes.append((start_tick, end_tick, pitch, vel, ch, getattr(ev, "expression", None)))
 
     # Second pass: de-overlap same-pitch/same-channel notes so note_offs never
     # cross (a later note_off cutting an earlier note, or vice versa).
@@ -218,15 +299,15 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
     #     only the longest (velocity as deterministic tie-break).
     #   - An earlier note overlapping a later note's start is truncated to the
     #     later note's start tick.
-    by_key: dict[tuple[int, int], list[tuple[int, int, int, int, int]]] = {}
+    by_key: dict[tuple[int, int], list[tuple[int, int, int, int, int, Any]]] = {}
     for n in notes:
         by_key.setdefault((n[4], n[2]), []).append(n)
 
-    deduped: list[tuple[int, int, int, int, int]] = []
+    deduped: list[tuple[int, int, int, int, int, Any]] = []
     for _key, group in by_key.items():
         group.sort(key=lambda n: (n[0], -(n[1] - n[0]), -n[3]))
         # Drop duplicates that share a start tick (keep first = longest/loudest).
-        unique: list[tuple[int, int, int, int, int]] = []
+        unique: list[tuple[int, int, int, int, int, Any]] = []
         last_start: Optional[int] = None
         for n in group:
             if last_start is not None and n[0] == last_start:
@@ -235,20 +316,25 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
             last_start = n[0]
         # Truncate overlaps against the next note's start.
         for i, n in enumerate(unique):
-            start_tick, end_tick, pitch, vel, ch = n
+            start_tick, end_tick, pitch, vel, ch, expr = n
             if i + 1 < len(unique):
                 next_start = unique[i + 1][0]
                 if end_tick > next_start:
                     end_tick = max(next_start, start_tick + 1)
-            deduped.append((start_tick, end_tick, pitch, vel, ch))
+            deduped.append((start_tick, end_tick, pitch, vel, ch, expr))
 
     msgs: list[_MidiMsg] = []
-    for start_tick, end_tick, pitch, vel, ch in deduped:
+    for start_tick, end_tick, pitch, vel, ch, expr in deduped:
         # Order: note_off first at the same tick to avoid overlaps/stuck notes.
         msgs.append(_MidiMsg(start_tick, 1, mido.Message("note_on", note=pitch, velocity=vel, channel=ch, time=0)))
         msgs.append(_MidiMsg(end_tick, 0, mido.Message("note_off", note=pitch, velocity=0, channel=ch, time=0)))
+        # Pitch expression (vibrato / bend-in) rides the note's channel using
+        # the final, de-overlapped tick span. order=0 keeps wheel moves ahead
+        # of the note_on at the same tick.
+        msgs.extend(_expression_msgs(start_tick, end_tick, ch, expr, ppq=ppq))
 
-    msgs.sort(key=lambda m: (m.tick, m.order, m.msg.type, m.msg.channel, m.msg.note))
+    # Note: pitchwheel messages have no `.note` attribute — tolerate that.
+    msgs.sort(key=lambda m: (m.tick, m.order, m.msg.type, m.msg.channel, getattr(m.msg, "note", 0)))
 
     last_tick = 0
     for m in msgs:

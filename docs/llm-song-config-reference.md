@@ -545,6 +545,8 @@ Set in `extra:` block. Lead guitar is optional — omit for songs without lead l
 | `register` | `low`, `mid`, `high`, `very_high`, `full` | `mid` | Melodic range |
 | `theme_quote_rate` | 0.0-1.0 | 0.65 | How often phrases quote the melody theme |
 | `foreground` | `auto`, `full` | `auto` | `full` = lead owns the whole section (instrumental music); `auto` = call-and-answer windows |
+| `vibrato_rate` | 0.0-1.0 | 0.65 | Chance a note held 1+ beats gets pitchwheel vibrato |
+| `bend_rate` | 0.0-1.0 | 0.15 | Chance a note is approached with a short bend-in from below |
 
 When the song defines a `melody` theme, the lead guitar quotes it at
 `theme_quote_rate`; remaining phrases are free phrasing guided by the section
@@ -560,6 +562,14 @@ Genre selects a dedicated phrase vocabulary, and the ensemble planner assigns
 foreground windows that rhythm guitar leaves partially open.
 
 Use `solo: true` on the instrument to enable solo mode (denser playing, wider range).
+
+Pitch expression is seeded and deterministic: `vibrato_rate` controls how often
+sustained notes (1+ beats) get a pitchwheel vibrato (depth 15-45 cents, rate
+4.5-6.5 Hz, fading in after a short delay), and `bend_rate` controls how often
+a note is scooped into from 1-2 semitones below. Both render as standard
+pitchwheel messages on the lead channel, so they play back in any DAW that
+honors the GM default ±2 semitone bend range. Set either to `0.0` for a
+completely straight line.
 
 By default the ensemble planner gives the lead phrase-sized foreground windows
 (call-and-answer against an implied vocal): in verses it owns the middle of
