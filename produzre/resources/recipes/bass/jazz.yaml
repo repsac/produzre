@@ -1,4 +1,4 @@
-# Jazz bass — hand-tuned 2026-06-10.
+# Jazz bass: hand-tuned 2026-06-10.
 # The mined recipe used rhythm_pattern "push" with density 0.53, which never
 # reached the old walking trigger (density >= 0.9), and articulation "pick"
 # (jazz upright/electric is fingerstyle). Now requests walking explicitly
@@ -28,7 +28,5 @@ params:
   # Intended feel: triplet swing matching the drums (ratio ~2:1).
   # Bass swing application is being wired by the groove-clock task; the
   # value is authored to current drum semantics (0.25*swing beat delay).
-  swing: 0.6
   lock_to_kick: 0.2  # walking floats over the kit rather than locking
   accent_strength: 1.2
-  syncopation: 0.3

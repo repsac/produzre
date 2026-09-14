@@ -81,7 +81,7 @@ def select_chord_tone_with_voice_leading(
 
     # Downbeats: strongly prefer root
     if is_downbeat:
-        # Occasionally use fifth on downbeat for variation (25% — was 15%).
+        # Occasionally use fifth on downbeat for variation (25%: was 15%).
         # Never on the first note of a section (prev_pitch is None): the bass
         # must establish the root before varying away from it. The rng draw is
         # unconditional to keep the stream stable.

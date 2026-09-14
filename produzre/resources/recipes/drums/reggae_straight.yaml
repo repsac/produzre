@@ -1,6 +1,6 @@
-# Reggae one drop drum recipe — hand-tuned 2026-06-10.
+# Reggae one drop drum recipe: hand-tuned 2026-06-10.
 # Replaces a mined recipe that had four-on-the-floor WITH a kick on beat 1
-# (the one beat reggae avoids) and rock backbeat snares — that was steppers
+# (the one beat reggae avoids) and rock backbeat snares: that was steppers
 # data averaged into one drop territory (steppers now lives in
 # reggae_steppers.yaml, selected at higher BPM).
 # Idiom (one drop): beat 1 is EMPTY of kick and snare; kick + cross-stick
@@ -33,10 +33,10 @@ groove:
 params:
   # Light skank lilt. Intended feel is a slight behind-the-beat push, not a
   # full shuffle (current engine semantics: "&" delayed by 0.25*swing beats).
-  swing: 0.2
+  swing: 0.0
   fill_rate: 0.15
 
 voices:
   snare:
-    # All snare hits render as cross-stick (GM 37) — the one drop rim click.
+    # All snare hits render as cross-stick (GM 37): the one drop rim click.
     articulation: { default: crossstick }

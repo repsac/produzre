@@ -23,7 +23,9 @@ deliberately out of scope for this prototype milestone.
 from __future__ import annotations
 
 import logging
+import math
 import re
+from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
 from ..config.errors import ConfigError
@@ -45,7 +47,7 @@ def _parse_shorthand(spec: str) -> List[ThemeEvent]:
             )
         accs, deg_tok, octs, dur_s = m.groups()
         dur = float(dur_s)
-        if dur <= 0:
+        if not math.isfinite(dur) or dur <= 0:
             raise ConfigError(f"themes: event {raw_tok!r} has non-positive duration")
         if deg_tok in (".", "r"):
             events.append(ThemeEvent(offset, dur, None))
@@ -71,8 +73,11 @@ def _parse_lists(degrees: List[Any], rhythm: List[Any]) -> List[ThemeEvent]:
     events: List[ThemeEvent] = []
     offset = 0.0
     for d, dur in zip(degrees, rhythm):
-        dur = float(dur)
-        if dur <= 0:
+        try:
+            dur = float(dur)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError("themes: rhythm values must be positive numbers") from exc
+        if not math.isfinite(dur) or dur <= 0:
             raise ConfigError(f"themes: non-positive rhythm value {dur!r}")
         if d is None or str(d) in (".", "r"):
             events.append(ThemeEvent(offset, dur, None))
@@ -97,6 +102,11 @@ def _parse_lists(degrees: List[Any], rhythm: List[Any]) -> List[ThemeEvent]:
 def _parse_theme(name: str, spec: Dict[str, Any]) -> Theme:
     if not isinstance(spec, dict):
         raise ConfigError(f"themes.{name}: expected a mapping, got {type(spec).__name__}")
+    from ..config.validation import KNOWN_THEME_KEYS
+    supported = KNOWN_THEME_KEYS
+    unknown = set(spec) - supported
+    if unknown:
+        raise ConfigError(f"themes.{name}: unsupported keys: {', '.join(sorted(unknown))}")
 
     role_raw = str(spec.get("role", "melody")).strip().lower()
     try:
@@ -107,9 +117,14 @@ def _parse_theme(name: str, spec: Dict[str, Any]) -> Theme:
             f"expected one of: {', '.join(r.value for r in ThemeRole)}"
         )
 
+    if role is ThemeRole.DRUM_GROOVE:
+        raise ConfigError(f"themes.{name}: drum_groove themes are not yet supported")
+
     if "events" in spec:
         events = _parse_shorthand(str(spec["events"]))
     elif "degrees" in spec and "rhythm" in spec:
+        if not isinstance(spec["degrees"], list) or not isinstance(spec["rhythm"], list):
+            raise ConfigError(f"themes.{name}: degrees and rhythm must be lists")
         events = _parse_lists(list(spec["degrees"]), list(spec["rhythm"]))
     else:
         raise ConfigError(
@@ -118,7 +133,14 @@ def _parse_theme(name: str, spec: Dict[str, Any]) -> Theme:
     if not any(not e.is_rest for e in events):
         raise ConfigError(f"themes.{name}: theme contains only rests")
 
-    length = float(spec.get("length_beats") or sum(e.duration_beats for e in events))
+    try:
+        octave = int(spec.get("octave", 0))
+        length = float(spec.get("length_beats", sum(e.duration_beats for e in events)))
+    except (ValueError, TypeError) as exc:
+        raise ConfigError(f"themes.{name}: invalid octave or length_beats") from exc
+    events = [replace(e, octave=e.octave + octave) if not e.is_rest else e for e in events]
+    if not math.isfinite(length) or length <= 0:
+        raise ConfigError(f"themes.{name}: length_beats must be finite and positive")
     total = sum(e.duration_beats for e in events)
     if abs(total - length) > 1e-6:
         raise ConfigError(
@@ -129,12 +151,17 @@ def _parse_theme(name: str, spec: Dict[str, Any]) -> Theme:
     if reg is not None:
         if not (isinstance(reg, (list, tuple)) and len(reg) == 2):
             raise ConfigError(f"themes.{name}.register: expected [low, high]")
-        register = (int(reg[0]), int(reg[1]))
+        try:
+            register = (int(reg[0]), int(reg[1]))
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"themes.{name}.register: expected MIDI numbers") from exc
+        if not 0 <= register[0] <= register[1] <= 127:
+            raise ConfigError(f"themes.{name}.register: expected 0 <= low <= high <= 127")
     else:
         register = DEFAULT_REGISTERS[role]
 
     tags = {"user"}
-    if spec.get("allow_development") is False:
+    if not spec.get("allow_development", False):
         tags.add("locked")
 
     return Theme(

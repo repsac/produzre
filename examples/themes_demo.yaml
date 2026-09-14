@@ -10,23 +10,33 @@ song:
   exports_root: "exports"
 
 # ---------------------------------------------------------------------------
-# Song-level thematic DNA (prototype: docs/design/theme-bank-architecture.md)
+# Song themes. See docs/design/theme-bank-architecture.md.
 # Degrees are key-relative (E major): 1=E 2=F# 3=G# 4=A 5=B 6=C# 7=D#
 # The b3/b5 (G/Bb against E) are rock blue notes and survive chord-tone
-# snapping; other semitone clashes snap to the nearest chord tone.
+# snapping. Tonic and final notes retain the written melody.
 # Borrowed numerals (bVII, bVI, iv) are spelled relative to the major scale,
 # matching the bass engine's convention.
 # ---------------------------------------------------------------------------
 themes:
   main_riff:
     role: riff
+    allow_development: true
     register: [40, 55]          # E2..G3
     events: "1:.5 .:.25 1:.25 b3:.5 4:.5 b5:.25 4:.25 5:1.5"
 
   chorus_hook:
     role: melody
+    allow_development: true
     register: [64, 79]          # E4..G5
     events: "5:.5 5:.5 6:.5 5:.5 4:1 b3:.5 2:.5 1:4"
+
+instruments:
+  bass:
+    params: {lock_to_riff: 1.0}
+  rhythm_gtr:
+    params: {lock_to_riff: 0.7}
+  drums:
+    params: {riff_accent_rate: 0.25, riff_accent_boost: 1.1}
 
 sections:
   intro:

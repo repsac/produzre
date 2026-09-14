@@ -104,7 +104,8 @@ class Theme:
             f"{e.accidental},{e.octave},{int(e.accent)}"
             for e in self.events
         ]
-        return f"{self.name}|{self.role.value}|{self.length_beats:g}|" + ";".join(rows)
+        return (f"{self.name}|{self.role.value}|{self.length_beats:g}|"
+                f"{self.base_register}|{','.join(sorted(self.tags))}|" + ";".join(rows))
 
 
 @dataclass
@@ -122,6 +123,7 @@ class ThemeBank:
 
     def finalize(self) -> "ThemeBank":
         """Compute the provenance hash after all themes are added."""
-        payload = "|".join(self.themes[k].serialize() for k in sorted(self.themes))
+        # Declaration order selects the active theme when roles are repeated.
+        payload = "|".join(theme.serialize() for theme in self.themes.values())
         self.seed_material_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
         return self

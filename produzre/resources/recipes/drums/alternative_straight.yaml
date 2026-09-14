@@ -34,6 +34,6 @@ groove:
   crash_start: true
   crash_phrase_end_rate: 0.27
 params:
-  swing: 0.2
+  swing: 0.0
   fill_rate: 0.15
 voices: {}

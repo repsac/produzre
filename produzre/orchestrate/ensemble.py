@@ -85,6 +85,8 @@ def _lead_windows(section_type: str, total_beats: float, beats_per_bar: float) -
         else:
             active_start = min(end, start + beats_per_bar)
             active_end = min(end, start + beats_per_bar * 3.0)
+        if active_end <= active_start:
+            active_start, active_end = start + (end - start) * 0.5, end
         if active_end - active_start > 1e-6:
             windows.append((active_start, active_end))
     return windows

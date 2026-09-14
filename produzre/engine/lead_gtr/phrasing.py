@@ -227,7 +227,7 @@ def realize_phrase(
         vary_last: Resolve last note to chord tone on final repetition
         call_and_response: Only fill first half of phrase
         leap_limit: Max semitone interval between consecutive anchors
-                    (default 5; solo sections may use 8–10 for wider range)
+                    (default 5; solo sections may use 8-10 for wider range)
 
     Returns:
         List of ResolvedNote sorted by beat_offset

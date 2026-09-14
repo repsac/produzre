@@ -161,7 +161,7 @@ def contribute_plan(
 
         # Use rest_probability as a proxy for rest_ratio
         # This is the configured "target" rest ratio that lead will aim for
-        rest_probability = planned_rest if planned_rest is not None else rest_probability
+        rest_probability = rest_probability if rest_probability is not None else planned_rest
         if rest_probability is not None:
             try:
                 rest_ratio = float(rest_probability)
@@ -203,7 +203,7 @@ def render_into_timeline(
 
     - Only runs if a 'lead' instrument config exists and is enabled.
     - Follows the section's harmony plan (chord numerals).
-    - Places 1–4 notes per chord slot depending on intensity band and solo flag.
+    - Places 1-4 notes per chord slot depending on intensity band and solo flag.
     - Uses the rhythm grid for timing; notes are aligned to grid cells within
       each chord span.
     - Keeps pitches in a melodic register above rhythm guitar using a small
@@ -299,7 +299,7 @@ def render_into_timeline(
     # Resolve key/mode and use the orchestrator's instrument RNG so take,
     # variation, arrangement occurrence, and instrument seed all participate.
     song_key = (section.key or cfg.song.key or "C").strip()
-    song_mode = getattr(cfg.song, "mode", None) or "minor"
+    song_mode = getattr(section, "mode", None) or getattr(cfg.song, "mode", None) or "minor"
     song_seed = getattr(cfg.song, "seed", 42)
     section_rng = kwargs.get("rng") or random.Random(_stable_u32(f"lead:{section.id}:{song_seed}"))
     song_genre = str(getattr(cfg.song, "genre", "") or "")
@@ -364,7 +364,7 @@ def render_into_timeline(
     # prefer_offbeat: chorus / high-intensity sections contrast the downbeat grid.
     prefer_offbeat = (intensity_band == "high") or (section_type.lower() == "chorus")
 
-    # Phase LG6: solo leap limit — wider melodic range for solo sections.
+    # Phase LG6: solo leap limit: wider melodic range for solo sections.
     # Can be overridden via contour_style parameter.
     contour_style = getattr(instrument_cfg, "contour_style", None)
     if contour_style is None:
@@ -456,7 +456,7 @@ def render_into_timeline(
 
         # Phase LG3: choose grid positions that breathe with the groove.
         # These are used as a MASK over the motif's own rhythm (rest/breathing
-        # decisions) — the realized motif keeps its beat offsets and durations
+        # decisions): the realized motif keeps its beat offsets and durations
         # so its rhythmic identity stays audible.
         note_starts = choose_note_starts(
             grid=rhythm_grid,
@@ -468,6 +468,7 @@ def render_into_timeline(
             prefer_offbeat=prefer_offbeat,
             rest_rate=rest_probability,
             genre=song_genre,
+            candidate_positions=[phrase_start + rn.beat_offset for rn in resolved_notes],
         )
 
         if not note_starts:
@@ -510,7 +511,7 @@ def render_into_timeline(
 
             song_beat = section_start_beat + local_beat + offset_beats
 
-            # Phase LG4: register management — wrap into range, optional lift.
+            # Phase LG4: register management: wrap into range, optional lift.
             pitch = rn.pitch
             if lift_this_phrase:
                 pitch = apply_lift(pitch, reg_min, reg_max)
@@ -546,7 +547,7 @@ def render_into_timeline(
                             int(nearest["pitch"]), reg_min, reg_max
                         )
 
-            # Phase LG5: articulation — shape duration, optional grace note.
+            # Phase LG5: articulation: shape duration, optional grace note.
             art = choose_articulation(section_rng, intensity)
             arted = apply_articulation(pitch, duration, art, section_rng)
 
@@ -571,7 +572,7 @@ def render_into_timeline(
             vel = max(20, min(127, vel))
 
             # Slide grace note handling. At the register bottom there is no
-            # lower neighbour to slide from — skip the slide instead of
+            # lower neighbour to slide from: skip the slide instead of
             # octave-wrapping the grace 11 semitones ABOVE the target.
             grace_pitch = arted.grace_pitch
             main_dur = arted.duration

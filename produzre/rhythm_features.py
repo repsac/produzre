@@ -64,6 +64,7 @@ class RhythmFeatures:
     syncopation_beats: Set[float] = field(default_factory=set)
     section_id: str = ""
     instrument: str = ""
+    hat_beats: Set[float] = field(default_factory=set)
 
 
 def extract_rhythm_features(
@@ -141,6 +142,7 @@ def extract_rhythm_features(
 
         # Count hat events per bar for density
         if pitch in hat_pitches:
+            features.hat_beats.add(beat)
             hat_events_per_bar[bar_idx] = hat_events_per_bar.get(bar_idx, 0) + 1
 
         # Strong beats: kicks (especially downbeats)

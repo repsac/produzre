@@ -14,24 +14,10 @@ import re
 from typing import Any, Iterable, Optional
 
 
-_KEY_PCS = {
-    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3,
-    "E": 4, "F": 5, "F#": 6, "Gb": 6, "G": 7, "G#": 8,
-    "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11,
-}
-_MODE_OFFSETS = {
-    "ionian": (0, 2, 4, 5, 7, 9, 11),
-    "major": (0, 2, 4, 5, 7, 9, 11),
-    "dorian": (0, 2, 3, 5, 7, 9, 10),
-    "phrygian": (0, 1, 3, 5, 7, 8, 10),
-    "lydian": (0, 2, 4, 6, 7, 9, 11),
-    "mixolydian": (0, 2, 4, 5, 7, 9, 10),
-    "aeolian": (0, 2, 3, 5, 7, 8, 10),
-    "minor": (0, 2, 3, 5, 7, 8, 10),
-    "locrian": (0, 1, 3, 5, 6, 8, 10),
-}
-_ROMAN_DEGREES = {"I": 0, "II": 1, "III": 2, "IV": 3, "V": 4, "VI": 5, "VII": 6}
-
+from .harmony.spelling import (
+    _KEY_PCS, _MODE_OFFSETS, _ROMAN_DEGREES, _parse_numeral, _normalize_key,
+    root_offset, chord_intervals,
+)
 
 @dataclass(frozen=True)
 class MelodyTarget:
@@ -59,34 +45,10 @@ class MelodyGuide:
         }
 
 
-def _parse_numeral(numeral: str) -> tuple[int, int, str, str]:
-    raw = str(numeral or "I").strip()
-    match = re.match(r"^([b#]*)([ivIV]+)(.*)$", raw)
-    if not match:
-        return 0, 0, "I", ""
-    accidental, roman, suffix = match.groups()
-    return (
-        _ROMAN_DEGREES.get(roman.upper(), 0),
-        accidental.count("#") - accidental.count("b"),
-        roman,
-        suffix.lower(),
-    )
-
-
 def chord_pitch_classes(numeral: str, key: str, mode: str) -> tuple[int, ...]:
-    """Return pitch classes for a Roman-numeral chord, including common suffixes."""
-    degree, accidental, roman, suffix = _parse_numeral(numeral)
-    tonic = _KEY_PCS.get(_normalize_key(key), 0)
-    scale = _MODE_OFFSETS.get(str(mode or "").lower(), _MODE_OFFSETS["major"])
-    root = (tonic + scale[degree] + accidental) % 12
-    diminished = "dim" in suffix or "o" in suffix or "°" in suffix
-    suspended = "sus" in suffix
-    third = 5 if "sus4" in suffix else (2 if suspended else (3 if roman.islower() else 4))
-    fifth = 6 if diminished else 7
-    pcs = [root, (root + third) % 12, (root + fifth) % 12]
-    if "7" in suffix:
-        pcs.append((root + (9 if diminished else 10)) % 12)
-    return tuple(pcs)
+    """Pitch classes with shared borrowed-chord and suffix spelling."""
+    root = _KEY_PCS.get(_normalize_key(key), 0) + root_offset(numeral, mode)
+    return tuple((root + interval) % 12 for interval in chord_intervals(numeral))
 
 
 def harmonic_function(numeral: str) -> str:
@@ -207,8 +169,3 @@ def _choose_pitch(
         repeat_penalty = 1.8 if previous == pitch else 0.0
         return abs(pitch - contour) + movement * 0.55 + leap_penalty + repeat_penalty + (0 if role == preferred_role else 1.6)
     return min(candidates, key=score)
-
-
-def _normalize_key(key: str) -> str:
-    raw = str(key or "C").strip().replace("♭", "b").replace("♯", "#")
-    return raw[:1].upper() + raw[1:].lower() if raw else "C"

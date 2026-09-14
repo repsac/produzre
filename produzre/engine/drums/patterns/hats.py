@@ -36,6 +36,7 @@ def generate_top_cymbal_events(
     accent_strength: float,
     rng: random.Random,
     pitches: Dict[str, int],
+    voice_params: Optional[Dict] = None,
 ) -> Tuple[List, bool, Set[int]]:
     """Generate top cymbal (hat/ride) and pedal hat events for a single bar.
 
@@ -115,6 +116,10 @@ def generate_top_cymbal_events(
         """True if step falls on an 8th-note offbeat (2, 6, 10, 14 in 4/4)."""
         return offbeat_in_beat > 0 and step % spb_per_beat == offbeat_in_beat
 
+    voice_params = voice_params or {}
+    velocity_bias = int(voice_params.get("velocity_bias", 0) or 0)
+    accent_boost = int(voice_params.get("accent_boost", 8))
+    accent_bias = int(voice_params.get("accent_bias", 0) or 0)
     hat_closed = int(pitches["hat_closed"])
     hat_open = int(pitches["hat_open"])
     hat_pedal = int(pitches.get("hat_pedal", 44))
@@ -153,7 +158,7 @@ def generate_top_cymbal_events(
     # NOTE: We do NOT force placement if density gating skips the step.
     # However, once a step is placed, open_rate==1.0 will force that placed step to be open when eligible.
     if hat_steps:
-        bar_end_step = max(int(s) for s in hat_steps if 0 <= int(s) < spb)
+        bar_end_step = max((int(s) for s in hat_steps if 0 <= int(s) < spb), default=max(0, spb - 1))
     else:
         bar_end_step = max(0, spb - 1)
 
@@ -181,7 +186,19 @@ def generate_top_cymbal_events(
         eligible_open_steps.discard(0)
         eligible_open_steps.difference_update({int(x) for x in backbeats})
 
+    if voice_params.get("open_placements") is not None:
+        eligible_open_steps = set(voice_params["open_placements"])
+
     close_on_downbeat = (not template.use_ride) and prev_bar_open_hat
+
+    def accented_velocity(vel, step_i):
+        accented = False
+        if accent_rate > 0.0:
+            placements = voice_params.get("accent_placements")
+            eligible = step_i in placements if placements is not None else (step_i == bar_end_step or _is_8th_offbeat(step_i))
+            accented = eligible and rng.random() < accent_rate
+        return clamp_int(vel + velocity_bias + (accent_boost if accented else accent_bias), 1, 127)
+
 
     for step_i in range(spb):
         if step_i not in hat_steps:
@@ -208,10 +225,11 @@ def generate_top_cymbal_events(
                     beat=beat,
                     duration_beats=dur,
                     pitch=hat_closed,
-                    velocity=vel,
+                    velocity=accented_velocity(vel, step_i),
                     kind=kind,
                 )
             )
+            open_hat_in_this_bar = False
             continue
 
         if density < 1.0 and rng.random() >= density:
@@ -243,6 +261,7 @@ def generate_top_cymbal_events(
                     kind = "open_hat"
                     open_hat_in_this_bar = True
 
+        open_hat_in_this_bar = kind == "open_hat"
         beat = bar_start + float(step_i) * sb
         vel = vel_for(
             base_vel=base_velocity,
@@ -256,25 +275,15 @@ def generate_top_cymbal_events(
             vel = clamp_int(vel + 3, 1, 127)
 
         # Optional additional accents on common offbeats / bar-end pickup.
-        if accent_rate > 0.0 and not template.use_ride:
-            eligible = (step_i == bar_end_step) or _is_8th_offbeat(step_i)
-            if eligible and rng.random() < accent_rate:
-                vel = clamp_int(vel + 8, 1, 127)
+        vel = accented_velocity(vel, step_i)
 
         dur = 0.5 if kind in ("open_hat", "ride") else 0.25
         events.append(DrumEvent(beat=beat, duration_beats=dur, pitch=pitch, velocity=vel, kind=kind))
 
     # Optional pedal hat (foot chick) on common backbeats (e.g., 2 and 4 in 4/4).
-    if pedal_rate > 0.0 and not template.use_ride:
-        # Determine "backbeat" beats for the current meter. The grid is
-        # meter-derived (spb == round(bpb * 4)), so spb_per_beat is 4 in every
-        # meter and no divisibility guard is needed (the old `spb % bpb == 0`
-        # check silently disabled pedal hats on the legacy 16-step 3/4 grid).
-        pedal_steps: Tuple[int, ...] = tuple()
-        if bpb >= 4.0 - 1e-6:
-            pedal_steps = (1 * spb_per_beat, 3 * spb_per_beat)
-        elif bpb >= 2.0 - 1e-6:
-            pedal_steps = (1 * spb_per_beat,)
+    if pedal_rate > 0.0:
+        placements = voice_params.get("pedal_placements")
+        pedal_steps = backbeats if placements is None else placements
 
         for s in pedal_steps:
             s = int(s)

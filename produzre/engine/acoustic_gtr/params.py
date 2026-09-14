@@ -35,11 +35,11 @@ class AcousticGuitarParams:
     # Technique
     technique:        str    # "fingerpicking" | "strumming" | "hybrid" | "percussive"
     picking_pattern:  str    # "travis" | "pima" | "broken_chord" | "waltz" | "roll"
-    strum_density:    float  # 0.0-1.0 — fraction of quarter-note positions to strum
-    mute_ratio:       float  # 0.0-1.0 — probability of dampened strum hit
-    body_tap_ratio:   float  # 0.0-1.0 — probability of body percussion per bar
-    melody_amount:    float  # 0.0-1.0 — treble hits shaped into a melodic top voice
-    phrase_variation: float  # 0.0-1.0 — bar-to-bar picking variation
+    strum_density:    float  # 0.0-1.0: fraction of quarter-note positions to strum
+    mute_ratio:       float  # 0.0-1.0: probability of dampened strum hit
+    body_tap_ratio:   float  # 0.0-1.0: probability of body percussion per bar
+    melody_amount:    float  # 0.0-1.0: treble hits shaped into a melodic top voice
+    phrase_variation: float  # 0.0-1.0: bar-to-bar picking variation
 
     # Voicing
     voicing_style:    str    # "open" | "barre" | "auto"

@@ -149,8 +149,8 @@ arrangement:
   - verse
   - chorus       # First chorus
   - verse
-  - chorus       # Second chorus — automatically different from first
+  - chorus       # Second chorus: automatically different from first
   - bridge
   - solo
-  - chorus       # Third chorus — also unique
+  - chorus       # Third chorus: also unique
   - outro

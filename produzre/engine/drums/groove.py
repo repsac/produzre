@@ -29,14 +29,13 @@ DEFAULT_STEPS_PER_BAR = 16
 # Produzre expresses musical time in quarter-note beats everywhere
 # (`Meter.beats_per_bar` returns *quarter-note* beats per bar: 4/4 -> 4.0,
 # 3/4 -> 3.0, 6/8 -> 3.0, 7/8 -> 3.5). The drum grid is therefore defined as
-# **4 steps per quarter-note beat** — every step is one 16th note
+# **4 steps per quarter-note beat**: every step is one 16th note
 # (0.25 beats), regardless of meter:
 #
 #   steps_per_bar = round(beats_per_bar * 4)   # 16 in 4/4, 12 in 3/4 & 6/8
 #
-# Consequence: compound meters such as 6/8 are normalized to 3.0 quarter
-# beats per bar before they reach the drums engine, so the engine cannot
-# distinguish 6/8 from 3/4 — both render on a 12-step bar of 16th notes.
+# The separate Meter value distinguishes compound 6/8 from simple 3/4.
+# Both use twelve sixteenth steps, but their backbeat anchors differ.
 STEPS_PER_QUARTER_BEAT = 4
 
 
@@ -249,6 +248,7 @@ def groove_template(
     section_type: str,
     intensity: float,
     beats_per_bar: float = 4.0,
+    meter=None,
     **_: object,
 ) -> "GrooveTemplate":
     """Return a groove template for a given groove id.
@@ -299,7 +299,9 @@ def groove_template(
     # Note: Meter.beats_per_bar normalizes 6/8 to 3.0 quarter beats, so 6/8
     # normally takes the "beat 2" branch; the bpb==6 case only fires when the
     # config supplies six quarter beats per bar.
-    if abs(bpb - 6.0) < 1e-6:
+    if meter is not None and meter.denominator == 8 and meter.numerator % 3 == 0:
+        backbeat_offsets = tuple(1.5 + 3.0 * i for i in range((meter.numerator + 5) // 6))
+    elif abs(bpb - 6.0) < 1e-6:
         backbeat_offsets: Tuple[float, ...] = (3.0,)
     elif bpb >= 4.0 - 1e-6:
         backbeat_offsets = (1.0, 3.0)
@@ -451,6 +453,7 @@ def groove_template(
 def groove_template_from_recipe(
     recipe_groove: dict,
     beats_per_bar: float = 4.0,
+    meter=None,
 ) -> "GrooveTemplate":
     """Build a GrooveTemplate from a recipe's ``groove`` dict.
 
@@ -473,6 +476,7 @@ def groove_template_from_recipe(
         return (int(val),)  # type: ignore[arg-type]
 
     g = recipe_groove or {}
+    fallback = groove_template("verse_light", section_type="verse", intensity=0.5, beats_per_bar=beats_per_bar, meter=meter)
     return GrooveTemplate(
         hat_mode=str(g.get("hat_mode", "8th")),
         use_ride=bool(g.get("use_ride", False)),
@@ -480,7 +484,7 @@ def groove_template_from_recipe(
         kick_base=_to_tuple(g.get("kick_base"), (0,)),
         kick_extra_rate=float(g.get("kick_extra_rate", 0.0)),
         double_kick_rate=float(g.get("double_kick_rate", 0.0)),
-        snare_backbeat_steps=_to_tuple(g.get("snare_backbeat_steps"), (4, 12)),
+        snare_backbeat_steps=_to_tuple(g.get("snare_backbeat_steps"), fallback.snare_backbeat_steps),
         ghost_rate=float(g.get("ghost_rate", 0.0)),
         ghost_steps=_to_tuple(g.get("ghost_steps"), (7, 15)),
         open_hat_rate=float(g.get("open_hat_rate", 0.0)),

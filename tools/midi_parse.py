@@ -209,7 +209,7 @@ def beat_to_bar_position(
         beat_in_bar = beat % 4.0
         return bar, beat_in_bar
 
-    # Use first time signature (simplified — doesn't handle mid-song changes)
+    # Use first time signature (simplified: doesn't handle mid-song changes)
     _, numerator, _ = time_sigs[0]
     beats_per_bar = float(numerator)
 

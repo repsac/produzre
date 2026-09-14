@@ -103,7 +103,6 @@ sections:
     type: verse
     bars: 8
     meter: "6/8"
-    beats_per_bar: 6
     harmony:
       progression: "I IV V I I IV V I"
     instruments:

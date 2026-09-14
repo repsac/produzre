@@ -7,9 +7,7 @@ personas:
       # Tight: precise, locked to grid, minimal variation
       humanize_velocity: 0.05
       humanize_timing: 0.02
-      swing: 0.0
       push_pull: 0.0
-      groove: "tight"
       accent_strength: 0.4
       chuck_rate: 0.0
       downbeat_boost: 0.2
@@ -21,9 +19,7 @@ personas:
       # Loose: relaxed timing, dynamic velocity, laid-back feel
       humanize_velocity: 0.20
       humanize_timing: 0.08
-      swing: 0.15
       push_pull: 0.08
-      groove: "loose"
       accent_strength: 0.6
       chuck_rate: 0.08
       downbeat_boost: 0.15
@@ -35,9 +31,7 @@ personas:
       # Aggressive: tight but with strong dynamics and punchy attacks
       humanize_velocity: 0.10
       humanize_timing: 0.03
-      swing: 0.0
       push_pull: 0.03
-      groove: "pushed"
       accent_strength: 0.8
       chuck_rate: 0.12
       downbeat_boost: 0.35
@@ -49,9 +43,7 @@ personas:
       # Funky: syncopated, choppy, ghost strums, moderate swing
       humanize_velocity: 0.18
       humanize_timing: 0.06
-      swing: 0.12
       push_pull: 0.10
-      groove: "laid_back"
       accent_strength: 0.65
       chuck_rate: 0.20
       downbeat_boost: 0.10
@@ -64,9 +56,7 @@ personas:
       # Jangly: bright, ringing chords, light touch, open voicings
       humanize_velocity: 0.12
       humanize_timing: 0.04
-      swing: 0.0
       push_pull: 0.0
-      groove: "tight"
       accent_strength: 0.35
       chuck_rate: 0.0
       downbeat_boost: 0.25

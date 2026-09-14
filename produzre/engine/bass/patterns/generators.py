@@ -146,7 +146,7 @@ def get_rhythm_pattern_rock_riff(
     eligible = set()
     for slot in slots:
         bar = int(slot // beats_per_bar)
-        position = round(slot % beats_per_bar, 3)
+        position = round((slot % beats_per_bar) % 4.0, 3)
         if position in (first_bar if bar % 2 == 0 else second_bar):
             eligible.add(slot)
     return eligible
@@ -161,7 +161,7 @@ def get_rhythm_pattern_funk_16ths(
     eligible = set()
     for slot in slots:
         bar = int(slot // beats_per_bar)
-        position = round(slot % beats_per_bar, 3)
+        position = round((slot % beats_per_bar) % 4.0, 3)
         if position in (first_bar if bar % 2 == 0 else second_bar):
             eligible.add(slot)
     return eligible

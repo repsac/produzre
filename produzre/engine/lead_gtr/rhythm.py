@@ -27,6 +27,7 @@ def choose_note_starts(
     prefer_offbeat: bool = False,
     rest_rate: float = 0.2,
     genre: str | None = None,
+    candidate_positions: Optional[List[float]] = None,
 ) -> List[float]:
     """Select beat positions for lead notes within a phrase window.
 
@@ -44,12 +45,12 @@ def choose_note_starts(
     Args:
         grid: RhythmGrid providing cell positions and downbeat flags.
         accent_beats: Section-local beat positions accented by drums/rhythm gtr.
-        density: 0.0–1.0 — fraction of candidate positions to select.
+        density: 0.0-1.0: fraction of candidate positions to select.
         rng: Seeded RNG for determinism.
         phrase_start: Start beat of the phrase window (section-local).
         phrase_end: End beat of the phrase window (defaults to grid.total_beats).
         prefer_offbeat: Bias toward off-grid positions for energetic contrast.
-        rest_rate: 0.0–1.0 — probability of silencing each selected position
+        rest_rate: 0.0-1.0: probability of silencing each selected position
                    after density filtering (minimum one position always kept).
 
     Returns:
@@ -72,6 +73,9 @@ def choose_note_starts(
         phrase_start + i * step for i in range(n_steps)
         if phrase_start + i * step < phrase_end - 1e-9
     ]
+
+    if candidate_positions is not None:
+        candidate_beats = sorted(set(b for b in candidate_positions if phrase_start <= b < phrase_end))
 
     if not candidate_beats:
         return [phrase_start]

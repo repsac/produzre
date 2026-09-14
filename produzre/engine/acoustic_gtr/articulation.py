@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 # =============================================================================
-# Finger attack — velocity shaping by stroke type
+# Finger attack: velocity shaping by stroke type
 # =============================================================================
 
 def apply_finger_attack(
@@ -33,8 +33,8 @@ def apply_finger_attack(
 ) -> int:
     """Compute final note velocity for a single fingerpicking hit.
 
-    Bass (thumb/P stroke): warmer, slightly louder — the foundation.
-    Treble (I/M/A finger stroke): lighter, airier — the melody layer.
+    Bass (thumb/P stroke): warmer, slightly louder: the foundation.
+    Treble (I/M/A finger stroke): lighter, airier: the melody layer.
 
     Args:
         base_vel:      Base velocity from params.
@@ -49,7 +49,7 @@ def apply_finger_attack(
     # Bass strings are plucked harder by the thumb naturally
     v = base_vel + (6 if is_bass else -4)
 
-    # Downbeat emphasis — the guitarist naturally accents beat 1
+    # Downbeat emphasis: the guitarist naturally accents beat 1
     if is_downbeat:
         v += 5 if is_bass else 3
 
@@ -61,7 +61,7 @@ def apply_finger_attack(
 
 
 # =============================================================================
-# Duration calculation — string-aware sustain
+# Duration calculation: string-aware sustain
 # =============================================================================
 
 def calc_pick_duration(
@@ -82,7 +82,7 @@ def calc_pick_duration(
     Args:
         hit_beat:       Current hit's beat position (section-local).
         next_hit_beat:  When the same string is next plucked (or chord_end).
-        chord_end_beat: Hard boundary — note cannot ring past this.
+        chord_end_beat: Hard boundary: note cannot ring past this.
         is_bass:        True = bass string (longer sustain).
 
     Returns:
@@ -135,7 +135,7 @@ def emit_body_tap(
 
 
 # =============================================================================
-# Strum spread — micro-stagger for chord hits
+# Strum spread: micro-stagger for chord hits
 # =============================================================================
 
 def strum_spread_offsets(

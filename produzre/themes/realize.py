@@ -1,26 +1,18 @@
-"""Theme realization: degrees + rhythm -> concrete pitches over harmony.
+"""Realize theme degrees and rhythm over a section's harmony.
 
-Realization is a **pure function** of (theme, chord slots, key, mode, genre):
-no RNG is involved, which keeps the determinism story airtight. Engines (and
-the demo tooling) call `realize_theme` per section.
-
-Pitch policy (see design doc §5):
-  1. Degree + accidental maps to a key-relative pitch class.
-  2. Chord-tone snapping: if the pitch class is foreign to the active chord
-     and one semitone from a chord tone, snap to it — unless the note is a
-     recognized genre color tone (b3 / b5 / b7 in blues-family genres).
-  3. Voice leading: octave placement prefers the smallest motion from the
-     previous realized note, constrained to the theme's register.
+Realization uses no RNG. Register-relative targets preserve written octaves,
+then fold pitches into range. Interior non-chord notes can move by one semitone
+when the preceding note belongs to the active chord. Tonic degrees, each
+statement's final note, and genre blue notes retain their pitch identity.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import List, Optional, Sequence, Tuple
 
-# NOTE: these helpers currently live in melody.py; the design doc proposes
-# factoring them into a shared pitch_utils module. The prototype imports them
-# to avoid duplicating the tables.
+# Melody re-exports the shared harmony tables and supplies register fitting.
 from ..melody import _KEY_PCS, _MODE_OFFSETS, _normalize_key, chord_pitch_classes, fit_pitch_to_range
 
 
@@ -42,7 +34,7 @@ class RealizedNote:
     beat: float              # section-relative beat
     duration_beats: float
     pitch: int               # MIDI note number
-    degree_label: str        # e.g. "b3" — provenance for inspection
+    degree_label: str        # e.g. "b3": provenance for inspection
     numeral: str             # chord active at this beat
     chord_index: int
     occurrence: int          # which theme loop iteration this came from
@@ -93,12 +85,20 @@ def realize_theme(
     Returns:
         Ordered list of RealizedNote, section-relative.
     """
+    if not math.isfinite(theme.length_beats) or theme.length_beats <= 0:
+        raise ValueError("Theme length must be finite and positive")
     slots = list(chord_slots or [])
     if not slots:
         return []
     end_of_harmony = float(slots[-1].end_beat)
-    limit = float(total_beats) if total_beats else end_of_harmony
+    limit = float(total_beats) if total_beats is not None else end_of_harmony
+    if not math.isfinite(limit):
+        raise ValueError("Section length must be finite")
     lo, hi = register or theme.base_register
+    tonic = _KEY_PCS.get(_normalize_key(key), 0)
+    scale = _MODE_OFFSETS.get(str(mode or "").lower(), _MODE_OFFSETS["major"])
+    center = (lo + hi) / 2 - 6
+    base = tonic + 12 * math.floor((center - tonic) / 12)
     keep_color = any(tok in str(genre or "").lower() for tok in COLOR_GENRES)
 
     notes: List[RealizedNote] = []
@@ -107,6 +107,8 @@ def realize_theme(
     occ_start = 0.0
 
     while occ_start < limit - 1e-9:
+        sounded = [e for e in theme.events if not e.is_rest and occ_start + e.offset_beats < limit]
+        final_event = sounded[-1] if sounded else None
         for ev in theme.events:
             beat = occ_start + ev.offset_beats
             if beat >= limit - 1e-9 or ev.is_rest:
@@ -119,10 +121,11 @@ def realize_theme(
             chord_pcs = set(chord_pitch_classes(slot.numeral, key, mode))
             snapped = False
 
-            if pc not in chord_pcs:
+            if (pc not in chord_pcs and ev.degree != 1 and ev is not final_event
+                    and previous is not None and previous % 12 in chord_pcs):
                 is_color = keep_color and (ev.degree, ev.accidental) in COLOR_TONES
                 if not is_color:
-                    neighbors = [c for c in chord_pcs if (pc - c) % 12 in (1, 11)]
+                    neighbors = sorted(c for c in chord_pcs if (pc - c) % 12 in (1, 11))
                     if neighbors:
                         # Prefer the neighbor in the direction of recent motion.
                         if previous is not None and notes:
@@ -135,7 +138,10 @@ def realize_theme(
                         snapped = True
                     # Whole-step dissonance is left alone: passing tones are legal.
 
-            pitch = fit_pitch_to_range(60 + pc, lo, hi, previous=previous)
+            target = base + scale[(ev.degree - 1) % 7] + ev.accidental + 12 * ev.octave
+            if snapped:
+                target += ((pc - target + 6) % 12) - 6
+            pitch = fit_pitch_to_range(target, lo, hi)
             previous = pitch
             notes.append(
                 RealizedNote(

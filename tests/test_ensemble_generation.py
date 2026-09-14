@@ -166,7 +166,7 @@ def test_drum_fill_vocabulary_is_not_snare_roll_dominated():
     assert {45, 47, 50} & set(all_fill_pitches)
 
 
-def test_swing_does_not_compress_structural_fill_cells():
+def test_fills_follow_shared_swing():
     events = [
         DrumEvent(beat=1.5, duration_beats=0.25, pitch=38, velocity=80, kind="fill"),
         DrumEvent(beat=1.75, duration_beats=0.25, pitch=47, velocity=86, kind="fill"),
@@ -182,4 +182,4 @@ def test_swing_does_not_compress_structural_fill_cells():
         velocity_humanize=0.0,
         rng=random.Random(4),
     )
-    assert notes[1][0] - notes[0][0] == 0.25
+    assert [round(n[0], 6) for n in notes] == [1.7, 1.85]

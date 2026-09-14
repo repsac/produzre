@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, Optional
 import logging
+import math
 
 from ...melody import chord_pitch_classes, guide_pitch_at
 
@@ -54,7 +55,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
     # Get configuration parameters. The orchestrator may deliver either an
     # InstrumentConfig dataclass or a plain dict (e.g. merged _effective
-    # configs) — support both like other engines.
+    # configs): support both like other engines.
     if isinstance(instrument_cfg, Mapping):
         intensity = instrument_cfg.get("intensity")
         extra = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
@@ -66,6 +67,8 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         if not isinstance(extra, Mapping):
             extra = {}
 
+    if intensity is None:
+        intensity = getattr(section, "intensity", None)
     intensity = float(intensity) if intensity is not None else 0.5
 
     pattern = str(extra.get("pattern", "phrase")).lower()
@@ -110,7 +113,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
         # Calculate how many notes fit in this chord slot
         slot_duration = slot.end_beat - slot.start_beat
-        num_notes = int(slot_duration / note_duration_beats)
+        num_notes = max(0, math.ceil(slot_duration / note_duration_beats - 1e-9))
 
         # Generate arpeggio events
         for i in range(num_notes):

@@ -1,4 +1,4 @@
-# Blues bass — tuned 2026-06-10.
+# Blues bass: tuned 2026-06-10.
 # Corpus-measured blues swing was 0.54; the mined 0.15 was inaudible.
 # Intended feel: shuffle (2:1). Authored to current drum semantics
 # (0.25*swing beat delay on the "&"); bass swing application is being
@@ -24,7 +24,5 @@ params:
   rest_rate: 0.19
   root_bias: 0.61
   motion_style: "mixed"
-  swing: 0.6
   lock_to_kick: 0.47
   accent_strength: 1.29
-  syncopation: 0.41

@@ -1,7 +1,7 @@
 """Rule-based theme composition (M4, design doc §6).
 
-When a song has no ``themes:`` block, this module composes a small bank —
-a riff and a hook — from the song seed. The rules matter more than the
+When a song has no ``themes:`` block, this module composes a small bank:
+a riff and a hook: from the song seed. The rules matter more than the
 randomness:
 
 1. **Rhythm first.** A distinctive rhythm with plain pitches is a hook; the
@@ -13,7 +13,7 @@ randomness:
    half cadence: degree 5 or 2) and a consequent (same rhythm, full cadence
    on the tonic).
 4. **Color tones.** Blues-family genres may flatten 3/5/7 for blue notes.
-5. **Register by role.** Riff low, hook mid — from DEFAULT_REGISTERS.
+5. **Register by role.** Riff low, hook mid: from DEFAULT_REGISTERS.
 
 The RNG only *selects* among valid options; generation is one dedicated
 song-level stream, so take/variation change the performance, never the
@@ -106,11 +106,18 @@ def _genre_weights(genre: str) -> Dict[str, float]:
 
 
 def _scale_cell(cell: Sequence[float], beats_per_bar: float) -> Tuple[float, ...]:
-    """Adapt a 4/4 rhythm cell to another bar length (uniform scaling)."""
-    if abs(beats_per_bar - 4.0) < 1e-9:
-        return tuple(cell)
-    factor = beats_per_bar / 4.0
-    return tuple(d * factor for d in cell)
+    """Fill a bar without moving attacks off the original eighth/16th grid."""
+    remaining = float(beats_per_bar)
+    result = []
+    for duration in cell:
+        if remaining <= 1e-9:
+            break
+        duration = min(duration, remaining)
+        result.append(duration)
+        remaining -= duration
+    if remaining > 1e-9:
+        result.append(remaining)
+    return tuple(result)
 
 
 def _is_strong_beat(beat: float) -> bool:
@@ -144,7 +151,9 @@ def _compose_pitches(
         is_penult = i == last - 1
         strong = _is_strong_beat(beat)
 
-        if is_final and full_cadence_idx is not None:
+        if i == 0 and not is_final:
+            idx = start_idx
+        elif is_final and full_cadence_idx is not None:
             idx = full_cadence_idx
         elif is_penult and half_cadence_idx is not None:
             idx = half_cadence_idx
@@ -262,7 +271,7 @@ def compose_theme_bank(
         rng, antecedent,
         lo_idx=4, hi_idx=12,           # degree 5 low .. degree 5 high
         start_idx=7,                   # start on the tonic, up an octave
-        half_cadence_idx=half_idx,
+        half_cadence_idx=None,
         full_cadence_idx=half_idx,
         color_rate=color_rate,
     )

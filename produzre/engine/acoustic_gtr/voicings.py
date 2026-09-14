@@ -1,4 +1,4 @@
-"""Acoustic guitar chord voicing — thin adapter over the instruments library.
+"""Acoustic guitar chord voicing: thin adapter over the instruments library.
 
 Delegates all voicing logic to `produzre.instruments.chord_shapes.select_voicing()`,
 which uses physics-based CAGED chord shapes instead of piano-style interval templates.
@@ -6,7 +6,7 @@ This produces physically playable chords with correct open-string positions and 
 strings, matching how a steel-string guitar actually sounds.
 
 Profile:
-    GUITAR_STANDARD — 6-string, E2-A2-D3-G3-B3-E4
+    GUITAR_STANDARD: 6-string, E2-A2-D3-G3-B3-E4
 
 Return type changed from List[int] to ResolvedVoicing. Callers that only need
 MIDI pitches use the .pitches property (backward compatible). Fingerpicking
@@ -22,7 +22,7 @@ from typing import Optional
 from ...instruments.chord_shapes import ResolvedVoicing, select_voicing
 from ...instruments.profile import GUITAR_STANDARD
 
-# The instrument profile for this engine — change to GUITAR_7STRING, GUITAR_DADGAD, etc.
+# The instrument profile for this engine: change to GUITAR_7STRING, GUITAR_DADGAD, etc.
 ENGINE_INSTRUMENT_PROFILE = GUITAR_STANDARD
 
 

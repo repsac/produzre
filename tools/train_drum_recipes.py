@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 STEPS_PER_BAR = 16
 
 # ---------------------------------------------------------------------------
-# GM Drum Map — pitch ranges to instrument class
+# GM Drum Map: pitch ranges to instrument class
 # ---------------------------------------------------------------------------
 
 # Standard GM percussion mapping (channel 10, but we scan all channels).
@@ -151,7 +151,8 @@ def _detect_ticks_per_bar(mid: mido.MidiFile) -> Tuple[int, Optional[str]]:
 def quantize_midi(
     filepath: Path,
     *,
-    steps_per_bar: int = STEPS_PER_BAR,
+    steps_per_bar: Optional[int] = None,
+    assumed_meter: str = "4/4",
 ) -> Optional[Dict[str, List[List[Tuple[int, int]]]]]:
     """Load a MIDI file and quantize note events to a step grid.
 
@@ -177,6 +178,11 @@ def quantize_midi(
         return None
 
     ticks_per_bar, time_signature = _detect_ticks_per_bar(mid)
+    if time_signature is None:
+        num, den = map(int, assumed_meter.split("/"))
+        ticks_per_bar = int(mid.ticks_per_beat * num * 4 / den)
+    if steps_per_bar is None:
+        steps_per_bar = max(1, round(ticks_per_bar / mid.ticks_per_beat * 4))
 
     if ticks_per_bar <= 0:
         return None
@@ -185,7 +191,7 @@ def quantize_midi(
 
     # Collect note_on events, preferring the GM percussion channel (9).
     # Only fall back to scanning all channels when channel 9 carries zero
-    # note_ons — otherwise melodic tracks pollute the drum statistics.
+    # note_ons: otherwise melodic tracks pollute the drum statistics.
     ch9_note_ons = 0
     ch9_events: Dict[str, List[Tuple[float, int]]] = defaultdict(list)
     all_events: Dict[str, List[Tuple[float, int]]] = defaultdict(list)
@@ -319,7 +325,7 @@ class GrooveProfile:
         """Return the most common explicit time signature, or None."""
         if not self.meters:
             return None
-        return max(self.meters, key=lambda k: self.meters[k])
+        return min(self.meters, key=lambda k: (-self.meters[k], k))
 
     def step_probability(self, inst_class: str, step: int) -> float:
         """Return the probability of a hit at this step (0.0 to 1.0)."""
@@ -383,28 +389,28 @@ def derive_recipe(
     crash_probs = profile.probabilities("crash")
 
     # --- kick_base: steps where P(kick) > 0.30 ---
-    kick_base = [s for s in range(STEPS_PER_BAR) if kick_probs[s] > 0.30]
+    kick_base = [s for s in range(profile.steps) if kick_probs[s] > 0.30]
     if not kick_base:
         kick_base = [0]  # Fallback: at least the downbeat
 
     # --- kick_extra_rate: mean P of kick steps NOT in kick_base ---
-    non_base_kick = [kick_probs[s] for s in range(STEPS_PER_BAR) if s not in kick_base]
+    non_base_kick = [kick_probs[s] for s in range(profile.steps) if s not in kick_base]
     kick_extra_rate = sum(non_base_kick) / len(non_base_kick) if non_base_kick else 0.0
 
     # --- double_kick_rate: P of kick on steps 14-15 (end of bar) ---
-    end_kicks = [kick_probs[s] for s in [14, 15] if s not in kick_base]
+    end_kicks = [kick_probs[s] for s in range(max(0, profile.steps - 2), profile.steps) if s not in kick_base]
     double_kick_rate = sum(end_kicks) / max(len(end_kicks), 1)
 
     # --- snare_backbeat_steps: steps with P(snare) in the top tier ---
     max_snare_p = max(snare_probs) if any(snare_probs) else 0.0
     snare_threshold = max(0.25, max_snare_p * 0.60)
-    snare_backbeat = [s for s in range(STEPS_PER_BAR) if snare_probs[s] >= snare_threshold]
+    snare_backbeat = [s for s in range(profile.steps) if snare_probs[s] >= snare_threshold]
     if not snare_backbeat:
-        snare_backbeat = [4, 12]  # Standard backbeat
+        snare_backbeat = [s for s in (4, 12) if s < profile.steps]  # Standard backbeat
 
     # --- ghost_rate & ghost_steps ---
     snare_non_backbeat = sorted(
-        [(s, snare_probs[s]) for s in range(STEPS_PER_BAR)
+        [(s, snare_probs[s]) for s in range(profile.steps)
          if s not in snare_backbeat and snare_probs[s] > 0.03],
         key=lambda x: -x[1],
     )[:6]
@@ -418,9 +424,9 @@ def derive_recipe(
     # --- hat_mode: classify hat density ---
     hat_active_steps = sum(1 for p in hat_closed_probs if p > 0.15)
 
-    if hat_active_steps >= 14:
+    if hat_active_steps >= profile.steps * 0.85:
         hat_mode = "16th"
-    elif hat_active_steps >= 6:
+    elif hat_active_steps >= profile.steps * 0.375:
         hat_mode = "8th"
     else:
         hat_mode = "quarter"
@@ -431,7 +437,7 @@ def derive_recipe(
     use_ride = ride_total > hat_total * 0.8
 
     # --- open_hat_rate: mean P of open hat on "&" steps (odd steps) ---
-    and_steps = [1, 3, 5, 7, 9, 11, 13, 15]
+    and_steps = list(range(2, profile.steps, 4))
     open_hat_and = [hat_open_probs[s] for s in and_steps]
     open_hat_rate = sum(open_hat_and) / len(open_hat_and) if open_hat_and else 0.0
 
@@ -452,27 +458,9 @@ def derive_recipe(
     if feel:
         tags["feel"] = feel
 
-    # --- Derive swing from hat pattern ---
-    even_hat = sum(hat_closed_probs[s] for s in range(0, STEPS_PER_BAR, 2))
-    odd_hat = sum(hat_closed_probs[s] for s in range(1, STEPS_PER_BAR, 2))
-    even_ride = sum(ride_probs[s] for s in range(0, STEPS_PER_BAR, 2))
-    odd_ride = sum(ride_probs[s] for s in range(1, STEPS_PER_BAR, 2))
-
-    # Use whichever cymbal has more activity.
-    if (even_ride + odd_ride) > (even_hat + odd_hat):
-        even_cym, odd_cym = even_ride, odd_ride
-    else:
-        even_cym, odd_cym = even_hat, odd_hat
-
-    swing = 0.0
-    if even_cym > 0 and odd_cym > 0.3:
-        swing_ratio = odd_cym / even_cym
-        if swing_ratio < 0.3:
-            swing = 0.35
-        elif swing_ratio < 0.5:
-            swing = 0.20
-        elif swing_ratio < 0.8:
-            swing = 0.10
+    # Quantized hit density cannot measure swing timing. Use the corpus feel
+    # label until the trainer retains microtiming from the source performances.
+    swing = 2.0 / 3.0 if str(feel or "").lower() in ("swing", "shuffle", "triplet") else 0.0
 
     # --- Assemble recipe ---
     recipe: Dict[str, Any] = {
@@ -487,7 +475,7 @@ def derive_recipe(
             "double_kick_rate": _round(double_kick_rate),
             "snare_backbeat_steps": snare_backbeat,
             "ghost_rate": _round(ghost_rate),
-            "ghost_steps": ghost_steps if ghost_steps else [7, 15],
+            "ghost_steps": ghost_steps if ghost_steps else [s for s in (7, 15) if s < profile.steps],
             "open_hat_rate": _round(open_hat_rate),
             "crash_start": crash_start,
             "crash_phrase_end_rate": _round(crash_phrase_end_rate),
@@ -602,10 +590,10 @@ def collect_time_signature(folders: List[Dict[str, Any]]) -> Optional[str]:
 def _print_probability_grid(profile: GrooveProfile, genre: str) -> None:
     """Print a visual per-step probability grid for debugging."""
     instruments = ["kick", "snare", "hat_closed", "hat_open", "ride", "crash"]
-    header = f"  Step:  " + "".join(f"{s:5d}" for s in range(STEPS_PER_BAR))
+    header = f"  Step:  " + "".join(f"{s:5d}" for s in range(profile.steps))
     print(f"\n  Probability grid for '{genre}' ({profile.total_bars} bars):")
     print(header)
-    print("  " + "-" * (9 + 5 * STEPS_PER_BAR))
+    print("  " + "-" * (9 + 5 * profile.steps))
     for inst in instruments:
         probs = profile.probabilities(inst)
         if max(probs) < 0.01:
@@ -656,6 +644,7 @@ def train_genre(
         Recipe dict, or ``None`` if insufficient data.
     """
     profile = GrooveProfile()
+    profiles = {}
     files_processed = 0
 
     for folder in folders:
@@ -674,15 +663,28 @@ def train_genre(
             if not filepath.exists():
                 continue
 
-            quantized = quantize_midi(filepath)
+            assumed_meter = str(folder.get("time_signature") or "4/4")
+            quantized = quantize_midi(filepath, assumed_meter=assumed_meter)
             if quantized is None:
                 profile.files_failed += 1
                 continue
 
             grid, file_meter = quantized
-            profile.add_file(grid, time_signature=file_meter)
+            meter = file_meter or assumed_meter
+            num, den = map(int, meter.split("/"))
+            meter_profile = profiles.setdefault(meter, GrooveProfile(round(num * 16 / den)))
+            meter_profile.add_file(grid, time_signature=file_meter)
             files_processed += 1
 
+    if profiles:
+        selected_meter = min(profiles, key=lambda m: (-profiles[m].files_loaded, m))
+        failed = profile.files_failed
+        profile = profiles[selected_meter]
+        profile.files_failed = failed
+        if len(profiles) > 1:
+            logger.info("Genre '%s': keeping dominant meter %s; other meters are not mixed into its grid.", genre, selected_meter)
+    else:
+        selected_meter = "4/4"
     if profile.files_loaded < min_files:
         logger.warning(
             "Genre '%s': only %d files loaded (need >= %d), skipping.",
@@ -705,8 +707,7 @@ def train_genre(
     # files themselves, then manifest metadata, then assume 4/4.
     time_signature = (
         profile.dominant_meter()
-        or collect_time_signature(folders)
-        or "4/4"
+        or selected_meter
     )
 
     recipe = derive_recipe(

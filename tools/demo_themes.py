@@ -37,23 +37,7 @@ from produzre.themes.transform import apply_transform
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
-# Default arrangement arc: section type -> transform applied to each theme.
-# This mirrors design doc §9 and exists only in the demo (arc.py is M4).
-ARC = {
-    "intro": ("fragment", {"keep": "first"}),
-    "verse": ("quote", {}),
-    "prechorus": ("displace", {"shift_beats": 0.5}),
-    "chorus": ("quote", {}),
-    "bridge": ("invert", {}),
-    "solo": ("sequence", {"steps": 2}),
-    "breakdown": ("thin", {}),
-    "outro": ("fragment", {"keep": "last"}),
-}
-
-# Repeat statements get a development bump: 2nd+ chorus lifts the melody.
-REPEAT_ARC = {
-    "chorus": {"melody": ("octave_shift", {"octaves": 1})},
-}
+from produzre.themes.arc import treatment_for
 
 
 def note_name(pitch: int) -> str:
@@ -86,13 +70,12 @@ def _varint(n: int) -> bytes:
 
 def _track_chunk(events, name: str, program: int, channel: int, ppq: int) -> bytes:
     body = bytearray()
-    body += b"\x00\xff\x03" + _varint(len(name)) + name.encode()
+    body += b"\x00\xff\x03" + _varint(len(name.encode("utf-8"))) + name.encode("utf-8")
     body += b"\x00" + bytes([0xC0 | channel, program])
     timeline = []
     for on_b, off_b, pitch, vel in events:
-        timeline.append((int(round(on_b * ppq)), 1, bytes([0x80 | channel, pitch, 0])))
-        timeline.append((int(round(off_b * ppq)), 1, bytes([0x80 | channel, pitch, 0])))
-        timeline.append((int(round(on_b * ppq)), 0, bytes([0x90 | channel, pitch, vel])))
+        timeline.append((max(int(round(on_b * ppq)) + 1, int(round(off_b * ppq))), 0, bytes([0x80 | channel, pitch, 0])))
+        timeline.append((int(round(on_b * ppq)), 1, bytes([0x90 | channel, pitch, vel])))
     timeline.sort(key=lambda t: (t[0], t[1]))
     last = 0
     for tick, _order, msg in timeline:
@@ -138,7 +121,7 @@ def main() -> int:
     logging.basicConfig(level=logging.WARNING, format="[%(levelname)s] %(message)s")
     logger = logging.getLogger("produzre.demo")
 
-    arc = dict(ARC)
+    arc = {}
     for expr in args.transform:
         sec_type, spec = parse_override(expr)
         arc[sec_type] = spec
@@ -170,7 +153,7 @@ def main() -> int:
         section = cfg.sections[sec_id]
         hplan = build_harmony_plan(cfg, section, logger)
         if hplan is None or not hplan.chord_slots:
-            print(f"\n=== {sec_id} ({section.type}) — no harmony plan, skipped")
+            print(f"\n=== {sec_id} ({section.type}): no harmony plan, skipped")
             continue
 
         key = section.key or song_key
@@ -186,10 +169,7 @@ def main() -> int:
         print(f"  chords: {slots}")
 
         for theme in bank.themes.values():
-            transform_name, params = arc.get(section.type, ("quote", {}))
-            repeat_spec = REPEAT_ARC.get(section.type, {}).get(theme.role.value)
-            if repeat_spec and occurrence > 0:
-                transform_name, params = repeat_spec
+            transform_name, params = arc.get(section.type, treatment_for(theme, section.type, occurrence))
             developed = apply_transform(theme, transform_name, **params)
 
             notes = realize_theme(

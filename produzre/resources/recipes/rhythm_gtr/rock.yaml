@@ -16,7 +16,5 @@ params:
   voicing: power
   strum_style: balanced
   accent_strength: 0.5
-  groove: tight
-  swing: 0.0
   chuck_rate: 0.0
   use_patterns: true

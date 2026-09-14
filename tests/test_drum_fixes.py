@@ -230,7 +230,7 @@ def test_backbeat_detection_uses_tolerance():
     non_backbeat_flams = count(offset=-1.0)  # lands on bar downbeats
     assert jittered_backbeat_flams > non_backbeat_flams, (
         f"jittered backbeat snares got {jittered_backbeat_flams} flams vs "
-        f"{non_backbeat_flams} off-backbeat — tolerance-based backbeat "
+        f"{non_backbeat_flams} off-backbeat: tolerance-based backbeat "
         "detection is not applying the boost"
     )
 

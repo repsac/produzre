@@ -1,4 +1,4 @@
-# Blues shuffle drum recipe — hand-tuned 2026-06-10.
+# Blues shuffle drum recipe: hand-tuned 2026-06-10.
 # The mined value swing: 0.2 (= "&" delayed by 0.05 beats) is inaudible.
 # Intended feel: 12/8 triplet shuffle, long-short 2:1 ratio. With current
 # engine semantics (offbeat delayed by 0.25*swing beats) the triplet

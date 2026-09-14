@@ -50,6 +50,7 @@ def add_fills(
     phrase_len_bars: int = 4,
     phrase_end_emphasis: float = 1.5,
     genre: str | None = None,
+    meter=None,
 ) -> List[DrumEvent]:
     """Return events with optional fills added.
 
@@ -125,12 +126,9 @@ def add_fills(
 
     bars = _bars_total(tb, bpb)
 
-    # Meter awareness: detect compound 6-beat bars (e.g., 6/4, or 6/8 expressed
-    # as 6 quarter beats). Note: Meter.beats_per_bar normalizes 6/8 to 3.0
-    # quarter beats per bar, in which case it is indistinguishable from 3/4
-    # here and uses the straight-16th path. (The old `spb == 6` clause was a
-    # leftover from the legacy fixed 16-step grid and never fired.)
-    is_6_8 = abs(bpb - 6.0) < 0.1
+    # Compound meters retain their notated meter separately from bar duration.
+    # For example, 6/8 and 3/4 both last three quarter-note beats.
+    is_6_8 = meter is not None and meter.denominator == 8 and meter.numerator % 3 == 0
 
     # Map fill_length to beat durations
     fill_length_str = (fill_length or "medium").strip().lower()
@@ -215,8 +213,8 @@ def add_fills(
 
             # Meter-aware step sizing
             if is_6_8:
-                # 6/8: use triplet feel (3 subdivisions per beat)
-                roll_step = step_beats if rng_fill.random() < 0.70 else (1.5 * step_beats)
+                # Compound fills favor sixteenths within the dotted-quarter pulse.
+                roll_step = step_beats if rng_fill.random() < 0.70 else (2.0 * step_beats)
             else:
                 # Most fills speak in eighths with short sixteenth cells near
                 # the cadence. Faster genres may choose sixteenths more often.
@@ -268,7 +266,7 @@ def add_fills(
 
                 # Velocity shaping depends on fill type
                 if fill_type == 0:
-                    # Snare roll: exponential crescendo — slow build then explosive end
+                    # Snare roll: exponential crescendo: slow build then explosive end
                     # Real rolls accelerate dynamically into the downbeat
                     ramp = int((prog ** 1.8) * 22.0)
                     # Alternate L/R hands: odd hits slightly softer (weaker hand)
@@ -350,10 +348,10 @@ def add_fills(
 
         # Place at a grid-aligned position (meter-aware)
         if is_6_8:
-            # In 6/8, prefer beat 4 or 5 (second half)
+            # In 6/8, prefer the fourth or fifth eighth note.
             candidate_steps = [int(spb * 0.5), int(spb * 0.67)]
         else:
-            # In 4/4, prefer beat 2 or 3
+            # In 4/4, prefer quarter-note beats 3 or 4.
             candidate_steps = []
             if spb >= 4:
                 candidate_steps.append(spb // 2)
@@ -382,7 +380,7 @@ def add_fills(
 
         # Meter-aware step sizing
         if is_6_8:
-            chatter_step = step_beats if rng_chatter.random() < 0.80 else (1.5 * step_beats)
+            chatter_step = step_beats if rng_chatter.random() < 0.80 else (2.0 * step_beats)
         else:
             chatter_step = step_beats if rng_chatter.random() < 0.70 else (2.0 * step_beats)
 

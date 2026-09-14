@@ -1,4 +1,4 @@
-# Metal bass — tuned 2026-06-10.
+# Metal bass: tuned 2026-06-10.
 # Pick articulation (metal persona agrees), high density riffing locked to
 # roots; density trimmed from the mined 0.95 wall-of-notes to 0.85.
 id: metal
@@ -22,7 +22,5 @@ params:
   rest_rate: 0.21
   root_bias: 0.8
   motion_style: "mixed"
-  swing: 0.01
   lock_to_kick: 0.39
   accent_strength: 1.13
-  syncopation: 0.51

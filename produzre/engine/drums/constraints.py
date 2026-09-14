@@ -343,7 +343,7 @@ def apply_constraints(
 
     # Calculate kick density (hits per beat)
     kick_density_by_bar = {
-        bar: count / beats_per_bar
+        bar: count / max(4.0, beats_per_bar)
         for bar, count in kick_hits_by_bar.items()
     }
 
@@ -376,7 +376,15 @@ def apply_constraints(
         # Duck hats during fills
         if fill_duck_hats and step in fill_windows:
             # Suppress hat timekeeping (keep accents)
-            hits = [h for h in hits if not (h.voice in ("hat_c", "hat_o") and h.kind == "timekeep")]
+            hits = [h for h in hits if not (h.voice in ("hat_c", "hat_o") and h.kind in ("timekeep", "hat_closed", "hat_open", "hat", "open_hat", "hat_close"))]
+
+        unique = {}
+        for hit in hits:
+            key = (hit.start_beat, hit.pitch, hit.channel)
+            old = unique.get(key)
+            if old is None or (hit.kind == "fill", hit.velocity) > (old.kind == "fill", old.velocity):
+                unique[key] = hit
+        hits = list(unique.values())
 
         # Resolve limb collisions
         original_count = len(hits)

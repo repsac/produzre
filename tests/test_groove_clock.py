@@ -304,7 +304,7 @@ arrangement:
 """,
     )
     # The default 'tight' personas define swing: 0.0 and push_pull: 0.0
-    # explicitly — those zeros must not resolve a feel.
+    # explicitly: those zeros must not resolve a feel.
     drum_params = (
         cfg.raw["_effective"]["instruments"]["drums"].get("params", {})
     )
@@ -498,7 +498,7 @@ def test_section_drum_swing_beats_groove_block():
 
 def test_groove_block_used_when_drums_silent():
     cfg = _CfgStub({"groove": {"swing": 0.3, "swing_16th": 0.1}})
-    feel = resolve_groove_feel(cfg, None, {"swing": 0.0}, {"bass": {}})
+    feel = resolve_groove_feel(cfg, None, None, {"bass": {}})
     assert feel is not None
     assert feel.swing == pytest.approx(0.3)
     assert feel.swing_16th == pytest.approx(0.1)
@@ -522,15 +522,14 @@ def test_push_pull_maps_to_pocket_ms():
 
 
 def test_rhythm_gtr_push_pull_not_double_applied():
-    """rhythm_gtr consumes push_pull internally (apply_microtiming); the
-    groove clock must not also derive a pocket from it."""
+    """Rhythm guitar uses the shared clock for its push/pull offset."""
     cfg = _CfgStub({})
     feel = resolve_groove_feel(
         cfg, None, {"swing": 0.5}, {"rhythm_gtr": {"push_pull": 0.1}}
     )
     assert feel is not None
     assert feel.pocket_offsets_ms["rhythm_gtr"] == pytest.approx(
-        DEFAULT_POCKET_MS["rhythm_gtr"]
+        -10.0
     )
 
 

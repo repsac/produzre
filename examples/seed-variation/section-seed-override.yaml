@@ -1,4 +1,4 @@
-# Seed & Variation — Section Seed Override
+# Seed & Variation: Section Seed Override
 #
 # Identical to base-song.yaml EXCEPT the chorus section has seed: 999.
 # This re-rolls the entire chorus (all instruments) while every other

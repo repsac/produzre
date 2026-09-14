@@ -1,188 +1,138 @@
 # Changelog
 
-## [0.9.0] — 2026-06-11 — Correctness Release
+## 0.9.0 (unreleased)
 
-Large bug-fix and feature pass driven by a full-codebase review (~80 findings, all resolved).
+### What changes for existing songs
+
+Existing YAML can produce different MIDI in 0.9.0. Phrase development, shared
+melody, corrected harmony, recipe precedence, meter handling, kit constraints,
+and timing all affect what you hear.
+
+- Drum and bass goldens were regenerated once after the output-changing fixes.
+  The bass baseline remained byte-identical; the drum baselines capture the
+  corrected kit behavior.
+- Automatic themes are on by default with `song.themes_auto: true`. You get
+  a riff and melody unless you supply authored themes or turn this off.
+- Accompaniment theme coupling is off by default. Bass and rhythm-guitar
+  `lock_to_riff` and drum `riff_accent_rate` default to 0; drum
+  `riff_accent_boost` defaults to 1. Enable coupling explicitly to keep the
+  riff-following kicks from the first theme-bank implementation. Lead quotation
+  stays at 0.65, and automatic melodic material remains available.
+- The arpeggiator defaults to `pattern: phrase` and `note_duration: 0.5`,
+  replacing `up` and 0.25 beats. Legacy `up`, `down`, and `up_down` remain available.
+- Bar length now comes from `meter` when you omit the legacy `beats_per_bar` override.
+- Straight drum recipes now have zero inferred swing. The training corpus has
+  not been rerun as part of this release review.
+
+See [DETERMINISM.md](DETERMINISM.md) for repeatability within a version and
+why output can change across releases.
+
+### New
+
+- Bass, rhythm guitar, and lead guitar develop phrases across bars. Bass can
+  repeat two-bar rock/funk onset cells within longer phrases.
+- Section energy shapes pickups, turnarounds, entrances, and endings.
+  Repeated section occurrences receive their own transition directives.
+- A shared groove clock applies swing and per-instrument pockets.
+- A shared melody guide supplies targets to lead guitar, acoustic treble
+  melody, and the arpeggiator.
+- Ensemble planning assigns foreground roles, lead windows, density budgets,
+  and fill ownership.
+- Acoustic `melody_amount` and `phrase_variation` shape the moving top line.
+  The `cinematic` picking pattern adds space around it.
+- Automatic composition creates a riff and melody from the song seed.
+  Takes and performance variation preserve that material.
+- Top-level `themes` accepts authored degree/duration events or matching degree
+  and rhythm lists. Registers and octave offsets affect realized pitches.
+- Authored themes keep their written sequence unless `allow_development: true`.
+  Generated or unlocked themes can be quoted, sequenced, inverted, fragmented,
+  displaced, thinned, stretched, compressed, or shifted by octave.
+- Bass plays realized `bass_motif` pitches, falling back to the active riff,
+  when `lock_to_riff` is enabled. Rhythm guitar uses riff accents; drums can
+  add constrained riff kicks.
 
 ### Fixed
 
-- **Parameter plumbing** — persona, recipe, and user `params` now actually reach the engines; the merge chain (persona < recipe < global params < section params) is applied end-to-end instead of silently falling back to engine defaults.
-- **Harmony spelling** — `V7` and other seventh chords spell the dominant b7 correctly (G7 renders G–B–D–F, not F#); borrowed-chord spelling fixed.
-- **Timing** — per-engine timing fixes for drums, guitars, and bass; turnaround/fill material stays inside its section window instead of spilling past section ends.
-- **Bass cadences** — `root_cadence` resolution now fires on the last selected slot of a section's final chord; approach tones resolve directly into the next chord.
-- **Trainer/analysis tooling** — fixes to the MIDI analysis pipeline feeding recipe generation.
+#### Themes
 
-### Added
+- Theme cells stay on eighth/sixteenth grids in odd meters. Tonic and final
+  notes keep their identity. Duplicate roles use the first declared theme
+  consistently; all named themes remain in the performance plan.
+- Invalid lengths, unsupported theme keys, and unimplemented MIDI imports or
+  drum themes now produce clear errors. The architecture document identifies
+  the ideas that have not been built.
+- One-bar sections now receive usable lead windows.
 
-- **Meter support** — non-4/4 time signatures flow through planning, engines, and MIDI export.
-- **Macro-dynamics** — section-level intensity arc derives per-section energy so verses and choruses differ dynamically by default.
-- **Shared groove clock** (`produzre/groove.py`) — one resolved groove feel (swing, push/pull pockets) shared by all engines; a config with no groove indications is a strict no-op on the straight grid.
-- **Re-authored genre recipes** — recipe parameter sets rewritten against the corrected parameter plumbing.
-- **Integration regression tests** (`tests/test_integration_e2e.py`) — end-to-end nets for param plumbing, V7 spelling, section bounds, persona precedence, and groove no-op.
+#### Drums
 
----
+- Drum recipe voices apply before generation. Crossstick, ghost, hat, and kick
+  settings honor overrides. Recipe groove rates survive energy defaults.
+- Hat and kick placement controls reach the kit. Hat velocity and accent controls
+  affect forced closures too. Pedal hats work alongside ride cymbal.
+- Fills and pickups swing with the groove. Hat ducking recognizes generated
+  voice kinds, duplicate hits are removed, and theme kicks pass constraints.
+- Trainer keyword matching and drum-grid analysis were corrected.
 
-## [0.8.0] — 2026-03-11 — First Public Release
+#### Bass
 
-**Produzre** is a deterministic, section-based procedural MIDI engine. Describe your song in YAML and get a fully-produced multi-track MIDI arrangement — drums, bass, guitars, harmony — reproducibly, every time.
+- Kick locking applies once, and zero disables it. Hat locking uses rendered
+  cymbal attacks. Locked bass respects register, velocity, and section boundaries.
+- Tight bass keeps kick locking at 0.8 and snare locking at 0 instead of 0.3.
+  Global bass offsets now reach rendering.
 
----
+#### Guitars
 
-### What is Produzre?
+- Rhythm patterns vary by phrase and leave space for lead activity. Muted and
+  stabbed strokes keep positive durations through export.
+- Acoustic fingerpicking uses physical strings consistently and stops each
+  string before its next attack.
+- Lead phrases retain off-grid motif attacks and use genre color tones.
+  Local mode overrides now reach lead pitches.
+- Guitar voicings and legacy play patterns handle chord spelling and boundaries
+  correctly. Chords shorter than the arpeggiator's spacing still receive an attack.
 
-Write a YAML file describing your song's structure, genre, and instrumentation. Produzre renders complete arrangements that can be imported directly into any DAW as multi-track MIDI. The same config + seed always produces byte-identical output.
+#### Groove and meter
 
----
+- Explicit zero swing overrides presets. True triplets keep their timing.
+- Positive `push_pull` means ahead for every instrument. The conversion is
+  `-100 * push_pull` milliseconds, capped at 25 ms each way. Positive `pocket_ms`
+  means behind for pitched instruments.
+- Timing offsets apply once through the shared clock where appropriate. Recipe
+  timing reaches silent-drum sections and pitched engines.
+- Section meter changes reach planning, full-song MIDI, stems, patterns, and the
+  bar map. Compound 6/8 has a different backbeat from 3/4.
+- Shared Roman-numeral spelling handles borrowed chords, dominant and major
+  sevenths, suspended, diminished, and half-diminished chords consistently.
 
-### Core Features
+#### Export
 
-#### Instrument Engines
+- Pattern export settings are parsed. Repeated sections retain distinct index
+  and sequence entries. Time metadata uses timezone-aware UTC.
+- The drum golden runner reads its own export and fails on missing baselines.
 
-Six production-ready engines render in a coordinated pipeline:
+#### Config
 
-| Engine | Role |
-|---|---|
-| `harmony` | Chord planning from Roman numeral progressions; feeds all melodic engines |
-| `drums` | Multi-voice kit — kick, snare, hats, crash, ride — with fills and swing |
-| `bass` | Chord-tone bass lines, kick-locked, with approach notes and octave/fifth jumps |
-| `rhythm_gtr` | Strumming and arpeggio patterns, harmony-aware |
-| `lead_gtr` | Phrase-based soloing within scale |
-| `acoustic_gtr` | Fingerpicked and strummed acoustic patterns |
+- Explicit user settings now reach the renderers; see [preset order](docs/llm-song-config-reference.md#recipes-and-personas)
+  for how persona, recipe, global, and section values combine.
+- Removed unused bass `swing`/`syncopation`, rhythm-guitar `swing`/`groove`,
+  the unused coordination threshold, and the unused downshift helper.
+- Added theme and release regression tests. Count-only assertions now check
+  the musical properties they were meant to guard.
+- Updated the README, config reference, engine guide, determinism guide, theme
+  design, example guides, and test guides against the code. The package version
+  is now 0.9.0.
 
-A seventh engine (`arpeggiator`) ships as a working example for building custom engines.
+Commits: `b1244b5`, `da46bf8`, `2552bc5`, `8b4bd85`, `7624d32`; followed by the September 13 release review fixes.
 
-#### Genre-Aware Recipes
+## 0.8.0 (2026-03-11)
 
-Set `genre:` in your config and parameter presets load automatically. 31 genres supported including rock, metal, jazz, funk, blues, folk, classical, reggae, bossa nova, and more. Bass recipes were generated from analysis of 2,275 real MIDI files across 116 genres.
+First public release. YAML song definitions describe key, tempo, harmony,
+instruments, sections, and arrangement order. Built-in engines provide drums,
+bass, rhythm guitar, lead guitar, acoustic guitar, and an arpeggiator example.
+Harmony supplies chord plans to the pitched engines.
 
-#### Persona System
-
-Character presets for each instrument that bundle multiple parameters into a single keyword:
-
-- **Bass:** `tight`, `pocket`, `loose`, `funk`, `metal`, `walking`, `dub`
-- **Drums:** `tight`, `rock`, `experimental`, `metal`, `funk-lite`, `jazz-lite`
-- **Rhythm/Lead/Acoustic guitar:** 5 personas each
-
-#### Deterministic Reproducibility
-
-Hierarchical seeding from project → song → take → section → instrument → event. Same YAML + same seed = byte-identical MIDI output. Verify with `--strict-determinism`. Explore variations with `take:` without changing your arrangement.
-
-#### Flexible Overrides
-
-Config merges in priority order: persona → recipe → global instrument params → section params. Override anything at any level.
-
----
-
-### Outputs
-
-From a single `produzre build` command:
-
-- **Full-track MIDI** — all instruments in one multi-track file
-- **Stems** — one MIDI per instrument
-- **Section clips** — per-section MIDIs for loop-based workflows
-- **Pattern sequences** — unique deduplicated patterns with metadata
-- **Index + QUICKREF** — build metadata and human-readable section map
-- **ASCII piano rolls** — grid view with velocity symbols (optional)
-- **Guitar tablature** — standard 6-string tab for guitar engines (optional)
-- **Event log** — TSV with pitch, velocity, duration, note kind per event (optional)
-
----
-
-### CLI
-
-```
-produzre build <config.yaml>          Build MIDI from YAML config
-produzre validate <config.yaml>       Validate config without building
-produzre show-config <config.yaml>    Print fully-resolved config
-
-produzre project create <name>        Create a named project (persistent seed registry)
-produzre project export/import        Share projects with collaborators
-produzre project list/show            Browse projects
-
-produzre user set <field> <value>     Store name, email, band, custom fields
-```
-
-Key build flags: `--dry-run`, `--strict-determinism`, `--no-export-sections`, `--no-export-patterns`, `-v`
-
----
-
-### Configuration
-
-Minimal example:
-
-```yaml
-version: 1
-
-song:
-  title: My Song
-  bpm: 120
-  key: E
-  mode: minor
-  genre: rock
-  seed: 42
-
-sections:
-  verse:
-    bars: 8
-    harmony:
-      progression: "i bVII VI i"
-      chord_rate: 4.0
-    instruments:
-      harmony: {}
-      drums: {}
-      bass: {}
-      rhythm_gtr: {}
-
-arrangement:
-  - verse
-  - verse
-```
-
-See [docs/llm-song-config-reference.md](docs/llm-song-config-reference.md) for the complete reference, and [examples/](examples/) for 150+ working configs covering genres, personas, and parameter tuning.
-
----
-
-### Extending Produzre
-
-Custom engines can be added without modifying orchestration code. Implement `render_into_timeline()`, register in `resources/engines.yml`, and ship as a standalone module. See [produzre/engine/ENGINES.md](produzre/engine/ENGINES.md).
-
----
-
-### Installation
-
-**From source:**
-
-```bash
-git clone <repo>
-pip install mido pyyaml
-produzre build examples/minimal.yaml
-```
-
-**Standalone binary** (no Python required):
-
-```bash
-python scripts/build_executable.py
-./dist/produzre build examples/minimal.yaml
-```
-
-**Requirements:** Python 3.9+, `mido >= 1.3.0`, `PyYAML >= 6.0`
-
----
-
-### Examples
-
-```bash
-# Rock song with two sections
-produzre build examples/genres/rock.yaml
-
-# Explore micro-variations — same structure, different feel
-produzre build song.yaml  # take: 0
-# edit song.yaml: set take: 1
-produzre build song.yaml  # take: 1
-
-# Inspect the fully-resolved config before building
-produzre show-config song.yaml
-
-# Verify reproducibility
-produzre build song.yaml --strict-determinism
-```
+The release includes genre recipes, instrument personas, project seed
+registries, seed/take/variation controls, full-song MIDI, stems, section clips,
+deduplicated patterns, sequence/index metadata, and optional grid, tablature,
+and event-text exports. The CLI supports building, validation, resolved config
+inspection, project sharing, and local user profiles.

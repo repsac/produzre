@@ -1,4 +1,4 @@
-# Seed & Variation — Section Variation
+# Seed & Variation: Section Variation
 #
 # Identical to base-song.yaml EXCEPT the chorus section has variation: 0.6.
 # This adds variation bias to the entire chorus while every other section

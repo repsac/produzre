@@ -419,7 +419,7 @@ class SongConfig:
     meter: str = "4/4"
     genre: Optional[str] = None     # Hints groove recipe auto-selection
     project: Optional[str] = None
-    beats_per_bar: int = 4
+    beats_per_bar: Optional[float] = None
 
     seed: int = 0
     take: int = 0  # Optional take number for controlled micro-variation (0..N)
@@ -430,12 +430,22 @@ class SongConfig:
 
     exports_root: str = "exports"
     pattern_bars: int = 1  # number of bars per pattern window
+    pattern_quantize_beats: float = 0.0
+    pattern_velocity_step: int = 1
+    pattern_merge_repeats: bool = False
+    pattern_merge_min_run: int = 2
+    pattern_merge_max: int = 0
 
     # Transition-aware arranging settings
     transitions: TransitionSettings = field(default_factory=TransitionSettings)
 
     # Derived / optional runtime-only name for files (can differ from title)
     song_name_override: Optional[str] = None
+
+    def __post_init__(self):
+        if self.beats_per_bar is None:
+            from .harmony.meter import parse_meter
+            self.beats_per_bar = parse_meter(self.meter).beats_per_bar
 
 
 @dataclass

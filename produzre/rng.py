@@ -159,7 +159,7 @@ def make_instrument_rng(
     """Create a deterministic RNG for an instrument within a section.
 
     Derives seed from the section RNG's *stable seed components* (project,
-    song, take, section — stashed by make_section_rng) plus the instrument
+    song, take, section: stashed by make_section_rng) plus the instrument
     name, ensuring each instrument in the section gets an independent RNG
     stream that does not reshuffle if the section RNG is drawn from first.
 

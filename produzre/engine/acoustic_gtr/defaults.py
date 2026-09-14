@@ -117,7 +117,7 @@ TIMING_VARIATION_DEFAULT = 0.018  # ±beats timing jitter (~10ms at 90BPM)
 # Body tap parameters (percussive technique)
 # =============================================================================
 
-BODY_TAP_PITCH    = 40    # E2 — dead note for body percussion
+BODY_TAP_PITCH    = 40    # E2: dead note for body percussion
 BODY_TAP_VEL_LO   = 45
 BODY_TAP_VEL_HI   = 65
-BODY_TAP_DURATION = 0.07  # beats — very short, percussive
+BODY_TAP_DURATION = 0.07  # beats: very short, percussive

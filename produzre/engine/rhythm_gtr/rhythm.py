@@ -527,7 +527,7 @@ def _apply_accents(
     """
     # Convert accent beats to subdivision indices.
     # Bound by the bar's total slot count (beats_per_bar * subdivision), NOT by
-    # the number of hits — hits are slot indices, not a dense array.
+    # the number of hits: hits are slot indices, not a dense array.
     total_slots = max(1, int(beats_per_bar * pattern.subdivision))
     accent_indices: Set[int] = set()
 
@@ -544,7 +544,7 @@ def _apply_accents(
     new_accents = set(pattern.accents)
     for hit in pattern.hits:
         for acc_idx in accent_indices:
-            if abs(hit - acc_idx) <= 1:
+            if hit == acc_idx:
                 new_accents.add(hit)
                 break
 
@@ -599,48 +599,3 @@ def _apply_palm_mutes(
         strum_directions=pattern.strum_directions,
         density=pattern.density,
     )
-
-
-def apply_microtiming(
-    beat_position: float,
-    groove_profile: str = "tight",
-    push_pull_amount: float = 0.0,
-    rng: Optional[random.Random] = None,
-) -> float:
-    """Apply push/pull microtiming to a beat position.
-
-    Args:
-        beat_position: Original beat position
-        groove_profile: Groove style ("tight", "laid_back", "pushed", "loose")
-        push_pull_amount: Amount of timing adjustment in beats (±0.0-0.1)
-        rng: Random generator for loose timing
-
-    Returns:
-        float: Adjusted beat position
-    """
-    if rng is None:
-        rng = random.Random()
-
-    if push_pull_amount <= 0.0:
-        return beat_position
-
-    # Apply groove-specific timing
-    if groove_profile == "tight":
-        # No adjustment
-        return beat_position
-
-    elif groove_profile == "laid_back":
-        # Slight delay (push back)
-        return beat_position + (push_pull_amount * 0.5)
-
-    elif groove_profile == "pushed":
-        # Slight rush (pull forward)
-        return beat_position - (push_pull_amount * 0.5)
-
-    elif groove_profile == "loose":
-        # Random variation
-        offset = (rng.random() - 0.5) * push_pull_amount * 2.0
-        return beat_position + offset
-
-    # Unknown profile: no adjustment
-    return beat_position

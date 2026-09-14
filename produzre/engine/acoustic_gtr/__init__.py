@@ -2,10 +2,10 @@
 
 Steel-string acoustic guitar (GM program 25). Supports four playing techniques:
 
-  fingerpicking  — arpeggiated patterns (Travis, PIMA, broken chord, waltz, roll)
-  strumming      — chord sweeps with beat-grid density filtering
-  hybrid         — fingerpicking in bar's first half, strum on second half
-  percussive     — body taps + sparse chord stabs (breakdowns, spacious sections)
+  fingerpicking: arpeggiated patterns (Travis, PIMA, broken chord, waltz, roll)
+  strumming: chord sweeps with beat-grid density filtering
+  hybrid: fingerpicking in bar's first half, strum on second half
+  percussive: body taps + sparse chord stabs (breakdowns, spacious sections)
 
 Technique is auto-selected by section type but overridable via instrument extra
 params. Open-string voicings simulate 6-string resonance with octave doublings.
@@ -80,13 +80,8 @@ def _resolve_root(cfg, section, numeral: str, instrument_cfg) -> int:
     key = key.replace("♭", "b").replace("♯", "#")
     tonic_midi = _KEY_TO_MIDI_ROOT.get(key, 48)
 
-    offsets = _get_mode_scale_offsets(getattr(cfg.song, "mode", None))
-    degree_index, accidental = _parse_roman_numeral(numeral)
-    if offsets:
-        degree_index = max(0, min(degree_index, len(offsets) - 1))
-        semitone = offsets[degree_index] + accidental
-    else:
-        semitone = 0
+    from ...harmony.spelling import root_offset
+    semitone = root_offset(numeral, getattr(section, "mode", None) or cfg.song.mode)
 
     return tonic_midi + semitone
 
@@ -96,35 +91,27 @@ def _slot_for_beat(harmony_plan: HarmonySectionPlan, beat: float):
     for cs in harmony_plan.chord_slots:
         if cs.start_beat <= beat < cs.end_beat:
             return cs
-    # Past the last slot — return the final slot as a fallback
+    # Past the last slot: return the final slot as a fallback
     if harmony_plan.chord_slots:
         return harmony_plan.chord_slots[-1]
     return None
 
 
-def _pitch_for_pattern_hit(rv: ResolvedVoicing, hit) -> Optional[int]:
-    """Map a PickHit's logical string index to a sounding MIDI pitch.
-
-    Pattern string indices are LOGICAL positions on a fully-played 6-string
-    chord (0 = lowest, 5 = highest). Real voicings mute strings (C/A/D
-    shapes), so indices are remapped onto the PLAYED strings:
-
-      - bass hits (``is_bass``) count up from the lowest played string, so
-        Travis-style thumb alternation lands on the root and the next-lowest
-        played string (root/5th alternation) instead of repeating the root;
-      - treble (finger) hits count down from the highest played string
-        (logical 5 = highest played, 4 = second-highest, ...).
-    """
+def _string_for_pattern_hit(rv: ResolvedVoicing, hit) -> Optional[int]:
+    """Resolve a logical pick position, reserving low strings for the thumb."""
     played = rv.played_strings
     if not played:
         return None
-    n = len(played)
     if hit.is_bass:
-        s = played[min(max(0, hit.string_idx), n - 1)]
-    else:
-        from_top = max(0, 5 - hit.string_idx)
-        s = played[max(0, n - 1 - from_top)]
-    return rv.pitch_for_string(s)
+        return played[min(max(0, hit.string_idx), len(played) - 1)]
+    from_top = max(0, 5 - hit.string_idx)
+    index = max(min(2, len(played) - 1), len(played) - 1 - from_top)
+    return played[index]
+
+
+def _pitch_for_pattern_hit(rv: ResolvedVoicing, hit) -> Optional[int]:
+    string = _string_for_pattern_hit(rv, hit)
+    return rv.pitch_for_string(string) if string is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +173,7 @@ class _NullGrid:
 
 
 # ---------------------------------------------------------------------------
-# render_into_timeline — public entry point
+# render_into_timeline: public entry point
 # ---------------------------------------------------------------------------
 
 def render_into_timeline(
@@ -334,7 +321,7 @@ def _render_fingerpicking(
     melody_guide: Optional[dict] = None,
 ) -> None:
     """Render arpeggiated fingerpicking bar by bar using a PickPattern."""
-    pattern = get_pattern(params.picking_pattern, int(bpb))
+    pattern = get_pattern(params.picking_pattern, bpb)
     previous_melody: Optional[int] = None
 
     bar_start = 0.0
@@ -352,7 +339,7 @@ def _render_fingerpicking(
 
         for hit in pattern.hits:
             local_beat = bar_start + hit.beat
-            if local_beat >= total_beats:
+            if hit.beat >= bpb or local_beat >= total_beats:
                 break
             if (
                 not hit.is_bass and hit.string_idx <= 3
@@ -399,7 +386,7 @@ def _render_fingerpicking(
 
             # Legato duration: sustain until next hit on the SAME string
             next_same_beat = _next_same_string_beat(
-                pattern, hit, local_beat, bar_start, bpb, n_strings,
+                pattern, hit, local_beat, bar_start, bpb, rv,
                 cs.end_beat, total_beats,
             )
             duration = calc_pick_duration(local_beat, next_same_beat, cs.end_beat, hit.is_bass)
@@ -432,7 +419,7 @@ def _render_fingerpicking(
                 kind="acoustic_melody" if is_melody else "acoustic_pick",
             )
 
-        # Occasional body tap (very rare in fingerpicking — just texture)
+        # Occasional body tap (very rare in fingerpicking: just texture)
         if params.body_tap_ratio > 0.0 and rng.random() < params.body_tap_ratio * 0.08:
             tap_beat = bar_start + bpb * 0.625  # ~beat 2.5 in 4/4
             if tap_beat < total_beats:
@@ -444,21 +431,21 @@ def _render_fingerpicking(
 def _next_same_string_beat(
     pattern, current_hit, current_local_beat: float,
     bar_start: float, bpb: float,
-    n_strings: int, chord_end: float, total_beats: float,
+    voicing: ResolvedVoicing, chord_end: float, total_beats: float,
 ) -> float:
     """Find the next beat where the same string index is hit again."""
-    current_sidx = max(0, min(current_hit.string_idx, n_strings - 1))
+    current_sidx = _string_for_pattern_hit(voicing, current_hit)
 
     # Search remaining hits in the current bar
     for future_hit in pattern.hits:
         future_local = bar_start + future_hit.beat
-        if future_local > current_local_beat + 0.001:
-            if max(0, min(future_hit.string_idx, n_strings - 1)) == current_sidx:
+        if future_hit.beat < bpb and future_local > current_local_beat + 0.001:
+            if _string_for_pattern_hit(voicing, future_hit) == current_sidx:
                 return min(future_local, chord_end, total_beats)
 
     # Fall back to the same hit in the next bar
     for future_hit in pattern.hits:
-        if max(0, min(future_hit.string_idx, n_strings - 1)) == current_sidx:
+        if _string_for_pattern_hit(voicing, future_hit) == current_sidx:
             next_bar_beat = bar_start + bpb + future_hit.beat
             return min(next_bar_beat, chord_end, total_beats)
 
@@ -497,7 +484,7 @@ def _render_strumming(
 
             seg_end = min(bar_end, cs.end_beat)
             if seg_end <= seg_start + eps:
-                seg_end = bar_end  # past the final slot — finish the bar
+                seg_end = bar_end  # past the final slot: finish the bar
 
             _rv = chord_voicings.get(cs.numeral)
             pitches = _rv.pitches if _rv is not None else []
@@ -571,7 +558,7 @@ def _render_hybrid(
     arpeggio, then locks in with a rhythmic strum on the backbeat.
     """
     half = bpb / 2.0
-    pattern = get_pattern(params.picking_pattern, int(bpb))
+    pattern = get_pattern(params.picking_pattern, bpb)
     prev_cs_numeral: Optional[str] = None
     previous_melody: Optional[int] = None
 
@@ -594,7 +581,7 @@ def _render_hybrid(
             local_beat = bar_start + hit.beat
             if local_beat >= bar_start + half:
                 break
-            if local_beat >= total_beats:
+            if hit.beat >= bpb or local_beat >= total_beats:
                 break
             if (
                 not hit.is_bass and hit.string_idx <= 3
@@ -612,7 +599,7 @@ def _render_hybrid(
                         rv = _new_rv
 
             # Map the hit's logical string index onto PLAYED strings (same
-            # contract as fingerpicking) — indexing the sorted pitch list with
+            # contract as fingerpicking): indexing the sorted pitch list with
             # a physical string index broke shapes with muted strings.
             pitch = _pitch_for_pattern_hit(rv, hit)
             if pitch is None:
@@ -717,7 +704,7 @@ def _render_percussive(
         _rv = chord_voicings.get(cs.numeral)
         pitches = _rv.pitches if _rv is not None else []
 
-        # Sparse downbeat chord stab (always — the anchor hit)
+        # Sparse downbeat chord stab (always: the anchor hit)
         if pitches and bar_start < cs.end_beat:
             vel = max(20, min(127, int(params.base_vel * 0.65) + rng.randint(-5, 5)))
             n = len(pitches)

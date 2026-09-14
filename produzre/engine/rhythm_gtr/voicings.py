@@ -1,4 +1,4 @@
-"""Guitar chord voicing for rhythm guitar — adapter over shared physics library.
+"""Guitar chord voicing for rhythm guitar: adapter over shared physics library.
 
 Delegates voicing to ``produzre.instruments.chord_shapes.select_voicing()``
 which uses CAGED-system shapes and fret-span validation to produce physically
@@ -23,12 +23,12 @@ from ...instruments.profile import GUITAR_STANDARD, InstrumentProfile
 
 from .types import ChordShape
 
-# Guitar standard tuning — open string MIDI pitches (low to high)
+# Guitar standard tuning: open string MIDI pitches (low to high)
 _PROFILE = GUITAR_STANDARD
 
 
 # ---------------------------------------------------------------------------
-# Quality parsing (shared with acoustic_gtr — duplicated for decoupling)
+# Quality parsing (shared with acoustic_gtr: duplicated for decoupling)
 # ---------------------------------------------------------------------------
 
 def _parse_quality(numeral: str) -> str:

@@ -127,6 +127,7 @@ def _write_pattern_midi(
     run_start: float,
     run_len_beats: float,
     logger,
+    meter: str | None = None,
 ) -> None:
     """Write a single pattern MIDI file clipped to a pattern run window.
 
@@ -198,7 +199,7 @@ def _write_pattern_midi(
         track,
         float(cfg.song.bpm),
         f"{inst_name}_{pid}",
-        meter=str(getattr(cfg.song, "meter", "4/4") or "4/4"),
+        meter=meter or str(getattr(cfg.song, "meter", "4/4") or "4/4"),
     )
 
     prog = program_for_instrument(cfg, inst_name)
@@ -334,7 +335,10 @@ def write_patterns_and_sequences(
         # Per-section metadata (meter + pattern length + timing)
         sections_meta: Dict[str, dict] = {}
 
-        for st in section_timings:
+        for occurrence, st in enumerate(section_timings):
+            occurrence_key = st.id if cfg.arrangement.count(st.id) == 1 else f"{occurrence:02d}_{st.id}"
+            section_cfg = cfg.sections.get(st.id)
+            section_meter = (section_cfg.meter if section_cfg else None) or cfg.song.meter
             section_len = float(st.length_beats)
             section_beats_per_bar = float(getattr(st, "beats_per_bar", beats_per_bar_global))
             pattern_len_beats = float(section_beats_per_bar * pattern_bars)
@@ -378,7 +382,7 @@ def write_patterns_and_sequences(
                 run_start = window_start
                 run_len = float(window_end - window_start)
 
-                norm = (round(float(run_len), 6),) + tuple(
+                norm = (section_meter, round(float(run_len), 6),) + tuple(
                     (
                         round(_quantize(float(ev.start_beat) - run_start, quantize_beats), 6),
                         round(_quantize(float(ev.duration_beats), quantize_beats), 6),
@@ -404,6 +408,7 @@ def write_patterns_and_sequences(
                         events=window_events,
                         run_start=run_start,
                         run_len_beats=run_len,
+                        meter=section_meter,
                         logger=logger,
                     )
                     pattern_files[pid] = out_path.name
@@ -445,7 +450,7 @@ def write_patterns_and_sequences(
                         evs = windows[i + k]["events"] or []
                         merged_events.extend(evs)
 
-                    merged_norm = (round(merged_len_beats, 6),) + tuple(
+                    merged_norm = (section_meter, round(merged_len_beats, 6),) + tuple(
                         (
                             round(_quantize(float(ev.start_beat) - run_start, quantize_beats), 6),
                             round(_quantize(float(ev.duration_beats), quantize_beats), 6),
@@ -472,6 +477,7 @@ def write_patterns_and_sequences(
                             events=merged_events,
                             run_start=run_start,
                             run_len_beats=merged_len_beats,
+                            meter=section_meter,
                             logger=logger,
                         )
                         pattern_files[mpid] = out_path.name
@@ -506,8 +512,8 @@ def write_patterns_and_sequences(
                         pass
 
             if sequence:
-                sections_seq[st.id] = sequence
-                sections_meta[st.id] = {
+                sections_seq[occurrence_key] = sequence
+                sections_meta[occurrence_key] = {
                     "type": st.type,
                     "start_beat": float(st.start_beat),
                     "end_beat": float(st.end_beat),

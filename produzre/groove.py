@@ -1,52 +1,18 @@
-"""Shared groove clock for Produzre.
+"""Shared swing and performance timing.
 
-The drums engine has always applied swing/push-pull internally
-(produzre.engine.drums.humanize), but the melodic engines rendered on a
-quantized grid and silently dropped their swing/timing parameters — the band
-could not swing together. This module is the shared clock that fixes that:
+Drums apply timing internally and publish their resolved settings. The
+orchestrator applies one matching feel pass to each pitched instrument.
+Eighth offbeats move by 0.25 * swing beats; sixteenth e/a positions move by
+0.25 * swing_16th. True triplets stay on their own grid. An omitted swing_16th
+uses half of swing, while explicit zero disables it.
 
-- The drums engine remains the timing reference. It keeps swinging internally
-  and publishes its resolved humanize params to the PerformancePlan
-  (``groove.humanize.<section_id>``).
-- After every OTHER engine renders a section, the orchestrator post-processes
-  the newly added events with :func:`apply_feel`: the same swing semantics the
-  drums use (8th offbeat "&" delayed by ``0.25 * swing`` beats), an optional
-  16th-note swing for the "e"/"a" positions, a per-instrument constant pocket
-  offset (milliseconds behind/ahead of the beat), plus per-event timing jitter
-  and velocity humanization when the instrument's params request them.
+Positive pocket_ms means behind the beat. Positive push_pull means ahead;
+it maps to -100 * push_pull milliseconds, capped at 25 ms in either direction.
+Instrument pocket_ms overrides the groove mapping and push_pull.
 
-Swing semantics (identical to drums):
-    swing = 0.6  -> 8th offbeats land +0.15 beats late (~triplet feel at 0.67)
-    swing_16th   -> "e"/"a" 16th positions land +0.25 * swing_16th beats late
-                    (defaults to swing * 0.5 when not explicitly set)
-
-push_pull -> pocket mapping:
-    Personas express push_pull in loose "fraction of a beat" units with
-    magnitudes around 0.05-0.15 and NEGATIVE meaning behind the beat / laid
-    back (see produzre/resources/personas/bass.yml: pocket = -0.05, dub =
-    -0.15). The pocket offset uses milliseconds with POSITIVE meaning behind
-    the beat, so the mapping is::
-
-        pocket_ms = -push_pull * 100.0   (clamped to +/- 25 ms)
-
-    i.e. push_pull -0.05 -> +5 ms behind, -0.15 -> +15 ms behind,
-    +0.10 -> -10 ms ahead. This keeps magnitudes in the musical 5-20 ms range.
-
-No-op guarantee:
-    :func:`resolve_groove_feel` returns ``None`` when the config carries no
-    groove indication anywhere: no nonzero swing in the resolved drum params
-    (persona/recipe/user/section), no ``groove:`` block in the song YAML, no
-    explicit ``pocket_ms`` instrument param, and no nonzero ``push_pull``
-    (zero values count as "no indication"). When no feel resolves, the
-    orchestrator skips the post-process entirely, so existing configs produce
-    byte-identical output. The default pocket offsets apply ONLY once a feel
-    is actually resolved (e.g. a genre whose drum recipe carries swing).
-
-Determinism:
-    All jitter/velocity randomness is drawn from per-event RNGs seeded from
-    stable components (section seed material, instrument, event beat/pitch),
-    never from shared RNG state — two builds of the same config are
-    byte-identical, and adding/removing one event does not reshuffle others.
+A config without swing, pocket, push/pull, jitter, or velocity-humanization
+indications resolves to no feel pass. Default pockets apply only when a feel
+is active. Per-event random choices use stable seeds so repeat builds match.
 """
 
 from __future__ import annotations
@@ -70,7 +36,7 @@ DEFAULT_POCKET_MS: Dict[str, float] = {
     "drums": 0.0,
 }
 
-# Conversion factor for persona push_pull (beat-ish units) -> pocket ms.
+# Conversion factor for persona push_pull (dimensionless) -> pocket ms.
 # See module docstring for the mapping rationale.
 PUSH_PULL_MS_PER_UNIT = 100.0
 _POCKET_MS_CLAMP = 25.0
@@ -78,7 +44,7 @@ _POCKET_MS_CLAMP = 25.0
 # Engines that already consume their push_pull param internally (drums via
 # humanize_events, rhythm_gtr via apply_microtiming). Deriving a pocket from
 # push_pull for these would double-apply the offset.
-_PUSH_PULL_CONSUMED_INTERNALLY = frozenset({"drums", "rhythm_gtr"})
+_PUSH_PULL_CONSUMED_INTERNALLY = frozenset({"drums"})
 
 # Half of a 16th-note: events within this window of a 16th grid point are
 # classified to that grid point (tolerates strum spread / engine microtiming
@@ -94,9 +60,9 @@ class GrooveFeel:
     """A resolved per-section groove feel shared by the whole band.
 
     Attributes:
-        swing: 0..1 — 8th offbeats ("&") delayed by ``0.25 * swing`` beats
+        swing: 0..1: 8th offbeats ("&") delayed by ``0.25 * swing`` beats
             (same semantics as the drums engine).
-        swing_16th: 0..1 — "e"/"a" 16th positions delayed by
+        swing_16th: 0..1: "e"/"a" 16th positions delayed by
             ``0.25 * swing_16th`` beats. Defaults to ``swing * 0.5`` unless
             explicitly set (drum params or song ``groove:`` block).
         pocket_offsets_ms: Per-instrument constant timing offset in
@@ -133,6 +99,25 @@ def effective_params_dict(instrument_cfg: Any) -> Dict[str, Any]:
     ):
         params = params["extra"]
     return params if isinstance(params, dict) else {}
+
+
+def _optional_float(value):
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def swing_offset(beat: float, swing: float, swing_16th: float, tolerance: float = 1e-6) -> float:
+    """Delay straight subdivisions; already-triplet attacks keep their timing."""
+    triplet = round(beat * 3) / 3
+    if abs(triplet - round(triplet)) > 1e-6 and abs(beat - triplet) < min(tolerance, 0.025):
+        return 0.0
+    grid = round(beat * 4) / 4
+    if abs(beat - grid) > tolerance:
+        return 0.0
+    frac = grid % 1
+    return 0.25 * (swing if frac == 0.5 else swing_16th if frac in (0.25, 0.75) else 0.0)
 
 
 def _nonzero_float(value: Any) -> Optional[float]:
@@ -172,7 +157,7 @@ def resolve_groove_feel(
         > :data:`DEFAULT_POCKET_MS`
 
     Returns None when there is no groove indication anywhere (the no-op
-    default — see module docstring).
+    default: see module docstring).
 
     Args:
         cfg: Root config (the song-level ``groove:`` block is read from
@@ -203,22 +188,26 @@ def resolve_groove_feel(
     # --- swing (groove block < drums chain) ---
     swing: Optional[float] = None
     source = "none"
-    gb_swing = _nonzero_float(groove_block.get("swing"))
+    gb_swing = _optional_float(groove_block.get("swing"))
     if gb_swing is not None:
         swing = gb_swing
         source = "groove_block"
-    drums_swing = _nonzero_float(drum_params.get("swing"))
+    drums_swing = _optional_float(drum_params.get("swing"))
     if drums_swing is not None:
         swing = drums_swing
         source = str(drum_params.get("source") or "drums.params")
 
     # --- swing_16th (explicit nonzero only; default = swing * 0.5) ---
-    swing_16th = _nonzero_float(groove_block.get("swing_16th"))
-    drums_swing_16th = _nonzero_float(drum_params.get("swing_16th"))
+    swing_16th = _optional_float(groove_block.get("swing_16th"))
+    drums_swing_16th = _optional_float(drum_params.get("swing_16th"))
     if drums_swing_16th is not None:
         swing_16th = drums_swing_16th
 
-    indicated = swing is not None or swing_16th is not None
+    indicated = bool(swing or swing_16th) or any(
+        _nonzero_float(params.get(key)) is not None
+        for name, params in instrument_params.items() if name != "drums"
+        for key in ("timing_jitter_ms", "velocity_humanize")
+    )
 
     # --- per-instrument pockets ---
     gb_pockets = groove_block.get("pocket_ms")
@@ -227,7 +216,7 @@ def resolve_groove_feel(
     pocket_offsets: Dict[str, float] = {}
     pocket_source: Optional[str] = None
     instruments = set(instrument_params) | set(gb_pockets)
-    for inst in instruments:
+    for inst in sorted(instruments):
         params = instrument_params.get(inst, {}) or {}
         explicit = params.get("pocket_ms")
         gb_val = gb_pockets.get(inst)
@@ -328,7 +317,7 @@ def apply_feel(
         rng_seed: Stable seed material for this (section, instrument) scope.
         section_start_beat: Song-relative section start (clamp floor).
         timing_jitter_ms: Per-event random jitter amount (+/- ms).
-        velocity_humanize: 0..1 — +/- fraction of nominal velocity noise.
+        velocity_humanize: 0..1: +/- fraction of nominal velocity noise.
     """
     _ = beats_per_bar
     if not events:
@@ -359,15 +348,7 @@ def apply_feel(
 
         shift = pocket_beats
 
-        # Classify against the 16th grid so engine microtiming (strum spread,
-        # internal humanize) riding on a grid position swings with it.
-        grid = round(rel * 4.0) / 4.0
-        if abs(rel - grid) <= _GRID_SNAP_WINDOW:
-            frac = grid % 1.0
-            if abs(frac - 0.5) < _EPS:
-                shift += swing_shift_8th
-            elif abs(frac - 0.25) < _EPS or abs(frac - 0.75) < _EPS:
-                shift += swing_shift_16th
+        shift += swing_offset(rel, feel.swing, feel.swing_16th, _GRID_SNAP_WINDOW)
 
         if jitter_beats > 0.0:
             rt = random.Random(stable_seed_int("groove.jitter", rng_seed, key))

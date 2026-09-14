@@ -247,7 +247,8 @@ def test_tuned_bass_recipes_load():
     assert recipes["punk"]["params"]["rest_rate"] <= 0.1
     assert recipes["jazz"]["params"]["rhythm_pattern"] == "walking"
     assert recipes["reggae"]["params"]["rest_rate"] >= 0.3
-    assert recipes["blues"]["params"]["swing"] >= 0.5
+    assert recipes["blues"]["params"]["rhythm_pattern"] == "push"
+    assert all("swing" not in recipe["params"] and "syncopation" not in recipe["params"] for recipe in recipes.values())
     assert recipes["metal"]["params"]["articulation_style"] == "pick"
     assert recipes["classical"]["params"]["lock_to_kick"] == 0.0
 

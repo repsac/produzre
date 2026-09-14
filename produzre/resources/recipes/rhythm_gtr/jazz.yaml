@@ -16,8 +16,6 @@ params:
   voicing: shell
   strum_style: balanced
   accent_strength: 0.3
-  groove: laid_back
-  swing: 0.2
   chuck_rate: 0.0
   strum_ms: 20.0
   use_patterns: true

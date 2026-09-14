@@ -191,7 +191,7 @@ def generate_ride_bell_events(
     ride_bell = int(pitches.get("ride_bell", 53))
 
     # Eligible steps: downbeat + beat 3, avoid backbeats
-    eligible = [0, spb // 2]  # Typically steps 0 and 8 on 16-step grid
+    eligible = [0, (spb // 8) * 4]  # Typically steps 0 and 8 on 16-step grid
     eligible = [s for s in eligible if s not in backbeats and s in top_in_bar]
 
     if not eligible:
@@ -319,7 +319,7 @@ def generate_splash_china_events(
         china = int(pitches.get("china", 52))
 
         # Eligible steps: downbeat or beat 3, not on backbeats
-        eligible_china = [s for s in [0, spb // 2] if s not in backbeats]
+        eligible_china = [s for s in [0, (spb // 8) * 4] if s not in backbeats]
 
         # Extremely rare: only on last bar of section, low probability
         is_last_bar = (bar_i == bars - 1)

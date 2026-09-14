@@ -296,6 +296,9 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     beats_per_bar = float(_get_attr_or_key(rhythm_grid, "beats_per_bar", 4.0))
     total_beats = float(_get_attr_or_key(rhythm_grid, "total_beats", 0.0))
 
+    from ...harmony.meter import parse_meter
+    meter = parse_meter(str(_get_attr_or_key(section, "meter", None) or _get_attr_or_key(_get_attr_or_key(cfg, "song"), "meter", "4/4")))
+
     # Internal step grid: 4 steps per quarter-note beat (one 16th note per
     # step, step duration 0.25 beats). 16 steps in 4/4, 12 in 3/4 (and 6/8,
     # which Meter.beats_per_bar normalizes to 3.0 quarter beats per bar).
@@ -305,7 +308,8 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     section_type = str(_get_attr_or_key(section, "type", "verse"))
     section_id = str(_get_attr_or_key(section, "id", section_type))
     instrument_name = str(kwargs.get("instrument_name", "drums"))
-    intensity = float(_get_attr_or_key(section, "intensity", 0.5))
+    intensity_raw = _get_attr_or_key(section, "intensity", None)
+    intensity = float(0.5 if intensity_raw is None else intensity_raw)
 
     # Create instrument-specific RNG from section RNG.
     # This ensures each instrument in the section gets an independent RNG stream,
@@ -458,15 +462,9 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     # Persona-sourced extra keys (tagged `_persona_keys` by the orchestrator
     # merge) are NOT user overrides and stay recipe-overridable.
     _extra_persona_keys = set(_get_mapping(extra_m).get("_persona_keys") or [])
-    for k in (
-        "fill_rate",
-        "fill_chatter",
-        "swing",
-        "swing_16th",
-        "timing_jitter_ms",
-        "push_pull",
-        "velocity_humanize",
-    ):
+    for k in sorted(set(params_m) | set(extra_m) | {"fill_rate", "fill_chatter", "swing", "swing_16th", "timing_jitter_ms", "push_pull", "velocity_humanize", "riff_accent_rate", "riff_accent_boost"}):
+        if k.startswith("_") or k in ("extra", "voices", "persona"):
+            continue
         if k in inst_m:
             params_m[k] = inst_m[k]
             _user_set_keys.add(k)
@@ -478,6 +476,102 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             else:
                 _user_set_keys.add(k)
                 _persona_sourced_keys.discard(k)
+
+    # --- Groove recipe resolution ---
+    # Recipes provide genre-aware groove defaults. They are resolved AFTER
+    # persona/params merging so user overrides always win.
+    _recipe_groove = None
+    _all_recipes: dict = {}
+    if hasattr(cfg, "raw") and isinstance(getattr(cfg, "raw", None), dict):
+        _all_recipes = cfg.raw.get("_recipes", {}).get("drums", {})
+
+    if _all_recipes:
+        from ...config.recipes import resolve_recipe_name as _resolve_recipe
+
+        _song = _get_attr_or_key(cfg, "song", None)
+        _song_genre = _get_attr_or_key(_song, "genre", None) if _song else None
+        _bpm = float(_get_attr_or_key(_song, "bpm", 120.0)) if _song else 120.0
+        _meter = str(_get_attr_or_key(section, "meter", None) or _get_attr_or_key(_song, "meter", "4/4"))
+
+        # Read explicit recipe: from section instrument, then global instrument.
+        _section_recipe = inst_m.get("recipe")
+        if _section_recipe is None and hasattr(inst, "recipe"):
+            _section_recipe = getattr(inst, "recipe", None)
+        _global_inst_recipe = None
+        _inst_genre = None
+        if isinstance(cfg.raw.get("instruments"), dict):
+            _gi = cfg.raw["instruments"].get("drums")
+            if isinstance(_gi, dict):
+                _global_inst_recipe = _gi.get("recipe")
+                _inst_genre = _gi.get("genre")
+
+        # Per-instrument genre: section → global instrument → song
+        _sect_genre = inst_m.get("genre")
+        if _sect_genre is None and hasattr(inst, "genre"):
+            _sect_genre = getattr(inst, "genre", None)
+        if _sect_genre is not None:
+            _inst_genre = _sect_genre
+        _genre = _inst_genre if _inst_genre is not None else _song_genre
+
+        _recipe_name = _resolve_recipe(
+            instrument="drums",
+            genre=_genre,
+            section_type=section_type,
+            intensity=intensity,
+            bpm=_bpm,
+            time_signature=_meter,
+            instrument_recipe=_global_inst_recipe,
+            section_recipe=_section_recipe,
+            recipes=_all_recipes,
+        )
+
+        if _recipe_name and _recipe_name in _all_recipes:
+            _recipe = _all_recipes[_recipe_name]
+            _recipe_groove = _recipe.get("groove") or None
+
+            # Merge recipe params honoring persona < recipe < user: keys the
+            # user explicitly set always win, but persona-sourced defaults
+            # (e.g. swing: 0.0 from the default 'tight' persona) yield to the
+            # recipe (see config.recipes.merge_recipe_params).
+            _rp = _recipe.get("params", {})
+            if _rp:
+                from ...config.recipes import merge_recipe_params as _merge_recipe_params
+
+                _tagged = dict(params_m)
+                _pk = sorted(
+                    k for k in params_m
+                    if k in _persona_sourced_keys and k not in _user_set_keys
+                )
+                if _pk:
+                    _tagged["_persona_keys"] = _pk
+                params_m = _merge_recipe_params(_tagged, _rp)
+                params_m.pop("_persona_keys", None)
+
+            # Merge recipe voices UNDER existing voices_m.
+            _rv = _recipe.get("voices", {})
+            if _rv:
+                _merge_voices_map(_rv)
+                # Explicit global and section voice fields outrank the recipe.
+                _merge_voices_from((cfg.raw.get("instruments") or {}).get("drums", {}))
+                _raw_section = (cfg.raw.get("sections") or {}).get(section_id)
+                if isinstance(_raw_section, dict):
+                    _merge_voices_from((_raw_section.get("instruments") or {}).get("drums", {}))
+                else:
+                    _merge_voices_from(inst_m)
+                    _merge_voices_map(extra_m.get("voices"))
+
+            if logger:
+                logger.info(
+                    "Drums: using recipe '%s' (genre=%s, section=%s)",
+                    _recipe_name, _genre, section_type,
+                )
+
+    # A song-wide groove is shared by drums and pitched instruments. Explicit
+    # drum settings still win, including zero.
+    _groove_block = (getattr(cfg, "raw", {}) or {}).get("groove") or {}
+    for key in ("swing", "swing_16th"):
+        if key in _groove_block and key not in _user_set_keys:
+            params_m[key] = _groove_block[key]
 
     # Persona/params (conservative defaults)
     accent_strength = float(params_m.get("accent_strength", 0.1))
@@ -553,7 +647,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     hats_density_raw = hats_voice_params_m.get("density", None)
     hats_density = None if hats_density_raw is None else float(hats_density_raw)
 
-    hats_open_rate_raw = hats_voice_params_m.get("open_rate", hats_voice_params_m.get("open_hat_rate", None))
+    hats_open_rate_raw = hats_voice_params_m.get("open_rate", hats_voice_params_m.get("open_hat_rate", (_recipe_groove or {}).get("open_hat_rate")))
     hats_open_rate = None if hats_open_rate_raw is None else float(hats_open_rate_raw)
 
     hats_pedal_rate_raw = hats_voice_params_m.get("pedal_rate", None)
@@ -585,10 +679,10 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         kick_voice_params_m = {**dict(kick_voice_params_m), "double_kick_placements": kick_double_m.get("placements")}
 
     # Extract final values
-    kick_syncopation_rate_raw = kick_voice_params_m.get("syncopation_rate", None)
+    kick_syncopation_rate_raw = kick_voice_params_m.get("syncopation_rate", (_recipe_groove or {}).get("kick_extra_rate"))
     kick_syncopation_rate = None if kick_syncopation_rate_raw is None else float(kick_syncopation_rate_raw)
 
-    kick_double_kick_rate_raw = kick_voice_params_m.get("double_kick_rate", None)
+    kick_double_kick_rate_raw = kick_voice_params_m.get("double_kick_rate", (_recipe_groove or {}).get("double_kick_rate"))
     kick_double_kick_rate = None if kick_double_kick_rate_raw is None else float(kick_double_kick_rate_raw)
 
     # Apply energy-based orchestration defaults (only if not explicitly set by user).
@@ -631,7 +725,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         else:
             kick_double_kick_rate = 0.1  # Mid energy: rare doubles
 
-    # Ghost notes (snare) – optional overrides.
+    # Ghost notes (snare), optional overrides.
     # Precedence (highest -> lowest):
     #   voices.snare.params.ghost_rate (section override) -> params.ghost_rate -> template.ghost_rate
     snare_voice = _get_mapping(voices_m.get("snare"))
@@ -704,6 +798,12 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             steps_per_bar=ghost_grid_spb,
             logger=logger,
         )
+        # The placement grid controls quantization, not the kit's step units.
+        ghost_steps_raw = sorted({
+            int(round(step * steps_per_bar / ghost_grid_spb))
+            for step in ghost_steps_raw
+            if 0 <= int(round(step * steps_per_bar / ghost_grid_spb)) < steps_per_bar
+        })
     else:
         ghost_steps_raw = params_m.get("ghost_steps", None)
         if ghost_steps_raw is not None:
@@ -847,92 +947,18 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             # Open: Reduce chokes to let cymbals ring
             choke_rate *= 0.3
 
-    # --- Groove recipe resolution ---
-    # Recipes provide genre-aware groove defaults. They are resolved AFTER
-    # persona/params merging so user overrides always win.
-    _recipe_groove = None
-    _all_recipes: dict = {}
-    if hasattr(cfg, "raw") and isinstance(getattr(cfg, "raw", None), dict):
-        _all_recipes = cfg.raw.get("_recipes", {}).get("drums", {})
-
-    if _all_recipes:
-        from ...config.recipes import resolve_recipe_name as _resolve_recipe
-
-        _song = _get_attr_or_key(cfg, "song", None)
-        _song_genre = _get_attr_or_key(_song, "genre", None) if _song else None
-        _bpm = float(_get_attr_or_key(_song, "bpm", 120.0)) if _song else 120.0
-        _meter = str(_get_attr_or_key(_song, "meter", "4/4")) if _song else "4/4"
-
-        # Read explicit recipe: from section instrument, then global instrument.
-        _section_recipe = inst_m.get("recipe")
-        if _section_recipe is None and hasattr(inst, "recipe"):
-            _section_recipe = getattr(inst, "recipe", None)
-        _global_inst_recipe = None
-        _inst_genre = None
-        if isinstance(cfg.raw.get("instruments"), dict):
-            _gi = cfg.raw["instruments"].get("drums")
-            if isinstance(_gi, dict):
-                _global_inst_recipe = _gi.get("recipe")
-                _inst_genre = _gi.get("genre")
-
-        # Per-instrument genre: section → global instrument → song
-        _sect_genre = inst_m.get("genre")
-        if _sect_genre is None and hasattr(inst, "genre"):
-            _sect_genre = getattr(inst, "genre", None)
-        if _sect_genre is not None:
-            _inst_genre = _sect_genre
-        _genre = _inst_genre if _inst_genre is not None else _song_genre
-
-        _recipe_name = _resolve_recipe(
-            instrument="drums",
-            genre=_genre,
-            section_type=section_type,
-            intensity=intensity,
-            bpm=_bpm,
-            time_signature=_meter,
-            instrument_recipe=_global_inst_recipe,
-            section_recipe=_section_recipe,
-            recipes=_all_recipes,
-        )
-
-        if _recipe_name and _recipe_name in _all_recipes:
-            _recipe = _all_recipes[_recipe_name]
-            _recipe_groove = _recipe.get("groove") or None
-
-            # Merge recipe params honoring persona < recipe < user: keys the
-            # user explicitly set always win, but persona-sourced defaults
-            # (e.g. swing: 0.0 from the default 'tight' persona) yield to the
-            # recipe (see config.recipes.merge_recipe_params).
-            _rp = _recipe.get("params", {})
-            if _rp:
-                from ...config.recipes import merge_recipe_params as _merge_recipe_params
-
-                _tagged = dict(params_m)
-                _pk = sorted(
-                    k for k in params_m
-                    if k in _persona_sourced_keys and k not in _user_set_keys
-                )
-                if _pk:
-                    _tagged["_persona_keys"] = _pk
-                params_m = _merge_recipe_params(_tagged, _rp)
-                params_m.pop("_persona_keys", None)
-
-            # Merge recipe voices UNDER existing voices_m.
-            _rv = _recipe.get("voices", {})
-            if _rv:
-                _merge_voices_map(_rv)
-
-            if logger:
-                logger.info(
-                    "Drums: using recipe '%s' (genre=%s, section=%s)",
-                    _recipe_name, _genre, section_type,
-                )
-
     # Build groove template: recipe groove overrides hardcoded templates.
     if _recipe_groove:
         from .groove import groove_template_from_recipe
         groove_id = f"recipe:{_recipe_name}"
-        template = groove_template_from_recipe(_recipe_groove, beats_per_bar)
+        template = groove_template_from_recipe(_recipe_groove, beats_per_bar, meter=meter)
+        # A recipe in another meter supplies timbre/rates, while compound
+        # pulse anchors come from the actual section signature.
+        recipe_meter = str((_recipe.get("tags") or {}).get("time_signature", "4/4"))
+        if recipe_meter != f"{meter.numerator}/{meter.denominator}" and meter.denominator == 8 and meter.numerator % 3 == 0:
+            from dataclasses import replace
+            compound = groove_template("verse_light", section_type=section_type, intensity=intensity, beats_per_bar=beats_per_bar, meter=meter)
+            template = replace(template, snare_backbeat_steps=compound.snare_backbeat_steps, kick_base=(0,), ghost_steps=compound.ghost_steps)
     else:
         groove_id = resolve_groove_id(
             section_type=section_type,
@@ -944,6 +970,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             section_type=section_type,
             intensity=intensity,
             beats_per_bar=beats_per_bar,
+            meter=meter,
         )
 
     # Standard GM drum pitches
@@ -985,10 +1012,10 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     # Energy-based use_ride override (only if not already set by groove)
     # High energy sections (chorus, solo) should use ride cymbal instead of closed hats
     # unless the template explicitly sets use_ride already
-    if energy >= 0.7 and not template.use_ride:
+    if energy >= 0.7 and not template.use_ride and "use_ride" not in (_recipe_groove or {}):
         # High energy: switch to ride cymbal for "opening up" the sound
         template_updates["use_ride"] = True
-    elif energy <= 0.4 and template.use_ride:
+    elif energy <= 0.4 and template.use_ride and "use_ride" not in (_recipe_groove or {}):
         # Low energy: force closed hats even if template suggests ride
         template_updates["use_ride"] = False
 
@@ -1009,7 +1036,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         # Half-time: lone snare at the bar midpoint (beat 3 in 4/4), slower feel.
         # The midpoint step is meter-derived: spb//2 == step 8 on the 16-step
         # 4/4 grid, step 6 on the 12-step 3/4 grid, etc.
-        template_updates["snare_backbeat_steps"] = (steps_per_bar // 2,)
+        template_updates["snare_backbeat_steps"] = ((steps_per_bar // 8) * 4,)
         template_updates["half_time"] = True  # Mark as half-time feel
         template_updates["kick_extra_rate"] = 0.1  # Minimal syncopation
         template_updates["double_kick_rate"] = 0.0  # No double kicks
@@ -1059,6 +1086,13 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             "downbeat_rate": downbeat_rate,
         }
 
+    def placement_params(values):
+        result = dict(values)
+        for key, value in values.items():
+            if key.endswith("_placements") and value is not None:
+                result[key] = _ghost_placements_to_steps(value, beats_per_bar, steps_per_bar, logger)
+        return result
+
     events: list[DrumEvent] = events_for_section_from_template(
         template=template,
         total_beats=total_beats,
@@ -1078,6 +1112,8 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         hats_open_rate=hats_open_rate,
         hats_pedal_rate=hats_pedal_rate,
         hats_accent_rate=hats_accent_rate,
+        hats_params=placement_params(hats_voice_params_m),
+        kick_params=placement_params(kick_voice_params_m),
         groove_tom_rate=groove_tom_rate,
         fill_tom_rate=fill_tom_rate,
         crash_rate=crash_rate,
@@ -1141,6 +1177,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             phrase_len_bars=phrase_len_bars,
             phrase_end_emphasis=phrase_end_emphasis,
             genre=str(_get_attr_or_key(_get_attr_or_key(cfg, "song", None), "genre", "") or ""),
+            meter=meter,
         )
 
     # Add performance ornaments (chokes, flams, drags) before humanization.
@@ -1160,6 +1197,63 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
     song = _get_attr_or_key(cfg, "song")
     bpm = float(_get_attr_or_key(song, "bpm", 120.0))
+
+    # Theme coupling (M3): the kit acknowledges the song's riff. Existing
+    # kick/snare/tom hits landing on riff attacks get a velocity accent, and
+    # uncovered attacks may gain a kick hit so the groove doubles the theme.
+    if plan is not None:
+        from ...themes.coupling import get_theme_onsets, nearest_onset
+
+        _riff_onsets = get_theme_onsets(plan, section_id, "riff")
+        if _riff_onsets:
+            riff_accent_rate = float(params_m.get("riff_accent_rate", 0.0))
+            riff_accent_boost = float(params_m.get("riff_accent_boost", 1.0))
+            kick_pitch = int(pitches.get("kick", 36))
+            rng_theme = _derive_rng(rng, "drums.theme_lock")
+            from dataclasses import replace as _dc_replace
+
+            accented: list = []
+            for ev in events:
+                hit = nearest_onset(_riff_onsets, float(ev.beat), 0.12)
+                if hit is not None and ev.pitch != kick_pitch and "hat" not in ev.kind:
+                    accented.append(
+                        _dc_replace(
+                            ev, velocity=min(127, int(ev.velocity * riff_accent_boost))
+                        )
+                    )
+                else:
+                    accented.append(ev)
+            events = accented
+
+            added_kicks = 0
+            for onset in sorted(set(round(b * 4) / 4 for b in _riff_onsets)):
+                # Draw unconditionally so the stream doesn't depend on kit content.
+                draw = rng_theme.random()
+                has_kick = any(
+                    ev.pitch == kick_pitch and abs(float(ev.beat) - onset) <= 0.12
+                    for ev in events
+                )
+                near_backbeat = any(
+                    abs(onset - (bar * beats_per_bar + step * 0.25)) <= 0.25
+                    for bar in range(max(1, int(total_beats / beats_per_bar) + 1))
+                    for step in template.snare_backbeat_steps
+                )
+                if not has_kick and not near_backbeat and onset < total_beats and draw < riff_accent_rate:
+                    events.append(
+                        DrumEvent(
+                            beat=float(onset),
+                            duration_beats=0.25,
+                            pitch=kick_pitch,
+                            velocity=min(127, int(base_velocity * 1.05)),
+                            kind="kick_theme_lock",
+                        )
+                    )
+                    added_kicks += 1
+            if logger and added_kicks:
+                logger.debug(
+                    "Section '%s': theme lock added %d kick hit(s) on riff attacks",
+                    section_id, added_kicks,
+                )
 
     # Apply limb constraints (2 hands + 2 feet realism) before humanization
     constraints_m = _get_mapping(params_m.get("constraints"))
@@ -1181,58 +1275,6 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             fill_duck_hats=constraints_fill_duck_hats,
             logger=logger,
         )
-
-    # Theme coupling (M3): the kit acknowledges the song's riff. Existing
-    # kick/snare/tom hits landing on riff attacks get a velocity accent, and
-    # uncovered attacks may gain a kick hit so the groove doubles the theme.
-    if plan is not None:
-        from ...themes.coupling import get_theme_onsets, nearest_onset
-
-        _riff_onsets = get_theme_onsets(plan, section_id, "riff")
-        if _riff_onsets:
-            riff_accent_rate = float(params_m.get("riff_accent_rate", 0.5))
-            riff_accent_boost = float(params_m.get("riff_accent_boost", 1.12))
-            kick_pitch = int(pitches.get("kick", 36))
-            rng_theme = _derive_rng(rng, "drums.theme_lock")
-            from dataclasses import replace as _dc_replace
-
-            accented: list = []
-            for ev in events:
-                hit = nearest_onset(_riff_onsets, float(ev.beat), 0.12)
-                if hit is not None and ev.pitch != kick_pitch and "hat" not in ev.kind:
-                    accented.append(
-                        _dc_replace(
-                            ev, velocity=min(127, int(ev.velocity * riff_accent_boost))
-                        )
-                    )
-                else:
-                    accented.append(ev)
-            events = accented
-
-            added_kicks = 0
-            for onset in _riff_onsets:
-                # Draw unconditionally so the stream doesn't depend on kit content.
-                draw = rng_theme.random()
-                has_kick = any(
-                    ev.pitch == kick_pitch and abs(float(ev.beat) - onset) <= 0.12
-                    for ev in events
-                )
-                if not has_kick and draw < riff_accent_rate:
-                    events.append(
-                        DrumEvent(
-                            beat=float(onset),
-                            duration_beats=0.25,
-                            pitch=kick_pitch,
-                            velocity=min(127, int(base_velocity * 1.05)),
-                            kind="kick_theme_lock",
-                        )
-                    )
-                    added_kicks += 1
-            if logger and added_kicks:
-                logger.debug(
-                    "Section '%s': theme lock added %d kick hit(s) on riff attacks",
-                    section_id, added_kicks,
-                )
 
     # Humanization params (defaults are persona/tight-friendly).
     timing_jitter_ms = float(params_m.get("timing_jitter_ms", 0.0))
@@ -1270,6 +1312,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         bpm=bpm,
         timing_jitter_ms=timing_jitter_ms,
         swing=swing,
+        swing_16th=params_m.get("swing_16th"),
         push_pull=push_pull,
         velocity_humanize=velocity_humanize,
         rng=rng,

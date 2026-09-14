@@ -96,7 +96,7 @@ def _create_performance_plan(
             length_beats=ps.timing.length_beats,
             beats_per_bar=ps.timing.beats_per_bar,
             # Section fields exist with value None when not overridden, so a
-            # plain getattr default never fires — use `or` to fall back to
+            # plain getattr default never fires: use `or` to fall back to
             # the song-level values.
             meter=getattr(ps.sec, "meter", None) or meter,
             key=getattr(ps.sec, "key", None) or key,
@@ -129,7 +129,7 @@ def _create_performance_plan(
     performance_plan.set(PLAN_KEY_TRANSITIONS_MAP, serialized_transitions)
 
     logger.debug(
-        f"[PERFORMANCE_PLAN] Added transitions map with {len(transitions_map)} section directives"
+        f"[PERFORMANCE_PLAN] Added transitions map with {len(plan.planned_sections)} section directives"
     )
 
     # Theme bank (design: docs/design/theme-bank-architecture.md): publish the

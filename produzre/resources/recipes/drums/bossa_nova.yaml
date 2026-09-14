@@ -1,7 +1,7 @@
-# Bossa nova drum recipe — hand-tuned 2026-06-10.
+# Bossa nova drum recipe: hand-tuned 2026-06-10.
 # The mined recipe placed full-velocity snare backbeats on clave-ish steps.
 # Idiom: rim clicks (cross-stick) on the bossa clave over steady 8th hats,
-# surdo-style kick on 1, 2&, 3, 4& — no real backbeat, no crashes.
+# surdo-style kick on 1, 2&, 3, 4&: no real backbeat, no crashes.
 # The schema has no per-step snare velocity, but routing all snare hits to
 # cross-stick (GM 37, voices.snare.articulation) gives the quiet rim-click
 # timbre the style needs.
@@ -35,5 +35,5 @@ params:
 
 voices:
   snare:
-    # All snare hits as rim clicks — bossa never plays open backbeat snare.
+    # All snare hits as rim clicks: bossa never plays open backbeat snare.
     articulation: { default: crossstick }

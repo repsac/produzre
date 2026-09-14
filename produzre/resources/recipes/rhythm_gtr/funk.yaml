@@ -16,7 +16,5 @@ params:
   voicing: triad
   strum_style: upbeat_heavy
   accent_strength: 0.6
-  groove: tight
-  swing: 0.05
   chuck_rate: 0.15
   use_patterns: true

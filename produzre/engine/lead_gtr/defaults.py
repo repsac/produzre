@@ -1,13 +1,13 @@
 """Default parameters for lead guitar engine (Phase LG0).
 
 Engine metadata only. Register presets live in ``register.py`` (the single
-source of truth — a duplicate ``REGISTER_RANGES`` table previously lived here).
+source of truth: a duplicate ``REGISTER_RANGES`` table previously lived here).
 
 Note: earlier versions of this module also defined section-type tables
 (``PHRASE_DENSITY_TARGETS``, ``MOTIF_REPEAT_RATE``, ``REST_RATE``,
 ``CHORD_TONE_BIAS``, ``PHRASE_LENGTH_BARS``, ``NEUTRAL_DEFAULTS``) and a
-``get_section_defaults()`` helper. They had zero callers — the renderer in
-``__init__.py`` derives density/rests/phrase length itself — so they were
+``get_section_defaults()`` helper. They had zero callers: the renderer in
+``__init__.py`` derives density/rests/phrase length itself: so they were
 removed rather than left as misleading dead configuration.
 """
 

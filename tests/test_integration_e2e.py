@@ -2,13 +2,13 @@
 
 Each test pins one of the session's core fixes so it cannot silently regress:
 
-1. Param plumbing — user params (pattern/density/rest_rate/intensity) actually
+1. Param plumbing: user params (pattern/density/rest_rate/intensity) actually
    reach the bass engine instead of being dropped in favor of defaults.
-2. Harmony spelling — V7 renders a dominant seventh (b7), not a major seventh.
-3. Section bounds — no engine (drums/rhythm_gtr/bass) spills events past its
+2. Harmony spelling: V7 renders a dominant seventh (b7), not a major seventh.
+3. Section bounds: no engine (drums/rhythm_gtr/bass) spills events past its
    section window (turnaround/fill material must stay inside the section).
-4. Persona precedence — explicit user params override persona presets.
-5. Groove clock no-op — without groove indications, no groove resolution runs
+4. Persona precedence: explicit user params override persona presets.
+5. Groove clock no-op: without groove indications, no groove resolution runs
    and all bass onsets stay on the straight 16th (0.25-beat) grid.
 
 All configs use fixed seeds and zero humanization so outputs are
@@ -72,7 +72,7 @@ def _read_events(tsv_path: Path) -> list[dict]:
 
 def test_param_plumbing_user_params_reach_engine(caplog):
     """rhythm-drive.yaml sets pattern=drive, density=0.70, rest_rate=0.15,
-    intensity=0.70 — the engine log must echo the USER values, not engine
+    intensity=0.70: the engine log must echo the USER values, not engine
     defaults (density=0.57/rest_rate=0.24) or the metal persona/recipe values.
     """
     from produzre.config.load import load_root_config
@@ -160,7 +160,7 @@ arrangement:
 
 def test_v7_dominant_seventh_spelling(tmp_path):
     """Bar 2 carries the V7 (G7) chord: its root must be G (pc 7) and any
-    chord-seventh events must be F (pc 5) — a dominant b7. F# (pc 6) sounding
+    chord-seventh events must be F (pc 5): a dominant b7. F# (pc 6) sounding
     as the seventh would mean V7 was spelled as a major seventh (the pre-fix
     bug).
     """
@@ -182,7 +182,7 @@ def test_v7_dominant_seventh_spelling(tmp_path):
 
     # No F# (pc 6) anywhere under the V7 slot.
     pc6 = [e for e in bar2 if e["pitch"] % 12 == 6]
-    assert not pc6, f"F# (pc 6) sounded under V7 — major-seventh spelling bug: {pc6}"
+    assert not pc6, f"F# (pc 6) sounded under V7: major-seventh spelling bug: {pc6}"
 
     # Any event labeled as the chord seventh must be F (pc 5).
     sevenths = [e for e in bar2 if e["kind"].startswith("seventh")]

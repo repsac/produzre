@@ -9,6 +9,7 @@ fully developed arrangement bit-for-bit reproducible.
 from __future__ import annotations
 
 from dataclasses import replace
+import math
 from typing import Callable, Dict, List
 
 from .model import Theme, ThemeEvent
@@ -70,13 +71,15 @@ def invert(theme: Theme, **_) -> Theme:
 
 def fragment(theme: Theme, *, keep: str = "first", beats: float = 0.0, **_) -> Theme:
     """Keep only the first or last ``beats`` of the theme (default: half)."""
-    window = float(beats) if beats > 0 else theme.length_beats / 2.0
+    window = min(float(beats), theme.length_beats) if beats > 0 else theme.length_beats / 2.0
     if keep == "last":
         lo = theme.length_beats - window
         shifted = tuple(
-            replace(e, offset_beats=e.offset_beats - lo)
+            replace(e, offset_beats=max(0.0, e.offset_beats - lo),
+                    duration_beats=min(e.offset_beats + e.duration_beats, theme.length_beats)
+                    - max(lo, e.offset_beats))
             for e in theme.events
-            if e.offset_beats >= lo
+            if e.offset_beats + e.duration_beats > lo
         )
         return replace(theme, events=shifted, length_beats=window)
     clipped = tuple(
@@ -91,18 +94,24 @@ def fragment(theme: Theme, *, keep: str = "first", beats: float = 0.0, **_) -> T
 def displace(theme: Theme, *, shift_beats: float = 0.5, **_) -> Theme:
     """Rotate the rhythm within the theme length (re-grooving a riff)."""
     length = theme.length_beats
+    if length <= 0:
+        raise ValueError("Theme length must be positive")
     moved: List[ThemeEvent] = []
     for e in theme.events:
         off = (e.offset_beats + shift_beats) % length
         dur = min(e.duration_beats, length - off)
         if dur > 0:
             moved.append(replace(e, offset_beats=off, duration_beats=dur))
+        if e.duration_beats > dur:
+            moved.append(replace(e, offset_beats=0.0, duration_beats=e.duration_beats - dur))
     moved.sort(key=lambda e: e.offset_beats)
     return replace(theme, events=tuple(moved))
 
 
 def augment(theme: Theme, *, factor: float = 2.0, **_) -> Theme:
     """Stretch durations (climax)."""
+    if not math.isfinite(factor) or factor <= 0:
+        raise ValueError("Theme scale factor must be finite and positive")
     return replace(
         theme,
         events=tuple(

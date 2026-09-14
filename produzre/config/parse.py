@@ -137,7 +137,8 @@ def parse_song(song_data: Dict[str, Any]) -> SongConfig:
     project = song_data.get("project")
     project = str(project) if project is not None else None
 
-    beats_per_bar = int(song_data.get("beats_per_bar", 4))
+    from ..harmony.meter import parse_meter
+    beats_per_bar = float(song_data.get("beats_per_bar", parse_meter(meter).beats_per_bar))
     pattern_bars = int(song_data.get("pattern_bars", 1))
 
     seed = int(song_data.get("seed", 0))
@@ -169,6 +170,11 @@ def parse_song(song_data: Dict[str, Any]) -> SongConfig:
         genre=genre,
         beats_per_bar=beats_per_bar,
         pattern_bars=pattern_bars,
+        pattern_quantize_beats=max(0.0, float(song_data.get("pattern_quantize_beats", 0.0))),
+        pattern_velocity_step=max(1, int(song_data.get("pattern_velocity_step", 1))),
+        pattern_merge_repeats=bool(song_data.get("pattern_merge_repeats", False)),
+        pattern_merge_min_run=max(2, int(song_data.get("pattern_merge_min_run", 2))),
+        pattern_merge_max=max(0, int(song_data.get("pattern_merge_max", 0))),
         seed=seed,
         take=take,
         variation=variation,

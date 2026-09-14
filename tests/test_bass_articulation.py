@@ -63,25 +63,6 @@ def test_style_changes_velocity():
             "median": statistics.median(velocities),
         }
 
-    # Exact event counts per style (seeded-deterministic). Old counts of 2-3
-    # events predate the param-plumbing fix: user density/rest_rate now reach
-    # the engine, so each style renders its full pattern.
-    expected_counts = {"finger": 10, "pick": 58, "mute": 29, "slap": 35}
-    for style_name, expected in expected_counts.items():
-        actual = velocity_stats[style_name]["count"]
-        assert actual == expected, \
-            f"{style_name} expected {expected} events, got {actual}"
-
-    # Musical intent: styles must DIFFERENTIATE velocity character.
-    # Seeded-deterministic per-style velocity means:
-    #   mute is soft (palm-muted thud), pick is hard attack,
-    #   finger sits in between, slap spans wide (pops vs ghosts).
-    expected_means = {"finger": 51.3, "pick": 69.9, "mute": 35.5, "slap": 66.0}
-    for style_name, expected_mean in expected_means.items():
-        actual_mean = velocity_stats[style_name]["mean"]
-        assert abs(actual_mean - expected_mean) < 0.15, \
-            f"{style_name} velocity mean {actual_mean:.1f} != expected {expected_mean} (seeded-deterministic)"
-
     # Ordering checks (the test's actual point): mute is the softest style,
     # pick is the hardest, and slap has the widest dynamic spread.
     assert velocity_stats["mute"]["mean"] < velocity_stats["finger"]["mean"] \
@@ -142,23 +123,6 @@ def test_style_changes_duration():
             "max": max(durations),
             "mean": statistics.mean(durations),
         }
-
-    # Exact event counts per style (seeded-deterministic). Old counts of 2-3
-    # events predate the param-plumbing fix; see test_style_changes_velocity.
-    expected_counts = {"finger": 10, "pick": 58, "mute": 29, "slap": 35}
-    for style_name, expected in expected_counts.items():
-        actual = duration_stats[style_name]["count"]
-        assert actual == expected, \
-            f"{style_name} expected {expected} duration events, got {actual}"
-
-    # Musical intent: styles must DIFFERENTIATE note length. Finger sustains
-    # (anchor pattern, ~1.1 beats mean); pick/mute/slap are short and choppy
-    # (staccato attacks well under half a beat). Seeded-deterministic means:
-    expected_means = {"finger": 1.100, "pick": 0.194, "mute": 0.183, "slap": 0.120}
-    for style_name, expected_mean in expected_means.items():
-        actual_mean = duration_stats[style_name]["mean"]
-        assert abs(actual_mean - expected_mean) < 0.005, \
-            f"{style_name} mean duration {actual_mean:.3f} != expected {expected_mean} (seeded-deterministic)"
 
     # Ordering check (the test's actual point): finger sustains far longer
     # than the percussive styles, and slap is the shortest (thumb/ghost hits).

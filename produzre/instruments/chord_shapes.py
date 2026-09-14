@@ -16,8 +16,8 @@ Public API:
         .fret_center       -> float               # avg fret (voice-leading key)
 
 Internal structure:
-    GuitarShape  — open position chord (standard tuning, absolute frets)
-    ChordForm    — movable barre form (any tuning, frets relative to root)
+    GuitarShape: open position chord (standard tuning, absolute frets)
+    ChordForm: movable barre form (any tuning, frets relative to root)
 """
 
 from __future__ import annotations
@@ -114,7 +114,7 @@ class ResolvedVoicing:
 
 
 # ===========================================================================
-# Open chord shapes — standard guitar tuning (E2-A2-D3-G3-B3-E4)
+# Open chord shapes: standard guitar tuning (E2-A2-D3-G3-B3-E4)
 # ===========================================================================
 # Keyed by (root_pitch_class, quality).
 # root_pitch_class: 0=C, 1=C#/Db, 2=D, 3=D#/Eb, 4=E, 5=F, 6=F#/Gb,
@@ -206,7 +206,7 @@ _MOVABLE_FORMS: List[ChordForm] = [
     ChordForm("A-form_sus2",     "sus2",      1, (-1, 0, 2, 2, 0, 0), min_strings=4),
     ChordForm("A-form_sus4",     "sus4",      1, (-1, 0, 2, 2, 3, 0), min_strings=4),
 
-    # D-form shapes (root on string 2) — mirror the open D shapes:
+    # D-form shapes (root on string 2): mirror the open D shapes:
     # major = x-x-0-2-3-2 (root, 5th, root, 3rd), minor = x-x-0-2-3-1
     ChordForm("D-form_major",    "major",     2, (-1, -1, 0, 2, 3, 2), min_strings=4),
     ChordForm("D-form_minor",    "minor",     2, (-1, -1, 0, 2, 3, 1), min_strings=4),
@@ -214,7 +214,7 @@ _MOVABLE_FORMS: List[ChordForm] = [
 
 
 # ===========================================================================
-# Quality alias map — normalise extended quality names to keys used above
+# Quality alias map: normalise extended quality names to keys used above
 # ===========================================================================
 
 _QUALITY_ALIASES: Dict[str, str] = {
@@ -452,7 +452,7 @@ def _fallback_voicing(
             new_max = fret if max_fret_used is None else max(max_fret_used, fret)
             if new_max - new_min > profile.max_fret_span:
                 if min_fret_used is not None and fret > min_fret_used + profile.max_fret_span:
-                    break  # frets only increase from here — give up on this string
+                    break  # frets only increase from here: give up on this string
                 continue  # too far below the current cluster; try a higher fret
             frets_list[i] = fret
             min_fret_used = new_min
@@ -495,7 +495,7 @@ def _apply_voice_leading(
     if prev_voicing is None:
         return candidate
 
-    # Check if candidate has any open strings — open shapes can't be transposed
+    # Check if candidate has any open strings: open shapes can't be transposed
     has_open = any(f == 0 for f in candidate.frets if f >= 0)
     if has_open:
         return candidate
@@ -588,7 +588,7 @@ def select_voicing(
         result = _try_open_shape(root_pc, quality, profile, capo)
 
     # Step 2: Movable barre form with the EXACT quality (e.g. min7 barre)
-    # — exact quality always beats a quality-degraded simplification.
+    #: exact quality always beats a quality-degraded simplification.
     if result is None:
         result = _resolve_movable(
             root_midi, quality, profile, capo, allow_quality_fallback=False
@@ -669,7 +669,7 @@ def resolve_pitches_to_voicing(
     best_score = float("inf")
 
     def _full_span(frets: List[int]) -> int:
-        """Span including open strings — prevents open+high-fret combos."""
+        """Span including open strings: prevents open+high-fret combos."""
         active = [f for f in frets if f >= 0]
         if len(active) < 2:
             return 0

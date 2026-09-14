@@ -9,7 +9,7 @@
 #
 # The acoustic_gtr engine auto-selects technique by section type, but
 # each section here overrides it explicitly so all four are demonstrated
-# in one file. Harmony only — no drums/bass/rhythm_gtr, acoustic only for clarity.
+# in one file. Harmony only: no drums/bass/rhythm_gtr, acoustic only for clarity.
 
 version: 1
 

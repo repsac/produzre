@@ -1,14 +1,14 @@
 """Regression tests for verified guitar bugs (2026-06-10 full review).
 
 Covers:
-  Theme 2.4 — chord shape / voicing bugs in produzre/instruments/chord_shapes.py:
+  Theme 2.4: chord shape / voicing bugs in produzre/instruments/chord_shapes.py:
     - D-form movable shapes had wrong intervals (maj7 + minor 10th!)
     - Voice-leading octave shift corrupted barre chords (negative frets)
     - Capo discarded by the open-shape path (capo=2 played a whole step flat)
     - Fallback voicing span check was one-sided (unplayable spans)
     - Quality fallback degraded min7 → minor before trying the exact min7 barre
 
-  Theme 3 — rhythm guitar placement bugs:
+  Theme 3: rhythm guitar placement bugs:
     - Turnaround/pickup overlays smeared up to 5 beats past the barline
       (double offset + wrong subdivision in merge_patterns)
     - merge_patterns density was len(hits)/len(hits) == always 1.0
@@ -31,7 +31,7 @@ from produzre.instruments.profile import GUITAR_STANDARD
 
 
 # ---------------------------------------------------------------------------
-# Theme 2.4 — chord shape data and voicing
+# Theme 2.4: chord shape data and voicing
 # ---------------------------------------------------------------------------
 
 class TestDFormIntervals:
@@ -123,7 +123,7 @@ class TestQualityFallbackOrder:
     """Exact-quality movable forms must beat quality-degraded open shapes."""
 
     def test_c_min7_keeps_its_seventh(self):
-        # Old order: open Cm barre (plain minor — 7th lost) was chosen before
+        # Old order: open Cm barre (plain minor: 7th lost) was chosen before
         # the exact min7 movable form was even tried.
         v = select_voicing(48, "minor7")
         pcs = {p % 12 for p in v.pitches}
@@ -137,7 +137,7 @@ class TestQualityFallbackOrder:
 
 
 # ---------------------------------------------------------------------------
-# Theme 3 — rhythm guitar turnaround merging (B6)
+# Theme 3: rhythm guitar turnaround merging (B6)
 # ---------------------------------------------------------------------------
 
 class TestTurnaroundMerge:
@@ -194,14 +194,15 @@ class TestTurnaroundMerge:
 
 
 # ---------------------------------------------------------------------------
-# Theme 3 — legacy play_pattern presets must produce notes (B9)
+# Theme 3: legacy play_pattern presets must produce notes (B9)
 # ---------------------------------------------------------------------------
 
 class TestLegacyPlayPatterns:
     """syncopated/offbeat/gallop must produce notes on a quarter-note grid."""
 
     @pytest.fixture(scope="class")
-    def render_ctx(self):
+    @classmethod
+    def render_ctx(cls):
         from produzre.config.load import load_root_config
         from produzre.harmony import build_harmony_plan, parse_meter
         from produzre.rhythm import create_basic_rhythm_grid

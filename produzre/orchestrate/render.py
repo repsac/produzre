@@ -200,7 +200,7 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
         return base_cfg
 
     if base_cfg is None:
-        # No InstrumentConfig — wrap persona params in one so engines get a
+        # No InstrumentConfig: wrap persona params in one so engines get a
         # proper dataclass with .intensity / .extra.
         from ..model import InstrumentConfig
         extra = dict(persona_params)
@@ -327,7 +327,7 @@ def _merge_instrument_config(base: Any, override: Any) -> Any:
     if base_params or override_params:
         merged_params = {**dict(base_params), **dict(override_params)}
         if "params" in merged:
-            # InstrumentConfig doesn't have a 'params' field — fold into extra
+            # InstrumentConfig doesn't have a 'params' field: fold into extra
             del merged["params"]
         merged["extra"] = {**merged_params, **(merged.get("extra", {}) or {})}
 
@@ -531,8 +531,32 @@ def render_section_instruments(
 
     # Shared groove clock state (resolved lazily once per section, after the
     # drums engine has published its merged humanize params to the plan).
+    def recipe_feel_params(name, instrument_cfg):
+        from ..config.recipes import resolve_recipe_name, merge_recipe_params
+        params = effective_params_dict(instrument_cfg)
+        raw = getattr(cfg, "raw", {}) or {}
+        recipes = raw.get("_recipes", {}).get(name, {})
+        song = getattr(cfg, "song", None)
+        intensity = getattr(instrument_cfg, "intensity", None)
+        if intensity is None:
+            intensity = getattr(sec, "intensity", None)
+        recipe_name = resolve_recipe_name(
+            instrument=name, genre=getattr(instrument_cfg, "genre", None) or getattr(song, "genre", None),
+            section_type=sec.type, intensity=.5 if intensity is None else intensity,
+            bpm=getattr(song, "bpm", 120), time_signature=getattr(sec, "meter", None) or getattr(song, "meter", "4/4"),
+            instrument_recipe=getattr(instrument_cfg, "recipe", None), section_recipe=params.get("recipe"),
+            recipes=recipes,
+        )
+        explicit_keys = set(params) - set(params.get("_persona_keys") or [])
+        params = merge_recipe_params(params, (recipes.get(recipe_name) or {}).get("params", {}))
+        if name == "drums":
+            for key, value in (raw.get("groove") or {}).items():
+                if key in ("swing", "swing_16th") and key not in explicit_keys:
+                    params[key] = value
+        return params
+
     groove_inst_params = {
-        name: effective_params_dict(c) for name, c in effective_cfgs.items()
+        name: recipe_feel_params(name, c) for name, c in effective_cfgs.items()
     }
     groove_feel = None
     groove_feel_resolved = False
@@ -553,8 +577,10 @@ def render_section_instruments(
                 drum_params = None
         if not isinstance(drum_params, dict):
             # Drums not rendered (or no plan): fall back to the merged drums
-            # instrument params (persona/global/section, without recipe).
+            # instrument params, including the selected recipe.
             drum_params = groove_inst_params.get("drums")
+            if drum_params is None:
+                drum_params = recipe_feel_params("drums", _get_global_instrument_cfg(cfg, "drums"))
         feel = resolve_groove_feel(cfg, sec, drum_params, groove_inst_params)
         if feel is not None:
             pockets = {
@@ -678,6 +704,7 @@ def render_section_instruments(
             )
 
             realized_payload: dict[str, list] = {}
+            realized_by_name: dict[str, list] = {}
             total_beats = float(getattr(hplan, "total_beats", 0.0) or 0.0)
             for theme in theme_bank.themes.values():
                 t_name, t_params = treatment_for(theme, sec_type_key, occurrence)
@@ -686,13 +713,16 @@ def render_section_instruments(
                     key=sec_key, mode=sec_mode, genre=sec_genre,
                     total_beats=total_beats,
                 )
-                realized_payload[theme.role.value] = realized_to_dicts(notes)
+                realized_by_name[theme.name] = realized_to_dicts(notes)
+                # The first declared theme owns its role in every consumer.
+                realized_payload.setdefault(theme.role.value, realized_by_name[theme.name])
                 if theme.role is ThemeRole.MELODY and guide_dict is None:
                     guide_dict = build_themed_guide(
                         theme, hplan,
                         key=sec_key, mode=sec_mode, genre=sec_genre,
                         total_beats=total_beats,
                         transform_name=t_name, transform_params=t_params,
+                        realized_notes=notes,
                     ).to_dict()
                     logger.info(
                         "Section '%s': melody guide from theme '%s' "
@@ -700,6 +730,7 @@ def render_section_instruments(
                         sec.id, theme.name, t_name, occurrence + 1, len(notes),
                     )
             performance_plan.set(f"themes.realized.{sec.id}", realized_payload)
+            performance_plan.set(f"themes.realized_by_name.{sec.id}", realized_by_name)
 
         if guide_dict is None:
             melody_rng = random.Random(stable_seed_int(
@@ -754,7 +785,7 @@ def render_section_instruments(
         )
 
         # Shared groove clock: post-process the newly added events with the
-        # section's resolved feel. Drums are excluded — they already swing
+        # section's resolved feel. Drums are excluded: they already swing
         # internally and are the reference clock (pocket 0 by definition).
         # apply_feel is invoked exactly once per event (this is the only call
         # site), so swing can never double-apply.
@@ -805,7 +836,16 @@ def render_section_instruments(
                         velocity_humanize=vel_humanize,
                     )
 
-        new_events = timeline.events[events_before:]
+        # Timing feel cannot move notes beyond the section being rendered.
+        section_end = section_start_beat + float(getattr(rgrid, "total_beats", float("inf")))
+        bounded = []
+        for ev in timeline.events[events_before:]:
+            ev.start_beat = max(section_start_beat, ev.start_beat)
+            ev.duration_beats = min(ev.duration_beats, section_end - ev.start_beat)
+            if ev.duration_beats > 0:
+                bounded.append(ev)
+        timeline.events[events_before:] = bounded
+        new_events = bounded
         if render_result is not None:
             rhythm_features[inst_name] = render_result
         if performance_plan is not None and new_events:

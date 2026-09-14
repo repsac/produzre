@@ -107,7 +107,7 @@ def test_resolver_repeat_escalation_capped():
 
 
 def test_resolver_user_value_passthrough():
-    # User values pass through untouched — no escalation, no clamping.
+    # User values pass through untouched: no escalation, no clamping.
     assert resolve_section_intensity("chorus", 3, 0.42) == pytest.approx(0.42)
     assert resolve_section_intensity("verse", 0, 1.5) == pytest.approx(1.5)
 

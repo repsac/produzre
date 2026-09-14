@@ -79,6 +79,7 @@ def humanize_start(
     swing: float,
     push_pull: float,
     rng: random.Random,
+    swing_16th: Optional[float] = None,
 ) -> float:
     """Return a humanized start time in beats.
 
@@ -101,25 +102,10 @@ def humanize_start(
 
     t = float(start_beat)
 
-    # Push/pull as a small deterministic bias (in ms scaled to beats).
-    # This is intentionally small; genre/persona can increase it.
-    PUSH_PULL_MS = 10.0
-    if push_pull:
-        t += _beats_from_ms(PUSH_PULL_MS * float(push_pull), bpm)
-
-    # Swing: delay the eighth off-beat (beat + 0.5) by up to ~0.25 beats at swing=1.
-    #
-    # Meter note: the check is on the *fraction of the quarter-note beat*, so
-    # it works in any meter — the drum grid places steps at exact multiples of
-    # 0.25 beats (4 steps per quarter beat), so 8th offbeats land exactly on
-    # x.5 in 3/4 and 6/8 just like in 4/4. (The legacy fixed 16-step grid put
-    # 3/4 steps at multiples of 0.1875, which made swing a silent no-op.)
-    s = float(swing)
-    if s != 0.0:
-        frac = float(beat_in_bar) % 1.0
-        # Detect the "&" (0.5) within a tolerance.
-        if abs(frac - 0.5) < 1e-6:
-            t += 0.25 * s
+    from ...groove import swing_offset
+    t += _beats_from_ms(max(-25.0, min(25.0, -100.0 * float(push_pull))), bpm)
+    sixteenth = swing * 0.5 if swing_16th is None else swing_16th
+    t += swing_offset(beat_in_bar, swing, sixteenth)
 
     # Random jitter.
     j_ms = float(timing_jitter_ms)
@@ -165,6 +151,7 @@ def humanize_events(
     rng: random.Random,
     rng_timing: Optional[random.Random] = None,
     rng_velocity: Optional[random.Random] = None,
+    swing_16th: Optional[float] = None,
 ) -> List[Tuple[float, float, int, int, str]]:
     """Humanize a sequence of DrumEvents into timeline-ready note tuples.
 
@@ -205,20 +192,17 @@ def humanize_events(
         rt_e = random.Random(_seed_from_rng_state(rt, "timing|" + ek))
         rv_e = random.Random(_seed_from_rng_state(rv, "velocity|" + ek))
 
-        # Fill and pickup cells already encode their rhythmic feel. Applying
-        # the groove's offbeat swing again can compress an offbeat stroke into
-        # the following stroke and recreate an unintended roll burst.
-        structural_gesture = kind in ("fill", "chatter") or kind.endswith("_pickup")
-        event_swing = 0.0 if structural_gesture else swing
         start_abs = humanize_start(
             start_beat=float(section_start_beat) + rel,
             beat_in_bar=beat_in_bar,
             bpm=bpm,
             timing_jitter_ms=timing_jitter_ms,
-            swing=event_swing,
+            swing=swing,
+            swing_16th=swing_16th,
             push_pull=push_pull,
             rng=rt_e,
         )
+        start_abs = max(float(section_start_beat), start_abs)
         vel = humanize_velocity(velocity=int(e.velocity), velocity_humanize=velocity_humanize, rng=rv_e)
         out.append((start_abs, dur, pitch, vel, kind))
 

@@ -23,7 +23,7 @@ Data structure:
 """
 
 # Small preset library.
-# Keys: (mode, section_type) — both lowercase.
+# Keys: (mode, section_type): both lowercase.
 PROGRESSION_PRESETS: dict[tuple[str, str], list[str]] = {
     # Ionian (major) examples
     ("ionian", "verse"): ["I", "V", "vi", "IV"],

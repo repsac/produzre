@@ -258,3 +258,30 @@ def write_timeline_to_track(track: mido.MidiTrack, timeline: Any, *, ppq: int = 
         m.msg.time = int(dt)
         track.append(m.msg)
         last_tick = m.tick
+
+
+def add_song_meter_changes(track: mido.MidiTrack, cfg, *, ppq: int = PPQ) -> None:
+    """Merge the arrangement's meter events into an existing delta-time track."""
+    absolute = []
+    tick = 0
+    for index, message in enumerate(track):
+        tick += message.time
+        if message.type != "time_signature":
+            absolute.append((tick, 1, index, message))
+    beat = 0.0
+    previous = None
+    for index, section_id in enumerate(cfg.arrangement):
+        section = cfg.sections[section_id]
+        meter = section.meter or cfg.song.meter
+        if meter != previous:
+            num, den = parse_meter(meter)
+            absolute.append((beats_to_ticks(beat, ppq=ppq), 0, index,
+                             mido.MetaMessage("time_signature", numerator=num, denominator=den)))
+            previous = meter
+        beat += section.total_beats(cfg.song.beats_per_bar)
+    absolute.sort(key=lambda row: row[:3])
+    track.clear()
+    last = 0
+    for tick, _, _, message in absolute:
+        track.append(message.copy(time=tick - last))
+        last = tick

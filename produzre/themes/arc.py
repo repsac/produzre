@@ -41,7 +41,7 @@ def treatment_for(
 
     Args:
         theme: The theme being placed. User-authored themes marked ``locked``
-            (``allow_development: false``) always quote — user material is
+            (``allow_development: false``) always quote: user material is
             intent, not clay.
         section_type: Section type label ("verse", "chorus", ...).
         occurrence: 0-based count of prior sections of the same type.

@@ -1,143 +1,91 @@
-# Drums Engine Test Examples
+# Drum examples
 
-This directory contains test YAML files for the Produzre drums engine, designed for quick validation and regression testing.
-
-## Quick Start
-
-### Running a Quick Validation
+Build a demo and assign a General MIDI drum kit to channel 10 in your DAW:
 
 ```bash
-# From the repository root — use any demo file for a quick check
-python -m produzre.cli build examples/drums/hats-demo.yaml -v
+python produzre_entry.py build examples/drums/hats-demo.yaml -v
 ```
 
-### Validating Changes
+## Choose a demo
 
-After making changes to the drums engine, verify stability:
+### Kit voices
+
+- [hats-demo.yaml](hats-demo.yaml): compare open and pedal hat rates 1.0 with 0.5, plus different placements and accent boosts.
+- [kick-demo.yaml](kick-demo.yaml): compare `double.rate` 0, 1.0, and 0.3 alongside different syncopated kick placements.
+- [snare-demo.yaml](snare-demo.yaml): hear crossstick, rimshot, and normal snare with ghost rates 0.3, 0.15, and 0.5.
+
+### Fills and transitions
+
+- [fills-demo.yaml](fills-demo.yaml): compare `fill_rate` 0 with 1.0, then short, medium, and long fills and `fill_chatter: 0.4`.
+- [transitions-demo.yaml](transitions-demo.yaml): compare `pickup_rate: 0.7` with 0 and `downbeat_rate: 0.8` with 0 around section changes.
+- [phrasing-demo.yaml](phrasing-demo.yaml): compare two-bar and four-bar phrase endings, a six-bar section, and a final 6/8 section.
+- [performance-demo.yaml](performance-demo.yaml): hear chokes, flams, and drags separately, then combined; the first section sets all three rates to 0.
+
+### Arrangement and color
+
+- [energy-demo.yaml](energy-demo.yaml): compare automatic energy with forced `low`, `high`, and numeric 0.75 while also changing section intensity.
+- [cymbals-demo.yaml](cymbals-demo.yaml): hear a ride chorus with `bell_rate: 0.3`, splash/china additions, and an outro crash on beat 1.
+- [toms-demo.yaml](toms-demo.yaml): compare `groove.rate: 0.2` with `fills.rate: 0.8`, then combine groove and fill toms at 0.4 and 0.5.
+- [take-demo.yaml](take-demo.yaml): start at `take: 0`, then rebuild with `take: 1` to compare a new performance of the repeated verse and chorus.
+- [bridge-demo.yaml](bridge-demo.yaml): compare `drop`, `half_time`, `build`, `open`, and `stomp` intents through contrasting sections.
+
+## Change the kit part
+
+Voice controls go under `drums.voices`. Placements count quarter notes from 1
+within a bar: `2&` means 1.5 beats after the bar starts. In 6/8, the fourth
+eighth note is also placement `2&`. The engine uses quarter-note beat units
+for every meter.
+
+```yaml
+# Inside an instruments block:
+drums:
+  voices:
+    snare:
+      ghosts: {rate: 0.3, placements: ["2a", "4e"]}
+      articulation: {default: crossstick}
+    hats:
+      open: {rate: 0.25, placements: ["4&"]}
+      pedal: {rate: 0.4, placements: ["2", "4"]}
+  params:
+    fill_rate: 0.2
+```
+
+Recipes can set voices too; see [preset order](../../docs/llm-song-config-reference.md#recipes-and-personas).
+Energy supplies values only when a recipe
+or user setting leaves them open. Physical constraints may remove an otherwise
+requested hit, such as a third hand strike or a pedal hat during dense kicks.
+
+See the [drum reference](../../docs/llm-song-config-reference.md#drum-controls)
+for every voice control and the [shared timing reference](../../docs/llm-song-config-reference.md#shared-timing)
+for swing and pocket units.
+
+## Inspect the output
+
+The build log prints the export root. Drum files are below it:
+
+```text
+<Song>.mid
+instruments/drums/<Song>_drums.mid
+analysis/drums/<Song>_drums.events.tsv
+analysis/drums/<Song>_drums.grid.txt
+```
+
+Enable text views through `exports.midi_text`.
+The [output guide](../../README.md#output-files) defines the TSV columns.
+The grid shows the voices that played in this groove.
+
+Common GM pitches are kick 35/36, crossstick 37, snare 38/40, closed hat 42,
+open hat 46, pedal hat 44, ride 51, crash 49, and toms 45/47/50. Grid symbols
+represent velocity; consult [grid_format.py](../../produzre/analysis/grid_format.py)
+for the exact display thresholds.
+
+## Check a change
 
 ```bash
-# Build the same file twice
-python -m produzre.cli build examples/drums/hats-demo.yaml -v
-python -m produzre.cli build examples/drums/hats-demo.yaml -v
-
-# Compare last two outputs
-python scripts/diff_last_two.py
+python produzre_entry.py build examples/drums/hats-demo.yaml --strict-determinism
+python tests/test_golden_drums.py
 ```
 
-If the diff shows no changes, your modifications are deterministic and stable.
-
-## Artifacts
-
-After running a build, artifacts are exported to:
-
-```
-exports/[SongTitle]_[Timestamp]/
-├── [SongTitle].mid               # Full song MIDI file
-├── analysis/
-│   └── drums/
-│       ├── [SongTitle]_drums.events.tsv   # Event-level data (TSV format)
-│       └── [SongTitle]_drums.grid.txt     # Visual grid representation
-└── instruments/
-    └── drums.mid                 # Drums-only MIDI file
-```
-
-### Analysis Files
-
-**`*_drums.events.tsv`** - Tab-separated event data:
-- Columns: `section`, `instrument`, `start_beat_abs`, `duration_beats`, `pitch`, `velocity`, `note`, `kind`
-- One row per drum hit
-- Useful for programmatic analysis
-
-**`*_drums.grid.txt`** - Human-readable grid visualization:
-- Shows drum pattern as a piano-roll style grid
-- One row per drum voice (KICK, SNARE, HAT_C, HAT_O, CRASH, etc.)
-- Characters indicate velocity: `X` (loud), `^` (accent), `x` (normal), `g` (ghost), `.` (soft)
-- Grid resolution: 16th notes (16 steps per bar in 4/4)
-
-## Expected Grid Lanes
-
-A well-formed drums output should contain these lanes in the grid:
-
-**Required lanes** (always present):
-- `KICK` - Kick drum (GM pitch 35/36)
-- `SNARE` - Snare drum (GM pitch 38/40)
-- `HAT_C` - Closed hi-hat (GM pitch 42)
-
-**Optional lanes** (depending on template settings):
-- `HAT_O` - Open hi-hat (GM pitch 46)
-- `HAT_P` - Pedal hi-hat / foot chick (GM pitch 44)
-- `RIDE` - Ride cymbal (GM pitch 51)
-- `CRASH` - Crash cymbal (GM pitch 49)
-- `TOM_L`, `TOM_M`, `TOM_H` - Toms (GM pitches 45, 47, 50)
-
-**Analysis expectations**:
-- Grid should show consistent pattern structure across bars
-- Ghost notes appear as `g` characters (velocity < 70)
-- Accents appear as `^` (velocity 92-109) or `X` (velocity >= 110)
-- Grid header shows: `INSTRUMENT: drums`, meter, and subdivision
-
-## CLI Commands
-
-```bash
-# Validate YAML syntax
-python -m produzre.cli validate examples/drums/hats-demo.yaml
-
-# Show resolved configuration (useful for debugging)
-python -m produzre.cli show-config examples/drums/hats-demo.yaml --format json
-
-# Dry-run (validate without writing files)
-python -m produzre.cli build examples/drums/hats-demo.yaml --dry-run -v
-
-# Build with verbose output
-python -m produzre.cli build examples/drums/hats-demo.yaml -v
-```
-
-## Test Files
-
-The drums directory contains multiple demo YAMLs that serve as both examples and regression tests:
-
-- **`hats-demo.yaml`** - Hi-hat patterns (open/closed/pedal variations, density, accents)
-- **`kick-demo.yaml`** - Kick patterns (syncopation, double-kick, extra kicks)
-- **`snare-demo.yaml`** - Snare patterns and ghost notes
-- **`fills-demo.yaml`** - Fill patterns (short/medium/long, chatter, persona-based types)
-- **`transitions-demo.yaml`** - Section transition effects (pickups, downbeats)
-- **`phrasing-demo.yaml`** - Phrase boundary fill placement
-- **`performance-demo.yaml`** - Performance ornaments (chokes, flams, drags)
-- **`energy-demo.yaml`** - Intensity-driven dynamic variation
-- **`cymbals-demo.yaml`** - Cymbal usage (crashes, rides)
-- **`toms-demo.yaml`** - Tom patterns in fills
-- **`take-demo.yaml`** - Take-based micro-variation
-- **`bridge-demo.yaml`** - Bridge section behavior
-
-## Debugging Tips
-
-### Grid shows unexpected lanes
-
-If you see unexpected drum voices in the grid:
-1. Check the groove template in `produzre/engine/drums/groove.py`
-2. Verify `pitches` mapping in `produzre/engine/drums/__init__.py`
-3. Review GM drum mapping in `produzre/analysis/grid_format.py`
-
-### Events differ between runs
-
-Drums generation uses a deterministic RNG seeded by the YAML `seed` parameter. If outputs differ:
-1. Ensure the YAML file has a fixed `seed` value
-2. Check for non-deterministic code in voice modules (kick, snare, hats)
-3. Verify RNG threading in `produzre/engine/drums/patterns/kit.py`
-
-### Missing ghost notes or accents
-
-Ghost notes (`g`) and accents (`^`, `X`) are velocity-mapped in `grid_format.py`:
-- Ghost: velocity < 70
-- Normal: velocity 70-91
-- Accent: velocity 92-109
-- Loud: velocity >= 110
-
-Check `vel_for()` in `produzre/engine/drums/patterns/utils.py` for velocity calculation logic.
-
-## Related Documentation
-
-- Main drums engine: `produzre/engine/drums/__init__.py`
-- Pattern generation: `produzre/engine/drums/patterns/`
-- Analysis exports: `produzre/analysis/README.md`
-- Groove templates: `produzre/engine/drums/groove.py`
+The first command checks repeatability. The second checks the three saved
+hats, kick, and fill outputs. Listen to the MIDI too, and check whether
+the groove suits the song. See [testing](../../tests/README.md) for baseline updates.

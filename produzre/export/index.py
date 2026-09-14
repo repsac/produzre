@@ -60,24 +60,29 @@ def generate_export_index(
 
     # Add section timing map
     sections_map = {}
-    for st in section_timings:
+    bar_cursor = 1.0
+    for occurrence, st in enumerate(section_timings):
         section_config = cfg.sections.get(st.id)
         section_type = section_config.type if section_config else "unknown"
 
-        sections_map[st.id] = {
+        occurrence_key = st.id if cfg.arrangement.count(st.id) == 1 else f"{occurrence:02d}_{st.id}"
+        sections_map[occurrence_key] = {
+            "id": st.id,
+            "meter": section_config.meter or cfg.song.meter if section_config else cfg.song.meter,
             "type": section_type,
             "start_beat": float(st.start_beat),
             "end_beat": float(st.end_beat),
             "length_beats": float(st.length_beats),
-            "start_bar": int(st.start_beat / cfg.song.beats_per_bar) + 1,
-            "length_bars": int(st.length_beats / cfg.song.beats_per_bar),
+            "start_bar": bar_cursor,
+            "length_bars": st.length_beats / st.beats_per_bar,
         }
 
         # Add timestamp if useful for DAW sync
         start_seconds = st.start_beat * (60.0 / cfg.song.bpm)
         end_seconds = st.end_beat * (60.0 / cfg.song.bpm)
-        sections_map[st.id]["start_time"] = f"{int(start_seconds // 60)}:{int(start_seconds % 60):02d}"
-        sections_map[st.id]["end_time"] = f"{int(end_seconds // 60)}:{int(end_seconds % 60):02d}"
+        sections_map[occurrence_key]["start_time"] = f"{int(start_seconds // 60)}:{int(start_seconds % 60):02d}"
+        sections_map[occurrence_key]["end_time"] = f"{int(end_seconds // 60)}:{int(end_seconds % 60):02d}"
+        bar_cursor += st.length_beats / st.beats_per_bar
 
     index["sections"] = sections_map
 
@@ -159,13 +164,15 @@ def generate_quick_reference(
         "",
     ]
 
-    for st in section_timings:
+    bar_cursor = 1.0
+    for occurrence, st in enumerate(section_timings):
         section_config = cfg.sections.get(st.id)
         section_type = section_config.type if section_config else "unknown"
-        start_bar = int(st.start_beat / cfg.song.beats_per_bar) + 1
-        length_bars = int(st.length_beats / cfg.song.beats_per_bar)
+        start_bar = bar_cursor
+        length_bars = st.length_beats / st.beats_per_bar
 
-        lines.append(f"Bar {start_bar:3d} | {st.id:20s} | {section_type:10s} | {length_bars} bars")
+        lines.append(f"Bar {start_bar:5g} | {st.id:20s} | {section_type:10s} | {length_bars:g} bars")
+        bar_cursor += length_bars
 
     lines.extend([
         "",

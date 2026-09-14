@@ -62,7 +62,7 @@ _DEFAULT_SECTION_INTENSITY = 0.65
 # Per-repeat escalation: the Nth arrangement occurrence of the same section
 # *type* gets +0.05 per repeat, capped at +0.10. Example: chorus 1 = 0.90,
 # chorus 2 = 0.95, chorus 3+ = 1.00. Escalation only applies to derived
-# defaults — explicit user values are never touched.
+# defaults: explicit user values are never touched.
 _REPEAT_INTENSITY_STEP = 0.05
 _REPEAT_INTENSITY_CAP = 0.10
 
@@ -396,7 +396,7 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
         # User-set values pass through untouched; unset sections get a derived
         # default (type table + repeat escalation). Repeated arrangement
         # entries share one SectionConfig object, so derived values are
-        # written onto a per-occurrence copy — engines read the resolved
+        # written onto a per-occurrence copy: engines read the resolved
         # value via the planned section (e.g., drums'
         # `_get_attr_or_key(section, "intensity", ...)`).
         type_key = str(sec.type or "").strip().lower()

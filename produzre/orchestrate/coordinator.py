@@ -58,7 +58,7 @@ class EngineCoordinator:
     # Rule 1: Inverse Density (Lead-Rhythm Coordination)
     # =========================================================================
 
-    def get_rhythm_intensity_adjustment(self, section_id: str, lead_rest_threshold: float = 0.2) -> float:
+    def get_rhythm_intensity_adjustment(self, section_id: str) -> float:
         """Get rhythm intensity adjustment based on lead activity (Rule 1).
 
         Implements inverse density rule: When lead rests, rhythm should fill.
@@ -70,7 +70,6 @@ class EngineCoordinator:
 
         Args:
             section_id: Section identifier.
-            lead_rest_threshold: Rest ratio threshold (default 0.2 = 20%).
 
         Returns:
             float: Intensity multiplier for rhythm (0.7 = reduce 30%, 1.3 = boost 30%).

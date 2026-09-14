@@ -13,14 +13,14 @@ and have the metadata inferred automatically.
 
 Metadata extraction
 -------------------
-- **Genre** — matched from path components against ~60 genre keywords
+- **Genre**: matched from path components against ~60 genre keywords
   (rock, jazz, funk, metal, etc.) plus SD2 kit names and GM MIDI Pack folders.
-- **Region** — world music regions (africa, asia, caribbean, etc.).
-- **BPM** — extracted from path/filename patterns like ``120bpm``, ``bpm120``,
+- **Region**: world music regions (africa, asia, caribbean, etc.).
+- **BPM**: extracted from path/filename patterns like ``120bpm``, ``bpm120``,
   or bare 3-digit prefixes.
-- **Time signature** — patterns like ``3/4``, ``6/8``, ``3-4``.
-- **Feel** — straight, shuffle, swing, triplet, half_time, etc.
-- **Function** — fill, intro, ending, groove, loop, verse, chorus, etc.
+- **Time signature**: patterns like ``3/4``, ``6/8``, ``3-4``.
+- **Feel**: straight, shuffle, swing, triplet, half_time, etc.
+- **Function**: fill, intro, ending, groove, loop, verse, chorus, etc.
 
 Usage
 -----

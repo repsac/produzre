@@ -189,7 +189,7 @@ def export_all(
     timelines_by_name = {name: timelines[name] for name in instruments_used}
 
     # Filter out planning-only engines (e.g., harmony produces no musical
-    # MIDI events — it only contributes a chord plan for other engines).
+    # MIDI events: it only contributes a chord plan for other engines).
     # These are identified by having "planning" in their engine roles.
     planning_only = set()
     for name in instruments_used:

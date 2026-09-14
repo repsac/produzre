@@ -26,6 +26,7 @@ from ..timeline import InstrumentTimeline
 from .midi import (
     PPQ,
     add_tempo_and_name,
+    add_song_meter_changes,
     program_for_instrument,
     write_timeline_to_track,
 )
@@ -118,6 +119,7 @@ def write_full_song_midi(
 
         write_timeline_to_track(track, tl)
 
+    add_song_meter_changes(conductor, cfg)
     mid.save(out_path)
     if logger is not None:
         try:
@@ -198,6 +200,7 @@ def write_instrument_stems(
             )
 
         write_timeline_to_track(track, tl)
+        add_song_meter_changes(track, cfg)
         mid.save(out_path)
         out[inst] = out_path
 

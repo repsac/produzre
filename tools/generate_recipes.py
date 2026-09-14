@@ -3,9 +3,9 @@
 
 Reads a ``genre_stats.json`` file produced by :mod:`batch_analyze` and generates:
 
-1. **Bass recipe YAML files** — one per genre with sufficient data
-2. **Drum tuning recommendations** — suggested ghost/fill/swing values per genre
-3. **Rhythm guitar tuning recommendations** — voicing, density, palm-mute per genre
+1. **Bass recipe YAML files**: one per genre with sufficient data
+2. **Drum tuning recommendations**: suggested ghost/fill/swing values per genre
+3. **Rhythm guitar tuning recommendations**: voicing, density, palm-mute per genre
 
 The generated recipes are written to the Produzre recipes directory
 (``produzre/resources/recipes/bass/`` by default).  A JSON tuning report is also

@@ -50,6 +50,7 @@ def build_themed_guide(
     total_beats: Optional[float] = None,
     transform_name: str = "quote",
     transform_params: Optional[dict] = None,
+    realized_notes: Optional[Sequence[RealizedNote]] = None,
 ) -> MelodyGuide:
     """Return a MelodyGuide whose targets are the realized theme notes.
 
@@ -61,7 +62,7 @@ def build_themed_guide(
     """
     section_id = str(getattr(chord_slots, "section_id", "") or "")
     slots = getattr(chord_slots, "chord_slots", chord_slots)
-    notes = realize_for_section(
+    notes = realized_notes if realized_notes is not None else realize_for_section(
         theme, transform_name, transform_params, slots,
         key=key, mode=mode, genre=genre, total_beats=total_beats,
     )

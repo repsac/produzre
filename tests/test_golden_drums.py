@@ -28,7 +28,6 @@ import argparse
 import difflib
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -70,73 +69,31 @@ def build_and_extract_tsv(yaml_file: str, instrument: str) -> Optional[str]:
         print(f"ERROR: YAML file not found: {yaml_path}")
         return None
 
-    # Build with temporary export directory
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Run build (assuming produzre is installed or in PYTHONPATH)
-        cmd = [
-            sys.executable,
-            "-m",
-            "produzre.cli",
-            "build",
-            str(yaml_path),
-        ]
+    cmd = [sys.executable, "-m", "produzre.cli", "build", str(yaml_path)]
+    try:
+        result = subprocess.run(cmd, cwd=repo_root, capture_output=True,
+                                text=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        print(f"ERROR: Build timed out for {yaml_file}")
+        return None
+    if result.returncode != 0:
+        print(f"ERROR: Build failed for {yaml_file}\n{result.stdout}\n{result.stderr}")
+        return None
 
-        try:
-            result = subprocess.run(
-                cmd,
-                cwd=repo_root,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            if result.returncode != 0:
-                print(f"ERROR: Build failed for {yaml_file}")
-                print(f"STDOUT:\n{result.stdout}")
-                print(f"STDERR:\n{result.stderr}")
-                return None
-
-            # Find the TSV file in exports
-            # Pattern: exports/<song>_<timestamp>/analysis/<instrument>/<song>_<instrument>.events.tsv
-            exports_dir = repo_root / "exports"
-            if not exports_dir.exists():
-                print(f"ERROR: Exports directory not found: {exports_dir}")
-                return None
-
-            # Find the most recent export directory
-            export_dirs = sorted(
-                [d for d in exports_dir.iterdir() if d.is_dir()],
-                key=lambda d: d.stat().st_mtime,
-                reverse=True,
-            )
-
-            if not export_dirs:
-                print(f"ERROR: No export directories found in {exports_dir}")
-                return None
-
-            latest_export = export_dirs[0]
-            tsv_path = latest_export / "analysis" / instrument / f"*_{instrument}.events.tsv"
-
-            # Use glob to find the TSV file
-            import glob
-            tsv_files = list(glob.glob(str(tsv_path)))
-
-            if not tsv_files:
-                print(f"ERROR: TSV file not found: {tsv_path}")
-                print(f"  Searched in: {latest_export / 'analysis' / instrument}")
-                return None
-
-            tsv_file = Path(tsv_files[0])
-            return tsv_file.read_text(encoding="utf-8")
-
-        except subprocess.TimeoutExpired:
-            print(f"ERROR: Build timed out for {yaml_file}")
-            return None
-        except Exception as e:
-            print(f"ERROR: Exception during build: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+    # Use this build's output path, even if another build finishes concurrently.
+    roots = [line.split("Export root:", 1)[1].strip()
+             for line in result.stderr.splitlines() if "Export root:" in line]
+    if len(roots) != 1:
+        print(f"ERROR: Expected one export root for {yaml_file}, got {roots}")
+        return None
+    export_root = Path(roots[0])
+    if not export_root.is_absolute():
+        export_root = repo_root / export_root
+    tsv_files = sorted((export_root / "analysis" / instrument).glob(f"*_{instrument}.events.tsv"))
+    if len(tsv_files) != 1:
+        print(f"ERROR: Expected one TSV for {instrument} in {export_root}")
+        return None
+    return tsv_files[0].read_text(encoding="utf-8")
 
 
 def compare_tsv(expected: str, actual: str, test_name: str) -> bool:
@@ -214,8 +171,8 @@ def run_test(yaml_file: str, instrument: str) -> bool:
 
     golden_path = get_golden_path(yaml_file, instrument)
     if not golden_path.exists():
-        print(f"SKIP (no golden file at {golden_path})")
-        return True  # Don't fail if golden doesn't exist yet
+        print(f"FAIL (no golden file at {golden_path})")
+        return False
 
     expected = golden_path.read_text(encoding="utf-8")
     actual = build_and_extract_tsv(yaml_file, instrument)

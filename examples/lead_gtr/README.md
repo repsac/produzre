@@ -1,123 +1,44 @@
-# Lead Guitar Examples
+# Lead guitar examples
 
-This directory contains examples demonstrating lead guitar capabilities and parameters.
+These songs isolate phrasing choices, then place the lead in blues, rock,
+and jazz arrangements.
 
-## Directory Structure
-
-```
-lead_gtr/
-├── basics/           # Fundamental parameter comparisons
-├── styles/           # Genre-specific examples
-└── advanced/         # Complex parameter interactions
-```
-
-## Examples by Category
-
-### Basics (Parameter Isolation)
-
-**density-comparison.yaml**
-- **Purpose**: Compare sparse, moderate, and dense lead guitar approaches
-- **Parameters tested**: `rest_probability`, `intensity`
-- **Expected behavior**:
-  - Sparse: ~1-2 notes/bar
-  - Moderate: ~3-5 notes/bar
-  - Dense: ~5-8 notes/bar
-
-**resolution-comparison.yaml**
-- **Purpose**: Demonstrate harmonic resolution strength effects
-- **Parameters tested**: `resolution_strength` (0.2, 0.5, 0.8)
-- **Expected behavior**:
-  - Low: More passing tones and tension
-  - Medium: Balanced chord tones and color notes
-  - High: Strong chord tone emphasis
-
-### Styles (Genre-Specific)
-
-**blues-lead.yaml**
-- 12-bar blues progression, stepwise motion, 4-bar phrases
-- Sparse verse → denser solo section
-
-**rock-solo.yaml**
-- High energy, wide intervals, leaping motion
-- Build from verse to 16-bar guitar solo
-
-**jazz-lead.yaml**
-- ii-V-I progressions, stepwise voice leading, 4-bar phrases
-- Head → Solo → Head (standard jazz form)
-
-### Advanced (Complex Behaviors)
-
-**contour-comparison.yaml**
-- **Parameters tested**: `contour_style` (stepwise, balanced, leaping)
-- Stepwise: 1-3 semitone intervals; Leaping: 5+ semitone jumps
-
-**phrase-length-comparison.yaml**
-- **Parameters tested**: `phrase_len_bars` (1, 2, 4)
-- 1-bar: riff-like repetition; 4-bar: longer melodic development
-
-## Key Lead Guitar Parameters
-
-### Density & Activity
-- **intensity** (0.0-1.0+): Overall energy and note density
-- **rest_probability** (0.0-0.85): Amount of space between notes
-  - 0.05-0.15: Very dense (solo)
-  - 0.20-0.30: Moderate (melodic lead)
-  - 0.40-0.50: Sparse (verse backing)
-- **solo** (boolean): Enable solo mode (higher density, wider range)
-
-### Melodic Shape
-- **contour_style**: Melodic interval behavior
-  - `"stepwise"`: Smooth, conjunct motion (2-3 semitones)
-  - `"balanced"`: Mix of steps and leaps (default)
-  - `"leaping"`: Wide intervals (7-9 semitones)
-- **phrase_len_bars** (1-4): Length of repeated motifs
-  - Later phrases develop the opening motif with related contour/rhythm changes
-  - Final phrases bias the last note back toward resolution
-
-### Harmonic Behavior
-- **resolution_strength** (0.0-1.0): Pull toward chord tones
-  - 0.2-0.3: More passing tones, "outside" playing
-  - 0.5-0.6: Balanced approach
-  - 0.7-0.8: Strong chord tone emphasis
-
-### Other Parameters
-- **motif_strength** (0.0-1.0): How strongly motifs repeat/develop
-- **approach_tones**: `"diatonic"` or `"chromatic"`
-- **syncopation** (0.0-1.0): Off-beat emphasis
-- **leap_probability** (0.0-1.0): Frequency of large interval jumps
-- **leap_min_semitones** (int): Minimum interval size for leaps
-
-## Personas
-
-5 lead guitar personas are available (defined in `produzre/resources/personas/lead_gtr.yml`):
-
-| Persona | Character | Best For |
-|---------|-----------|----------|
-| **balanced** (default) | Moderate phrasing, smooth contour | General purpose |
-| **melodic** | Long phrases, stepwise, strong resolution | Ballads, pop |
-| **shredder** | Fast runs, wide leaps, minimal rests | Metal, hard rock |
-| **bluesy** | Spacious phrasing, breathing room | Blues, classic rock |
-| **ambient** | Sparse, long phrases, wide intervals | Post-rock, ambient |
-
-## Building Examples
+- [advanced/contour-comparison.yaml](advanced/contour-comparison.yaml): compare `contour_style: stepwise`, `balanced`, and `leaping` at intensity 0.7 and rest probability 0.2.
+- [advanced/phrase-length-comparison.yaml](advanced/phrase-length-comparison.yaml): compare `phrase_len_bars` 1, 2, and 4 across eight-bar sections.
+- [basics/density-comparison.yaml](basics/density-comparison.yaml): compare `rest_probability` 0.5, 0.25, and 0.1 as lead intensity rises from 0.5 to 0.9.
+- [basics/resolution-comparison.yaml](basics/resolution-comparison.yaml): compare `resolution_strength` 0.2, 0.5, and 0.8 with the same contour and rest settings.
+- [styles/blues-lead.yaml](styles/blues-lead.yaml): hear a 12-bar E blues move from stepwise verse phrases to a balanced solo, with rests dropping from 0.35 to 0.2.
+- [styles/jazz-lead.yaml](styles/jazz-lead.yaml): hear an F major head return after a solo; the solo lowers `rest_probability` from 0.3 to 0.15.
+- [styles/rock-solo.yaml](styles/rock-solo.yaml): hear a D minor verse and chorus lead into a leaping solo with `rest_probability: 0.05` and four-bar phrases.
 
 ```bash
-# Build a specific example
-python -m produzre.cli build examples/lead_gtr/basics/density-comparison.yaml
-
-# Build all lead guitar examples
-for f in examples/lead_gtr/**/*.yaml; do
-  python -m produzre.cli build "$f"
-done
+python produzre_entry.py build examples/lead_gtr/basics/density-comparison.yaml
 ```
 
-## Analysis Targets
+## What to listen for
 
-When analyzing output, look for:
+The density comparison changes `rest_probability` and intensity. Count gaps
+as well as notes. Planning can reserve only part of a section for lead, so
+listen for how the lead uses its available space.
 
-1. **Note density**: Count notes per bar in each section
-2. **Interval sizes**: Semitone distances between consecutive notes
-3. **Chord tone percentage**: Ratio of chord tones to passing tones
-4. **Phrase structure**: Motif repetition and variation
-5. **Melodic range**: Highest minus lowest pitch in each section
-6. **Rest distribution**: Gaps between notes and phrases
+The resolution comparison changes `resolution_strength`. Higher values favor
+chord tones and stronger phrase endings. The contour comparison changes
+`contour_style`: stepwise, balanced, or leaping. Registers and chord targets
+still limit the available intervals.
+
+The phrase-length comparison changes `phrase_len_bars`. Later phrases develop
+the opening motif; a short cycle produces more frequent returns. The style
+examples change genre vocabulary and arrangement, including featured solos.
+
+## Themes and phrasing
+
+Use [themes_demo.yaml](../themes_demo.yaml) to hear an authored hook across
+sections; see [theme controls](../../docs/llm-song-config-reference.md#themes) for quotation settings.
+
+For more space, raise `rest_probability`. For a featured part, set direct
+`solo: true` or `role: lead` and choose an appropriate register. The personas
+are balanced, melodic, shredder, bluesy, and ambient.
+
+The [lead reference](../../docs/llm-song-config-reference.md#lead-guitar-controls)
+lists defaults and ranges for contour, rests, resolution, phrase length,
+and intensity.

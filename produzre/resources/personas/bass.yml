@@ -7,12 +7,10 @@ personas:
       # Conservative defaults: minimal humanization, locked to groove
       timing_jitter_ms: 0.0
       velocity_humanize: 0.0
-      swing: 0.0
       push_pull: 0.0
 
       # Note generation
       density: 0.7            # How many notes per bar (0.0-1.0)
-      syncopation: 0.0        # Off-beat emphasis
       rest_rate: 0.0          # Probability of rests/gaps
 
       # Pitch/register
@@ -41,7 +39,7 @@ personas:
       # Rhythm (Phase B3)
       rhythm_pattern: anchor  # anchor | push | drive | syncopated
       lock_to_kick: 0.8       # How much to lock bass rhythm to kick drum (0.0-1.0)
-      lock_to_snare: 0.3      # Lock to snare backbeat
+      lock_to_snare: 0.0      # Keep the tight persona focused on the kick
       lock_to_hat: 0.0        # Lock to hi-hat/ride pattern
 
       # Fills & Transitions (Phase B9)
@@ -59,11 +57,9 @@ personas:
       # Pocket: slightly behind the beat, warm and solid
       timing_jitter_ms: 2.0
       velocity_humanize: 0.08
-      swing: 0.0
       push_pull: -0.05        # Slightly behind the beat (negative = laid back)
 
       density: 0.65
-      syncopation: 0.15
       rest_rate: 0.1
 
       register_low: 28
@@ -107,11 +103,9 @@ personas:
       # Loose: more timing variation, swung feel, more gaps
       timing_jitter_ms: 8.0
       velocity_humanize: 0.20
-      swing: 0.25
       push_pull: 0.10         # Can push or pull around the beat
 
       density: 0.50
-      syncopation: 0.30
       rest_rate: 0.25
 
       register_low: 28
@@ -155,11 +149,9 @@ personas:
       # Funk: syncopated, percussive, slap technique
       timing_jitter_ms: 5.0
       velocity_humanize: 0.18
-      swing: 0.15
       push_pull: 0.08
 
       density: 0.85           # Busy, many notes
-      syncopation: 0.60       # Heavy syncopation
       rest_rate: 0.15         # Gaps create funk pocket
 
       register_low: 28
@@ -203,11 +195,9 @@ personas:
       # Metal: tight, fast, picked, aggressive
       timing_jitter_ms: 1.0
       velocity_humanize: 0.05
-      swing: 0.0
       push_pull: 0.0
 
       density: 0.95           # Dense, rapid notes
-      syncopation: 0.40
       rest_rate: 0.05         # Few rests, relentless
 
       register_low: 24        # Lower register (C1)
@@ -251,11 +241,9 @@ personas:
       # Walking: quarter notes, chord tones, smooth voice leading
       timing_jitter_ms: 3.0
       velocity_humanize: 0.12
-      swing: 0.30             # Classic jazz swing
       push_pull: 0.05
 
       density: 1.0            # Steady quarter note pulse
-      syncopation: 0.10       # Mostly on-beat
       rest_rate: 0.0          # Continuous walking
 
       register_low: 28
@@ -299,11 +287,9 @@ personas:
       # Dub: sparse, deep, heavily effects-laden, behind the beat
       timing_jitter_ms: 12.0   # Loose, human feel
       velocity_humanize: 0.25
-      swing: 0.10
       push_pull: -0.15        # Way behind the beat
 
       density: 0.35           # Very sparse
-      syncopation: 0.20
       rest_rate: 0.40         # Many gaps for echo/delay
 
       register_low: 24        # Very low register (C1)

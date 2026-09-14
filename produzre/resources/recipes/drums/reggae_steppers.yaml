@@ -1,4 +1,4 @@
-# Reggae steppers drum recipe — hand-authored 2026-06-10.
+# Reggae steppers drum recipe: hand-authored 2026-06-10.
 # Preserves the four-on-the-floor kick that the trainer originally mined for
 # reggae (correct for steppers, wrong for one drop). Selected over
 # reggae_straight at driving tempos via bpm_range; can also be requested
@@ -30,7 +30,7 @@ groove:
   crash_phrase_end_rate: 0.05
 
 params:
-  swing: 0.15
+  swing: 0.0
   fill_rate: 0.18
 
 voices:

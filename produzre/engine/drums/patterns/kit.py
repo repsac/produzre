@@ -232,6 +232,8 @@ def events_for_section_from_template(
     hats_open_rate: Optional[float] = None,
     hats_pedal_rate: Optional[float] = None,
     hats_accent_rate: Optional[float] = None,
+    hats_params: Optional[Dict[str, Any]] = None,
+    kick_params: Optional[Dict[str, Any]] = None,
     groove_tom_rate: float = 0.0,
     fill_tom_rate: float = 0.0,
     crash_rate: Optional[float] = None,
@@ -293,6 +295,13 @@ def events_for_section_from_template(
     hat_steps = hat_steps_for_mode(template.hat_mode, steps_per_bar=spb)
     sync_steps = eligible_syncopation_steps(spb)
     dbl_steps = eligible_double_kick_steps(spb)
+    hats_params, kick_params = hats_params or {}, kick_params or {}
+    def selected_steps(params, key, default):
+        value = params.get(key)
+        return tuple(sorted({int(s) for s in (default if value is None else value) if 0 <= int(s) < spb}))
+    hat_steps = selected_steps(hats_params, "pattern_placements", hat_steps)
+    sync_steps = selected_steps(kick_params, "syncopation_placements", sync_steps)
+    dbl_steps = selected_steps(kick_params, "double_kick_placements", dbl_steps)
 
     events: List[DrumEvent] = []
     # Intent rules: track if previous bar ended with an open hat.
@@ -303,7 +312,7 @@ def events_for_section_from_template(
     # matching the half_time section intent in the engine entrypoint.
     backbeats: tuple[int, ...] = tuple(template.snare_backbeat_steps)
     if template.half_time and backbeats:
-        backbeats = (spb // 2,)
+        backbeats = ((spb // 8) * 4,)
 
     # Resolve ghost rate and steps
     effective_ghost_rate = template.ghost_rate if ghost_rate is None else float(ghost_rate)
@@ -389,6 +398,7 @@ def events_for_section_from_template(
             hats_open_rate=hats_open_rate,
             hats_pedal_rate=hats_pedal_rate,
             hats_accent_rate=hats_accent_rate,
+            voice_params=hats_params,
             base_velocity=base_velocity,
             accent_strength=accent_strength,
             rng=rng,

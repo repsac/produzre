@@ -1,4 +1,4 @@
-# Seed & Variation — Instrument Variation
+# Seed & Variation: Instrument Variation
 #
 # Identical to base-song.yaml EXCEPT the drums in the chorus section
 # has variation: 0.8. This adds variation bias ONLY to the drum pattern

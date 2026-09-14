@@ -190,77 +190,6 @@ def apply_build_to_pattern(
     )
 
 
-def apply_downshift_to_pattern(
-    pattern: GtrPattern,
-    downshift_intensity: float,
-    bar_position: float,
-    beats_per_bar: float,
-    rng: Optional[random.Random] = None,
-) -> GtrPattern:
-    """Apply downshift effect to a pattern (reduce density at start).
-
-    Args:
-        pattern: Original pattern
-        downshift_intensity: How much to downshift (0.0-1.0)
-        bar_position: Position within downshift (0.0 = start, 1.0 = normal)
-        beats_per_bar: Beats per bar
-
-    Returns:
-        GtrPattern: Modified pattern with downshift applied
-    """
-    if downshift_intensity <= 0.0 or bar_position >= 1.0:
-        return pattern
-    if rng is None:
-        rng = random.Random()
-
-    # Scale downshift by position (reduces from start to normal)
-    scaled_intensity = downshift_intensity * (1.0 - bar_position)
-
-    # Thin out hits based on downshift intensity
-    if scaled_intensity <= 0.0:
-        return pattern
-
-    # Keep only strong beats at high downshift
-    keep_probability = 1.0 - scaled_intensity
-    hits = []
-    subdivision = pattern.subdivision
-
-    for hit in pattern.hits:
-        # Always keep beat 1
-        if hit == 0:
-            hits.append(hit)
-            continue
-
-        # Keep strong beats (downbeats)
-        beat_pos = hit / subdivision
-        is_downbeat = abs(beat_pos - round(beat_pos)) < 0.1
-
-        if is_downbeat:
-            hits.append(hit)
-        elif rng.random() < keep_probability:
-            hits.append(hit)
-
-    # Reduce accents during downshift
-    accents = [a for a in pattern.accents if a in hits and a == 0]
-
-    # Keep palm mutes only for hits we kept
-    palm_mutes = [pm for pm in pattern.palm_mutes if pm in hits]
-
-    # Recompute strum directions from slot parity (positional list misaligns
-    # after hits were removed).
-    directions = ["down" if (h % subdivision) == 0 else "up" for h in hits]
-
-    return GtrPattern(
-        name=f"{pattern.name}_downshift",
-        subdivision=pattern.subdivision,
-        hits=hits,
-        accents=accents,
-        palm_mutes=palm_mutes,
-        strum_directions=directions,
-        density=pattern.density * (1.0 - scaled_intensity),
-    )
-
-
 def create_turnaround_pattern(
     style: str,
     turnaround_intensity: str,
@@ -274,7 +203,7 @@ def create_turnaround_pattern(
     Contract: the returned pattern's hits are BAR-ABSOLUTE slot indices in the
     pattern's own subdivision (slot = beat_in_bar * subdivision). They must be
     overlaid onto a base pattern with ``merge_patterns`` (which rescales them
-    into the base subdivision) — do NOT shift them by an additional offset.
+    into the base subdivision): do NOT shift them by an additional offset.
 
     Args:
         style: Pattern style (straight_8s, chugs, etc.)
@@ -298,23 +227,11 @@ def create_turnaround_pattern(
 
     subdivision = 4  # Use 16th notes for turnarounds
 
-    if turnaround_intensity == "light":
-        # Light turnaround: hits on beats 3 and 4
-        hits = [
-            int(2 * subdivision),  # Beat 3
-            int(3 * subdivision),  # Beat 4
-        ]
-        accents = hits.copy()
-
-    else:  # "heavy"
-        # Heavy turnaround: rapid hits leading to beat 1 of next bar
-        hits = [
-            int(2 * subdivision),      # Beat 3
-            int(2.5 * subdivision),    # Beat 3.5
-            int(3 * subdivision),      # Beat 4
-            int(3.5 * subdivision),    # Beat 4.5
-        ]
-        accents = [hits[0], hits[-1]]  # Accent first and last
+    start = max(0.0, beats_per_bar - 2.0)
+    step = 1.0 if turnaround_intensity == "light" else 0.5
+    hits = [round((start + i * step) * subdivision)
+            for i in range(4) if start + i * step < beats_per_bar]
+    accents = hits.copy() if turnaround_intensity == "light" else [hits[0], hits[-1]]
 
     # All downstrokes for power
     directions = ["down"] * len(hits)
@@ -382,7 +299,7 @@ def merge_patterns(
 
     Contract: hits in BOTH patterns are bar-absolute slot indices expressed
     in each pattern's OWN subdivision (slot = beat_in_bar * subdivision).
-    Overlay hits are rescaled into the output subdivision — no positional
+    Overlay hits are rescaled into the output subdivision: no positional
     offset is applied (turnaround/pickup hits already encode their bar
     position). The output uses the finer of the two subdivisions so 16th-note
     overlays survive merging into an 8th-note base. All merged slots are
@@ -421,7 +338,7 @@ def merge_patterns(
         | set(_rescale(overlay_pattern.palm_mutes, overlay_sub))
     )
 
-    # Recompute strum directions from slot parity — positional direction lists
+    # Recompute strum directions from slot parity: positional direction lists
     # from either source pattern no longer line up after merging.
     merged_directions = [
         "down" if (h % out_sub) == 0 else "up" for h in merged_hits

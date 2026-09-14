@@ -1,4 +1,4 @@
-# Jazz swing drum recipe — retuned 2026-06-10.
+# Jazz swing drum recipe: retuned 2026-06-10.
 # Ride cymbal timekeeping, sparse kick, brushy ghost notes, swing feel.
 # Intended feel: triplet swing (2:1 long-short). Current engine semantics
 # delay the "&" by 0.25*swing beats, so triplet placement (+0.167 beats)
