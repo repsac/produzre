@@ -79,6 +79,7 @@ def humanize_start(
     swing: float,
     push_pull: float,
     rng: random.Random,
+    swing_16th: Optional[float] = None,
 ) -> float:
     """Return a humanized start time in beats.
 
@@ -101,19 +102,10 @@ def humanize_start(
 
     t = float(start_beat)
 
-    # Push/pull as a small deterministic bias (in ms scaled to beats).
-    # This is intentionally small; genre/persona can increase it.
-    PUSH_PULL_MS = 10.0
-    if push_pull:
-        t += _beats_from_ms(PUSH_PULL_MS * float(push_pull), bpm)
-
-    # Swing: delay the eighth off-beat (beat + 0.5) by up to ~0.25 beats at swing=1.
-    s = float(swing)
-    if s != 0.0:
-        frac = float(beat_in_bar) - float(int(beat_in_bar))
-        # Detect the "&" (0.5) within a tolerance.
-        if abs(frac - 0.5) < 1e-6:
-            t += 0.25 * s
+    from ...groove import swing_offset
+    t += _beats_from_ms(max(-25.0, min(25.0, -100.0 * float(push_pull))), bpm)
+    sixteenth = swing * 0.5 if swing_16th is None else swing_16th
+    t += swing_offset(beat_in_bar, swing, sixteenth)
 
     # Random jitter.
     j_ms = float(timing_jitter_ms)
@@ -159,6 +151,7 @@ def humanize_events(
     rng: random.Random,
     rng_timing: Optional[random.Random] = None,
     rng_velocity: Optional[random.Random] = None,
+    swing_16th: Optional[float] = None,
 ) -> List[Tuple[float, float, int, int, str]]:
     """Humanize a sequence of DrumEvents into timeline-ready note tuples.
 
@@ -205,9 +198,11 @@ def humanize_events(
             bpm=bpm,
             timing_jitter_ms=timing_jitter_ms,
             swing=swing,
+            swing_16th=swing_16th,
             push_pull=push_pull,
             rng=rt_e,
         )
+        start_abs = max(float(section_start_beat), start_abs)
         vel = humanize_velocity(velocity=int(e.velocity), velocity_humanize=velocity_humanize, rng=rv_e)
         out.append((start_abs, dur, pitch, vel, kind))
 

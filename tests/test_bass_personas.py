@@ -37,7 +37,7 @@ def test_bass_personas_loaded():
     assert "timing_jitter_ms: 0.0" in output
     assert "velocity_humanize: 0.0" in output
     assert "density: 0.7" in output
-    assert "syncopation: 0.0" in output
+    assert "rhythm_pattern: anchor" in output
 
 
 def test_persona_selection():

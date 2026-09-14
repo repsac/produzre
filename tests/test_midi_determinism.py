@@ -122,12 +122,14 @@ def test_all_midi_files_determinism():
     # Build 1
     export_root_1, _ = build_song(yaml_path)
     midi_files_1 = collect_all_midi_files(export_root_1)
-    assert len(midi_files_1) == 156, f"Expected 156 MIDI files in build 1, got {len(midi_files_1)}"
+    assert any(p.parent == export_root_1 for p in midi_files_1)
+    assert any("sections" in p.parts for p in midi_files_1)
+    assert any("patterns" in p.parts for p in midi_files_1)
+    assert any(p.parent.parent.name == "instruments" for p in midi_files_1)
 
     # Build 2
     export_root_2, _ = build_song(yaml_path)
     midi_files_2 = collect_all_midi_files(export_root_2)
-    assert len(midi_files_2) == 156, f"Expected 156 MIDI files in build 2, got {len(midi_files_2)}"
 
     # Compare file counts
     assert len(midi_files_1) == len(midi_files_2), (

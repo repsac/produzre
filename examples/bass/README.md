@@ -1,198 +1,121 @@
-# Bass Examples
+# Bass examples
 
-This directory contains comprehensive bass guitar examples organized by technique and feature.
-
-## Directory Structure
-
-```
-bass/
-├── articulation/      - Playing styles (finger, pick, slap, mute)
-├── rhythm/            - Rhythmic patterns (anchor, drive, push, syncopated)
-├── techniques/        - Passing tones and walking bass
-├── grooves/           - Groove techniques (pedal tones, octave jumps, fifth drops)
-├── fills/             - Bass fill variations
-├── slap/              - Slap bass technique demonstrations
-├── advanced/          - Advanced features (solos, motion styles)
-└── baseline/          - Basic starting examples
-```
-
-## Quick Reference
-
-### Articulation (Playing Styles)
-- `style-finger.yaml` - Fingerstyle playing (warm, sustained)
-- `style-pick.yaml` - Picked bass (bright, articulate)
-- `style-slap.yaml` - Slap bass (percussive, funky)
-- `style-mute.yaml` - Palm-muted bass (short, tight)
-
-### Rhythm Patterns
-- `rhythm-anchor.yaml` - Root-focused, steady pattern
-- `rhythm-drive.yaml` - Forward-pushing rhythm
-- `rhythm-push.yaml` - Syncopated push feel
-- `rhythm-syncopated.yaml` - Complex syncopation
-
-### Techniques
-- `passing-none.yaml` - No passing tones (simple roots)
-- `passing-diatonic.yaml` - Scale-based passing tones
-- `passing-chromatic.yaml` - Chromatic approaches
-- `passing-walking.yaml` - Continuous walking bass
-- `walking-blues.yaml` - Blues walking bass
-- `walking-jazz.yaml` - Jazz walking bass
-- `walking-vs-pocket.yaml` - Walking vs. pocket groove comparison
-
-### Grooves
-- `groove-pedal-tones.yaml` - Sustained root notes
-- `groove-octave-jumps.yaml` - Octave variation
-- `groove-fifth-drops.yaml` - Fifth interval movement
-- `groove-combined.yaml` - Multiple groove techniques
-
-### Fills
-- `fills-minimal.yaml` - Simple, sparse fills
-- `fills-pocket.yaml` - Groove-focused fills
-- `fills-funk.yaml` - Funky, active fills
-
-### Slap Technique
-- `slap-vs-finger.yaml` - Slap vs. finger comparison
-- `slap-conservative.yaml` - Subtle slap technique
-- `slap-funk.yaml` - Aggressive funk slapping
-
-### Advanced
-- `solo-pocket.yaml` - Pocket-style bass solo
-- `solo-funk.yaml` - Funk bass solo
-- `solo-comparison.yaml` - Solo style comparison
-- `motion-style-demo.yaml` - Voice leading motion styles (stepwise, leaping, mixed)
-
-### Baseline
-- `baseline-demo.yaml` - Basic bass demonstration
-- `chord-changes-demo.yaml` - Following chord changes
-- `chord-changes-minor.yaml` - Minor key chord following
-- `negotiation-baseline.yaml` - Cross-instrument negotiation
-
-## Key Parameters
-
-### articulation_style
-- `finger` - Warm, sustained notes
-- `pick` - Bright, attack-heavy
-- `slap` - Percussive, short
-- `mute` - Very short, tight
-
-### rhythm_pattern
-- `anchor` - Steady, root-focused
-- `drive` - Forward-pushing
-- `push` - Syncopated feel
-- `syncopated` - Complex rhythms
-
-### motion_style (Phase 4.2)
-- `stepwise` - Smooth voice leading (small intervals)
-- `leaping` - Angular jumps (large intervals)
-- `mixed` - Random combination
-
-### Other Important Parameters
-- `density` (0.0-1.0) - How many notes to play
-- `lock_to_kick` (0.0-1.0) - How closely to follow kick drum
-- `passing_tone_rate` (0.0-1.0) - Frequency of passing tones
-- `fill_rate` (0.0-1.0) - Frequency of fills
-
-## Learning Path
-
-### Beginner
-1. Start with `baseline/baseline-demo.yaml`
-2. Try different articulation styles in `articulation/`
-3. Explore rhythm patterns in `rhythm/`
-
-### Intermediate
-1. Learn passing tones in `techniques/`
-2. Practice fills in `fills/`
-3. Experiment with grooves in `grooves/`
-
-### Advanced
-1. Master slap technique in `slap/`
-2. Study solos in `advanced/`
-3. Explore motion styles and voice leading
-
-## Building Examples
+Start with [baseline/baseline-demo.yaml](baseline/baseline-demo.yaml). Then
+compare the articulation files with the same sound patch. Finger, pick, slap,
+and mute alter note length, velocity, and note choices.
 
 ```bash
-# Build all examples in a category
-python3 -m produzre.cli build examples/bass/articulation/*.yaml
-
-# Build specific example
-python3 -m produzre.cli build examples/bass/advanced/motion-style-demo.yaml
-
-# Build all bass examples
-for dir in articulation rhythm techniques grooves fills slap advanced baseline; do
-  for f in examples/bass/$dir/*.yaml; do
-    python3 -m produzre.cli build "$f"
-  done
-done
+python produzre_entry.py build examples/bass/baseline/baseline-demo.yaml
 ```
 
-## Tips and Best Practices
+## Find a comparison
 
-### Choosing Articulation
-- **Finger** - Jazz, blues, soul, classic rock
-- **Pick** - Punk, metal, hard rock, country
-- **Slap** - Funk, fusion, modern R&B
-- **Mute** - Reggae, ska, some funk
+| Folder | Listen for |
+|---|---|
+| `articulation` | Finger, pick, slap, and muted note lengths. |
+| `rhythm` | Anchor, push, drive, and syncopated attack patterns. |
+| `techniques` | Diatonic/chromatic approaches and walking lines. |
+| `grooves` | Pedal tones, octave jumps, fifth drops, and combinations. |
+| `fills` | Sparse, pocket, and funk fills. |
+| `slap` | Thumb, pop, and ghost activity. |
+| `advanced` | Featured bass, motion styles, and register changes. |
+| `baseline` | Chord changes, minor harmony, and coordination. |
 
-### Rhythm Pattern Selection
-- **Anchor** - Simple songs, ballads, straightforward grooves
-- **Drive** - Energetic rock, punk, driving songs
-- **Push** - Funk, R&B, syncopated styles
-- **Syncopated** - Jazz, fusion, complex arrangements
+### Baseline
 
-### Passing Tones
-- Start with `passing_tone_rate: 0.2` for subtle movement
-- Increase to 0.4-0.5 for jazz walking bass
-- Use `motion_style: stepwise` for smooth walking lines
-- Combine with high `density` (0.85-0.95) for continuous lines
+- [baseline/baseline-demo.yaml](baseline/baseline-demo.yaml): compare verse intensity 0.7 with chorus intensity 0.85 over two E dorian progressions.
+- [baseline/chord-changes-demo.yaml](baseline/chord-changes-demo.yaml): follow the tight bass through `I IV V I` in C major at 100 BPM.
+- [baseline/chord-changes-minor.yaml](baseline/chord-changes-minor.yaml): follow the same persona through `i VI iv V` in A minor at 100 BPM.
+- [baseline/negotiation-baseline.yaml](baseline/negotiation-baseline.yaml): hear bass alone at intensity 1.0 and `density: 0.8`; there are no drums to trigger its kick locking.
+
+### Articulation
+
+- [articulation/style-finger.yaml](articulation/style-finger.yaml): hear `articulation_style: finger` with the pocket persona and `density: 0.8`.
+- [articulation/style-mute.yaml](articulation/style-mute.yaml): hear `articulation_style: mute` with the tight persona and `rest_rate: 0.2`.
+- [articulation/style-pick.yaml](articulation/style-pick.yaml): hear `articulation_style: pick` with the metal persona and `density: 0.9`.
+- [articulation/style-slap.yaml](articulation/style-slap.yaml): hear `articulation_style: slap` with the funk persona and syncopated attacks.
+
+### Rhythm
+
+- [rhythm/rhythm-anchor.yaml](rhythm/rhythm-anchor.yaml): hear `rhythm_pattern: anchor` at density 1.0 with no added rests.
+- [rhythm/rhythm-drive.yaml](rhythm/rhythm-drive.yaml): hear `rhythm_pattern: drive` at density 0.7 with the metal persona.
+- [rhythm/rhythm-push.yaml](rhythm/rhythm-push.yaml): hear `rhythm_pattern: push` at density 0.8 with the tight persona.
+- [rhythm/rhythm-syncopated.yaml](rhythm/rhythm-syncopated.yaml): hear `rhythm_pattern: syncopated` at density 0.6 with the funk persona.
+
+### Techniques
+
+- [techniques/passing-chromatic.yaml](techniques/passing-chromatic.yaml): hear chromatic approaches with `approach_rate: 0.8`, `chromatic_rate: 0.4`, and up to three passing notes per bar.
+- [techniques/passing-diatonic.yaml](techniques/passing-diatonic.yaml): hear diatonic approaches with `approach_rate: 0.8` and `chromatic_rate: 0`, compared with both at 0 in `passing-none`.
+- [techniques/passing-none.yaml](techniques/passing-none.yaml): hear the pocket foundation with `approach_rate: 0`, `chromatic_rate: 0`, and no passing notes.
+- [techniques/passing-walking.yaml](techniques/passing-walking.yaml): hear the walking persona at density 0.95 with up to four passing notes per bar.
+- [techniques/walking-blues.yaml](techniques/walking-blues.yaml): hear a continuous walking line over eight bars of `I I I I IV IV I I` at 120 BPM.
+- [techniques/walking-jazz.yaml](techniques/walking-jazz.yaml): hear a continuous walking line over `I vi ii V` at 140 BPM, with `approach_rate: 0.4`.
+- [techniques/walking-vs-pocket.yaml](techniques/walking-vs-pocket.yaml): compare the jazz walking file with pocket bass at density 0.65 and `approach_rate: 0.1`; the progression and tempo match.
+
+### Grooves
+
+- [grooves/groove-combined.yaml](grooves/groove-combined.yaml): combine octave and fifth jumps at 0.3 each with `pedal_rate: 0.2`.
+- [grooves/groove-fifth-drops.yaml](grooves/groove-fifth-drops.yaml): hear picked drive with `fifth_jump_rate: 0.7` and `octave_jump_rate: 0.1`.
+- [grooves/groove-octave-jumps.yaml](grooves/groove-octave-jumps.yaml): hear slap octave movement with `octave_jump_rate: 0.6` and `fifth_jump_rate: 0.1`.
+- [grooves/groove-pedal-tones.yaml](grooves/groove-pedal-tones.yaml): hear the dub persona hold a foundation with `pedal_rate: 0.8` and `rest_rate: 0.3`.
 
 ### Fills
-- Use `fill_rate: 0.2-0.3` for occasional fills
-- Increase for more active bass lines
-- Combine with appropriate articulation for style
 
-## Combining Features
+- [fills/fills-funk.yaml](fills/fills-funk.yaml): hear busy slap fills with `fill_rate: 0.6` and `fill_complexity: 0.8`.
+- [fills/fills-minimal.yaml](fills/fills-minimal.yaml): hear sparse fingerstyle fills with `fill_rate: 0.1` and `fill_complexity: 0.3`.
+- [fills/fills-pocket.yaml](fills/fills-pocket.yaml): hear a middle ground with `fill_rate: 0.4` and `fill_complexity: 0.5`.
 
-Bass parameters work together - here's an effective combination for different styles:
+### Slap
 
-**Funk Bass:**
+- [slap/slap-conservative.yaml](slap/slap-conservative.yaml): hear restrained slap with `slap_pop_rate: 0.3` and `ghost_perc_rate: 0.1`.
+- [slap/slap-funk.yaml](slap/slap-funk.yaml): hear more pops and ghosts at `slap_pop_rate: 0.7` and `ghost_perc_rate: 0.25`.
+- [slap/slap-vs-finger.yaml](slap/slap-vs-finger.yaml): hear the fingerstyle counterpart to conservative slap with the same anchor pattern, density 0.7, and rest rate 0.1.
+
+### Advanced
+
+- [advanced/motion-style-demo.yaml](advanced/motion-style-demo.yaml): compare `motion_style: stepwise`, `leaping`, and `mixed` across a full band arrangement; articulation and density change too.
+- [advanced/solo-comparison.yaml](advanced/solo-comparison.yaml): hear the same bass settings move from verse to `solo: true` and back over the same progression.
+- [advanced/solo-funk.yaml](advanced/solo-funk.yaml): hear a slap bass feature with `role: lead`, syncopated attacks, and `chromatic_rate: 0.3`.
+- [advanced/solo-pocket.yaml](advanced/solo-pocket.yaml): hear fingerstyle accompaniment become a solo over `I vi ii V`, then return to the verse.
+
+The articulation, rhythm, fill, and groove files also change seeds or other
+settings; use their listed values to choose a starting point for your own comparison.
+
+## Controls to try
+
+Use `rhythm_pattern` for the onset vocabulary and `density` for activity.
+`rest_rate` removes notes. `motion_style` selects stepwise, leaping, or mixed
+pitch movement. `approach_rate` and `chromatic_rate` control approaches into
+chord changes.
+
+See [bass controls](../../docs/llm-song-config-reference.md#bass-controls)
+for drum locking and the alternate kick-led renderer.
+
+Try [themes_demo.yaml](../themes_demo.yaml) to hear bass quote a theme;
+the [theme controls](../../docs/llm-song-config-reference.md#themes) explain coupling.
+
+For walking bass, start from the walking persona and a jazz recipe. For funk,
+try slap articulation, a syncopated pattern, and moderate kick locking. For
+metal, try picked articulation and a drive pattern. Full defaults, ranges,
+and fill controls are in the [bass reference](../../docs/llm-song-config-reference.md#bass-controls).
+
 ```yaml
+# Inside an instruments block:
 bass:
   params:
+    articulation_style: slap
+    rhythm_pattern: syncopated
     density: 0.9
-    rhythm_pattern: "syncopated"
-    articulation_style: "slap"
     lock_to_kick: 0.7
 ```
 
-**Jazz Walking:**
-```yaml
-bass:
-  params:
-    density: 0.95
-    rhythm_pattern: "anchor"
-    articulation_style: "finger"
-    motion_style: "stepwise"
-    passing_tone_rate: 0.5
+To build a comparison group:
+
+```bash
+for file in examples/bass/articulation/*.yaml; do
+  python produzre_entry.py build "$file"
+done
 ```
 
-**Metal Bass:**
-```yaml
-bass:
-  params:
-    density: 0.9
-    rhythm_pattern: "drive"
-    articulation_style: "pick"
-    lock_to_kick: 0.95
-```
-
-**Blues Bass:**
-```yaml
-bass:
-  params:
-    density: 0.8
-    rhythm_pattern: "anchor"
-    articulation_style: "finger"
-    motion_style: "stepwise"
-    passing_tone_rate: 0.3
-```
+The event TSV records each note's `kind`, including approach, fill, cadence,
+and theme quotation. Use it with the piano roll to check what a control changed.

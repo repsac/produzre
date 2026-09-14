@@ -23,7 +23,7 @@ class RoleClassification:
     track_name: str
     channel: int
     role: str  # "drums", "bass", "rhythm", "lead", "other"
-    confidence: float  # 0.0–1.0
+    confidence: float  # 0.0-1.0
     rationale: str
     event_count: int
     pitch_range: Tuple[int, int]  # (min, max)
@@ -120,7 +120,7 @@ def _classify_track_channel(
             confidence += 0.1
             rationale_parts.append("monophonic")
 
-    # Lead: melodic range (60–84), monophonic, moderate to high density
+    # Lead: melodic range (60-84), monophonic, moderate to high density
     elif 60 <= avg_pitch <= 84 and polyphony_score < 0.4:
         role = "lead"
         confidence = 0.7

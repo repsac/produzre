@@ -10,13 +10,11 @@ tags:
   bpm_range: [80, 160]
 
 params:
-  style: straight_8s
+  style: country_boom_chuck
   density: 0.55
   palm_mute: 0.15
   voicing: triad
   strum_style: balanced
   accent_strength: 0.4
-  groove: tight
-  swing: 0.0
   chuck_rate: 0.0
   use_patterns: true

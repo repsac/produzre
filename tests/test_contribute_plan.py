@@ -338,6 +338,56 @@ def test_mixed_engines_with_and_without_contribute_plan():
     assert not plan.has("engine3.data")
 
 
+def test_all_planning_hooks_finish_before_first_render():
+    """An early-priority render can consume intent from a later planner."""
+    import logging
+
+    calls = []
+
+    def early_plan(**kwargs):
+        calls.append("early_plan")
+        kwargs["plan"].set("early.intent", True)
+
+    def late_plan(**kwargs):
+        calls.append("late_plan")
+        kwargs["plan"].set("late.intent", True)
+
+    def early_render(**kwargs):
+        calls.append("early_render")
+        assert kwargs["plan"].get("late.intent") is True
+
+    def late_render(**kwargs):
+        calls.append("late_render")
+
+    early = Engine(
+        name="early", module_path=".engine.early", priority=1, channel=0,
+        program=None, render=early_render, contribute_plan=early_plan,
+        enabled=True, requires=[], provides=["early.intent"], roles=[],
+    )
+    late = Engine(
+        name="late", module_path=".engine.late", priority=9, channel=1,
+        program=None, render=late_render, contribute_plan=late_plan,
+        enabled=True, requires=[], provides=["late.intent"], roles=[],
+    )
+    cfg = create_mock_config({"early": early, "late": late})
+    sec = create_mock_section(["early", "late"])
+
+    render_section_instruments(
+        cfg=cfg,
+        sec=sec,
+        hplan=None,
+        rgrid=None,
+        section_start_beat=0.0,
+        section_rng=MockRNG(),
+        timelines={},
+        performance_plan=create_mock_performance_plan(),
+        transition_context=None,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert calls == ["early_plan", "late_plan", "early_render", "late_render"]
+
+
 if __name__ == "__main__":
     # Run all tests
     test_engine_without_contribute_plan_works()

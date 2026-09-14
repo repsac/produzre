@@ -116,8 +116,16 @@ def resolve_legacy_guitar_params(
         Validated parameter object with all defaults applied
     """
     # Resolve section-level rhythm guitar config from the instrument_cfg
-    raw_intensity = instrument_cfg.intensity if instrument_cfg is not None else 1.0
-    style_bias = getattr(instrument_cfg, "style_bias", 0.0) if instrument_cfg is not None else 0.0
+    raw_intensity = getattr(instrument_cfg, "intensity", None) if instrument_cfg is not None else None
+    if raw_intensity is None:
+        # Macro-dynamics: fall back to the section's resolved intensity
+        # (orchestrate.plan.resolve_section_intensity) before the default.
+        raw_intensity = getattr(section, "intensity", None)
+    if raw_intensity is None:
+        raw_intensity = 1.0
+    style_bias = getattr(instrument_cfg, "style_bias", None) if instrument_cfg is not None else None
+    if style_bias is None:
+        style_bias = 0.0
     intensity = raw_intensity + style_bias
     intensity = max(0.0, min(intensity, 2.0))
     base_vel = int(75 * max(0.1, min(intensity, 2.0)))
@@ -138,7 +146,9 @@ def resolve_legacy_guitar_params(
             voicing = "tight"  # Default fallback
 
     # Per-section rhythmic and placement settings
-    offset_beats = instrument_cfg.offset_beats if instrument_cfg is not None else 0.0
+    offset_beats = getattr(instrument_cfg, "offset_beats", None) if instrument_cfg is not None else None
+    if offset_beats is None:
+        offset_beats = 0.0
 
     # Rhythm grid basics (needed for strum defaults below)
     bpb = rhythm_grid.beats_per_bar

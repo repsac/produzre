@@ -125,7 +125,10 @@ def write_section_midis(
       2) Writes a MIDI file per section.
 
     Output layout:
-        <instruments_dir>/<instrument>/sections/<song_name>_<instrument>_<section_id>.mid
+        <instruments_dir>/<instrument>/sections/<song_name>_<instrument>_<NN>_<section_id>.mid
+
+    where <NN> is the zero-padded arrangement index, so repeated sections in
+    the arrangement export to distinct files.
 
     MIDI content:
       - Creates a one-track MIDI file per section.
@@ -169,20 +172,30 @@ def write_section_midis(
 
         out[inst] = []
 
-        for st in section_timings:
+        for arr_idx, st in enumerate(section_timings):
             sec_tl = slice_timeline_for_section(
                 timeline=tl,
                 section=st,
                 absolute_timing=absolute_timing,
             )
 
-            out_path = sections_dir / f"{song_name}_{inst}_{st.id}.mid"
+            # Include the arrangement index so repeated sections (e.g.
+            # [verse1, chorus, verse1]) get distinct files instead of
+            # clobbering each other.
+            out_path = sections_dir / f"{song_name}_{inst}_{arr_idx:02d}_{st.id}.mid"
 
             mid = mido.MidiFile(ticks_per_beat=PPQ)
             track = mido.MidiTrack()
             mid.tracks.append(track)
 
-            add_tempo_and_name(track, float(cfg.song.bpm), f"{inst}_{st.id}")
+            # Use the section's meter when it overrides the song meter.
+            sec_cfg = getattr(cfg, "sections", {}).get(st.id)
+            sec_meter = getattr(sec_cfg, "meter", None) if sec_cfg is not None else None
+            meter = sec_meter or str(getattr(cfg.song, "meter", "4/4") or "4/4")
+
+            add_tempo_and_name(
+                track, float(cfg.song.bpm), f"{inst}_{st.id}", meter=meter
+            )
 
             prog = program_for_instrument(cfg, inst)
             if prog is not None and getattr(sec_tl, "events", None):

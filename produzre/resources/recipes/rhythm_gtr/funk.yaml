@@ -10,13 +10,11 @@ tags:
   bpm_range: [80, 120]
 
 params:
-  style: syncopated
+  style: funk_chanks
   density: 0.7
   palm_mute: 0.1
   voicing: triad
   strum_style: upbeat_heavy
   accent_strength: 0.6
-  groove: tight
-  swing: 0.05
   chuck_rate: 0.15
   use_patterns: true

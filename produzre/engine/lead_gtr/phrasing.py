@@ -75,8 +75,40 @@ _RHYTHM_4_SYNCOPATED = (0.5, 1.5, 0.5, 1.5)
 _RHYTHM_6_EIGHTH = (0.5, 0.5, 1.0, 0.5, 0.5, 1.0)
 _RHYTHM_6_MIXED = (1.0, 0.5, 0.5, 1.0, 0.5, 0.5)
 
+_GENRE_MOTIFS: dict[str, List[Tuple[int, ...]]] = {
+    "blues": [(0, 3, 5, 6, 5, 3), (0, -2, 0, 3), (0, 3, 5, 3)],
+    "rock": [(0, 3, 5, 7), (0, 7, 5, 3), (0, 3, 0, -2)],
+    "metal": [(0, 1, 3, 6, 5, 3), (0, 7, 6, 3, 1, 0), (0, 3, 6, 7, 6, 3)],
+    "funk": [(0, 0, 3, 0, -2, 0), (0, 3, 0, 5), (0, 0, -2, 0)],
+    "jazz": [(0, 2, 3, -1, 0), (0, -1, 2, 4, 3), (0, 4, 2, 1, -1)],
+    "country": [(0, 4, 7, 4), (0, 2, 4, 7), (0, 7, 4, 2)],
+    "pop": [(0, 2, 4, 2), (0, 4, 2, -1), (0, 2, 0, -2)],
+}
 
-def make_motif(rng: random.Random, intensity: float) -> Motif:
+_GENRE_RHYTHMS: dict[str, List[Tuple[float, ...]]] = {
+    "blues": [(2 / 3, 1 / 3, 1.0, 0.5, 1.5, 1.0), (1.0, 0.5, 0.5, 2.0)],
+    "rock": [(0.5, 0.5, 1.0, 2.0), (1.0, 0.5, 0.5, 2.0)],
+    "metal": [(0.25, 0.25, 0.5, 0.25, 0.75, 2.0), (0.5, 0.25, 0.25, 0.5, 0.5, 2.0)],
+    "funk": [(0.25, 0.75, 0.5, 0.25, 0.75, 1.5), (0.5, 0.25, 0.75, 2.5)],
+    "jazz": [(2 / 3, 1 / 3, 1.0, 0.5, 1.5), (1.0, 0.5, 0.5, 1.0, 1.0)],
+    "country": [(0.5, 0.5, 1.0, 2.0), (0.5, 0.5, 0.5, 2.5)],
+    "pop": [(1.0, 0.5, 0.5, 2.0), (0.5, 1.0, 0.5, 2.0)],
+}
+
+
+def _genre_family(genre: str | None) -> str:
+    value = str(genre or "").lower()
+    aliases = (("r&b", "funk"), ("soul", "funk"), ("hard rock", "rock"), ("punk", "rock"))
+    for token, family in aliases:
+        if token in value:
+            return family
+    for family in _GENRE_MOTIFS:
+        if family in value:
+            return family
+    return ""
+
+
+def make_motif(rng: random.Random, intensity: float, genre: str | None = None) -> Motif:
     """Generate a short melodic motif scaled to intensity.
 
     intensity < 0.4  -> sparse: 2-note motifs, longer durations
@@ -90,7 +122,11 @@ def make_motif(rng: random.Random, intensity: float) -> Motif:
     Returns:
         Motif with matched intervals and durations
     """
-    if intensity < 0.4:
+    family = _genre_family(genre)
+    if family and rng.random() < 0.78:
+        shape = rng.choice(_GENRE_MOTIFS[family])
+        rhythm = rng.choice(_GENRE_RHYTHMS[family])
+    elif intensity < 0.4:
         shape = _SHAPES_SPARSE[rng.randrange(len(_SHAPES_SPARSE))]
         rhythm = _RHYTHM_2_LONG if rng.random() < 0.4 else _RHYTHM_2_HALF
     elif intensity < 0.7:
@@ -105,6 +141,45 @@ def make_motif(rng: random.Random, intensity: float) -> Motif:
     rhythm = rhythm[:n] if len(rhythm) >= n else rhythm + (1.0,) * (n - len(rhythm))
 
     return Motif(intervals=tuple(shape), durations=tuple(rhythm))
+
+
+def develop_motif(
+    motif: Motif,
+    rng: random.Random,
+    *,
+    phrase_index: int,
+    is_final_phrase: bool = False,
+    intensity: float = 0.5,
+    total_phrases: int = 4,
+) -> Motif:
+    """Create a related motif variation for later phrases.
+
+    Lead parts become more useful in a DAW when phrases sound like variations of
+    an idea rather than unrelated licks. This keeps the original contour but
+    applies small deterministic changes: answer phrases may invert direction,
+    final phrases tighten the last interval toward resolution, and active parts
+    can rotate the rhythm.  Later phrases in longer sections drift further.
+    """
+    if phrase_index <= 0 or not motif.intervals:
+        return motif
+
+    progress = phrase_index / max(1, total_phrases - 1)
+
+    intervals = list(motif.intervals)
+    durations = list(motif.durations)
+
+    if phrase_index % 2 == 1 and rng.random() < 0.55:
+        intervals = [0] + [-i for i in intervals[1:]]
+    elif rng.random() < 0.35 + 0.20 * progress:
+        intervals = [0] + [max(-7, min(7, i + rng.choice([-2, -1, 1, 2]))) for i in intervals[1:]]
+
+    if is_final_phrase and len(intervals) > 1:
+        intervals[-1] = 0 if rng.random() < 0.65 else (2 if intervals[-1] < 0 else -2)
+
+    if intensity > 0.65 and len(durations) > 2 and rng.random() < 0.30 + 0.20 * progress:
+        durations = durations[1:] + durations[:1]
+
+    return Motif(intervals=tuple(intervals), durations=tuple(durations))
 
 
 def _snap_to_pool(target: int, pool: PitchPool) -> int:
@@ -152,7 +227,7 @@ def realize_phrase(
         vary_last: Resolve last note to chord tone on final repetition
         call_and_response: Only fill first half of phrase
         leap_limit: Max semitone interval between consecutive anchors
-                    (default 5; solo sections may use 8–10 for wider range)
+                    (default 5; solo sections may use 8-10 for wider range)
 
     Returns:
         List of ResolvedNote sorted by beat_offset

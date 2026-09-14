@@ -3,15 +3,22 @@
 Each pattern describes which strings to pluck and when (relative to bar start).
 Patterns are defined in 4/4 by default; WALTZ is 3/4.
 
-String indices reference the sorted voicing pitches list:
-  0 = lowest (bass/6th string),  1 = 5th string,  2 = 4th string
-  3 = 3rd string,                4 = 2nd string,  5 = 1st string (treble)
+String indices are LOGICAL positions on a fully-played 6-string chord
+(0 = lowest, 5 = highest). The renderer maps them onto the voicing's PLAYED
+strings via ``_pitch_for_pattern_hit``:
+
+  - bass hits (``is_bass=True``) index up from the lowest PLAYED string:
+    index 0 = root (lowest played), index 1 = next-lowest played (typically
+    the 5th), preserving Travis-style root/5th alternation on shapes with
+    muted low strings (C, A, D forms);
+  - treble hits index down from the highest PLAYED string:
+    index 5 = highest played, 4 = second-highest, 3 = third-highest.
 
 PickHit fields:
-  beat       — beat within bar (0.0 = bar downbeat)
-  string_idx — index into voicing pitches (clamped to actual chord length)
-  vel_ratio  — velocity multiplier relative to base_vel
-  is_bass    — True = thumb stroke (warmer, louder), False = finger stroke
+  beat: beat within bar (0.0 = bar downbeat)
+  string_idx: logical string index (see mapping contract above)
+  vel_ratio: velocity multiplier relative to base_vel
+  is_bass: True = thumb stroke (warmer, louder), False = finger stroke
 """
 
 from __future__ import annotations
@@ -51,20 +58,20 @@ TRAVIS = PickPattern(
     name="travis",
     beats_per_bar=4,
     hits=(
-        PickHit(0.0, 0, 1.00, True),   # P — bass root (strong downbeat)
-        PickHit(0.5, 3, 0.78, False),  # I — mid-treble
-        PickHit(1.0, 1, 0.88, True),   # P — bass 5th
-        PickHit(1.5, 4, 0.75, False),  # M — upper treble
-        PickHit(2.0, 0, 0.95, True),   # P — bass root (beat 3)
-        PickHit(2.5, 3, 0.78, False),  # I — mid-treble
-        PickHit(3.0, 1, 0.85, True),   # P — bass 5th
-        PickHit(3.5, 4, 0.75, False),  # M — upper treble
+        PickHit(0.0, 0, 1.00, True),   # P: bass root (strong downbeat)
+        PickHit(0.5, 3, 0.78, False),  # I: mid-treble
+        PickHit(1.0, 1, 0.88, True),   # P: bass 5th
+        PickHit(1.5, 4, 0.75, False),  # M: upper treble
+        PickHit(2.0, 0, 0.95, True),   # P: bass root (beat 3)
+        PickHit(2.5, 3, 0.78, False),  # I: mid-treble
+        PickHit(3.0, 1, 0.85, True),   # P: bass 5th
+        PickHit(3.5, 4, 0.75, False),  # M: upper treble
     ),
 )
 
 
 # =============================================================================
-# PIMA — Classical fingerstyle
+# PIMA: Classical fingerstyle
 #
 # One pluck per beat. Thumb (P) on bass, then ascending finger strokes
 # Index (I), Middle (M), Ring (A) on treble strings.
@@ -79,10 +86,10 @@ PIMA = PickPattern(
     name="pima",
     beats_per_bar=4,
     hits=(
-        PickHit(0.0, 0, 1.00, True),   # P — bass root
-        PickHit(1.0, 2, 0.80, False),  # I — mid string
-        PickHit(2.0, 3, 0.78, False),  # M — upper-mid string
-        PickHit(3.0, 4, 0.75, False),  # A — treble string
+        PickHit(0.0, 0, 1.00, True),   # P: bass root
+        PickHit(1.0, 2, 0.80, False),  # I: mid string
+        PickHit(2.0, 3, 0.78, False),  # M: upper-mid string
+        PickHit(3.0, 4, 0.75, False),  # A: treble string
     ),
 )
 
@@ -131,17 +138,17 @@ WALTZ = PickPattern(
     name="waltz",
     beats_per_bar=3,
     hits=(
-        PickHit(0.0, 0, 1.00, True),   # P — bass root
-        PickHit(1.0, 3, 0.78, False),  # I — mid-treble chord
-        PickHit(1.0, 4, 0.75, False),  # M — treble chord (simultaneous)
-        PickHit(2.0, 3, 0.76, False),  # I — mid-treble chord
-        PickHit(2.0, 4, 0.73, False),  # M — treble chord (simultaneous)
+        PickHit(0.0, 0, 1.00, True),   # P: bass root
+        PickHit(1.0, 3, 0.78, False),  # I: mid-treble chord
+        PickHit(1.0, 4, 0.75, False),  # M: treble chord (simultaneous)
+        PickHit(2.0, 3, 0.76, False),  # I: mid-treble chord
+        PickHit(2.0, 4, 0.73, False),  # M: treble chord (simultaneous)
     ),
 )
 
 
 # =============================================================================
-# Roll — 16th-note ascending arpeggio
+# Roll: 16th-note ascending arpeggio
 #
 # Continuous rolling arpeggio at 16th-note resolution, for building energy
 # or prechorus tension. 16 hits per bar (dense).
@@ -167,6 +174,22 @@ ROLL = PickPattern(
 )
 
 
+# Spacious thumb-and-finger pattern. Syncopated upper-string arrivals leave
+# room for the shared melody guide instead of filling every eighth note.
+CINEMATIC = PickPattern(
+    name="cinematic",
+    beats_per_bar=4,
+    hits=(
+        PickHit(0.0, 0, 1.00, True),
+        PickHit(0.75, 4, 0.74, False),
+        PickHit(1.5, 1, 0.84, True),
+        PickHit(2.0, 3, 0.70, False),
+        PickHit(2.75, 5, 0.80, False),
+        PickHit(3.5, 4, 0.68, False),
+    ),
+)
+
+
 # =============================================================================
 # Pattern registry
 # =============================================================================
@@ -177,6 +200,7 @@ PATTERNS: Dict[str, PickPattern] = {
     "broken_chord": BROKEN_CHORD,
     "waltz":        WALTZ,
     "roll":         ROLL,
+    "cinematic":    CINEMATIC,
 }
 
 

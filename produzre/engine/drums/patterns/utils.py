@@ -151,9 +151,9 @@ def limit_per_beat(
         True if density limit is exceeded.
     """
     spb = max(1, int(steps_per_bar))
-    beat_bucket = int(step_i) // max(1, spb // 4)
-    lo = beat_bucket * max(1, spb // 4)
-    hi = min(spb - 1, lo + max(1, spb // 4) - 1)
+    beat_bucket = int(step_i) // 4
+    lo = beat_bucket * 4
+    hi = min(spb - 1, lo + 4 - 1)
     count = 0
     for s in occupied_steps:
         if lo <= int(s) <= hi:

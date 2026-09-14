@@ -10,14 +10,12 @@ tags:
   bpm_range: [90, 140]
 
 params:
-  style: straight_8s
+  style: pop_push
   density: 0.6
   palm_mute: 0.15
   voicing: triad
   strum_style: balanced
   accent_strength: 0.45
-  groove: tight
-  swing: 0.0
   chuck_rate: 0.0
   strum_ms: 18.0
   use_patterns: true

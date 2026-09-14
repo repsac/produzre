@@ -88,5 +88,5 @@ arpeggiator:
   program: 1  # GM Bright Acoustic Piano
   enabled: true  # Example engine - demonstrates custom instrument authoring
   requires: ["harmony.plan"]  # Needs chord structure to arpeggiate
-  provides: []  # This example doesn't export plan data
+  provides: ["arpeggiator.pattern"]
   roles: ["texture", "rhythmic"]

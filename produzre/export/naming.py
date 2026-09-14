@@ -15,7 +15,7 @@ across full-song exports, stems, sections, and patterns.
 import os
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -123,7 +123,7 @@ def create_run_export_dir(
     """
     root_base = resolve_exports_root(exports_root)
     safe_song = sanitize_song_name(song_name)
-    rid = run_id or datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    rid = run_id or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     root_base.mkdir(parents=True, exist_ok=True)
 

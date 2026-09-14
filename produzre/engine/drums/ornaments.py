@@ -40,6 +40,7 @@ def add_ornaments(
     flam_rate: float = 0.0,
     drag_rate: float = 0.0,
     persona: str = "tight",
+    beats_per_bar: float = 4.0,
 ) -> List[DrumEvent]:
     """Add performance ornaments (chokes, flams, drags) to drum events.
 
@@ -51,6 +52,7 @@ def add_ornaments(
         flam_rate: 0..1 probability of adding flam to accented snares.
         drag_rate: 0..1 probability of adding drag to accented snares.
         persona: "tight" (conservative) or "loose" (more ornaments).
+        beats_per_bar: Meter beats per bar, used for backbeat detection.
 
     Returns:
         New list with ornament events added (sorted).
@@ -161,24 +163,34 @@ def add_ornaments(
             # Flams and drags are more common on:
             # - Accented snares (higher velocity)
             # - Snares at phrase boundaries
-            # - Backbeats (beats 2 and 4 in 4/4)
+            # - Backbeats (beat 2 and 4 in 4/4, beat 2 in 3/4)
             is_accent = vel >= 80
-            is_backbeat = (float(ev.beat) % 4.0) in [1.0, 3.0]  # 0-indexed: 1=beat 2, 3=beat 4
+            bpb = float(beats_per_bar) if beats_per_bar and beats_per_bar > 0 else 4.0
+            beat_in_bar = float(ev.beat) % bpb
+            # Backbeat offsets (0-indexed): beat 2 always; beat 4 only when
+            # the meter has at least 4 beats. Use a tolerance instead of
+            # exact float equality (humanized/jittered beats never match).
+            backbeat_offsets = [1.0]
+            if bpb >= 3.5:
+                backbeat_offsets.append(3.0)
+            is_backbeat = any(abs(beat_in_bar - b) < 0.05 for b in backbeat_offsets)
 
-            # Calculate ornament probability based on context
-            ornament_prob = 1.0
+            # Calculate ornament probability boost based on context.
+            # The boost scales the ornament RATES up (accents are MORE likely
+            # to be ornamented), with the effective probability clamped to 1.
+            ornament_boost = 1.0
             if is_accent:
-                ornament_prob *= 1.5
+                ornament_boost *= 1.5
             if is_backbeat:
-                ornament_prob *= 1.2
+                ornament_boost *= 1.2
 
             # Decide between flam, drag, or no ornament
-            r = rng.random() * ornament_prob
+            r = rng.random()
             ornament_type = None
 
-            if dr > 0.0 and r < dr:
+            if dr > 0.0 and r < min(1.0, dr * ornament_boost):
                 ornament_type = "drag"
-            elif fr > 0.0 and r < (dr + fr):
+            elif fr > 0.0 and r < min(1.0, (dr + fr) * ornament_boost):
                 ornament_type = "flam"
 
             if ornament_type == "flam":

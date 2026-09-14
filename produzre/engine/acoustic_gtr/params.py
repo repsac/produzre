@@ -35,9 +35,11 @@ class AcousticGuitarParams:
     # Technique
     technique:        str    # "fingerpicking" | "strumming" | "hybrid" | "percussive"
     picking_pattern:  str    # "travis" | "pima" | "broken_chord" | "waltz" | "roll"
-    strum_density:    float  # 0.0-1.0 — fraction of quarter-note positions to strum
-    mute_ratio:       float  # 0.0-1.0 — probability of dampened strum hit
-    body_tap_ratio:   float  # 0.0-1.0 — probability of body percussion per bar
+    strum_density:    float  # 0.0-1.0: fraction of quarter-note positions to strum
+    mute_ratio:       float  # 0.0-1.0: probability of dampened strum hit
+    body_tap_ratio:   float  # 0.0-1.0: probability of body percussion per bar
+    melody_amount:    float  # 0.0-1.0: treble hits shaped into a melodic top voice
+    phrase_variation: float  # 0.0-1.0: bar-to-bar picking variation
 
     # Voicing
     voicing_style:    str    # "open" | "barre" | "auto"
@@ -69,12 +71,18 @@ def resolve_params(section, instrument_cfg, rhythm_grid) -> AcousticGuitarParams
     sec_type = (section.type or "").strip().lower()
     bpb = rhythm_grid.beats_per_bar
 
-    # Extract intensity and offset from instrument config
-    intensity = 1.0
+    # Extract intensity and offset from instrument config.
+    # Intensity precedence: instrument > resolved section intensity
+    # (orchestrate.plan.resolve_section_intensity) > engine default.
+    _raw_intensity = None
     offset_beats = 0.0
     if instrument_cfg is not None:
-        intensity = float(getattr(instrument_cfg, "intensity", 1.0))
-        offset_beats = float(getattr(instrument_cfg, "offset_beats", 0.0))
+        _raw_intensity = getattr(instrument_cfg, "intensity", None)
+        _raw_offset = getattr(instrument_cfg, "offset_beats", None)
+        offset_beats = float(_raw_offset) if _raw_offset is not None else 0.0
+    if _raw_intensity is None:
+        _raw_intensity = getattr(section, "intensity", None)
+    intensity = float(_raw_intensity) if _raw_intensity is not None else 1.0
     intensity = _clamp(intensity, 0.0, 2.0)
 
     # Unwrap nested extra dict (config loader wraps section extra params)
@@ -128,6 +136,17 @@ def resolve_params(section, instrument_cfg, rhythm_grid) -> AcousticGuitarParams
         body_tap_ratio = 0.0
     body_tap_ratio = _clamp(body_tap_ratio, 0.0, 0.5)
 
+    # Fingerstyle defaults to a clearly audible, but not continuous, top voice.
+    melody_amount = extra.get("melody_amount", 0.72 if technique in ("fingerpicking", "hybrid") else 0.0)
+    phrase_variation = extra.get("phrase_variation", 0.35)
+    try:
+        melody_amount = float(melody_amount)
+        phrase_variation = float(phrase_variation)
+    except (TypeError, ValueError):
+        melody_amount, phrase_variation = 0.72, 0.35
+    melody_amount = _clamp(melody_amount, 0.0, 1.0)
+    phrase_variation = _clamp(phrase_variation, 0.0, 1.0)
+
     # ---- Voicing style ----
     voicing_style = extra.get("voicing_style", "auto")
     if isinstance(voicing_style, str):
@@ -169,6 +188,8 @@ def resolve_params(section, instrument_cfg, rhythm_grid) -> AcousticGuitarParams
         strum_density=strum_density,
         mute_ratio=mute_ratio,
         body_tap_ratio=body_tap_ratio,
+        melody_amount=melody_amount,
+        phrase_variation=phrase_variation,
         voicing_style=voicing_style,
         capo=capo,
         intensity=intensity,

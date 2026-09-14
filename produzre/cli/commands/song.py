@@ -170,7 +170,7 @@ def cmd_show_config(cfg: RootConfig, fmt: str) -> int:
                     {
                         "progression": s.harmony.progression,
                         "chord_rate": s.harmony.chord_rate,
-                        "extra": s.harmony.extra,
+                        "extra": {k: v for k, v in s.harmony.extra.items() if not k.startswith("_")},
                     }
                     if s.harmony
                     else None
@@ -260,7 +260,7 @@ def cmd_show_config(cfg: RootConfig, fmt: str) -> int:
         serialized_transitions = serialize_section_transitions_map(transitions_map)
         data["_transitions"] = serialized_transitions
 
-        logger.debug(f"Added transitions map with {len(transitions_map)} section directives")
+        logger.debug(f"Added transitions map with {len(build_plan.planned_sections)} section directives")
     except Exception as e:
         logger.debug(f"Could not compute transitions map: {e}")
         # Don't fail show-config if transitions can't be computed

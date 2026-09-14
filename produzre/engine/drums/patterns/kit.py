@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from ..groove import GrooveTemplate, hat_steps_for_mode
 from .cymbals import generate_crash_events, generate_ride_bell_events, generate_splash_china_events
-from .grid import bars_total, step_beats, steps_per_bar_default
+from .grid import bars_total, step_beats
 from .hats import generate_top_cymbal_events
 from .kick import eligible_double_kick_steps, eligible_syncopation_steps, generate_kick_events
 from .snare import generate_snare_events
@@ -53,6 +53,17 @@ def _apply_transition_effects(
     is_first_section = transition_context.get("is_first_section", False)
     pickup_rate = float(transition_context.get("pickup_rate", 0.7))
     downbeat_rate = float(transition_context.get("downbeat_rate", 0.8))
+    current_energy = transition_context.get("current_energy")
+    prev_energy = transition_context.get("prev_energy")
+    next_energy = transition_context.get("next_energy")
+    try:
+        energy_delta_next = float(next_energy) - float(current_energy)
+    except Exception:
+        energy_delta_next = 0.0
+    try:
+        energy_delta_in = float(current_energy) - float(prev_energy)
+    except Exception:
+        energy_delta_in = 0.0
 
     new_events = list(events)
 
@@ -69,7 +80,7 @@ def _apply_transition_effects(
 
         if not has_crash_at_start:
             # Add crash on downbeat
-            crash_velocity = int(base_velocity + accent_strength * 20)
+            crash_velocity = int(base_velocity + accent_strength * 20 + abs(energy_delta_in) * 18)
             crash_velocity = max(60, min(127, crash_velocity))
             new_events.append(
                 DrumEvent(
@@ -83,7 +94,7 @@ def _apply_transition_effects(
 
         if not has_kick_at_start:
             # Add kick on downbeat for emphasis
-            kick_velocity = int(base_velocity + accent_strength * 15)
+            kick_velocity = int(base_velocity + accent_strength * 15 + abs(energy_delta_in) * 18)
             kick_velocity = max(70, min(127, kick_velocity))
             new_events.append(
                 DrumEvent(
@@ -101,24 +112,56 @@ def _apply_transition_effects(
     if (next_section_type is not None
         and next_section_type != section_type
         and rng.random() < pickup_rate):
-        # Variable pickup window: short (0.5 beat), medium (1 beat), or long (2 beats)
-        # Real drummers vary how far back they start the roll — most are short and punchy
-        pickup_lengths = [0.5, 1.0, 1.0, 1.5, 2.0]
+        # Energy lifts deserve longer fills; drops are shorter and leave space.
+        if energy_delta_next >= 0.35:
+            pickup_lengths = [1.0, 1.5, 2.0, 2.0]
+            pickup_style = rng.choice(["snare_toms", "tom_run", "kick_snare"])
+        elif energy_delta_next <= -0.25:
+            pickup_lengths = [0.5, 1.0, 1.0]
+            pickup_style = rng.choice(["snare_toms", "stop_time"])
+        else:
+            pickup_lengths = [0.5, 1.0, 1.0, 1.5, 2.0]
+            pickup_style = rng.choice(["snare_toms", "tom_run", "kick_snare"])
         pickup_length = rng.choice(pickup_lengths)
         pickup_window_start = max(0.0, total_beats - pickup_length)
 
-        # 16th-note subdivisions within the window
-        step_16th = sb / 4
+        # 16th-note subdivisions within the window.
+        # `sb` is already one 16th-note step (bar / 16-step grid), so use it
+        # directly. Dividing again would produce 64th-note machine-gun pickups.
+        step_16th = sb
         num_16ths = max(1, int(pickup_length / step_16th))
+        tom_cycle = [
+            pitches.get("tom_high", pitches.get("snare", 38)),
+            pitches.get("tom_mid", pitches.get("snare", 38)),
+            pitches.get("tom_low", pitches.get("snare", 38)),
+            pitches.get("snare", 38),
+        ]
 
         for i in range(num_16ths):
             pickup_beat = pickup_window_start + (i * step_16th)
             if pickup_beat >= total_beats:
                 break
 
+            if pickup_style == "stop_time" and i < num_16ths - 1:
+                # Short drop transitions: let the last hit breathe into the next section.
+                if i % 2 == 1:
+                    continue
+                pitch = pitches.get("snare", 38)
+                kind = "snare_pickup"
+            elif pickup_style == "tom_run":
+                pitch = tom_cycle[min(len(tom_cycle) - 1, int(i / max(1, num_16ths / len(tom_cycle))))]
+                kind = "tom_pickup" if pitch != pitches.get("snare", 38) else "snare_pickup"
+            elif pickup_style == "kick_snare":
+                pitch = pitches.get("kick", 36) if i % 4 in (0, 3) else pitches.get("snare", 38)
+                kind = "kick_pickup" if pitch == pitches.get("kick", 36) else "snare_pickup"
+            else:
+                pitch = tom_cycle[i % len(tom_cycle)] if i >= num_16ths // 2 else pitches.get("snare", 38)
+                kind = "tom_pickup" if pitch != pitches.get("snare", 38) else "snare_pickup"
+
             # Exponential crescendo: quiet start, loud finish
             velocity_factor = ((i + 1) / num_16ths) ** 1.6
-            pickup_velocity = int(base_velocity - 18 + velocity_factor * 28)
+            lift_boost = 8 if energy_delta_next >= 0.35 else 0
+            pickup_velocity = int(base_velocity - 18 + velocity_factor * (28 + lift_boost))
             pickup_velocity = max(45, min(127, pickup_velocity))
 
             # Micro-timing jitter: natural hand acceleration feel
@@ -128,11 +171,24 @@ def _apply_transition_effects(
                 DrumEvent(
                     beat=pickup_beat + jitter,
                     duration_beats=step_16th,
-                    pitch=pitches.get("snare", 38),
+                    pitch=pitch,
                     velocity=pickup_velocity,
-                    kind="snare_pickup",
+                    kind=kind,
                 )
             )
+
+        if energy_delta_next >= 0.35:
+            final_crash_beat = max(0.0, total_beats - step_16th)
+            if rng.random() < 0.45:
+                new_events.append(
+                    DrumEvent(
+                        beat=final_crash_beat,
+                        duration_beats=0.25,
+                        pitch=pitches.get("crash", 49),
+                        velocity=max(70, min(127, int(base_velocity + 18))),
+                        kind="crash_pickup",
+                    )
+                )
 
     return new_events
 
@@ -176,6 +232,8 @@ def events_for_section_from_template(
     hats_open_rate: Optional[float] = None,
     hats_pedal_rate: Optional[float] = None,
     hats_accent_rate: Optional[float] = None,
+    hats_params: Optional[Dict[str, Any]] = None,
+    kick_params: Optional[Dict[str, Any]] = None,
     groove_tom_rate: float = 0.0,
     fill_tom_rate: float = 0.0,
     crash_rate: Optional[float] = None,
@@ -197,7 +255,9 @@ def events_for_section_from_template(
         base_velocity: Base velocity for the section before accents.
         accent_strength: 0..1 accent influence.
         hat_density: 0..1 probability for placing top cymbal steps.
-        steps_per_bar: Internal step grid resolution. Defaults to 16.
+        steps_per_bar: Internal step grid resolution. Defaults to the
+            meter-derived grid (4 steps per quarter-note beat: 16 in 4/4,
+            12 in 3/4).
         kick_density: Multiplier for kick drum density (0.5-1.5 typical). Defaults to 1.0.
         snare_density: Multiplier for snare drum density (0.5-1.5 typical). Defaults to 1.0.
         ghost_rate: Optional override for ghost probability (0..1). If None, uses template.ghost_rate.
@@ -217,25 +277,42 @@ def events_for_section_from_template(
             "events_for_section_from_template requires a non-None RNG. "
             "The drums engine entrypoint must pass the per-section RNG into patterns."
         )
-    spb = int(steps_per_bar_default() if steps_per_bar is None else steps_per_bar)
+    bpb = float(beats_per_bar)
+
+    # Default to the meter-derived grid (4 steps per quarter-note beat:
+    # 16 in 4/4, 12 in 3/4 and 6/8) when no explicit resolution is given.
+    if steps_per_bar is None:
+        from ..groove import steps_per_bar_for_meter
+
+        spb = steps_per_bar_for_meter(bpb)
+    else:
+        spb = int(steps_per_bar)
     spb = max(1, spb)
 
-    bpb = float(beats_per_bar)
     sb = step_beats(bpb, steps_per_bar=spb)
     bars = bars_total(float(total_beats), bpb)
 
     hat_steps = hat_steps_for_mode(template.hat_mode, steps_per_bar=spb)
     sync_steps = eligible_syncopation_steps(spb)
     dbl_steps = eligible_double_kick_steps(spb)
+    hats_params, kick_params = hats_params or {}, kick_params or {}
+    def selected_steps(params, key, default):
+        value = params.get(key)
+        return tuple(sorted({int(s) for s in (default if value is None else value) if 0 <= int(s) < spb}))
+    hat_steps = selected_steps(hats_params, "pattern_placements", hat_steps)
+    sync_steps = selected_steps(kick_params, "syncopation_placements", sync_steps)
+    dbl_steps = selected_steps(kick_params, "double_kick_placements", dbl_steps)
 
     events: List[DrumEvent] = []
     # Intent rules: track if previous bar ended with an open hat.
     prev_bar_open_hat = False
 
     # Decide which backbeats apply if half-time is enabled.
+    # Standard half-time puts the lone snare on beat 3 (the bar midpoint),
+    # matching the half_time section intent in the engine entrypoint.
     backbeats: tuple[int, ...] = tuple(template.snare_backbeat_steps)
     if template.half_time and backbeats:
-        backbeats = (max(backbeats),)
+        backbeats = ((spb // 8) * 4,)
 
     # Resolve ghost rate and steps
     effective_ghost_rate = template.ghost_rate if ghost_rate is None else float(ghost_rate)
@@ -321,6 +398,7 @@ def events_for_section_from_template(
             hats_open_rate=hats_open_rate,
             hats_pedal_rate=hats_pedal_rate,
             hats_accent_rate=hats_accent_rate,
+            voice_params=hats_params,
             base_velocity=base_velocity,
             accent_strength=accent_strength,
             rng=rng,

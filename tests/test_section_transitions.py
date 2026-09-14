@@ -212,8 +212,13 @@ def test_complex_arrangement():
 
     transitions = build_section_transitions_map(planned_sections)
 
-    # Verify all sections have transitions
-    assert len(transitions) == 8
+    # Verify all sections have transitions. Since the repeated-section fix,
+    # each occurrence is stored under a per-occurrence key ("<NN>:<id>") PLUS
+    # a legacy alias under the bare section id, so 8 unique sections yield
+    # 16 keys (8 occurrence keys + 8 aliases).
+    assert len(transitions) == 16
+    unique_ids = {d.section_id for d in transitions.values()}
+    assert len(unique_ids) == 8
 
     # Check first section
     assert transitions["intro"].is_first_section is True

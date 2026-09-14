@@ -19,7 +19,5 @@ params:
   rest_rate: 0.34
   root_bias: 0.64
   motion_style: "mixed"
-  swing: 0.01
   lock_to_kick: 0.42
   accent_strength: 1.27
-  syncopation: 0.47

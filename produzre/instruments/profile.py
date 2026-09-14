@@ -4,18 +4,18 @@ An InstrumentProfile captures the physical properties of a stringed instrument:
 open string tuning, fret count, max comfortable finger span, and whether the
 instrument can play barre chords (movable shapes across multiple strings).
 
-Adding a new instrument requires only adding a new profile constant — no engine
+Adding a new instrument requires only adding a new profile constant: no engine
 code changes are needed. The chord_shapes library uses the profile to validate
 and generate physically playable voicings.
 
 Standard profiles provided:
-    GUITAR_STANDARD  — 6-string, E standard (E2-A2-D3-G3-B3-E4)
-    GUITAR_7STRING   — 7-string, B standard (B1-E2-A2-D3-G3-B3-E4)
-    GUITAR_DADGAD    — 6-string, DADGAD alternate tuning
-    GUITAR_12STRING  — 12-string (same open tuning as standard; courses handled as unison)
-    BASS_4STRING     — 4-string bass (E1-A1-D2-G2)
-    BASS_5STRING     — 5-string bass (B0-E1-A1-D2-G2)
-    UKULELE          — 4-string ukulele (G4-C4-E4-A4, reentrant)
+    GUITAR_STANDARD: 6-string, E standard (E2-A2-D3-G3-B3-E4)
+    GUITAR_7STRING: 7-string, B standard (B1-E2-A2-D3-G3-B3-E4)
+    GUITAR_DADGAD: 6-string, DADGAD alternate tuning
+    GUITAR_12STRING: 12-string (same open tuning as standard; courses handled as unison)
+    BASS_4STRING: 4-string bass (E1-A1-D2-G2)
+    BASS_5STRING: 5-string bass (B0-E1-A1-D2-G2)
+    UKULELE: 4-string ukulele (G4-C4-E4-A4, reentrant)
 """
 
 from __future__ import annotations

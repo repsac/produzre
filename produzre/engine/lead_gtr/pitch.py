@@ -119,6 +119,7 @@ def allowed_pitches_for_slot(
     key: str,
     mode: str,
     register: str = "mid",
+    genre: str | None = None,
 ) -> PitchPool:
     """Build pitch pool for a chord slot: chord tones + safe scale neighbours.
 
@@ -168,6 +169,24 @@ def allowed_pitches_for_slot(
             if low <= p <= high and p not in ct_set:
                 st.append(p)
     scale_tones = sorted(set(st))
+
+    # Guitar idioms often rely on stable non-diatonic color tones. Keep these
+    # available as lower-priority neighbors instead of snapping every lick back
+    # into the same seven-note scale.
+    genre_lower = str(genre or "").lower()
+    color_intervals: list[int] = []
+    if any(token in genre_lower for token in ("blues", "rock", "metal")):
+        color_intervals = [3, 6, 10]
+    elif any(token in genre_lower for token in ("jazz", "bebop")):
+        color_intervals = [1, 3, 6, 10]
+    if color_intervals:
+        colors = []
+        for octave_off in range(-24, 25, 12):
+            for semi in color_intervals:
+                pitch = tonic + octave_off + semi
+                if low <= pitch <= high and pitch not in ct_set:
+                    colors.append(pitch)
+        scale_tones = sorted(set(scale_tones + colors))
 
     return PitchPool(chord_tones=tuple(chord_tones), scale_tones=tuple(scale_tones))
 

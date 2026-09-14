@@ -9,6 +9,7 @@ tags:
   section_types: [verse, chorus, bridge]
   bpm_range: [80, 240]
 
+# Dominants spelled V7 (2026-06-10): plain uppercase V renders maj7-quality; ii-V7-I needs the b7.
 progressions:
   minor:
     verse: ["i", "iv", "bVII", "bIII"]
@@ -17,10 +18,10 @@ progressions:
     default: ["i", "iv", "bVII", "bIII"]
   major:
     # ii-V-I turnaround patterns
-    verse: ["ii", "V", "I", "vi"]
-    chorus: ["IV", "V", "I", "vi"]
-    bridge: ["ii", "V", "iii", "vi"]
-    default: ["ii", "V", "I", "vi"]
+    verse: ["ii", "V7", "I", "vi"]
+    chorus: ["IV", "V7", "I", "vi"]
+    bridge: ["ii", "V7", "iii", "vi"]
+    default: ["ii", "V7", "I", "vi"]
   dorian:
     verse: ["i", "IV", "bVII", "bIII"]
     chorus: ["i", "bVII", "IV", "i"]

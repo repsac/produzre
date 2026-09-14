@@ -126,15 +126,21 @@ def create_basic_rhythm_grid(
     bpb = meter.beats_per_bar
     cells: List[RhythmCell] = []
 
-    beat = 0.0
+    # Compute each beat as idx * subdivision instead of accumulating, so
+    # float error does not drift across long sections.
     idx = 0
-    while beat < total_beats:
-        # Downbeat if at (or very near) bar boundary
-        bar_index, beat_in_bar = divmod(beat, bpb)
-        is_down = abs(beat_in_bar) < 1e-6
+    eps = 1e-6
+    while True:
+        beat = idx * subdivision
+        if beat >= total_beats - eps:
+            break
+        # Downbeat if at (or very near) a bar boundary. beat_in_bar can
+        # approach bpb from below due to float error (e.g. 3.9999999), which
+        # is also a bar boundary.
+        beat_in_bar = beat % bpb
+        is_down = beat_in_bar < eps or (bpb - beat_in_bar) < eps
         cells.append(RhythmCell(beat=beat, is_downbeat=is_down))
         idx += 1
-        beat += subdivision
 
     return RhythmGrid(
         meter=meter,

@@ -9,17 +9,18 @@ tags:
   section_types: [verse, chorus, bridge]
   bpm_range: [60, 110]
 
+# Dominants spelled V7 (2026-06-10): R&B cadential V is a dominant 7th.
 progressions:
   minor:
-    verse: ["i", "bVII", "bVI", "V"]
-    chorus: ["bVI", "bVII", "i", "V"]
+    verse: ["i", "bVII", "bVI", "V7"]
+    chorus: ["bVI", "bVII", "i", "V7"]
     bridge: ["iv", "bVII", "bIII", "bVI"]
-    default: ["i", "bVII", "bVI", "V"]
+    default: ["i", "bVII", "bVI", "V7"]
   major:
-    verse: ["I", "vi", "IV", "V"]
-    chorus: ["vi", "IV", "V", "I"]
-    bridge: ["ii", "V", "vi", "IV"]
-    default: ["I", "vi", "IV", "V"]
+    verse: ["I", "vi", "IV", "V7"]
+    chorus: ["vi", "IV", "V7", "I"]
+    bridge: ["ii", "V7", "vi", "IV"]
+    default: ["I", "vi", "IV", "V7"]
   dorian:
     verse: ["i", "IV", "bVII", "bIII"]
     chorus: ["IV", "bVII", "i", "i"]

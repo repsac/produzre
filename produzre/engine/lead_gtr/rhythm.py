@@ -26,6 +26,8 @@ def choose_note_starts(
     phrase_end: Optional[float] = None,
     prefer_offbeat: bool = False,
     rest_rate: float = 0.2,
+    genre: str | None = None,
+    candidate_positions: Optional[List[float]] = None,
 ) -> List[float]:
     """Select beat positions for lead notes within a phrase window.
 
@@ -43,12 +45,12 @@ def choose_note_starts(
     Args:
         grid: RhythmGrid providing cell positions and downbeat flags.
         accent_beats: Section-local beat positions accented by drums/rhythm gtr.
-        density: 0.0–1.0 — fraction of candidate positions to select.
+        density: 0.0-1.0: fraction of candidate positions to select.
         rng: Seeded RNG for determinism.
         phrase_start: Start beat of the phrase window (section-local).
         phrase_end: End beat of the phrase window (defaults to grid.total_beats).
         prefer_offbeat: Bias toward off-grid positions for energetic contrast.
-        rest_rate: 0.0–1.0 — probability of silencing each selected position
+        rest_rate: 0.0-1.0: probability of silencing each selected position
                    after density filtering (minimum one position always kept).
 
     Returns:
@@ -59,16 +61,21 @@ def choose_note_starts(
 
     bpb = grid.beats_per_bar
 
-    # Build 8th-note candidate positions within the phrase window.
-    # Using 0.5-beat steps gives 8 positions/bar in 4/4, which is fine for a lead
-    # melody. This is intentionally finer than the shared rhythm grid (which is
-    # typically at quarter-note resolution) so the lead can play 8th-note lines.
-    step = 0.5
+    genre_lower = str(genre or "").lower()
+    if any(token in genre_lower for token in ("funk", "metal", "punk")):
+        step = 0.25
+    elif any(token in genre_lower for token in ("jazz", "swing", "blues")):
+        step = 1.0 / 3.0
+    else:
+        step = 0.5
     n_steps = max(1, int((phrase_end - phrase_start) / step + 1e-9))
     candidate_beats: List[float] = [
         phrase_start + i * step for i in range(n_steps)
         if phrase_start + i * step < phrase_end - 1e-9
     ]
+
+    if candidate_positions is not None:
+        candidate_beats = sorted(set(b for b in candidate_positions if phrase_start <= b < phrase_end))
 
     if not candidate_beats:
         return [phrase_start]

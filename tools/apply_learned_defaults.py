@@ -6,7 +6,7 @@ cross-genre analysis to identify statistically-grounded changes for engine
 default parameters.  Recommendations are printed to stdout with supporting
 evidence (sample sizes, averages, ranges).
 
-This tool does **not** modify any code — it only prints recommendations for
+This tool does **not** modify any code: it only prints recommendations for
 a human to review and apply.
 
 Usage

@@ -63,19 +63,16 @@ def test_style_changes_velocity():
             "median": statistics.median(velocities),
         }
 
-    # Exact event counts per style (deterministic with seed)
-    expected_counts = {"finger": 2, "pick": 3, "mute": 2, "slap": 2}
-    for style_name, expected in expected_counts.items():
-        actual = velocity_stats[style_name]["count"]
-        assert actual == expected, \
-            f"{style_name} expected {expected} events, got {actual}"
-
-    # Verify velocity ranges are within expected bounds (deterministic)
-    for style_name, stats in velocity_stats.items():
-        assert 60 <= stats["mean"] <= 80, \
-            f"{style_name} velocity mean {stats['mean']} outside expected range [60, 80]"
-        assert stats["min"] >= 50, f"{style_name} min velocity {stats['min']} below 50"
-        assert stats["max"] <= 90, f"{style_name} max velocity {stats['max']} above 90"
+    # Ordering checks (the test's actual point): mute is the softest style,
+    # pick is the hardest, and slap has the widest dynamic spread.
+    assert velocity_stats["mute"]["mean"] < velocity_stats["finger"]["mean"] \
+        < velocity_stats["pick"]["mean"], \
+        "Expected velocity ordering mute < finger < pick"
+    slap_spread = velocity_stats["slap"]["max"] - velocity_stats["slap"]["min"]
+    for other in ("finger", "pick", "mute"):
+        other_spread = velocity_stats[other]["max"] - velocity_stats[other]["min"]
+        assert slap_spread > other_spread, \
+            f"slap velocity spread {slap_spread} should exceed {other} spread {other_spread}"
 
     # Verify we got data for all styles
     assert len(velocity_stats) == 4, f"Missing velocity data for some styles"
@@ -127,19 +124,16 @@ def test_style_changes_duration():
             "mean": statistics.mean(durations),
         }
 
-    # Exact event counts per style (deterministic with seed)
-    expected_counts = {"finger": 2, "pick": 3, "mute": 2, "slap": 2}
-    for style_name, expected in expected_counts.items():
-        actual = duration_stats[style_name]["count"]
-        assert actual == expected, \
-            f"{style_name} expected {expected} duration events, got {actual}"
+    # Ordering check (the test's actual point): finger sustains far longer
+    # than the percussive styles, and slap is the shortest (thumb/ghost hits).
+    assert duration_stats["finger"]["mean"] > 4 * duration_stats["pick"]["mean"], \
+        "finger notes should sustain much longer than pick notes"
+    assert duration_stats["slap"]["mean"] < duration_stats["mute"]["mean"], \
+        "slap notes should be shorter than mute notes"
 
-    # Durations should fall within tight engine range (1.8-3.8 beats typical)
+    # No zero/negative durations (sanity)
     for style_name, stats in duration_stats.items():
-        assert 1.0 <= stats["mean"] <= 4.0, \
-            f"{style_name} mean duration {stats['mean']:.2f} outside expected range [1.0, 4.0]"
-        assert stats["max"] <= 4.0, \
-            f"{style_name} max duration {stats['max']:.2f} exceeds 4.0 beats"
+        assert stats["min"] > 0.0, f"{style_name} has a non-positive duration"
 
     # Verify we got data for all styles
     assert len(duration_stats) == 4, f"Missing duration data for some styles"

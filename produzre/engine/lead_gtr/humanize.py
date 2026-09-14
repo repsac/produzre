@@ -9,7 +9,7 @@ Jitter and variance magnitudes scale with intensity:
     mid intensity  → gentle       (±0.04 beats, ±6 velocity)
     high intensity → moderate     (±0.06 beats, ±8 velocity)
 
-These are intentionally small — the goal is "feels alive", not "sounds
+These are intentionally small: the goal is "feels alive", not "sounds
 sloppy".  Positive timing jitter slightly shortens duration so notes
 don't creep into the next event's window.
 """
@@ -51,9 +51,9 @@ def humanize_note(
     Args:
         beat: Original start beat (section-local or song-local).
         duration: Original duration in beats.
-        velocity: Original MIDI velocity (1–127).
+        velocity: Original MIDI velocity (1-127).
         rng: Seeded RNG for determinism.
-        intensity: 0.0–1.0 section intensity (scales effect magnitude).
+        intensity: 0.0-1.0 section intensity (scales effect magnitude).
 
     Returns:
         Tuple of (jittered_beat, adjusted_duration, varied_velocity).

@@ -15,11 +15,11 @@ from typing import Tuple
 
 # Register presets: (min_note, max_note) in MIDI.
 REGISTER_PRESETS = {
-    "low":       (52, 67),   # E3–G4  (lower melodic, below rhythm gtr)
-    "mid":       (60, 76),   # C4–E5  (comfortable melodic range)
-    "high":      (67, 84),   # G4–C6  (upper melodic, still playable)
-    "very_high": (72, 91),   # C5–G6  (extreme high — use sparingly)
-    "full":      (52, 88),   # E3–E6  (full shred range, ~3 octaves)
+    "low":       (52, 67),   # E3-G4  (lower melodic, below rhythm gtr)
+    "mid":       (60, 76),   # C4-E5  (comfortable melodic range)
+    "high":      (67, 84),   # G4-C6  (upper melodic, still playable)
+    "very_high": (72, 91),   # C5-G6  (extreme high: use sparingly)
+    "full":      (52, 88),   # E3-E6  (full shred range, ~3 octaves)
     "auto":      (60, 76),   # alias for mid; future: dynamic selection
 }
 

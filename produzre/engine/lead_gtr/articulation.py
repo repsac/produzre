@@ -4,7 +4,7 @@ Adds basic note shaping: sustain (default), staccato (short),
 and slide_hint (two quick stepwise notes simulating a slide).
 
 Articulation choices are deterministic via the section RNG and
-biased by intensity — higher intensity sections get more staccato
+biased by intensity: higher intensity sections get more staccato
 and slide activity for energy.
 """
 
@@ -48,7 +48,7 @@ def choose_articulation(rng: random.Random, intensity: float) -> str:
 
     Args:
         rng: Seeded RNG for determinism.
-        intensity: 0.0–1.0 section intensity.
+        intensity: 0.0-1.0 section intensity.
 
     Returns:
         One of ``"sustain"``, ``"staccato"``, ``"slide_hint"``.
@@ -78,8 +78,8 @@ def apply_articulation(
 ) -> ArticulatedNote:
     """Shape a note according to its articulation type.
 
-    sustain:     No change — note plays at full duration.
-    staccato:    Duration reduced to 40–60 % of original.
+    sustain:     No change: note plays at full duration.
+    staccato:    Duration reduced to 40-60 % of original.
     slide_hint:  Duration reduced; a short grace note is added one
                  semitone below to simulate a slide-in.
 
@@ -93,7 +93,7 @@ def apply_articulation(
         ArticulatedNote with shaped duration and optional grace note.
     """
     if articulation == "staccato":
-        factor = 0.40 + rng.random() * 0.20  # 40–60 %
+        factor = 0.40 + rng.random() * 0.20  # 40-60 %
         return ArticulatedNote(pitch=pitch, duration=duration * factor)
 
     if articulation == "slide_hint":

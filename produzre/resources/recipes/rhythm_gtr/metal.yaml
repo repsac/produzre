@@ -16,7 +16,5 @@ params:
   voicing: power
   strum_style: downbeat_heavy
   accent_strength: 0.7
-  groove: tight
-  swing: 0.0
   chuck_rate: 0.0
   use_patterns: true

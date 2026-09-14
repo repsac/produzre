@@ -13,9 +13,10 @@ import logging
 
 from ...harmony import build_harmony_plan, HarmonySectionPlan, ChordSlot
 from ...model import RootConfig, SectionConfig
+from ...melody import harmonic_function
 
 
-def _serialize_chord_slot(slot: ChordSlot) -> dict:
+def _serialize_chord_slot(slot: ChordSlot, slot_count: int) -> dict:
     """Serialize a ChordSlot to a plain dictionary.
 
     Args:
@@ -29,6 +30,9 @@ def _serialize_chord_slot(slot: ChordSlot) -> dict:
         "numeral": slot.numeral,
         "start_beat": slot.start_beat,
         "end_beat": slot.end_beat,
+        "function": harmonic_function(slot.numeral),
+        "is_phrase_end": (slot.index + 1) % 4 == 0 or slot.index == slot_count - 1,
+        "is_section_cadence": slot.index == slot_count - 1,
     }
 
 
@@ -49,7 +53,10 @@ def _serialize_harmony_plan(hplan: HarmonySectionPlan) -> dict:
         },
         "total_beats": hplan.total_beats,
         "chord_rate": hplan.chord_rate,
-        "chord_slots": [_serialize_chord_slot(slot) for slot in hplan.chord_slots],
+        "chord_slots": [
+            _serialize_chord_slot(slot, len(hplan.chord_slots))
+            for slot in hplan.chord_slots
+        ],
     }
 
 

@@ -16,6 +16,7 @@ subsystem once timelines are fully rendered.
 """
 
 import logging
+import random
 from collections.abc import Mapping
 from dataclasses import fields
 from typing import Any, Optional, List
@@ -24,7 +25,10 @@ from ..model import RootConfig
 from ..rng import make_instrument_rng, stable_seed_int
 from ..timeline import InstrumentTimeline
 from ..config.errors import ConfigError
+from ..groove import apply_feel, effective_params_dict, resolve_groove_feel
 from .negotiation import create_feedback_collector, EngineFeedback
+from .ensemble import build_ensemble_section_plan
+from ..melody import build_melody_guide
 
 
 def _find_providers_for_requirement(cfg: RootConfig, requirement: str) -> list[str]:
@@ -157,10 +161,28 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
                     if base_cfg is not None:
                         break
 
+    if base_cfg is None and hasattr(cfg, "raw") and isinstance(cfg.raw, dict):
+        # RootConfig has no parsed global-instruments field; recover the
+        # top-level `instruments:` block (intensity, register, recipe, genre,
+        # ...) from the raw YAML so global scalars aren't silently dropped.
+        raw_instruments = cfg.raw.get("instruments")
+        if isinstance(raw_instruments, dict):
+            data = raw_instruments.get(inst_name)
+            if isinstance(data, dict):
+                from ..config.parse import _parse_instrument_config
+                # `persona` is resolved by the loader into _effective; keep it
+                # out of extra.
+                data = {k: v for k, v in data.items() if k != "persona"}
+                base_cfg = _parse_instrument_config(inst_name, data)
+
     if effective_cfg is None:
         return base_cfg
 
     persona_params = effective_cfg.get("params", {}) or {}
+    # Keys whose value came from the persona (not the user). Recipes are
+    # allowed to override these later (persona < recipe < user); see
+    # produzre.config.recipes.merge_recipe_params.
+    persona_keys = list(effective_cfg.get("persona_keys", []) or [])
 
     if base_cfg is not None and hasattr(base_cfg, "extra"):
         # Merge persona params into InstrumentConfig.extra (persona < user)
@@ -168,6 +190,9 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
             existing_extra = base_cfg.extra if base_cfg.extra else {}
             if isinstance(existing_extra, dict):
                 merged = {**persona_params, **existing_extra}
+                remaining = [k for k in persona_keys if k not in existing_extra]
+                if remaining:
+                    merged["_persona_keys"] = remaining
                 base_cfg = type(base_cfg)(
                     **{f.name: (merged if f.name == "extra" else getattr(base_cfg, f.name))
                        for f in fields(base_cfg)}
@@ -175,19 +200,44 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
         return base_cfg
 
     if base_cfg is None:
-        # No InstrumentConfig — wrap persona params in one so engines get a
+        # No InstrumentConfig: wrap persona params in one so engines get a
         # proper dataclass with .intensity / .extra.
         from ..model import InstrumentConfig
-        return InstrumentConfig(extra=dict(persona_params))
+        extra = dict(persona_params)
+        if persona_keys:
+            extra["_persona_keys"] = list(persona_keys)
+        return InstrumentConfig(extra=extra)
 
     return effective_cfg
+
+def _merge_extra(base_extra: Any, override_extra: Any) -> Any:
+    """Deep-merge two `extra` dicts (override keys win).
+
+    Maintains the `_persona_keys` tag: a key explicitly set by the override
+    is no longer persona-sourced, so recipes must not clobber it later.
+    """
+    if not isinstance(base_extra, dict) or not isinstance(override_extra, dict):
+        return override_extra if override_extra else base_extra
+    merged = {**base_extra, **override_extra}
+    persona_keys = [
+        k for k in (base_extra.get("_persona_keys") or [])
+        if k not in override_extra
+    ]
+    if persona_keys:
+        merged["_persona_keys"] = persona_keys
+    else:
+        merged.pop("_persona_keys", None)
+    return merged
+
 
 def _merge_instrument_config(base: Any, override: Any) -> Any:
     """Merge two InstrumentConfig dataclass instances.
 
     Semantics:
       - `override` wins when it explicitly sets a field to a non-None value.
-      - `params` is deep-merged key-by-key (override keys replace base keys).
+      - `extra`/`params` are deep-merged key-by-key (override keys replace
+        base keys); a section declaring `bass: {}` must NOT wipe global or
+        persona params that live in the base `extra`.
       - If `base` is None, return `override`.
       - If `override` is None, return `base`.
 
@@ -210,24 +260,32 @@ def _merge_instrument_config(base: Any, override: Any) -> Any:
 
         # Override can be dict or dataclass
         if isinstance(override, dict):
-            # Both are dicts - simple merge
+            # Both are dicts - simple merge (extra/params deep-merged below)
             for key, val in override.items():
-                if val is not None:
+                if val is not None and key not in ("extra", "params"):
                     merged[key] = val
-            # Deep-merge params
+            # Deep-merge params and extra
             base_params = base.get("params", {}) or {}
             override_params = override.get("params", {}) or {}
             merged["params"] = {**dict(base_params), **dict(override_params)}
+            merged["extra"] = _merge_extra(
+                base.get("extra", {}) or {}, override.get("extra", {}) or {}
+            )
         else:
-            # Override is dataclass - extract fields
+            # Override is dataclass - extract fields (extra deep-merged below)
             for f in fields(override):
+                if f.name == "extra":
+                    continue
                 val = getattr(override, f.name)
                 if val is not None:
                     merged[f.name] = val
-            # Deep-merge params
+            # Deep-merge params and extra
             base_params = base.get("params", {}) or {}
             override_params = getattr(override, "params", None) or {}
             merged["params"] = {**dict(base_params), **dict(override_params)}
+            merged["extra"] = _merge_extra(
+                base.get("extra", {}) or {}, getattr(override, "extra", None) or {}
+            )
 
         return merged
 
@@ -242,28 +300,36 @@ def _merge_instrument_config(base: Any, override: Any) -> Any:
     for f in fields(base):
         merged[f.name] = getattr(base, f.name)
 
-    # Apply overrides (non-None) on top.
+    # Apply overrides (non-None) on top. `extra` is deep-merged, never
+    # replaced: a section override like `bass: {}` (or one that only sets a
+    # couple of keys) must not wipe global/persona params held in base.extra.
+    base_extra = getattr(base, "extra", None) or {}
     if override_map is None:
         for f in fields(override):
+            if f.name == "extra":
+                continue
             val = getattr(override, f.name)
             if val is not None:
                 merged[f.name] = val
         override_params = getattr(override, "params", None) or {}
+        merged["extra"] = _merge_extra(base_extra, getattr(override, "extra", None) or {})
     else:
         for f in fields(base):
+            if f.name == "extra":
+                continue
             if f.name in override_map and override_map[f.name] is not None:
                 merged[f.name] = override_map[f.name]
         override_params = override_map.get("params", {}) or {}
+        merged["extra"] = _merge_extra(base_extra, override_map.get("extra", {}) or {})
 
     # Deep-merge params into extra (InstrumentConfig uses 'extra', not 'params').
     base_params = getattr(base, "params", None) or {}
     if base_params or override_params:
         merged_params = {**dict(base_params), **dict(override_params)}
         if "params" in merged:
-            # InstrumentConfig doesn't have a 'params' field — fold into extra
+            # InstrumentConfig doesn't have a 'params' field: fold into extra
             del merged["params"]
-        base_extra = merged.get("extra", {}) or {}
-        merged["extra"] = {**merged_params, **base_extra}
+        merged["extra"] = {**merged_params, **(merged.get("extra", {}) or {})}
 
     # Only pass fields that the dataclass actually accepts
     valid_fields = {f.name for f in fields(base)}
@@ -293,7 +359,27 @@ def init_timelines(cfg: RootConfig, instruments_to_init: Optional[list[str]] = N
         # Backward compatibility: initialize all engines
         instruments_to_init = list(cfg.engines.keys())
 
-    return {name: InstrumentTimeline(instrument=name) for name in instruments_to_init}
+    return {
+        name: InstrumentTimeline(
+            instrument=name,
+            default_channel=_engine_channel(cfg, name),
+        )
+        for name in instruments_to_init
+    }
+
+
+def _engine_channel(cfg: RootConfig, inst_name: str) -> Optional[int]:
+    """Return the engine-spec MIDI channel for an instrument, if registered.
+
+    Sources `engines.yml` (and project overrides) via the engine registry so
+    the configured `channel:` is actually applied to emitted events.
+    """
+    engine = getattr(cfg, "engines", {}).get(inst_name) if getattr(cfg, "engines", None) else None
+    ch = getattr(engine, "channel", None) if engine is not None else None
+    try:
+        return int(ch) if ch is not None else None
+    except Exception:
+        return None
 
 
 def compute_instruments_used(cfg: RootConfig) -> list[str]:
@@ -387,6 +473,17 @@ def render_section_instruments(
     # Phase N8: Create feedback collector for this section
     feedback_collector = create_feedback_collector(sec.id, logger)
 
+    # `harmony.plan` is a section-scoped artifact stored under a global plan
+    # key. Clear it at the start of each section so dependency validation is
+    # honest: a section without harmony must not pass validation on the
+    # previous section's stale entry.
+    if performance_plan is not None:
+        try:
+            performance_plan.data.pop("harmony.plan", None)
+            performance_plan.data.pop("melody.guide", None)
+        except Exception:
+            pass
+
     # Shared rhythm features: instruments can export features for others to use.
     # Key: instrument name, Value: RhythmFeatures object
     # Drums typically exports first (priority 10), bass/guitar read later (priority 20-30).
@@ -423,37 +520,101 @@ def render_section_instruments(
     # Sort by engine priority (ascending: lower priority renders first)
     instruments_with_engines.sort(key=lambda x: x[2].priority)
 
-    # Render instruments in priority order
-    for inst_name, inst_cfg, engine in instruments_with_engines:
-        # Phase N3: Validate engine dependencies before execution
-        _validate_engine_dependencies(inst_name, engine, performance_plan, cfg, logger)
-
-        # Merge global instrument defaults with section overrides.
+    # Merge global instrument defaults with section overrides for every
+    # instrument up front. The merged configs feed both the engines and the
+    # shared groove clock (which needs all instruments' params to resolve
+    # per-instrument pocket offsets before later engines have rendered).
+    effective_cfgs: dict[str, Any] = {}
+    for inst_name, inst_cfg, _engine in instruments_with_engines:
         base_cfg = _get_global_instrument_cfg(cfg, inst_name)
-        effective_cfg = _merge_instrument_config(base_cfg, inst_cfg)
+        effective_cfgs[inst_name] = _merge_instrument_config(base_cfg, inst_cfg)
 
-        timeline = timelines.get(inst_name)
-        if timeline is None:
-            timeline = InstrumentTimeline(instrument=inst_name)
-            timelines[inst_name] = timeline
+    # Shared groove clock state (resolved lazily once per section, after the
+    # drums engine has published its merged humanize params to the plan).
+    def recipe_feel_params(name, instrument_cfg):
+        from ..config.recipes import resolve_recipe_name, merge_recipe_params
+        params = effective_params_dict(instrument_cfg)
+        raw = getattr(cfg, "raw", {}) or {}
+        recipes = raw.get("_recipes", {}).get(name, {})
+        song = getattr(cfg, "song", None)
+        intensity = getattr(instrument_cfg, "intensity", None)
+        if intensity is None:
+            intensity = getattr(sec, "intensity", None)
+        recipe_name = resolve_recipe_name(
+            instrument=name, genre=getattr(instrument_cfg, "genre", None) or getattr(song, "genre", None),
+            section_type=sec.type, intensity=.5 if intensity is None else intensity,
+            bpm=getattr(song, "bpm", 120), time_signature=getattr(sec, "meter", None) or getattr(song, "meter", "4/4"),
+            instrument_recipe=getattr(instrument_cfg, "recipe", None), section_recipe=params.get("recipe"),
+            recipes=recipes,
+        )
+        explicit_keys = set(params) - set(params.get("_persona_keys") or [])
+        params = merge_recipe_params(params, (recipes.get(recipe_name) or {}).get("params", {}))
+        if name == "drums":
+            for key, value in (raw.get("groove") or {}).items():
+                if key in ("swing", "swing_16th") and key not in explicit_keys:
+                    params[key] = value
+        return params
 
-        # Log engine execution order for debugging (Phase N2)
-        logger.debug(
-            "Section '%s': rendering %s (priority=%d)",
-            sec.id,
-            inst_name,
-            engine.priority,
+    groove_inst_params = {
+        name: recipe_feel_params(name, c) for name, c in effective_cfgs.items()
+    }
+    groove_feel = None
+    groove_feel_resolved = False
+
+    if performance_plan is not None:
+        performance_plan.set(
+            f"ensemble.{sec.id}",
+            build_ensemble_section_plan(cfg, sec, rgrid, transition_context),
         )
 
-        # Instrument-level seed override: if the instrument declares its own
-        # seed, derive a unique RNG for this instrument instead of using
-        # the shared section_rng.
+    def _resolve_section_groove_feel():
+        """Resolve the section's groove feel once (drums params from plan)."""
+        drum_params = None
+        if performance_plan is not None:
+            try:
+                drum_params = performance_plan.get(f"groove.humanize.{sec.id}")
+            except Exception:
+                drum_params = None
+        if not isinstance(drum_params, dict):
+            # Drums not rendered (or no plan): fall back to the merged drums
+            # instrument params, including the selected recipe.
+            drum_params = groove_inst_params.get("drums")
+            if drum_params is None:
+                drum_params = recipe_feel_params("drums", _get_global_instrument_cfg(cfg, "drums"))
+        feel = resolve_groove_feel(cfg, sec, drum_params, groove_inst_params)
+        if feel is not None:
+            pockets = {
+                k: round(v, 2)
+                for k, v in sorted(feel.pocket_offsets_ms.items())
+                if k in groove_inst_params
+            }
+            logger.info(
+                "Section '%s': groove feel resolved (source=%s, swing=%.2f, "
+                "swing_16th=%.2f, pockets_ms=%s)",
+                sec.id,
+                feel.source,
+                feel.swing,
+                feel.swing_16th,
+                pockets,
+            )
+        else:
+            logger.debug(
+                "Section '%s': no groove indication; groove clock inactive.",
+                sec.id,
+            )
+        return feel
+
+    # Prepare deterministic per-instrument state, then run every planning hook
+    # before rendering any MIDI. This makes current-section intent available to
+    # earlier render priorities (notably rhythm guitar before lead guitar).
+    prepared_engines = []
+    for inst_name, inst_cfg, engine in instruments_with_engines:
+        effective_cfg = effective_cfgs[inst_name]
         inst_seed = getattr(effective_cfg, "seed", None) if hasattr(effective_cfg, "seed") else (
             effective_cfg.get("seed") if isinstance(effective_cfg, dict) else None
         )
         if inst_seed is not None:
             inst_rng_seed = stable_seed_int("inst_override", inst_seed, sec.id, inst_name)
-            import random
             engine_rng = random.Random(inst_rng_seed)
             logger.debug(
                 "Section '%s': instrument '%s' using seed override %d",
@@ -482,7 +643,10 @@ def render_section_instruments(
             elif isinstance(effective_cfg, dict):
                 effective_cfg.setdefault("_variation", engine_variation)
 
-        # Phase N4: Call contribute_plan if present (before render)
+        prepared_engines.append((inst_name, effective_cfg, engine, engine_rng))
+
+    for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
+        _validate_engine_dependencies(inst_name, engine, performance_plan, cfg, logger)
         if engine.contribute_plan is not None:
             section_ctx = {
                 "cfg": cfg,
@@ -502,7 +666,108 @@ def render_section_instruments(
                 logger=logger,
             )
 
-        engine.render(
+    # Derive melodic intent after harmony and all instrument planning hooks,
+    # but before any engine renders.  A dedicated RNG keeps engine streams
+    # stable when the melody planner evolves.
+    if performance_plan is not None and hplan is not None:
+        guide_dict = None
+
+        # Theme-driven guide (design: docs/design/theme-bank-architecture.md).
+        # When the song defines themes, the guide is built from the realized
+        # MELODY theme under this section's arc treatment, and realized notes
+        # for every role are published so engines can quote them directly.
+        theme_bank = performance_plan.get("themes.bank")
+        if theme_bank is not None and getattr(theme_bank, "themes", None):
+            from ..themes.arc import treatment_for
+            from ..themes.guide import (
+                build_themed_guide,
+                realize_for_section,
+                realized_to_dicts,
+            )
+            from ..themes.model import ThemeRole
+
+            sec_key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+            sec_mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+            sec_genre = str(getattr(cfg.song, "genre", "") or "")
+            arrangement_index = 0
+            if isinstance(transition_context, dict):
+                arrangement_index = int(
+                    transition_context.get("arrangement_index", 0) or 0
+                )
+            # Occurrence count of this section *type* up to this arrangement
+            # index (drives repeat-statement escalation, e.g. chorus 2 lift).
+            sec_type_key = str(getattr(sec, "type", "") or "").strip().lower()
+            occurrence = sum(
+                1
+                for meta in list(getattr(performance_plan, "sections", []))[:arrangement_index]
+                if str(getattr(meta, "type", "") or "").strip().lower() == sec_type_key
+            )
+
+            realized_payload: dict[str, list] = {}
+            realized_by_name: dict[str, list] = {}
+            total_beats = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+            for theme in theme_bank.themes.values():
+                t_name, t_params = treatment_for(theme, sec_type_key, occurrence)
+                notes = realize_for_section(
+                    theme, t_name, t_params, hplan.chord_slots,
+                    key=sec_key, mode=sec_mode, genre=sec_genre,
+                    total_beats=total_beats,
+                )
+                realized_by_name[theme.name] = realized_to_dicts(notes)
+                # The first declared theme owns its role in every consumer.
+                realized_payload.setdefault(theme.role.value, realized_by_name[theme.name])
+                if theme.role is ThemeRole.MELODY and guide_dict is None:
+                    guide_dict = build_themed_guide(
+                        theme, hplan,
+                        key=sec_key, mode=sec_mode, genre=sec_genre,
+                        total_beats=total_beats,
+                        transform_name=t_name, transform_params=t_params,
+                        realized_notes=notes,
+                    ).to_dict()
+                    logger.info(
+                        "Section '%s': melody guide from theme '%s' "
+                        "(%s, occurrence %d, %d notes)",
+                        sec.id, theme.name, t_name, occurrence + 1, len(notes),
+                    )
+            performance_plan.set(f"themes.realized.{sec.id}", realized_payload)
+            performance_plan.set(f"themes.realized_by_name.{sec.id}", realized_by_name)
+
+        if guide_dict is None:
+            melody_rng = random.Random(stable_seed_int(
+                "melody_guide", getattr(cfg.song, "seed", 42), sec.id,
+                section_start_beat, getattr(cfg.song, "genre", ""),
+            ))
+            guide_dict = build_melody_guide(
+                hplan,
+                key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+                mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+                section_type=getattr(sec, "type", ""),
+                genre=getattr(cfg.song, "genre", ""),
+                rng=melody_rng,
+            ).to_dict()
+        performance_plan.set(f"melody.guide.{sec.id}", guide_dict)
+        performance_plan.set("melody.guide", guide_dict)
+
+    # Render instruments in priority order after the complete intent prepass.
+    for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
+        timeline = timelines.get(inst_name)
+        if timeline is None:
+            timeline = InstrumentTimeline(
+                instrument=inst_name,
+                default_channel=_engine_channel(cfg, inst_name),
+            )
+            timelines[inst_name] = timeline
+
+        logger.debug(
+            "Section '%s': rendering %s (priority=%d)",
+            sec.id,
+            inst_name,
+            engine.priority,
+        )
+
+        events_before = len(timeline.events)
+
+        render_result = engine.render(
             cfg=cfg,
             section=sec,
             instrument_name=inst_name,
@@ -518,6 +783,96 @@ def render_section_instruments(
             plan=performance_plan,  # Phase RG2: Pass plan for rhythm.accents access
             logger=logger,
         )
+
+        # Shared groove clock: post-process the newly added events with the
+        # section's resolved feel. Drums are excluded: they already swing
+        # internally and are the reference clock (pocket 0 by definition).
+        # apply_feel is invoked exactly once per event (this is the only call
+        # site), so swing can never double-apply.
+        if inst_name != "drums":
+            new_events = timeline.events[events_before:]
+            if new_events:
+                if not groove_feel_resolved:
+                    groove_feel = _resolve_section_groove_feel()
+                    groove_feel_resolved = True
+                if groove_feel is not None:
+                    inst_params = groove_inst_params.get(inst_name, {}) or {}
+                    try:
+                        jitter_ms = float(inst_params.get("timing_jitter_ms", 0.0) or 0.0)
+                    except (TypeError, ValueError):
+                        jitter_ms = 0.0
+                    try:
+                        vel_humanize = float(inst_params.get("velocity_humanize", 0.0) or 0.0)
+                    except (TypeError, ValueError):
+                        vel_humanize = 0.0
+                    song = getattr(cfg, "song", None)
+                    try:
+                        bpm = float(getattr(song, "bpm", 120.0) or 120.0)
+                    except (TypeError, ValueError):
+                        bpm = 120.0
+                    beats_per_bar = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+                    arrangement_index = 0
+                    if isinstance(transition_context, dict):
+                        arrangement_index = int(
+                            transition_context.get("arrangement_index", 0) or 0
+                        )
+                    seed_material = getattr(section_rng, "_produzre_seed", None)
+                    if seed_material is None:
+                        seed_material = stable_seed_int(
+                            "groove_fallback", sec.id, getattr(sec, "type", "")
+                        )
+                    feel_seed = stable_seed_int(
+                        "groove", seed_material, sec.id, arrangement_index, inst_name
+                    )
+                    apply_feel(
+                        new_events,
+                        groove_feel,
+                        inst_name,
+                        bpm,
+                        beats_per_bar,
+                        feel_seed,
+                        section_start_beat=float(section_start_beat),
+                        timing_jitter_ms=jitter_ms,
+                        velocity_humanize=vel_humanize,
+                    )
+
+        # Timing feel cannot move notes beyond the section being rendered.
+        section_end = section_start_beat + float(getattr(rgrid, "total_beats", float("inf")))
+        bounded = []
+        for ev in timeline.events[events_before:]:
+            ev.start_beat = max(section_start_beat, ev.start_beat)
+            ev.duration_beats = min(ev.duration_beats, section_end - ev.start_beat)
+            if ev.duration_beats > 0:
+                bounded.append(ev)
+        timeline.events[events_before:] = bounded
+        new_events = bounded
+        if render_result is not None:
+            rhythm_features[inst_name] = render_result
+        if performance_plan is not None and new_events:
+            local_onsets = sorted({
+                round(float(event.start_beat) - float(section_start_beat), 4)
+                for event in new_events
+            })
+            pitches = [int(event.pitch) for event in new_events]
+            performance = {
+                "section_id": sec.id,
+                "event_count": len(new_events),
+                "onsets": local_onsets,
+                "register": [min(pitches), max(pitches)],
+            }
+            performance_plan.set(f"performance.{inst_name}.{sec.id}", performance)
+            if inst_name == "bass":
+                performance_plan.set("bass.line", performance)
+            elif inst_name == "rhythm_gtr":
+                performance_plan.set("rhythm.texture.actual", performance)
+            elif inst_name == "lead_gtr":
+                performance_plan.set("melody.line", performance)
+                performance_plan.set("lead.phrases", {
+                    "section_id": sec.id,
+                    "activity_windows": performance_plan.get(
+                        f"ensemble.{sec.id}", {}
+                    ).get("lead_activity_windows", []),
+                })
 
     # Phase N8: Return collected feedback for negotiation between sections
     return feedback_collector.get_feedback()

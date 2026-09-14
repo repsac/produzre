@@ -3,7 +3,7 @@
 # Demonstrates per-instrument genre overrides. The song has a base genre
 # of "rock" but individual instruments pull from different genre recipes.
 #
-# Instruments work together because they share the same harmony plan —
+# Instruments work together because they share the same harmony plan:
 # genre only affects rhythm patterns, density, and voicings, not pitch.
 #
 # Fallback chain: section instrument genre → global instrument genre → song genre

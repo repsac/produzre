@@ -70,6 +70,22 @@ def build_bar_pattern(
         pattern = _build_syncopated(density, beats_per_bar, rng)
     elif style == "half_time":
         pattern = _build_half_time(density, beats_per_bar, rng)
+    elif style == "rock_riff":
+        pattern = _build_idiom_pattern("rock_riff", 2, [0, 1, 3, 4, 6, 7], [0, 4], density, beats_per_bar, rng)
+    elif style == "pop_push":
+        pattern = _build_idiom_pattern("pop_push", 2, [0, 2, 3, 4, 6, 7], [0, 3, 7], density, beats_per_bar, rng)
+    elif style == "funk_chanks":
+        pattern = _build_idiom_pattern("funk_chanks", 4, [2, 5, 7, 10, 13, 15], [2, 10, 15], density, beats_per_bar, rng)
+    elif style == "jazz_comp":
+        pattern = _build_idiom_pattern("jazz_comp", 3, [0, 4, 7, 10], [0, 7], density, beats_per_bar, rng)
+    elif style == "blues_shuffle":
+        pattern = _build_idiom_pattern("blues_shuffle", 3, [0, 2, 3, 5, 6, 8, 9, 11], [0, 6], density, beats_per_bar, rng)
+    elif style == "country_boom_chuck":
+        pattern = _build_idiom_pattern("country_boom_chuck", 2, [0, 2, 3, 4, 6, 7], [2, 6], density, beats_per_bar, rng)
+    elif style == "reggae_skank":
+        pattern = _build_idiom_pattern("reggae_skank", 2, [1, 3, 5, 7], [1, 3, 5, 7], density, beats_per_bar, rng)
+    elif style == "latin_clave":
+        pattern = _build_idiom_pattern("latin_clave", 4, [0, 3, 6, 10, 12], [0, 6, 12], density, beats_per_bar, rng)
     else:
         # Fallback to straight_8s for unknown styles
         pattern = _build_straight_8s(density, beats_per_bar, rng)
@@ -83,6 +99,143 @@ def build_bar_pattern(
     pattern = _apply_palm_mutes(pattern, pm_bias, rng)
 
     return pattern
+
+
+def _build_idiom_pattern(
+    name: str,
+    subdivision: int,
+    source_hits: List[int],
+    source_accents: List[int],
+    density: float,
+    beats_per_bar: float,
+    rng: random.Random,
+) -> GtrPattern:
+    """Build a recognizable genre cell while allowing controlled omissions."""
+    total_slots = max(1, int(beats_per_bar * subdivision))
+    hits = [hit for hit in source_hits if hit < total_slots]
+    accents = {hit for hit in source_accents if hit in hits}
+    keep_probability = 0.45 + (0.55 * density)
+    kept = [hit for hit in hits if hit in accents or rng.random() < keep_probability]
+    if not kept and hits:
+        kept = [hits[0]]
+    directions = ["down" if (hit % subdivision) == 0 else "up" for hit in kept]
+    return GtrPattern(
+        name=f"{name}_d{int(density * 100)}",
+        subdivision=subdivision,
+        hits=sorted(kept),
+        accents=sorted(hit for hit in accents if hit in kept),
+        palm_mutes=[],
+        strum_directions=directions,
+        density=density,
+    )
+
+
+def apply_density_budget(pattern: GtrPattern, multiplier: float, rng: random.Random) -> GtrPattern:
+    """Thin weak strums while retaining the cell's defining accents."""
+    multiplier = max(0.0, min(1.0, float(multiplier)))
+    if multiplier >= 0.999 or len(pattern.hits) <= 1:
+        return pattern
+    accents = set(pattern.accents)
+    hits = [hit for hit in pattern.hits if hit in accents or rng.random() < multiplier]
+    if not hits:
+        hits = [pattern.hits[0]]
+    directions = ["down" if hit % pattern.subdivision == 0 else "up" for hit in hits]
+    return GtrPattern(
+        name=f"{pattern.name}_space{int(multiplier * 100)}",
+        subdivision=pattern.subdivision,
+        hits=hits,
+        accents=[hit for hit in pattern.accents if hit in hits],
+        palm_mutes=[hit for hit in pattern.palm_mutes if hit in hits],
+        strum_directions=directions,
+        density=pattern.density * multiplier,
+    )
+
+
+def develop_bar_pattern(
+    pattern: GtrPattern,
+    *,
+    bar_idx: int,
+    total_bars: int,
+    phrase_len_bars: int = 4,
+    section_type: str = "verse",
+    density: float = 0.5,
+    beats_per_bar: float = 4.0,
+    rng: Optional[random.Random] = None,
+) -> GtrPattern:
+    """Apply phrase-level rhythm guitar variation to a one-bar pattern."""
+    if rng is None:
+        rng = random.Random()
+
+    if not pattern.hits:
+        return pattern
+
+    subdivision = int(pattern.subdivision)
+    total_slots = max(1, int(float(beats_per_bar) * subdivision))
+    phrase_len = max(1, int(phrase_len_bars))
+    phrase_pos = bar_idx % phrase_len
+    is_phrase_end = phrase_pos == phrase_len - 1 or bar_idx == total_bars - 1
+    is_section_end = bar_idx == total_bars - 1
+
+    hits = set(int(h) for h in pattern.hits if 0 <= int(h) < total_slots)
+    accents = set(int(a) for a in pattern.accents if int(a) in hits)
+    palm_mutes = set(int(pm) for pm in pattern.palm_mutes if int(pm) in hits)
+
+    # Leave air after phrase starts, especially in verses and lower-density parts.
+    if phrase_pos == 1 and density < 0.75:
+        removable = [h for h in sorted(hits) if h != 0 and (h % subdivision) != 0]
+        for h in removable:
+            if rng.random() < (0.18 + (0.20 * (1.0 - min(1.0, density)))):
+                hits.discard(h)
+                accents.discard(h)
+                palm_mutes.discard(h)
+
+    # Phrase endings answer with a small pickup or syncopated push.
+    if is_phrase_end:
+        last_beat = max(0, int((beats_per_bar - 1.0) * subdivision))
+        candidates = [
+            last_beat,
+            min(total_slots - 1, last_beat + max(1, subdivision // 2)),
+            min(total_slots - 1, total_slots - 1),
+        ]
+        add_prob = 0.45 + (0.35 * min(1.0, density))
+        for h in candidates:
+            if rng.random() < add_prob:
+                hits.add(h)
+                if h >= last_beat:
+                    accents.add(h)
+
+        # Cadences often cut the last offbeat so the next downbeat lands harder.
+        if is_section_end and rng.random() < 0.45:
+            late_weak = [h for h in hits if h >= total_slots - subdivision and h not in accents]
+            if late_weak:
+                h = rng.choice(sorted(late_weak))
+                hits.discard(h)
+                palm_mutes.discard(h)
+
+    # Bridges and breakdowns should not just clone verse/chorus comping.
+    st = (section_type or "").lower()
+    if st in ("bridge", "breakdown", "solo") and total_slots > subdivision:
+        sync_hits = [
+            min(total_slots - 1, subdivision + subdivision // 2),
+            min(total_slots - 1, (2 * subdivision) + subdivision // 2),
+        ]
+        for h in sync_hits:
+            if rng.random() < 0.38 + (density * 0.25):
+                hits.add(h)
+                accents.add(h)
+
+    hits_list = sorted(hits)
+    directions = ["down" if (h % subdivision) == 0 else "up" for h in hits_list]
+
+    return GtrPattern(
+        name=f"{pattern.name}_dev{bar_idx % phrase_len}",
+        subdivision=pattern.subdivision,
+        hits=hits_list,
+        accents=sorted(a for a in accents if a in hits),
+        palm_mutes=sorted(pm for pm in palm_mutes if pm in hits),
+        strum_directions=directions,
+        density=pattern.density,
+    )
 
 
 def _choose_style_for_section(
@@ -372,26 +525,28 @@ def _apply_accents(
     Returns:
         GtrPattern: Pattern with updated accents
     """
-    # Convert accent beats to subdivision indices
+    # Convert accent beats to subdivision indices.
+    # Bound by the bar's total slot count (beats_per_bar * subdivision), NOT by
+    # the number of hits: hits are slot indices, not a dense array.
+    total_slots = max(1, int(beats_per_bar * pattern.subdivision))
     accent_indices: Set[int] = set()
 
     for accent_beat in accent_beats:
         # Normalize to bar-relative position
         bar_beat = accent_beat % beats_per_bar
         # Convert to subdivision index
-        subdivision_idx = int(bar_beat * pattern.subdivision)
-        if subdivision_idx < len(pattern.hits):
+        subdivision_idx = int(round(bar_beat * pattern.subdivision))
+        if 0 <= subdivision_idx < total_slots:
             accent_indices.add(subdivision_idx)
 
-    # Find hits that are close to accent beats
+    # Find hits that are close to accent beats: exact slot match or directly
+    # adjacent slot (1-slot proximity window).
     new_accents = set(pattern.accents)
     for hit in pattern.hits:
-        if hit in accent_indices:
-            new_accents.add(hit)
-        # Also check if hit is within half a subdivision of an accent
         for acc_idx in accent_indices:
-            if abs(hit - acc_idx) <= pattern.subdivision / 2:
+            if hit == acc_idx:
                 new_accents.add(hit)
+                break
 
     return GtrPattern(
         name=pattern.name,
@@ -444,48 +599,3 @@ def _apply_palm_mutes(
         strum_directions=pattern.strum_directions,
         density=pattern.density,
     )
-
-
-def apply_microtiming(
-    beat_position: float,
-    groove_profile: str = "tight",
-    push_pull_amount: float = 0.0,
-    rng: Optional[random.Random] = None,
-) -> float:
-    """Apply push/pull microtiming to a beat position.
-
-    Args:
-        beat_position: Original beat position
-        groove_profile: Groove style ("tight", "laid_back", "pushed", "loose")
-        push_pull_amount: Amount of timing adjustment in beats (±0.0-0.1)
-        rng: Random generator for loose timing
-
-    Returns:
-        float: Adjusted beat position
-    """
-    if rng is None:
-        rng = random.Random()
-
-    if push_pull_amount <= 0.0:
-        return beat_position
-
-    # Apply groove-specific timing
-    if groove_profile == "tight":
-        # No adjustment
-        return beat_position
-
-    elif groove_profile == "laid_back":
-        # Slight delay (push back)
-        return beat_position + (push_pull_amount * 0.5)
-
-    elif groove_profile == "pushed":
-        # Slight rush (pull forward)
-        return beat_position - (push_pull_amount * 0.5)
-
-    elif groove_profile == "loose":
-        # Random variation
-        offset = (rng.random() - 0.5) * push_pull_amount * 2.0
-        return beat_position + offset
-
-    # Unknown profile: no adjustment
-    return beat_position

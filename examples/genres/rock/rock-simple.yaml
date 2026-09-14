@@ -1,7 +1,7 @@
 # Simple Rock - Beginner Example
 #
 # Demonstrates the genre recipe system: setting genre: rock auto-loads
-# drum patterns, rhythm guitar style, and harmony recipes — no manual
+# drum patterns, rhythm guitar style, and harmony recipes: no manual
 # parameter tuning needed.
 #
 # Complexity: SIMPLE (1 section, minimal configuration)

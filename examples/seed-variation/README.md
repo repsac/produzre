@@ -1,42 +1,27 @@
-# Seed & Variation Examples
+# Seed and variation comparisons
 
-These 5 files demonstrate granular seed and variation control. They are all
-identical copies of the same song with **one change each**, so you can A/B
-compare builds.
+These five configs use the same arrangement with targeted seed or variation
+changes. They share a title, so use each build's export folder to tell them apart.
 
-## Files
+| File | Main override | Expected scope |
+|---|---|---|
+| [base-song.yaml](base-song.yaml) | None | Reference performance. |
+| [section-seed-override.yaml](section-seed-override.yaml) | Chorus `seed: 999` | Chorus engine RNG streams. |
+| [section-variation.yaml](section-variation.yaml) | Chorus `variation: 0.6` | Chorus performance choices. |
+| [instrument-seed-override.yaml](instrument-seed-override.yaml) | Chorus drums `seed: 777` | Drum RNG stream, then any parts that listen to drums. |
+| [instrument-variation.yaml](instrument-variation.yaml) | Chorus drums `variation: 0.8` | Drum performance choices, then dependent parts. |
 
-| File | Change | What differs in output |
-|------|--------|----------------------|
-| `base-song.yaml` | None (baseline) | Reference output |
-| `section-seed-override.yaml` | `chorus.seed: 999` | All chorus instruments re-rolled |
-| `section-variation.yaml` | `chorus.variation: 0.6` | Chorus has variation bias |
-| `instrument-seed-override.yaml` | `chorus.drums.seed: 777` | Only chorus drums re-rolled |
-| `instrument-variation.yaml` | `chorus.drums.variation: 0.8` | Only chorus drums get variation |
-
-## How to test
-
-Build all 5 and compare:
+Build them from the repository root:
 
 ```bash
-for f in examples/seed-variation/*.yaml; do
-  produzre build "$f"
+for file in examples/seed-variation/*.yaml; do
+  python produzre_entry.py build "$file"
 done
 ```
 
-Then compare the MIDI output in your DAW or use the text exports to diff:
+Use each build's printed export root to locate its MIDI and analysis files.
+Compare corresponding chorus sections in a DAW or diff the event TSVs.
+Export folders include timestamps, so use the path printed by each build.
 
-```bash
-diff exports/Seed\ Variation\ Base/  exports/Seed\ Variation\ Base\ 2/
-```
-
-## What to expect
-
-- **Section seed override**: The chorus sounds completely different; intro, verse,
-  and outro are identical to the base.
-- **Section variation**: The chorus has subtle differences from the base; other
-  sections are identical.
-- **Instrument seed override**: Only the drums in the chorus change; bass, guitar,
-  and all other sections match the base.
-- **Instrument variation**: Only the drums in the chorus have variation bias;
-  everything else matches the base.
+See [DETERMINISM.md](../../DETERMINISM.md) for the seed hierarchy, preserved
+theme material, and how one instrument's changes can affect another.

@@ -1,18 +1,11 @@
-"""Example arpeggiator engine for Produzre.
+"""Phrase-aware arpeggiator with voice-led melodic apex notes."""
 
-This is a simple example engine that demonstrates:
-- Reading harmony plan for chord structure
-- Using rhythm grid for timing
-- Deterministic RNG for variations
-- Proper timeline event generation
-- Engine configuration parameters
-
-The arpeggiator plays ascending/descending patterns through chord tones
-based on the harmony plan.
-"""
-
+from collections.abc import Mapping
 from typing import Any, Optional
 import logging
+import math
+
+from ...melody import chord_pitch_classes, guide_pitch_at
 
 # Module-level defaults (used if not specified in engines.yml)
 ENGINE_DEFAULT_PRIORITY = 6
@@ -21,10 +14,7 @@ ENGINE_DEFAULT_PROGRAM = 1  # GM Bright Acoustic Piano
 
 
 def render_into_timeline(*args: Any, **kwargs: Any) -> None:
-    """Render arpeggiator patterns based on harmony plan.
-
-    Plays ascending or descending arpeggios through chord tones at
-    16th note resolution.
+    """Render arpeggios as evolving phrases rather than repeated triad loops.
 
     Args (all via kwargs):
         cfg: RootConfig - Global configuration
@@ -51,40 +41,79 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     rng = kwargs.get("rng")
     logger = kwargs.get("logger")
 
+    # Fail fast on a missing RNG instead of crashing mid-render.
+    if rng is None:
+        raise TypeError(
+            "arpeggiator.render_into_timeline requires an 'rng' (random.Random); got None"
+        )
+
     # Check if we have harmony to arpeggiate
     if harmony_plan is None or not harmony_plan.chord_slots:
         if logger:
             logger.debug("arpeggiator: no harmony plan, skipping")
         return
 
-    # Get configuration parameters
-    intensity = float(getattr(instrument_cfg, "intensity", 0.5))
+    # Get configuration parameters. The orchestrator may deliver either an
+    # InstrumentConfig dataclass or a plain dict (e.g. merged _effective
+    # configs): support both like other engines.
+    if isinstance(instrument_cfg, Mapping):
+        intensity = instrument_cfg.get("intensity")
+        extra = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
+        if not isinstance(extra, Mapping):
+            extra = {}
+    else:
+        intensity = getattr(instrument_cfg, "intensity", None)
+        extra = getattr(instrument_cfg, "extra", {}) or {}
+        if not isinstance(extra, Mapping):
+            extra = {}
 
-    # Get extra params for arpeggiator-specific settings
-    extra = getattr(instrument_cfg, "extra", {})
-    pattern = extra.get("pattern", "up")  # "up", "down", "up_down"
-    note_duration_beats = float(extra.get("note_duration", 0.25))  # 16th note default
+    if intensity is None:
+        intensity = getattr(section, "intensity", None)
+    intensity = float(intensity) if intensity is not None else 0.5
+
+    pattern = str(extra.get("pattern", "phrase")).lower()
+    note_duration_beats = max(0.125, float(extra.get("note_duration", 0.5)))
+    rest_probability = max(0.0, min(0.65, float(extra.get("rest_probability", 0.08))))
+    octave_range = max(1, min(3, int(extra.get("octave_range", 2))))
+    legacy_pattern = pattern in {"up", "down", "up_down"}
+    if legacy_pattern and "rest_probability" not in extra:
+        rest_probability = 0.0
 
     # Calculate velocity from intensity
     base_velocity = int(60 + (intensity * 40))  # 60-100 range
 
     event_count = 0
+    previous_pitch = None
+    plan = kwargs.get("plan")
+    melody_guide = None
+    if plan is not None and hasattr(plan, "get"):
+        section_id = getattr(section, "id", "")
+        melody_guide = plan.get(f"melody.guide.{section_id}") or plan.get("melody.guide")
+
+    # Resolve key/mode with section overrides falling back to song defaults.
+    key = getattr(section, "key", None) or cfg.song.key
+    mode = getattr(section, "mode", None) or cfg.song.mode
 
     # Process each chord slot
-    for slot in harmony_plan.chord_slots:
+    for slot_index, slot in enumerate(harmony_plan.chord_slots):
         # Get chord tones for this slot
         chord_tones = _get_chord_tones_from_numeral(
             slot.numeral,
-            cfg.song.key,
-            cfg.song.mode,
+            key,
+            mode,
         )
 
-        # Determine arpeggio pattern
-        arpeggio_notes = _create_arpeggio_pattern(chord_tones, pattern)
+        expanded = sorted({tone + 12 * octave for tone in chord_tones for octave in range(octave_range)})
+        slot_pattern = pattern
+        if pattern in {"phrase", "cinematic"}:
+            slot_pattern = ("up", "up_down", "down", "up_down")[slot_index % 4]
+        arpeggio_notes = _create_arpeggio_pattern(expanded, slot_pattern)
+        if pattern == "ostinato":
+            arpeggio_notes = [expanded[0], expanded[min(2, len(expanded) - 1)], expanded[1], expanded[-1]]
 
         # Calculate how many notes fit in this chord slot
         slot_duration = slot.end_beat - slot.start_beat
-        num_notes = int(slot_duration / note_duration_beats)
+        num_notes = max(0, math.ceil(slot_duration / note_duration_beats - 1e-9))
 
         # Generate arpeggio events
         for i in range(num_notes):
@@ -98,14 +127,41 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             # Calculate beat position
             local_beat = slot.start_beat + (i * note_duration_beats)
 
+            # Every cycle's apex follows the shared melody. Other notes retain
+            # the chordal pattern, making this a countermoving texture rather
+            # than a doubled lead line.
+            is_apex = note_idx == len(arpeggio_notes) - 1
+            if is_apex and melody_guide is not None:
+                guided = guide_pitch_at(
+                    melody_guide, local_beat, min(expanded), max(expanded) + 7,
+                    previous=previous_pitch or pitch,
+                )
+                if guided is not None:
+                    pitch = guided
+
+            phrase_edge = i == num_notes - 1
+            if not phrase_edge and rng.random() < rest_probability:
+                continue
+
+            # Accented bass arrivals and softer upper notes create a hand-like
+            # dynamic hierarchy instead of independent random velocities.
+            if note_idx == 0:
+                velocity += 8
+            elif is_apex:
+                velocity += 3
+            velocity = max(35, min(112, velocity))
+            gate = 0.82 if pattern in {"ostinato", "cinematic"} else 0.9
+
             # Add note to timeline
             timeline.add_note(
                 start_beat=section_start_beat + local_beat,
-                duration_beats=note_duration_beats * 0.9,  # Slight gap between notes
+                duration_beats=min(note_duration_beats * gate, slot.end_beat - local_beat),
                 pitch=pitch,
                 velocity=velocity,
+                kind="arpeggio_apex" if is_apex else "arpeggio",
             )
             event_count += 1
+            previous_pitch = pitch
 
     if logger:
         logger.info(
@@ -119,11 +175,7 @@ def _get_chord_tones_from_numeral(
     key: str,
     mode: Optional[str] = None,
 ) -> list[int]:
-    """Extract chord tones (MIDI note numbers) from a Roman numeral.
-
-    This is a simplified implementation for demonstration purposes.
-    Production code should use produzre.engine.bass.harmony for full
-    mode support and proper voice leading.
+    """Extract mode-aware chord tones (MIDI note numbers) from a numeral.
 
     Args:
         numeral: Roman numeral (e.g., "I", "bVII", "vi")
@@ -133,7 +185,9 @@ def _get_chord_tones_from_numeral(
     Returns:
         List of MIDI note numbers for the chord (root, third, fifth)
     """
-    # Simple key-to-MIDI mapping (bass register)
+    # Simple key-to-MIDI mapping (bass register).
+    # Keys are normalized: note letter uppercased, accidental lowercased, so
+    # flat keys like "Eb"/"eb"/"EB" all resolve correctly.
     KEY_TO_MIDI = {
         "C": 48, "C#": 49, "Db": 49,
         "D": 50, "D#": 51, "Eb": 51,
@@ -144,34 +198,14 @@ def _get_chord_tones_from_numeral(
         "B": 59,
     }
 
-    # Major scale degree offsets
-    DEGREE_OFFSETS = [0, 2, 4, 5, 7, 9, 11]
-
-    # Parse Roman numeral to degree (simplified)
-    numeral_clean = numeral.strip().upper().lstrip("B#")
-    roman_map = {"I": 0, "II": 1, "III": 2, "IV": 3,
-                 "V": 4, "VI": 5, "VII": 6}
-
-    degree_index = roman_map.get(numeral_clean, 0)
-
-    # Get tonic MIDI note
-    tonic = KEY_TO_MIDI.get(key.strip().upper(), 48)
-
-    # Calculate root pitch
-    root = tonic + DEGREE_OFFSETS[degree_index]
-
-    # Determine chord quality (major/minor)
-    is_minor = numeral.strip().lower() == numeral.strip()
-    third_offset = 3 if is_minor else 4
-
-    # Build triad
-    chord_tones = [
-        root,
-        root + third_offset,  # Third
-        root + 7,             # Fifth
-    ]
-
-    return chord_tones
+    # Get tonic MIDI note (normalize "eb"/"EB" -> "Eb").
+    key_norm = str(key or "").strip()
+    if key_norm:
+        key_norm = key_norm[0].upper() + key_norm[1:].lower()
+    tonic = KEY_TO_MIDI.get(key_norm, 48)
+    pcs = chord_pitch_classes(numeral, key_norm, mode or "major")
+    root = tonic + ((pcs[0] - tonic) % 12)
+    return [root + ((pc - pcs[0]) % 12) for pc in pcs]
 
 
 def _create_arpeggio_pattern(chord_tones: list[int], pattern: str) -> list[int]:
@@ -194,34 +228,26 @@ def _create_arpeggio_pattern(chord_tones: list[int], pattern: str) -> list[int]:
         return sorted(chord_tones)
 
 
-# Example contribute_plan function (optional - not used by arpeggiator)
-# Uncomment to see how to export structural data
-
-# def contribute_plan(*args: Any, **kwargs: Any) -> None:
-#     """Example: Export arpeggio pattern info to plan (optional).
-#
-#     This demonstrates how to share data with other engines via
-#     the PerformancePlan.
-#     """
-#     if args:
-#         raise TypeError("arpeggiator.contribute_plan only supports keyword arguments")
-#
-#     plan = kwargs.get("plan")
-#     section_ctx = kwargs.get("section_ctx", {})
-#     logger = kwargs.get("logger")
-#
-#     if plan is None:
-#         return
-#
-#     # Extract section info
-#     section = section_ctx.get("section")
-#     section_id = section.id if section else "unknown"
-#
-#     # Export pattern info for other engines
-#     plan.set(f"arpeggiator.pattern.{section_id}", {
-#         "pattern": "up",
-#         "note_duration": 0.25,
-#     })
-#
-#     if logger:
-#         logger.debug(f"[ARPEGGIATOR] Exported pattern info for section '{section_id}'")
+def contribute_plan(*args: Any, **kwargs: Any) -> None:
+    """Publish arpeggiator texture intent for ensemble coordination."""
+    if args:
+        raise TypeError("arpeggiator.contribute_plan only supports keyword arguments")
+    plan = kwargs.get("plan")
+    section_ctx = kwargs.get("section_ctx", {})
+    if plan is None:
+        return
+    section = section_ctx.get("section")
+    instrument_cfg = section_ctx.get("instrument_cfg")
+    if section is None:
+        return
+    if isinstance(instrument_cfg, Mapping):
+        extra = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
+    else:
+        extra = getattr(instrument_cfg, "extra", {}) or {}
+    payload = {
+        "pattern": str(extra.get("pattern", "phrase")),
+        "note_duration": float(extra.get("note_duration", 0.5)),
+        "role": "moving_texture",
+    }
+    plan.set(f"arpeggiator.pattern.{section.id}", payload)
+    plan.set("arpeggiator.pattern", payload)

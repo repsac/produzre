@@ -49,6 +49,8 @@ def add_fills(
     rng_chatter: random.Random | None = None,
     phrase_len_bars: int = 4,
     phrase_end_emphasis: float = 1.5,
+    genre: str | None = None,
+    meter=None,
 ) -> List[DrumEvent]:
     """Return events with optional fills added.
 
@@ -124,8 +126,9 @@ def add_fills(
 
     bars = _bars_total(tb, bpb)
 
-    # Meter awareness: detect 6/8 time
-    is_6_8 = abs(bpb - 6.0) < 0.1 or (abs(bpb - 3.0) < 0.1 and spb == 6)
+    # Compound meters retain their notated meter separately from bar duration.
+    # For example, 6/8 and 3/4 both last three quarter-note beats.
+    is_6_8 = meter is not None and meter.denominator == 8 and meter.numerator % 3 == 0
 
     # Map fill_length to beat durations
     fill_length_str = (fill_length or "medium").strip().lower()
@@ -179,16 +182,24 @@ def add_fills(
             have_toms = (tom_l != snare) or (tom_m != snare) or (tom_h != snare)
             persona_str = (persona or "tight").strip().lower()
 
-            # Fill types: 0=snare_roll, 1=alternating, 2=tom_run, 3=kick_burst, 4=cymbal_swell
-            fill_type_weights = {
-                "tight": [0.40, 0.30, 0.20, 0.05, 0.05],   # Conservative, classic fills
-                "loose": [0.20, 0.25, 0.25, 0.15, 0.15],   # More experimental
-            }
-            weights = fill_type_weights.get(persona_str, fill_type_weights["tight"])
+            # Fill types: 0=snare_roll, 1=alternating, 2=tom_run,
+            # 3=kick_burst, 4=cymbal_swell, 5=setup. A setup is a sparse
+            # drummer-like phrase that becomes more active only near beat one.
+            genre_str = str(genre or "").strip().lower()
+            if any(token in genre_str for token in ("metal", "punk", "hardcore")):
+                weights = [0.14, 0.14, 0.30, 0.18, 0.04, 0.20]
+            elif any(token in genre_str for token in ("funk", "soul", "rnb", "r&b")):
+                weights = [0.04, 0.27, 0.19, 0.14, 0.05, 0.31]
+            elif any(token in genre_str for token in ("jazz", "swing", "bop")):
+                weights = [0.02, 0.18, 0.30, 0.05, 0.17, 0.28]
+            elif persona_str == "loose":
+                weights = [0.08, 0.22, 0.27, 0.14, 0.10, 0.19]
+            else:
+                weights = [0.08, 0.20, 0.25, 0.10, 0.05, 0.32]
 
             # If no toms, reduce tom-based fills
             if not have_toms:
-                weights = [0.70, 0.15, 0.0, 0.10, 0.05]
+                weights = [0.16, 0.24, 0.0, 0.15, 0.05, 0.40]
 
             # Cumulative weights for selection
             r = rng_fill.random()
@@ -202,11 +213,14 @@ def add_fills(
 
             # Meter-aware step sizing
             if is_6_8:
-                # 6/8: use triplet feel (3 subdivisions per beat)
-                roll_step = step_beats if rng_fill.random() < 0.70 else (1.5 * step_beats)
+                # Compound fills favor sixteenths within the dotted-quarter pulse.
+                roll_step = step_beats if rng_fill.random() < 0.70 else (2.0 * step_beats)
             else:
-                # 4/4: standard 16ths or 8ths
-                roll_step = step_beats if rng_fill.random() < 0.75 else (2.0 * step_beats)
+                # Most fills speak in eighths with short sixteenth cells near
+                # the cadence. Faster genres may choose sixteenths more often.
+                fast_genre = any(token in genre_str for token in ("metal", "punk", "hardcore"))
+                sixteenth_rate = 0.45 if fast_genre else 0.22
+                roll_step = step_beats if rng_fill.random() < sixteenth_rate else (2.0 * step_beats)
 
             # Define note sequences per fill type
             if fill_type == 0:
@@ -221,9 +235,22 @@ def add_fills(
             elif fill_type == 3:
                 # Kick burst with snare accents
                 choices = [kick, kick, snare, kick]
-            else:
+            elif fill_type == 4:
                 # Cymbal swell (crash repeated with crescendo)
                 choices = [crash]
+            else:
+                # Setup phrase: leave space, then lead into the boundary.
+                choices = [snare, tom_m if tom_m != snare else snare, snare, tom_l if tom_l != snare else snare]
+
+            spacing_patterns = {
+                0: [1.0],
+                1: [2.0, 1.0, 1.0, 2.0],
+                2: [2.0, 2.0, 1.0, 1.0],
+                3: [2.0, 1.0, 1.0, 2.0],
+                4: [4.0],
+                5: [4.0, 2.0, 1.0, 1.0],
+            }
+            spacing = spacing_patterns[fill_type]
 
             # Generate fill events with appropriate velocity shaping
             fill_len_beats = max(1e-6, float(fill_end - fill_start))
@@ -239,7 +266,7 @@ def add_fills(
 
                 # Velocity shaping depends on fill type
                 if fill_type == 0:
-                    # Snare roll: exponential crescendo — slow build then explosive end
+                    # Snare roll: exponential crescendo: slow build then explosive end
                     # Real rolls accelerate dynamically into the downbeat
                     ramp = int((prog ** 1.8) * 22.0)
                     # Alternate L/R hands: odd hits slightly softer (weaker hand)
@@ -263,16 +290,10 @@ def add_fills(
                 # Cymbal swell uses longer durations for overlap/sustain
                 duration = 0.5 if fill_type == 4 else min(0.25, roll_step)
 
-                # Per-hit jitter: snare/alternating fills get micro-timing variation
-                # simulating natural hand acceleration (human roll feel)
-                if fill_type in (0, 1):
-                    # Accelerate slightly into the phrase boundary (compress step at end)
-                    # step_multiplier: 1.15 at start → 0.85 at end
-                    step_mult = 1.15 - (prog * 0.30)
-                    jitter_beats = rng_fill.uniform(-0.006, 0.006)
-                    effective_step = roll_step * step_mult + jitter_beats
-                else:
-                    effective_step = roll_step
+                # Structural spacing creates the phrase. Timing humanization is
+                # applied later by the drum engine, so do not accelerate this
+                # loop or create sub-grid machine-gun intervals here.
+                effective_step = max(step_beats, roll_step * spacing[(idx - 1) % len(spacing)])
 
                 out.append(
                     DrumEvent(
@@ -285,20 +306,34 @@ def add_fills(
                 )
                 t += effective_step
 
-            # Optionally support a kick reinforcement on the downbeat of the phrase bar
-            # (avoid duplicates). This stays conservative.
-            vel_k = max(1, min(127, int(base_velocity + 10)))
-            if not any((abs(e.beat - phrase_bar_start) < 1e-9 and int(e.pitch) == kick) for e in out):
-                if rng_fill.random() < 0.40:
-                    out.append(DrumEvent(beat=phrase_bar_start, duration_beats=0.5, pitch=kick, velocity=vel_k, kind="kick"))
+            # The fill resolves on the NEXT bar's downbeat (the downbeat the
+            # fill is leading into), not the downbeat of the bar containing
+            # the fill. At the section end that downbeat belongs to the next
+            # section, so we leave it to the section-transition logic.
+            resolution_beat = phrase_bar_start + bpb
 
-            # Optional crash on the downbeat of the phrase bar (avoid duplicates).
-            vel_c = max(1, min(127, int(base_velocity + 22)))
-            if rng_fill.random() < 0.70:
-                if not any((abs(e.beat - phrase_bar_start) < 1e-9 and int(e.pitch) == crash) for e in out):
+            # Draw the rolls unconditionally to keep the RNG stream stable
+            # regardless of whether the resolution falls inside the section.
+            place_kick = rng_fill.random() < 0.40
+            place_crash = rng_fill.random() < 0.70
+
+            if resolution_beat < tb - 1e-9:
+                # Optional kick reinforcement on the resolution downbeat
+                # (avoid duplicates). This stays conservative.
+                vel_k = max(1, min(127, int(base_velocity + 10)))
+                if place_kick and not any(
+                    (abs(e.beat - resolution_beat) < 1e-9 and int(e.pitch) == kick) for e in out
+                ):
+                    out.append(DrumEvent(beat=resolution_beat, duration_beats=0.5, pitch=kick, velocity=vel_k, kind="kick"))
+
+                # Optional crash on the resolution downbeat (avoid duplicates).
+                vel_c = max(1, min(127, int(base_velocity + 22)))
+                if place_crash and not any(
+                    (abs(e.beat - resolution_beat) < 1e-9 and int(e.pitch) == crash) for e in out
+                ):
                     out.append(
                         DrumEvent(
-                            beat=phrase_bar_start,
+                            beat=resolution_beat,
                             duration_beats=0.5,
                             pitch=crash,
                             velocity=vel_c,
@@ -313,10 +348,10 @@ def add_fills(
 
         # Place at a grid-aligned position (meter-aware)
         if is_6_8:
-            # In 6/8, prefer beat 4 or 5 (second half)
+            # In 6/8, prefer the fourth or fifth eighth note.
             candidate_steps = [int(spb * 0.5), int(spb * 0.67)]
         else:
-            # In 4/4, prefer beat 2 or 3
+            # In 4/4, prefer quarter-note beats 3 or 4.
             candidate_steps = []
             if spb >= 4:
                 candidate_steps.append(spb // 2)
@@ -345,7 +380,7 @@ def add_fills(
 
         # Meter-aware step sizing
         if is_6_8:
-            chatter_step = step_beats if rng_chatter.random() < 0.80 else (1.5 * step_beats)
+            chatter_step = step_beats if rng_chatter.random() < 0.80 else (2.0 * step_beats)
         else:
             chatter_step = step_beats if rng_chatter.random() < 0.70 else (2.0 * step_beats)
 

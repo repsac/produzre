@@ -209,19 +209,23 @@ def generate_tom_fill_run(
     pattern_choice = rng.random()
 
     if pattern_choice < 0.6:
-        # Descending run: high → mid → low
+        # Descending run: high → mid → low.
+        # Drop the third hit when it would fall past the bar end rather than
+        # clamping it onto the second hit's step (two stacked toms on one step).
         fill_pattern = [
             (fill_start_step, tom_high, "tom_high"),
             (fill_start_step + 1, tom_mid, "tom_mid"),
-            (fill_start_step + 2 if fill_start_step + 2 < spb else fill_start_step + 1, tom_low, "tom_low"),
         ]
+        if fill_start_step + 2 < spb:
+            fill_pattern.append((fill_start_step + 2, tom_low, "tom_low"))
     elif pattern_choice < 0.8:
-        # Around-the-kit: high → low → mid
+        # Around-the-kit: high → low → mid (same collision rule as above)
         fill_pattern = [
             (fill_start_step, tom_high, "tom_high"),
             (fill_start_step + 1, tom_low, "tom_low"),
-            (fill_start_step + 2 if fill_start_step + 2 < spb else fill_start_step + 1, tom_mid, "tom_mid"),
         ]
+        if fill_start_step + 2 < spb:
+            fill_pattern.append((fill_start_step + 2, tom_mid, "tom_mid"))
     else:
         # Quick doubles on one tom
         tom_pitch = tom_mid if rng.random() < 0.7 else tom_low

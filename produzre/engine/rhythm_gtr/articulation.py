@@ -282,6 +282,7 @@ def apply_strum_spread(
     strum_direction: str = "down",
     humanize_amount: float = 0.0,
     rng: Optional[random.Random] = None,
+    bpm: float = 120.0,
 ) -> List[Tuple[ArticulatedNote, float]]:
     """Apply strum spread timing to notes in a chord.
 
@@ -294,6 +295,7 @@ def apply_strum_spread(
         strum_direction: "down" (low to high) or "up" (high to low)
         humanize_amount: Amount of random variation (0.0-1.0) - Phase RG6
         rng: Random number generator
+        bpm: Song tempo, used to convert milliseconds to beats
 
     Returns:
         List[Tuple[ArticulatedNote, float]]: (note, timing_offset_beats)
@@ -305,9 +307,9 @@ def apply_strum_spread(
         # No spread or single note
         return [(note, 0.0) for note in notes]
 
-    # Convert ms to beats (assuming 120 BPM as reference)
-    # At 120 BPM, 1 beat = 500ms
-    spread_beats = strum_ms / 500.0
+    # Convert ms to beats at the actual tempo: 1 beat = 60000/bpm ms.
+    ms_per_beat = 60000.0 / max(1.0, float(bpm))
+    spread_beats = strum_ms / ms_per_beat
 
     # Sort notes by pitch (for strum direction)
     sorted_notes = sorted(notes, key=lambda n: n.pitch)

@@ -39,16 +39,13 @@ class RhythmGuitarParams:
     strum_ms: float = 15.0  # Strum spread in milliseconds
 
     # Groove/timing
-    swing: float = 0.0  # 0.0-1.0 (swing feel)
     push_pull: float = 0.0  # Timing offset in beats (±0.05 typical)
-    groove: str = "tight"  # "tight", "laid_back", "pushed", "loose"
 
     # Humanization (Phase RG4)
     chuck_rate: float = 0.0  # 0.0-1.0 (dead note probability)
     humanize_velocity: float = 0.1  # 0.0-1.0 (velocity variation)
     humanize_timing: float = 0.05  # 0.0-1.0 (timing variation)
     downbeat_boost: float = 0.2  # 0.0-1.0 (downbeat emphasis)
-    velocity_curve: str = "linear"  # "linear", "exponential", "logarithmic", "compressed"
     sustain_cut_rate: float = 0.0  # 0.0-1.0 (probability of staccato stab instead of ring)
 
     # Meta parameters
@@ -66,14 +63,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "mid",
         "accent_strength": 0.4,
         "strum_ms": 20.0,  # Slower, more deliberate
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.0,
         "humanize_velocity": 0.08,
         "humanize_timing": 0.03,
         "downbeat_boost": 0.15,
-        "velocity_curve": "linear",
     },
     "verse": {
         "style": "auto",  # Will choose straight_8s or syncopated
@@ -83,14 +77,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "mid",
         "accent_strength": 0.5,
         "strum_ms": 15.0,
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.05,  # Occasional chucks in verse
         "humanize_velocity": 0.1,
         "humanize_timing": 0.05,
         "downbeat_boost": 0.2,
-        "velocity_curve": "linear",
     },
     "prechorus": {
         "style": "auto",
@@ -100,14 +91,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "mid",
         "accent_strength": 0.6,
         "strum_ms": 12.0,
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.0,
         "humanize_velocity": 0.1,
         "humanize_timing": 0.05,
         "downbeat_boost": 0.25,
-        "velocity_curve": "linear",
     },
     "chorus": {
         "style": "auto",  # Will choose chugs or power chords
@@ -117,14 +105,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "high",  # Brighter
         "accent_strength": 0.7,
         "strum_ms": 10.0,  # Tighter, more aggressive
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.0,  # No chucks in chorus (full chords)
         "humanize_velocity": 0.12,  # Slightly more variation
         "humanize_timing": 0.04,  # Tighter timing
         "downbeat_boost": 0.3,  # Strong downbeats
-        "velocity_curve": "linear",
     },
     "bridge": {
         "style": "syncopated",
@@ -134,14 +119,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "mid",
         "accent_strength": 0.5,
         "strum_ms": 15.0,
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.1,  # More chucks for texture
         "humanize_velocity": 0.1,
         "humanize_timing": 0.06,
         "downbeat_boost": 0.2,
-        "velocity_curve": "linear",
     },
     "solo": {
         "style": "auto",
@@ -151,14 +133,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "mid",
         "accent_strength": 0.6,
         "strum_ms": 15.0,
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.0,
         "humanize_velocity": 0.09,
         "humanize_timing": 0.05,
         "downbeat_boost": 0.15,
-        "velocity_curve": "linear",
     },
     "breakdown": {
         "style": "half_time",
@@ -168,14 +147,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "low",  # Heavy, dark
         "accent_strength": 0.8,  # Strong accents on sparse hits
         "strum_ms": 5.0,  # Tight, punchy
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.15,  # Lots of percussive chucks
         "humanize_velocity": 0.08,
         "humanize_timing": 0.03,
         "downbeat_boost": 0.4,  # Very strong downbeats
-        "velocity_curve": "linear",
         "sustain_cut_rate": 0.3,  # Punchy stabs suit breakdown sparseness
     },
     "outro": {
@@ -186,14 +162,11 @@ SECTION_TYPE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "register": "mid",
         "accent_strength": 0.4,
         "strum_ms": 20.0,
-        "swing": 0.0,
         "push_pull": 0.0,
-        "groove": "tight",
         "chuck_rate": 0.0,
         "humanize_velocity": 0.07,
         "humanize_timing": 0.04,
         "downbeat_boost": 0.15,
-        "velocity_curve": "linear",
     },
 }
 
@@ -207,14 +180,11 @@ NEUTRAL_DEFAULTS: Dict[str, Any] = {
     "register": "mid",
     "accent_strength": 0.5,
     "strum_ms": 15.0,
-    "swing": 0.0,
     "push_pull": 0.0,
-    "groove": "tight",
     "chuck_rate": 0.0,
     "humanize_velocity": 0.1,
     "humanize_timing": 0.05,
     "downbeat_boost": 0.2,
-    "velocity_curve": "linear",
     "sustain_cut_rate": 0.0,
     "section_contrast": 0.7,
     "use_patterns": False,
@@ -289,7 +259,6 @@ def resolve_params(
     blended["palm_mute"] = max(0.0, min(1.0, blended.get("palm_mute", 0.5)))
     blended["accent_strength"] = max(0.0, min(1.0, blended.get("accent_strength", 0.5)))
     blended["strum_ms"] = max(0.0, min(100.0, blended.get("strum_ms", 15.0)))
-    blended["swing"] = max(0.0, min(1.0, blended.get("swing", 0.0)))
     blended["push_pull"] = max(-0.1, min(0.1, blended.get("push_pull", 0.0)))
 
     # Clamp humanization parameters (Phase RG4)
@@ -297,7 +266,6 @@ def resolve_params(
     blended["humanize_velocity"] = max(0.0, min(1.0, blended.get("humanize_velocity", 0.1)))
     blended["humanize_timing"] = max(0.0, min(1.0, blended.get("humanize_timing", 0.05)))
     blended["downbeat_boost"] = max(0.0, min(1.0, blended.get("downbeat_boost", 0.2)))
-    # velocity_curve is string, no clamping needed
     # sustain_cut_rate: user override takes precedence
     blended["sustain_cut_rate"] = max(0.0, min(1.0, float(extra.get("sustain_cut_rate", blended.get("sustain_cut_rate", 0.0)))))
 
@@ -309,7 +277,7 @@ def resolve_params(
     if register_max is not None:
         register_max = int(register_max)
 
-    # Phase 1.4: Parse strum_style — user override takes precedence over blended
+    # Phase 1.4: Parse strum_style: user override takes precedence over blended
     strum_style = str(extra.get("strum_style", blended.get("strum_style", "balanced"))).strip().lower()
     if strum_style not in ("balanced", "downbeat_heavy", "upbeat_heavy"):
         strum_style = "balanced"
@@ -326,14 +294,11 @@ def resolve_params(
         register_max=register_max,
         accent_strength=float(blended["accent_strength"]),
         strum_ms=float(blended["strum_ms"]),
-        swing=float(blended["swing"]),
         push_pull=float(blended["push_pull"]),
-        groove=str(blended.get("groove", "tight")),
         chuck_rate=float(blended["chuck_rate"]),
         humanize_velocity=float(blended["humanize_velocity"]),
         humanize_timing=float(blended["humanize_timing"]),
         downbeat_boost=float(blended["downbeat_boost"]),
-        velocity_curve=str(blended.get("velocity_curve", "linear")),
         sustain_cut_rate=float(blended["sustain_cut_rate"]),
         section_contrast=contrast,
         use_patterns=bool(blended.get("use_patterns", False)),
@@ -362,14 +327,11 @@ def params_to_dict(params: RhythmGuitarParams) -> Dict[str, Any]:
         "register": params.register,
         "accent_strength": round(params.accent_strength, 2),
         "strum_ms": round(params.strum_ms, 1),
-        "swing": round(params.swing, 2),
         "push_pull": round(params.push_pull, 3),
-        "groove": params.groove,
         "chuck_rate": round(params.chuck_rate, 2),
         "humanize_velocity": round(params.humanize_velocity, 2),
         "humanize_timing": round(params.humanize_timing, 2),
         "downbeat_boost": round(params.downbeat_boost, 2),
-        "velocity_curve": params.velocity_curve,
         "sustain_cut_rate": round(params.sustain_cut_rate, 2),
         "section_contrast": round(params.section_contrast, 2),
         "use_patterns": params.use_patterns,

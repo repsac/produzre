@@ -17,7 +17,7 @@ from .articulation import strum_spread_offsets
 _STRUM_SPREAD_BEATS = 0.020
 
 # Muted hit characteristics
-_MUTE_DUR_FRACTION = 0.18   # Very short — just the percussive chop
+_MUTE_DUR_FRACTION = 0.18   # Very short: just the percussive chop
 _MUTE_VEL_FRACTION = 0.82   # Slightly softer than open hit
 
 # Probability of choosing an up-strum (otherwise down)
@@ -28,8 +28,8 @@ def place_strum_hits(
     voicing_pitches: List[int],
     beats_per_bar: float,
     bar_start_beat: float,      # Section-local offset of this bar's downbeat
-    strum_density: float,       # 0.0-1.0 — probability of non-change beats firing
-    mute_ratio: float,          # 0.0-1.0 — probability of a hit being palm-muted
+    strum_density: float,       # 0.0-1.0: probability of non-change beats firing
+    mute_ratio: float,          # 0.0-1.0: probability of a hit being palm-muted
     base_vel: int,
     is_chord_change: bool,      # True = first bar of a new chord slot
     rng: random.Random,

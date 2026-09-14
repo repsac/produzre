@@ -28,7 +28,7 @@ Rows are event-like objects with these attributes (duck-typed):
 - `start_beat_abs` (float): absolute start time in beats.
 - `duration_beats` (float): duration in beats.
 - `pitch` (int): MIDI pitch (for drums, this is the GM drum note number).
-- `velocity` (int): MIDI velocity 0–127.
+- `velocity` (int): MIDI velocity 0-127.
 - `note` (str): optional note label for non-drum instruments.
 
 Notes
@@ -156,7 +156,7 @@ def velocity_symbol_for_row(instrument: str, row_label: str, velocity: int) -> s
     Args:
         instrument: Instrument key (e.g., "drums").
         row_label: The grid row label (e.g., "SNARE", "HAT_C").
-        velocity: MIDI velocity (0–127).
+        velocity: MIDI velocity (0-127).
 
     Returns:
         A single character used in the grid cell.

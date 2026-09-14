@@ -79,7 +79,7 @@ python tools/train_drum_recipes.py --manifest manifest.yaml --archive-dir /path/
 
 ## Pipeline Scripts
 
-### `batch_analyze.py` — Batch Analysis Orchestrator
+### `batch_analyze.py`: Batch Analysis Orchestrator
 
 Recursively discovers MIDI files, runs the 4-phase analysis pipeline on each,
 and aggregates per-genre statistics.
@@ -133,7 +133,7 @@ File paths are resolved relative to the manifest's parent directory.
 
 ---
 
-### `generate_recipes.py` — Recipe Generator
+### `generate_recipes.py`: Recipe Generator
 
 Reads `genre_stats.json` and generates bass recipe YAML files plus a tuning
 recommendations report for drums and rhythm guitar.
@@ -151,15 +151,15 @@ python tools/generate_recipes.py --input <genre_stats.json> [options]
 
 **What it generates:**
 
-- **Bass recipes** — one YAML per genre, with density, rhythm pattern, articulation,
+- **Bass recipes**: one YAML per genre, with density, rhythm pattern, articulation,
   approach rate, octave/fifth jumps, swing, and other parameters derived from
   statistical analysis.
-- **Tuning report** — JSON with per-genre drum and rhythm guitar recommendations
+- **Tuning report**: JSON with per-genre drum and rhythm guitar recommendations
   (ghost rate, fill rate, hat mode, voicing style, palm mute ratio, etc.).
 
 ---
 
-### `apply_learned_defaults.py` — Default Recommendations
+### `apply_learned_defaults.py`: Default Recommendations
 
 Performs cross-genre analysis on `genre_stats.json` and prints recommended
 changes to engine default values with statistical evidence.
@@ -172,12 +172,12 @@ python tools/apply_learned_defaults.py --input <genre_stats.json>
 |----------|-------------|
 | `--input` | Path to `genre_stats.json` (required) |
 
-This tool does **not** modify any code — it only prints recommendations for
+This tool does **not** modify any code: it only prints recommendations for
 a human to review and apply.
 
 ---
 
-### `build_drum_manifest.py` — Drum Archive Manifest Builder
+### `build_drum_manifest.py`: Drum Archive Manifest Builder
 
 Walks a directory tree of drum MIDI files and builds a structured YAML manifest
 with automatically extracted metadata (genre, BPM, time signature, feel, etc.).
@@ -199,7 +199,7 @@ Pack, decade-themed packs).
 
 ---
 
-### `train_drum_recipes.py` — Drum Recipe Trainer
+### `train_drum_recipes.py`: Drum Recipe Trainer
 
 Reads a manifest (from `build_drum_manifest.py`), loads MIDI files by genre,
 quantizes events to a 16-step grid, and writes groove recipe YAMLs.
@@ -230,44 +230,44 @@ from statistical analysis of hit probabilities.
 These modules implement the 4 analysis phases.  They are imported by
 `batch_analyze.py` but can also be used standalone for custom analysis scripts.
 
-### `midi_parse.py` — Phase 1: MIDI Parsing
+### `midi_parse.py`: Phase 1: MIDI Parsing
 
 Parses a MIDI file into normalized `NoteEvent` objects with beat-aligned timing.
 
 **Key exports:**
 - `parse_midi_file(path, song_id) -> MIDIAnalysis`
-- `NoteEvent` — dataclass with track, channel, pitch, velocity, beat position, duration
-- `MIDIAnalysis` — dataclass with events, tempo map, time signatures, key signatures
+- `NoteEvent`: dataclass with track, channel, pitch, velocity, beat position, duration
+- `MIDIAnalysis`: dataclass with events, tempo map, time signatures, key signatures
 
-### `role_classify.py` — Phase 2: Role Classification
+### `role_classify.py`: Phase 2: Role Classification
 
 Classifies MIDI tracks/channels into instrument roles (drums, bass, rhythm guitar,
 lead guitar, other) using pitch range, density, polyphony, and sustain heuristics.
 
 **Key exports:**
 - `classify_roles(analysis) -> List[RoleClassification]`
-- `RoleClassification` — dataclass with role, confidence, rationale, pitch stats
+- `RoleClassification`: dataclass with role, confidence, rationale, pitch stats
 
-### `groove_extract.py` — Phase 3: Groove Extraction
+### `groove_extract.py`: Phase 3: Groove Extraction
 
-Analyzes timing micro-variations to characterize groove feel — swing ratio,
+Analyzes timing micro-variations to characterize groove feel: swing ratio,
 push/pull tendency, syncopation intensity, and accent patterns.
 
 **Key exports:**
 - `extract_groove_features(analysis) -> GrooveFeatures`
-- `GrooveFeatures` — dataclass with swing, push/pull, syncopation, accent metrics
+- `GrooveFeatures`: dataclass with swing, push/pull, syncopation, accent metrics
 
-### `pattern_mine.py` — Phase 4: Pattern Mining
+### `pattern_mine.py`: Phase 4: Pattern Mining
 
 Extracts reusable style features per instrument role without copying exact patterns.
 Produces statistical profiles for drums, bass, rhythm guitar, and lead guitar.
 
 **Key exports:**
 - `extract_patterns(analysis, roles) -> Dict[str, profile]`
-- `DrumProfile` — kick/snare/hat density, fills, ghosts, accents
-- `BassProfile` — notes/bar, root ratio, step motion, staccato, sustain
-- `RhythmProfile` — chords/bar, polyphony, palm mute, downbeat/upbeat ratio
-- `LeadProfile` — phrase length, contour, note density, rest ratio
+- `DrumProfile`: kick/snare/hat density, fills, ghosts, accents
+- `BassProfile`: notes/bar, root ratio, step motion, staccato, sustain
+- `RhythmProfile`: chords/bar, polyphony, palm mute, downbeat/upbeat ratio
+- `LeadProfile`: phrase length, contour, note density, rest ratio
 
 ## Output Schema
 

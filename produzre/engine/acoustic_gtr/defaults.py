@@ -69,14 +69,14 @@ STRUM_DENSITY_DEFAULT = 0.50
 # =============================================================================
 
 PICKING_PATTERN_DEFAULTS: Dict[str, str] = {
-    "intro":      "broken_chord",
+    "intro":      "cinematic",
     "verse":      "travis",
     "prechorus":  "roll",
     "pre_chorus": "roll",
-    "bridge":     "pima",
+    "bridge":     "cinematic",
     "solo":       "broken_chord",
-    "interlude":  "broken_chord",
-    "outro":      "broken_chord",
+    "interlude":  "cinematic",
+    "outro":      "cinematic",
 }
 PICKING_PATTERN_DEFAULT_FALLBACK = "travis"
 
@@ -106,16 +106,6 @@ VELOCITY_INTENSITY_RANGE = 20   # additional vel at intensity=1.0
 
 
 # =============================================================================
-# Register (MIDI note ranges)
-# =============================================================================
-
-REGISTER_OPEN_MIN  = 40   # E2 — lowest open string (6th string standard tuning)
-REGISTER_OPEN_MAX  = 76   # E5 — highest comfortable acoustic note
-REGISTER_BARRE_MIN = 43   # G2
-REGISTER_BARRE_MAX = 72   # C5
-
-
-# =============================================================================
 # Humanization defaults
 # =============================================================================
 
@@ -127,7 +117,7 @@ TIMING_VARIATION_DEFAULT = 0.018  # ±beats timing jitter (~10ms at 90BPM)
 # Body tap parameters (percussive technique)
 # =============================================================================
 
-BODY_TAP_PITCH    = 40    # E2 — dead note for body percussion
+BODY_TAP_PITCH    = 40    # E2: dead note for body percussion
 BODY_TAP_VEL_LO   = 45
 BODY_TAP_VEL_HI   = 65
-BODY_TAP_DURATION = 0.07  # beats — very short, percussive
+BODY_TAP_DURATION = 0.07  # beats: very short, percussive

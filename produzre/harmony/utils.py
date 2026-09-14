@@ -51,24 +51,25 @@ def resolve_total_beats(cfg: RootConfig, section: SectionConfig, meter: Meter) -
       - `section.beats`: an explicit beat length (float/int)
       - `section.bars`: bar count, converted to beats using a beats-per-bar value
 
-    Current conversion behavior:
-      - Uses `cfg.song.beats_per_bar` when converting bars to beats.
-
-    Note:
-      - The `meter` argument is currently unused in the conversion and is passed
-        in to make future meter-derived bar-length support straightforward.
-        For example, in the future we may derive beats-per-bar from
-        `meter.beats_per_bar` instead of relying on `cfg.song.beats_per_bar`.
+    Conversion behavior:
+      - When the section overrides `meter`, bars are converted using the
+        section meter's quarter-note beats per bar (`Meter.beats_per_bar`,
+        e.g. 3.0 for both 3/4 and 6/8). This makes `meter: "6/8", bars: 4`
+        resolve to 12 quarter-beats even inside a 4/4 song.
+      - Otherwise, falls back to `cfg.song.beats_per_bar` (legacy behavior,
+        byte-identical for existing 4/4 configs).
 
     Priority order:
       1) If `section.beats` is not None: return `float(section.beats)`.
-      2) Else if `section.bars` is not None: return `section.bars * cfg.song.beats_per_bar`.
+      2) Else if `section.bars` is not None: return bars * beats-per-bar
+         (section meter when overridden, else `cfg.song.beats_per_bar`).
       3) Else: return 0.0.
 
     Args:
         cfg: Root configuration providing global beats-per-bar.
         section: Section configuration providing beats and/or bars.
-        meter: Effective meter for the section (reserved for future use).
+        meter: Effective meter for the section (used when the section
+            overrides the song meter).
 
     Returns:
         float: Section length in quarter-note beats.
@@ -76,9 +77,11 @@ def resolve_total_beats(cfg: RootConfig, section: SectionConfig, meter: Meter) -
     if section.beats is not None:
         return float(section.beats)
 
-    bpb = cfg.song.beats_per_bar
     if section.bars is not None:
-        return float(section.bars * bpb)
+        if section.meter:
+            # Section-level meter override: derive bar length from the meter.
+            return float(section.bars) * float(meter.beats_per_bar)
+        return float(section.bars * cfg.song.beats_per_bar)
 
     return 0.0
 

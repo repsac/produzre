@@ -51,7 +51,7 @@ from .defaults import (
 from .pitch import allowed_pitches_for_slot
 
 # Phase LG2: Motif-based phrase generation
-from .phrasing import make_motif, realize_phrase
+from .phrasing import make_motif, develop_motif, realize_phrase
 
 # Phase LG3: Rhythm-aware note placement
 from .rhythm import choose_note_starts
@@ -62,6 +62,7 @@ from .register import get_register_bounds, octave_wrap_if_needed, apply_lift
 # Phase LG5: Articulation + humanisation
 from .articulation import choose_articulation, apply_articulation
 from .humanize import humanize_note
+from ...melody import guide_pitch_at
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,12 @@ def contribute_plan(
 
     # Sprint 4: Contribute rest_ratio for inverse density coordination
     plan = kwargs.get("plan")
+    section_ctx = kwargs.get("section_ctx", {})
+    section = section or section_ctx.get("section")
+    instrument_cfg = instrument_cfg or section_ctx.get("instrument_cfg")
     if plan is not None and section is not None and instrument_cfg is not None:
+        ensemble = plan.get(f"ensemble.{section.id}", {})
+        planned_rest = ensemble.get("lead_rest_ratio") if isinstance(ensemble, dict) else None
         # Read rest_probability from config (same logic as render)
         rest_probability = getattr(instrument_cfg, "rest_probability", None)
         if rest_probability is None:
@@ -155,6 +161,7 @@ def contribute_plan(
 
         # Use rest_probability as a proxy for rest_ratio
         # This is the configured "target" rest ratio that lead will aim for
+        rest_probability = rest_probability if rest_probability is not None else planned_rest
         if rest_probability is not None:
             try:
                 rest_ratio = float(rest_probability)
@@ -196,7 +203,7 @@ def render_into_timeline(
 
     - Only runs if a 'lead' instrument config exists and is enabled.
     - Follows the section's harmony plan (chord numerals).
-    - Places 1–4 notes per chord slot depending on intensity band and solo flag.
+    - Places 1-4 notes per chord slot depending on intensity band and solo flag.
     - Uses the rhythm grid for timing; notes are aligned to grid cells within
       each chord span.
     - Keeps pitches in a melodic register above rhythm guitar using a small
@@ -217,9 +224,15 @@ def render_into_timeline(
 
     # Effective intensity with style bias.
     raw_intensity = instrument_cfg.intensity
-    style_bias = getattr(instrument_cfg, "style_bias", 0.0)
+    style_bias = getattr(instrument_cfg, "style_bias", None)
+    if raw_intensity is None:
+        # Macro-dynamics: fall back to the section's resolved intensity
+        # (orchestrate.plan.resolve_section_intensity) before the default.
+        raw_intensity = getattr(section, "intensity", None)
     if raw_intensity is None:
         raw_intensity = 1.0
+    if style_bias is None:
+        style_bias = 0.0
     intensity = raw_intensity + style_bias
     intensity = max(0.0, min(intensity, 2.0))
 
@@ -283,11 +296,13 @@ def render_into_timeline(
 
     phrase_len_beats = float(phrase_len_bars) * float(bpb)
 
-    # Phase LG1: resolve key/mode and create section-scoped RNG.
+    # Resolve key/mode and use the orchestrator's instrument RNG so take,
+    # variation, arrangement occurrence, and instrument seed all participate.
     song_key = (section.key or cfg.song.key or "C").strip()
-    song_mode = getattr(cfg.song, "mode", None) or "minor"
+    song_mode = getattr(section, "mode", None) or getattr(cfg.song, "mode", None) or "minor"
     song_seed = getattr(cfg.song, "seed", 42)
-    section_rng = random.Random(_stable_u32(f"lead:{section.id}:{song_seed}"))
+    section_rng = kwargs.get("rng") or random.Random(_stable_u32(f"lead:{section.id}:{song_seed}"))
+    song_genre = str(getattr(cfg.song, "genre", "") or "")
 
     # Resolution behavior: encourage landing on chord tones at chord/phrase ends.
     resolution_strength = getattr(instrument_cfg, "resolution_strength", None)
@@ -309,11 +324,33 @@ def render_into_timeline(
 
     # Phase LG3: extract accent beats from plan for grid-aware placement.
     plan = kwargs.get("plan", None)
+    melody_guide = None
+    theme_notes: List[Dict[str, Any]] = []
     accent_beats: List[float] = []
+    density_multiplier = 1.0
     if plan is not None:
+        if hasattr(plan, "get"):
+            melody_guide = plan.get(f"melody.guide.{section.id}") or plan.get("melody.guide")
+            # Theme bank (design: docs/design/theme-bank-architecture.md):
+            # realized MELODY-theme notes for this section, used for quoting.
+            themes_realized = plan.get(f"themes.realized.{section.id}")
+            if isinstance(themes_realized, dict):
+                theme_notes = themes_realized.get("melody") or []
         accents_data = plan.get("rhythm.accents") if hasattr(plan, "get") else {}
         if isinstance(accents_data, dict):
             accent_beats = accents_data.get("accent_beats", [])
+        try:
+            from ...orchestrate import EngineCoordinator
+            coordinator = EngineCoordinator(plan, logger=logger)
+            actual_accents = coordinator.get_accent_beats(section.id)
+            if actual_accents:
+                accent_beats = sorted(actual_accents)
+            density_multiplier = coordinator.get_density_multiplier(section.id, "lead_gtr")
+            lead_activity_windows = coordinator.get_lead_activity_windows(section.id)
+        except Exception:
+            lead_activity_windows = []
+    else:
+        lead_activity_windows = []
 
     # Density: how many grid positions to fill (scales with intensity).
     # Solo sections use a higher base multiplier and bigger boost.
@@ -321,12 +358,13 @@ def render_into_timeline(
         density = intensity * 0.65 + 0.25
     else:
         density = intensity * 0.55 + 0.15
+    density *= density_multiplier
     density = max(0.10, min(density, 0.90))
 
     # prefer_offbeat: chorus / high-intensity sections contrast the downbeat grid.
     prefer_offbeat = (intensity_band == "high") or (section_type.lower() == "chorus")
 
-    # Phase LG6: solo leap limit — wider melodic range for solo sections.
+    # Phase LG6: solo leap limit: wider melodic range for solo sections.
     # Can be overridden via contour_style parameter.
     contour_style = getattr(instrument_cfg, "contour_style", None)
     if contour_style is None:
@@ -342,6 +380,20 @@ def render_into_timeline(
     else:
         # Default behavior: wider leaps in solo sections
         phrase_leap_limit = 8 if solo else 5
+
+    # Theme quoting strength (M2): probability that an interior note near a
+    # realized theme note adopts the theme pitch, so the lead paraphrases the
+    # hook instead of wandering the pitch pools. Only active when the song
+    # defines themes.
+    theme_quote_rate = getattr(instrument_cfg, "theme_quote_rate", None)
+    if theme_quote_rate is None:
+        theme_quote_rate = instrument_cfg.extra.get("theme_quote_rate", None)
+    if theme_quote_rate is None:
+        theme_quote_rate = 0.65
+    try:
+        theme_quote_rate = max(0.0, min(float(theme_quote_rate), 1.0))
+    except (TypeError, ValueError):
+        theme_quote_rate = 0.65
 
     # Phase LG4: resolve register bounds and chorus-lift flag.
     reg_min, reg_max = get_register_bounds(register or DEFAULT_REGISTER)
@@ -361,19 +413,29 @@ def render_into_timeline(
     # Phase LG2: group chord slots into phrase-length windows.
     phrases = _group_slots_by_phrase(harmony_plan.chord_slots, phrase_len_beats)
 
-    for phrase_start, phrase_end, slots_in_phrase in phrases:
+    base_motif = make_motif(section_rng, intensity, genre=song_genre)
+    previous_guide_pitch: Optional[int] = None
+
+    for phrase_idx, (phrase_start, phrase_end, slots_in_phrase) in enumerate(phrases):
         phrase_beats = phrase_end - phrase_start
         if phrase_beats <= eps:
             continue
 
-        # Generate a motif for this phrase.
-        motif = make_motif(section_rng, intensity)
+        # Reuse and develop a motif across phrases so the line has identity.
+        motif = develop_motif(
+            base_motif,
+            section_rng,
+            phrase_index=phrase_idx,
+            is_final_phrase=(phrase_idx == len(phrases) - 1),
+            intensity=intensity,
+            total_phrases=len(phrases),
+        )
 
         # Collect one pitch pool per chord slot in this phrase.
         pools = []
         for cs in slots_in_phrase:
             pool = allowed_pitches_for_slot(
-                cs.numeral, song_key, song_mode, register or DEFAULT_REGISTER
+                cs.numeral, song_key, song_mode, register or DEFAULT_REGISTER, genre=song_genre
             )
             pools.append(pool)
 
@@ -392,7 +454,10 @@ def render_into_timeline(
         if not resolved_notes:
             continue
 
-        # Phase LG3: choose grid-aligned start positions that breathe with the groove.
+        # Phase LG3: choose grid positions that breathe with the groove.
+        # These are used as a MASK over the motif's own rhythm (rest/breathing
+        # decisions): the realized motif keeps its beat offsets and durations
+        # so its rhythmic identity stays audible.
         note_starts = choose_note_starts(
             grid=rhythm_grid,
             accent_beats=accent_beats,
@@ -402,38 +467,87 @@ def render_into_timeline(
             phrase_end=phrase_end,
             prefer_offbeat=prefer_offbeat,
             rest_rate=rest_probability,
+            genre=song_genre,
+            candidate_positions=[phrase_start + rn.beat_offset for rn in resolved_notes],
         )
 
         if not note_starts:
             continue
 
+        allowed_slots = {round(s, 2) for s in note_starts}
+
+        # Mask motif notes through the chosen grid slots. The first and last
+        # notes of the phrase are always kept: the first anchors the motif,
+        # the last carries the vary_last chord-tone resolution.
+        emit_notes = []
+        for rn_idx, rn in enumerate(resolved_notes):
+            start_local = phrase_start + rn.beat_offset
+            if start_local >= phrase_end - eps:
+                continue
+            is_edge = rn_idx == 0 or rn_idx == len(resolved_notes) - 1
+            if not is_edge and round(start_local, 2) not in allowed_slots:
+                continue
+            emit_notes.append(rn)
+        if not emit_notes:
+            emit_notes = [resolved_notes[0]]
+
         # Phase LG4: apply chorus lift on the first phrase of a chorus section.
         is_first_phrase = (phrase_start < eps)
         lift_this_phrase = chorus_lift and is_first_phrase
 
-        # Map motif pitches onto the chosen grid positions.
-        # Pitch sequence cycles if there are more starts than resolved notes.
-        for note_idx, start_beat in enumerate(note_starts):
-            rn = resolved_notes[note_idx % len(resolved_notes)]
-            local_beat = start_beat
+        # Emit motif notes at their own beat offsets/durations within the phrase.
+        for note_idx, rn in enumerate(emit_notes):
+            local_beat = phrase_start + rn.beat_offset
 
-            # Duration fills to the next chosen start or phrase end.
-            if note_idx + 1 < len(note_starts):
-                raw_dur = note_starts[note_idx + 1] - start_beat
-            else:
-                raw_dur = phrase_end - start_beat
-            duration = min(raw_dur * dur_scale, phrase_end - start_beat)
+            if lead_activity_windows and not any(
+                start <= local_beat < end for start, end in lead_activity_windows
+            ):
+                continue
+
+            # The motif's own duration, scaled for articulation space and
+            # clamped to the phrase (and therefore section) bounds.
+            duration = min(rn.duration * dur_scale, phrase_end - local_beat)
             duration = max(0.1, duration)
 
             song_beat = section_start_beat + local_beat + offset_beats
 
-            # Phase LG4: register management — wrap into range, optional lift.
+            # Phase LG4: register management: wrap into range, optional lift.
             pitch = rn.pitch
             if lift_this_phrase:
                 pitch = apply_lift(pitch, reg_min, reg_max)
             pitch = octave_wrap_if_needed(pitch, reg_min, reg_max)
 
-            # Phase LG5: articulation — shape duration, optional grace note.
+            # Phrase boundaries lock to the shared melodic spine. Interior
+            # motif notes remain idiomatic lead-guitar development, avoiding
+            # doubled unison lines with acoustic guitar or arpeggiator.
+            is_phrase_anchor = note_idx == 0 or note_idx == len(emit_notes) - 1
+            if is_phrase_anchor and melody_guide is not None:
+                guided = guide_pitch_at(
+                    melody_guide, local_beat, reg_min, reg_max,
+                    previous=previous_guide_pitch or pitch,
+                )
+                if guided is not None:
+                    pitch = guided
+                    previous_guide_pitch = guided
+
+            # Theme quoting (design: theme-bank-architecture.md §4.4): an
+            # interior note close to a realized theme note may adopt the
+            # theme's pitch, so the line paraphrases the song's hook. The RNG
+            # draw happens for every interior note while themes are active,
+            # keeping the stream stable regardless of theme proximity.
+            if theme_notes and not is_phrase_anchor:
+                quote_draw = section_rng.random()
+                if quote_draw < theme_quote_rate:
+                    nearest = min(
+                        theme_notes,
+                        key=lambda tn: abs(float(tn["beat"]) - local_beat),
+                    )
+                    if abs(float(nearest["beat"]) - local_beat) <= 0.75:
+                        pitch = octave_wrap_if_needed(
+                            int(nearest["pitch"]), reg_min, reg_max
+                        )
+
+            # Phase LG5: articulation: shape duration, optional grace note.
             art = choose_articulation(section_rng, intensity)
             arted = apply_articulation(pitch, duration, art, section_rng)
 
@@ -457,27 +571,39 @@ def render_into_timeline(
 
             vel = max(20, min(127, vel))
 
-            # Emit grace note first if slide_hint produced one.
-            if arted.grace_pitch is not None:
-                grace_pitch = octave_wrap_if_needed(arted.grace_pitch, reg_min, reg_max)
-                grace_vel = max(20, min(127, int(vel * 0.70)))
-                grace_beat, grace_dur, grace_vel = humanize_note(
-                    song_beat, arted.grace_duration, grace_vel, section_rng, intensity
-                )
-                timeline.add_note(
-                    start_beat=grace_beat,
-                    duration_beats=grace_dur,
-                    pitch=grace_pitch,
-                    velocity=grace_vel,
-                    channel=None,
-                )
-                # Main note follows the grace.
-                song_beat = grace_beat + grace_dur
+            # Slide grace note handling. At the register bottom there is no
+            # lower neighbour to slide from: skip the slide instead of
+            # octave-wrapping the grace 11 semitones ABOVE the target.
+            grace_pitch = arted.grace_pitch
+            main_dur = arted.duration
+            if grace_pitch is not None and pitch <= reg_min:
+                grace_pitch = None
+                main_dur = arted.duration + arted.grace_duration
+            if grace_pitch is not None:
+                # Clamp (never wrap) the grace below the main note.
+                grace_pitch = max(reg_min, grace_pitch)
+                # The grace no longer eats into the main note's span: it is
+                # played BEFORE the beat so the main note lands on the beat.
+                main_dur = arted.duration + arted.grace_duration
 
             # Phase LG5: humanize main note timing + velocity.
             song_beat, h_dur, vel = humanize_note(
-                song_beat, arted.duration, vel, section_rng, intensity
+                song_beat, main_dur, vel, section_rng, intensity
             )
+
+            # Emit the grace note leading INTO the (humanized) main note.
+            if grace_pitch is not None:
+                grace_start = max(section_start_beat, song_beat - arted.grace_duration)
+                grace_dur = song_beat - grace_start
+                if grace_dur > 0.01:
+                    grace_vel = max(20, min(127, int(vel * 0.70)))
+                    timeline.add_note(
+                        start_beat=grace_start,
+                        duration_beats=grace_dur,
+                        pitch=grace_pitch,
+                        velocity=grace_vel,
+                        channel=None,
+                    )
 
             timeline.add_note(
                 start_beat=song_beat,

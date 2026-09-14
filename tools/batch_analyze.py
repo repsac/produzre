@@ -5,7 +5,7 @@ Scans a directory tree for MIDI files, runs the full 4-phase analysis pipeline
 (parse → classify → extract → mine), and aggregates per-genre statistics for
 all learnable engine parameters.
 
-MIDI files can be organized any way you like — the tool recursively finds all
+MIDI files can be organized any way you like: the tool recursively finds all
 .mid/.midi files under the input directory.  Genre metadata is supplied via an
 optional manifest file (YAML or JSONL).  Without a manifest, files are analyzed
 under the "__unknown__" genre.
@@ -40,8 +40,8 @@ Usage
 
 Output
 ------
-- ``genre_stats.json``   — per-genre aggregated statistics (mean, median, stdev, etc.)
-- ``file_results.jsonl`` — per-file raw analysis results (for debugging / deep dives)
+- ``genre_stats.json``: per-genre aggregated statistics (mean, median, stdev, etc.)
+- ``file_results.jsonl``: per-file raw analysis results (for debugging / deep dives)
 """
 
 import argparse
@@ -78,7 +78,7 @@ def discover_midi_files(directory: Path) -> List[Dict]:
     """Recursively find all MIDI files under *directory*.
 
     Returns a list of ``{"file": <absolute-path>, "genres": []}`` dicts.
-    Genre metadata is empty — use :func:`load_manifest` to attach genres.
+    Genre metadata is empty: use :func:`load_manifest` to attach genres.
     """
     entries = []
     for root, _dirs, files in os.walk(directory):
@@ -117,7 +117,7 @@ def load_manifest(manifest_path: Path) -> List[Dict]:
     elif ext in (".jsonl", ".json"):
         return _load_jsonl_manifest(manifest_path, base_dir)
     else:
-        logger.warning("Unknown manifest format %r — trying JSONL", ext)
+        logger.warning("Unknown manifest format %r: trying JSONL", ext)
         return _load_jsonl_manifest(manifest_path, base_dir)
 
 
@@ -143,7 +143,7 @@ def _load_yaml_manifest(path: Path, base_dir: Path) -> List[Dict]:
         data = yaml.safe_load(f)
 
     if not isinstance(data, list):
-        logger.warning("YAML manifest root is not a list — skipping")
+        logger.warning("YAML manifest root is not a list: skipping")
         return []
 
     entries = []
@@ -281,10 +281,10 @@ def analyze_one(entry: Dict, timeout_sec: int = 30) -> FileResult:
     """Run the full 4-phase pipeline on a single MIDI file.
 
     Phases:
-        1. **Parse** — extract raw MIDI events, tempo, time signature
-        2. **Classify** — assign instrument roles (drums, bass, rhythm, lead)
-        3. **Groove** — extract swing, syncopation, push/pull
-        4. **Patterns** — mine per-role statistics (density, intervals, etc.)
+        1. **Parse**: extract raw MIDI events, tempo, time signature
+        2. **Classify**: assign instrument roles (drums, bass, rhythm, lead)
+        3. **Groove**: extract swing, syncopation, push/pull
+        4. **Patterns**: mine per-role statistics (density, intervals, etc.)
 
     Parameters
     ----------
@@ -508,7 +508,7 @@ def summarize_genre(stats: GenreStats) -> Dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Batch MIDI analysis pipeline — analyzes MIDI files and "
+        description="Batch MIDI analysis pipeline: analyzes MIDI files and "
                     "aggregates per-genre statistics for engine parameters.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
