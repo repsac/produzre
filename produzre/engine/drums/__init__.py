@@ -462,7 +462,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     # Persona-sourced extra keys (tagged `_persona_keys` by the orchestrator
     # merge) are NOT user overrides and stay recipe-overridable.
     _extra_persona_keys = set(_get_mapping(extra_m).get("_persona_keys") or [])
-    for k in sorted(set(params_m) | set(extra_m) | {"fill_rate", "fill_chatter", "swing", "swing_16th", "timing_jitter_ms", "push_pull", "velocity_humanize", "riff_accent_rate", "riff_accent_boost"}):
+    for k in sorted(set(params_m) | set(extra_m) | {"fill_rate", "fill_chatter", "swing", "swing_16th", "timing_jitter_ms", "push_pull", "velocity_humanize", "groove_strength", "riff_accent_rate", "riff_accent_boost"}):
         if k.startswith("_") or k in ("extra", "voices", "persona"):
             continue
         if k in inst_m:
@@ -1077,6 +1077,83 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             )
         template = replace(template, **template_updates)
 
+    # Theme coupling (M4c): a drum_groove theme makes the kit pattern itself
+    # thematic — the song's own groove replaces the recipe's kick/snare/hat
+    # steps, quantized to the 16th grid. `groove_strength` crossfades between
+    # the theme pattern (1.0, the default when a groove theme exists) and the
+    # genre pattern (0.0). Voices the theme does not use keep the recipe
+    # pattern. All draws are unconditional and in sorted order, so the RNG
+    # stream stays independent of pattern content, and the derived sub-RNG
+    # leaves the base stream untouched for groove-free configs.
+    _groove_theme = None
+    _plan_for_groove = kwargs.get("plan")
+    if _plan_for_groove is not None and hasattr(_plan_for_groove, "get"):
+        _groove_theme = _plan_for_groove.get(f"themes.groove.{section_id}")
+    if _groove_theme:
+        groove_strength = params_m.get("groove_strength")
+        if groove_strength is None:
+            groove_strength = 1.0
+        groove_strength = max(0.0, min(float(groove_strength), 1.0))
+        if groove_strength > 0.0:
+            from dataclasses import replace as _tpl_replace
+            from .groove import hat_steps_for_mode as _hat_steps_for_mode
+            from .groove import step_index_in_bar as _step_in_bar
+
+            rng_groove = _derive_rng(rng, "drums.groove_theme")
+
+            def _crossfade_steps(theme_onsets, genre_steps):
+                steps = set()
+                for b in sorted(float(x) for x in theme_onsets):
+                    draw = rng_groove.random()  # unconditional per theme onset
+                    if draw < groove_strength:
+                        steps.add(
+                            _step_in_bar(b % beats_per_bar, beats_per_bar,
+                                         steps_per_bar=steps_per_bar)
+                        )
+                for s in sorted(int(x) for x in genre_steps):
+                    draw = rng_groove.random()  # unconditional per genre step
+                    if draw < (1.0 - groove_strength):
+                        steps.add(s)
+                return tuple(sorted(steps))
+
+            _gt_updates = {}
+            if _groove_theme.get("kick"):
+                _gt_updates["kick_base"] = _crossfade_steps(
+                    _groove_theme["kick"], template.kick_base
+                )
+            if _groove_theme.get("snare"):
+                _gt_updates["snare_backbeat_steps"] = _crossfade_steps(
+                    _groove_theme["snare"], template.snare_backbeat_steps
+                )
+            _hat_line = list(_groove_theme.get("hat") or []) + list(
+                _groove_theme.get("ride") or []
+            ) + list(_groove_theme.get("open_hat") or [])
+            if _hat_line:
+                _gt_updates["hat_steps_override"] = _crossfade_steps(
+                    _hat_line,
+                    _hat_steps_for_mode(template.hat_mode, steps_per_bar=steps_per_bar),
+                )
+            if _groove_theme.get("open_hat") and not template.use_ride:
+                # Open-hat onsets ride the hat line too, but these steps are
+                # additionally forced to the open-hat pitch downstream.
+                _gt_updates["open_hat_steps"] = _crossfade_steps(
+                    _groove_theme["open_hat"], ()
+                )
+            if _groove_theme.get("ride"):
+                _gt_updates["use_ride"] = True
+            if _gt_updates:
+                template = _tpl_replace(template, **_gt_updates)
+                if logger:
+                    logger.info(
+                        "Section '%s': drum groove theme applied "
+                        "(strength=%.2f, kick=%s, snare=%s)",
+                        section_id, groove_strength,
+                        _gt_updates.get("kick_base", template.kick_base),
+                        _gt_updates.get(
+                            "snare_backbeat_steps", template.snare_backbeat_steps
+                        ),
+                    )
+
     # Augment transition_context with transition params if context exists.
     effective_transition_context = None
     if transition_context is not None:
@@ -1275,6 +1352,72 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             fill_duck_hats=constraints_fill_duck_hats,
             logger=logger,
         )
+
+    # Theme coupling (M4d): the groove theme's accent voices. Crash and tom
+    # degrees can't replace structural kit decisions (section-boundary
+    # crashes, recipe fills), so they're injected as extra hits post-hoc,
+    # gated by the same groove_strength crossfade. Draws are unconditional
+    # per onset in sorted order; a same-pitch hit within 0.12 beats already
+    # covers the onset, so we skip it.
+    if _groove_theme:
+        _gv_strength = params_m.get("groove_strength")
+        _gv_strength = 1.0 if _gv_strength is None else max(
+            0.0, min(float(_gv_strength), 1.0)
+        )
+        if _gv_strength > 0.0:
+            rng_gv = _derive_rng(rng, "drums.groove_voices")
+            added_voices = 0
+            _crash_onsets = sorted(float(x) for x in (_groove_theme.get("crash") or []))
+            _tom_onsets = sorted(float(x) for x in (_groove_theme.get("tom") or []))
+            if _crash_onsets:
+                crash_pitch = int(pitches.get("crash", 49))
+                for onset in _crash_onsets:
+                    draw = rng_gv.random()
+                    covered = any(
+                        ev.pitch == crash_pitch
+                        and abs(float(ev.beat) - onset) <= 0.12
+                        for ev in events
+                    )
+                    if not covered and draw < _gv_strength:
+                        events.append(
+                            DrumEvent(
+                                beat=float(onset),
+                                duration_beats=0.5,
+                                pitch=crash_pitch,
+                                velocity=min(127, int(base_velocity * 1.15)),
+                                kind="crash_theme",
+                            )
+                        )
+                        added_voices += 1
+            if _tom_onsets:
+                tom_pitches = (
+                    int(pitches.get("tom_high", 50)),
+                    int(pitches.get("tom_mid", 47)),
+                    int(pitches.get("tom_low", 45)),
+                )
+                for i, onset in enumerate(_tom_onsets):
+                    draw = rng_gv.random()
+                    tp = tom_pitches[i % len(tom_pitches)]
+                    covered = any(
+                        ev.pitch == tp and abs(float(ev.beat) - onset) <= 0.12
+                        for ev in events
+                    )
+                    if not covered and draw < _gv_strength:
+                        events.append(
+                            DrumEvent(
+                                beat=float(onset),
+                                duration_beats=0.25,
+                                pitch=tp,
+                                velocity=min(127, int(base_velocity * 1.05)),
+                                kind="tom_theme",
+                            )
+                        )
+                        added_voices += 1
+            if logger and added_voices:
+                logger.debug(
+                    "Section '%s': groove theme added %d crash/tom hit(s)",
+                    section_id, added_voices,
+                )
 
     # Humanization params (defaults are persona/tight-friendly).
     timing_jitter_ms = float(params_m.get("timing_jitter_ms", 0.0))

@@ -197,7 +197,7 @@ def test_three_four_drums_on_valid_steps(tmp_path):
     """A 3/4 build places drum hits only on valid 3/4 grid positions."""
     title = "MeterDrums34"
     yaml_text = SONG_HEADER.format(
-        title=title, meter="3/4", bpb=3, exports_root=tmp_path / "exports"
+        title=title, meter="3/4", bpb=3, exports_root=(tmp_path / "exports").as_posix()
     ) + """
 sections:
   verse:
@@ -246,7 +246,7 @@ def test_six_eight_drums_in_bounds(tmp_path):
     """A 6/8 build (3.0 quarter-beats per bar) produces in-bounds drum events."""
     title = "MeterDrums68"
     yaml_text = SONG_HEADER.format(
-        title=title, meter="6/8", bpb=3, exports_root=tmp_path / "exports"
+        title=title, meter="6/8", bpb=3, exports_root=(tmp_path / "exports").as_posix()
     ) + """
 sections:
   verse:
@@ -283,7 +283,7 @@ def test_six_eight_section_in_four_four_song_length(tmp_path):
     """`meter: 6/8, bars: 4` inside a 4/4 song spans 12 quarter-beats."""
     title = "MeterMixed"
     yaml_text = SONG_HEADER.format(
-        title=title, meter="4/4", bpb=4, exports_root=tmp_path / "exports"
+        title=title, meter="4/4", bpb=4, exports_root=(tmp_path / "exports").as_posix()
     ) + """
 sections:
   verse:
@@ -333,7 +333,7 @@ def test_three_four_bass_and_drums_build(tmp_path):
     """A 3/4 bass+drums build completes without crashing."""
     title = "MeterBand34"
     yaml_text = SONG_HEADER.format(
-        title=title, meter="3/4", bpb=3, exports_root=tmp_path / "exports"
+        title=title, meter="3/4", bpb=3, exports_root=(tmp_path / "exports").as_posix()
     ) + """
 sections:
   verse:

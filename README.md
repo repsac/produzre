@@ -117,6 +117,8 @@ A song without authored themes automatically gets a riff, a short repeated
 phrase, and a hook, a melody that returns through the song. Lead
 guitar, acoustic melody, and phrase arpeggios draw from that shared material.
 Bass, drums, and rhythm guitar only couple to the riff when explicitly enabled.
+You can also write a `bass_motif` the bass quotes outright, or a `drum_groove`
+where degrees are kit voices and the theme becomes the beat.
 
 ```yaml
 themes:
@@ -124,10 +126,18 @@ themes:
     role: riff
     register: [36, 60]
     events: "1:.5 1:.5 b3:1 4:1 1:1"
+  kit_groove:
+    role: drum_groove
+    events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 4:.5"
 instruments:
   bass:
     params: {lock_to_riff: 1.0}
 ```
+
+Sustained lead notes get seeded vibrato, bends, and, in solo sections, a
+closing whammy dive, all written as pitch bend. Set `foreground: full` on the
+lead for instrumental songs so it plays through the whole section instead of
+answering an imaginary singer. See the lead guitar controls for the rates.
 
 See the [theme controls](docs/llm-song-config-reference.md#themes) for writing
 and developing your own material. [themes_demo.yaml](examples/themes_demo.yaml)

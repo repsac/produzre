@@ -85,6 +85,25 @@ def _stable_u32(text: str) -> int:
     return int.from_bytes(hashlib.md5(text.encode("utf-8")).digest()[:4], "little")
 
 
+def _extra_view(instrument_cfg) -> dict:
+    """Return a flat params dict from an instrument config's `extra`.
+
+    The config loader can wrap user params one level deep (`extra.extra`),
+    and the persona merge then puts persona keys at the top level. Flatten so
+    every param read sees both layers, with the user's nested keys winning
+    over persona-sourced top-level keys (persona < user).
+    """
+    extra = getattr(instrument_cfg, "extra", None)
+    if not isinstance(extra, dict):
+        return {}
+    nested = extra.get("extra")
+    if isinstance(nested, dict):
+        flat = {k: v for k, v in extra.items() if k != "extra"}
+        flat.update(nested)
+        return flat
+    return extra
+
+
 
 
 
@@ -155,9 +174,10 @@ def contribute_plan(
         ensemble = plan.get(f"ensemble.{section.id}", {})
         planned_rest = ensemble.get("lead_rest_ratio") if isinstance(ensemble, dict) else None
         # Read rest_probability from config (same logic as render)
+        lead_extra = _extra_view(instrument_cfg)
         rest_probability = getattr(instrument_cfg, "rest_probability", None)
         if rest_probability is None:
-            rest_probability = instrument_cfg.extra.get("rest_probability", None)
+            rest_probability = lead_extra.get("rest_probability", None)
 
         # Use rest_probability as a proxy for rest_ratio
         # This is the configured "target" rest ratio that lead will aim for
@@ -222,6 +242,11 @@ def render_into_timeline(
         logger.debug("Section '%s': no harmony plan; skipping lead guitar.", section.id)
         return
 
+    # Flat params view: the loader can nest user params under extra.extra
+    # (with persona keys merged at the top level). Normalize once so every
+    # param read below sees both layers.
+    lead_extra = _extra_view(instrument_cfg)
+
     # Effective intensity with style bias.
     raw_intensity = instrument_cfg.intensity
     style_bias = getattr(instrument_cfg, "style_bias", None)
@@ -249,12 +274,17 @@ def render_into_timeline(
 
     register = getattr(instrument_cfg, "register", None)
     solo = bool(getattr(instrument_cfg, "solo", False))
+    # Docs put lead params in `extra:` — honor a solo flag placed there too.
+    if not solo:
+        solo = bool(lead_extra.get("solo", False))
     role = getattr(instrument_cfg, "role", None)
     if role == "lead":
         solo = True
 
-    # Slightly boost intensity/velocity for true solo sections.
-    base_vel = int(80 * max(0.3, min(intensity, 1.5)))
+    # Lead sits above the band: scale toward the top of the velocity range so
+    # the line reads as the foreground voice (rhythm guitar choruses average
+    # in the mid-90s). Solo sections get the traditional extra push.
+    base_vel = int(100 * max(0.45, min(intensity, 1.5)))
     if solo:
         base_vel = min(118, base_vel + 10)
 
@@ -265,7 +295,7 @@ def render_into_timeline(
     # Solo sections default to longer phrases (4 bars) for more room to breathe.
     phrase_len_bars = getattr(instrument_cfg, "phrase_len_bars", None)
     if phrase_len_bars is None:
-        phrase_len_bars = instrument_cfg.extra.get("phrase_len_bars", None)
+        phrase_len_bars = lead_extra.get("phrase_len_bars", None)
     if phrase_len_bars is None:
         phrase_len_bars = 4 if solo else 2
     try:
@@ -277,7 +307,7 @@ def render_into_timeline(
     # Rhythm feel controls (rests + syncopation).
     rest_probability = getattr(instrument_cfg, "rest_probability", None)
     if rest_probability is None:
-        rest_probability = instrument_cfg.extra.get("rest_probability", None)
+        rest_probability = lead_extra.get("rest_probability", None)
     if rest_probability is None:
         # Default: more space in verses, less space in solos.
         if solo:
@@ -294,6 +324,98 @@ def render_into_timeline(
         rest_probability = 0.25
     rest_probability = max(0.0, min(rest_probability, 0.85))
 
+    # Pitch-expression controls (rendered as pitchwheel at export). A note
+    # held for >= 1 beat may get a seeded vibrato; any main note may get a
+    # short bend-in from below. Rates are probabilities, not guarantees.
+    vibrato_rate = getattr(instrument_cfg, "vibrato_rate", None)
+    if vibrato_rate is None:
+        vibrato_rate = lead_extra.get("vibrato_rate", None)
+    if vibrato_rate is None:
+        vibrato_rate = 0.65
+    try:
+        vibrato_rate = float(vibrato_rate)
+    except Exception:
+        vibrato_rate = 0.65
+    vibrato_rate = max(0.0, min(vibrato_rate, 1.0))
+
+    bend_rate = getattr(instrument_cfg, "bend_rate", None)
+    if bend_rate is None:
+        bend_rate = lead_extra.get("bend_rate", None)
+    if bend_rate is None:
+        bend_rate = 0.15
+    try:
+        bend_rate = float(bend_rate)
+    except Exception:
+        bend_rate = 0.15
+    bend_rate = max(0.0, min(bend_rate, 1.0))
+
+    # Whammy-bar dive bombs: rare, solo sections only, long held notes only.
+    dive_rate = getattr(instrument_cfg, "dive_rate", None)
+    if dive_rate is None:
+        dive_rate = lead_extra.get("dive_rate", None)
+    if dive_rate is None:
+        dive_rate = 0.30
+    try:
+        dive_rate = float(dive_rate)
+    except Exception:
+        dive_rate = 0.30
+    dive_rate = max(0.0, min(dive_rate, 1.0))
+
+    # Feedback swell: held notes fade in under a volume pedal (CC11 ramp).
+    swell_rate = getattr(instrument_cfg, "swell_rate", None)
+    if swell_rate is None:
+        swell_rate = lead_extra.get("swell_rate", None)
+    if swell_rate is None:
+        swell_rate = 0.25
+    try:
+        swell_rate = float(swell_rate)
+    except Exception:
+        swell_rate = 0.25
+    swell_rate = max(0.0, min(swell_rate, 1.0))
+
+    song_bpm = float(getattr(cfg.song, "bpm", 120.0) or 120.0)
+
+    def _draw_expression(dur_beats: float) -> Optional[dict]:
+        """Seeded per-note pitch expression. Draw order is fixed (bend gate,
+        vibrato gate, swell gate, then dive gate) so the RNG stream stays
+        stable across rate tweaks. A dive replaces bend/vibrato but keeps a
+        drawn swell (volume swell + whammy dive is the classic combo)."""
+        expr: dict = {}
+        if bend_rate > 0 and section_rng.random() < bend_rate:
+            semis = section_rng.choice([1, 2])
+            ramp = min(section_rng.uniform(0.10, 0.20), max(0.05, dur_beats * 0.5))
+            expr["bend_in"] = {"semitones": semis, "ramp_beats": ramp}
+        if dur_beats >= 1.0 and vibrato_rate > 0 and section_rng.random() < vibrato_rate:
+            depth = section_rng.uniform(15.0, 45.0)
+            hz = section_rng.uniform(4.5, 6.5)
+            period_beats = 60.0 / (song_bpm * hz)
+            delay = section_rng.uniform(0.20, 0.35)
+            expr["vibrato"] = {
+                "depth_cents": depth,
+                "period_beats": period_beats,
+                "delay_beats": delay,
+            }
+        if dur_beats >= 1.5 and swell_rate > 0 and section_rng.random() < swell_rate:
+            expr["swell"] = {
+                "from": section_rng.randint(30, 60),
+                "ramp_beats": dur_beats * section_rng.uniform(0.50, 0.80),
+                "to": 127,
+            }
+        if solo and dur_beats >= 1.5 and dive_rate > 0 and section_rng.random() < dive_rate:
+            # Dive bombs need room to fall: 7-14 semitones over most of the
+            # note, held at the bottom. The writer widens the channel's bend
+            # range via RPN for the dive and restores +/-2 after.
+            dive_expr: dict = {
+                "dive": {
+                    "semitones": section_rng.choice([7, 12, 14]),
+                    "drop_beats": dur_beats * section_rng.uniform(0.55, 0.75),
+                }
+            }
+            if "swell" in expr:
+                dive_expr["swell"] = expr["swell"]
+            return dive_expr
+        return expr or None
+
     phrase_len_beats = float(phrase_len_bars) * float(bpb)
 
     # Resolve key/mode and use the orchestrator's instrument RNG so take,
@@ -307,7 +429,7 @@ def render_into_timeline(
     # Resolution behavior: encourage landing on chord tones at chord/phrase ends.
     resolution_strength = getattr(instrument_cfg, "resolution_strength", None)
     if resolution_strength is None:
-        resolution_strength = instrument_cfg.extra.get("resolution_strength", None)
+        resolution_strength = lead_extra.get("resolution_strength", None)
     if resolution_strength is None:
         resolution_strength = 0.55 if solo else 0.35
     try:
@@ -320,7 +442,10 @@ def render_into_timeline(
     vary_last = resolution_strength > 0.3
     section_type = getattr(section, "type", "") or ""
     call_and_response = (section_type.lower() == "bridge")
-    dur_scale = 0.78 if solo else 0.90
+    # Near-full sustain: hooks live or die by their long notes, and heavy
+    # trimming is what made themed lines feel lifeless. Solo keeps a small
+    # gap for articulation space in denser lines.
+    dur_scale = 0.95 if solo else 1.0
 
     # Phase LG3: extract accent beats from plan for grid-aware placement.
     plan = kwargs.get("plan", None)
@@ -368,7 +493,7 @@ def render_into_timeline(
     # Can be overridden via contour_style parameter.
     contour_style = getattr(instrument_cfg, "contour_style", None)
     if contour_style is None:
-        contour_style = instrument_cfg.extra.get("contour_style", None)
+        contour_style = lead_extra.get("contour_style", None)
 
     # Map contour_style to leap_limit
     if contour_style == "stepwise":
@@ -387,7 +512,7 @@ def render_into_timeline(
     # defines themes.
     theme_quote_rate = getattr(instrument_cfg, "theme_quote_rate", None)
     if theme_quote_rate is None:
-        theme_quote_rate = instrument_cfg.extra.get("theme_quote_rate", None)
+        theme_quote_rate = lead_extra.get("theme_quote_rate", None)
     if theme_quote_rate is None:
         theme_quote_rate = 0.65
     try:
@@ -495,6 +620,10 @@ def render_into_timeline(
         is_first_phrase = (phrase_start < eps)
         lift_this_phrase = chorus_lift and is_first_phrase
 
+        # Track what actually got played so theme-driven placement below can
+        # tell coverage from coincidence.
+        emitted_beats: list = []
+
         # Emit motif notes at their own beat offsets/durations within the phrase.
         for note_idx, rn in enumerate(emit_notes):
             local_beat = phrase_start + rn.beat_offset
@@ -530,12 +659,14 @@ def render_into_timeline(
                     pitch = guided
                     previous_guide_pitch = guided
 
-            # Theme quoting (design: theme-bank-architecture.md §4.4): an
-            # interior note close to a realized theme note may adopt the
-            # theme's pitch, so the line paraphrases the song's hook. The RNG
-            # draw happens for every interior note while themes are active,
-            # keeping the stream stable regardless of theme proximity.
-            if theme_notes and not is_phrase_anchor:
+            # Theme quoting (design: theme-bank-architecture.md §4.4): a note
+            # close to a realized theme note adopts the theme's pitch AND its
+            # duration — a quote that keeps the motif's short durations does
+            # not sound like the hook. The RNG draw happens for every note
+            # while themes are active, keeping the stream stable regardless
+            # of theme proximity.
+            quoted = False
+            if theme_notes:
                 quote_draw = section_rng.random()
                 if quote_draw < theme_quote_rate:
                     nearest = min(
@@ -546,9 +677,21 @@ def render_into_timeline(
                         pitch = octave_wrap_if_needed(
                             int(nearest["pitch"]), reg_min, reg_max
                         )
+                        duration = min(
+                            float(nearest["duration_beats"]) * dur_scale,
+                            phrase_end - local_beat,
+                        )
+                        duration = max(0.1, duration)
+                        quoted = True
 
             # Phase LG5: articulation: shape duration, optional grace note.
+            # Long notes (resolutions, held hooks, quoted theme durations)
+            # always sustain: staccato on the money note is what made themed
+            # hooks feel lifeless. The articulation draw is consumed either
+            # way, so the RNG stream is unchanged.
             art = choose_articulation(section_rng, intensity)
+            if duration >= 1.4 and art == "staccato":
+                art = "sustain"
             arted = apply_articulation(pitch, duration, art, section_rng)
 
             # Per-hit velocity shaping.
@@ -560,14 +703,18 @@ def render_into_timeline(
                     vel = int(vel * 1.06)
             if intensity_band == "low":
                 vel = int(vel * 0.9)
-            elif intensity_band == "high":
-                if note_idx == 0:
-                    vel = int(vel * 1.05)
-                else:
-                    vel = int(vel * 0.95)
+            elif intensity_band == "high" and note_idx == 0:
+                # Accent the phrase anchor only — never duck the rest of the
+                # line. A lead that gets quieter as the band gets louder
+                # disappears from the mix.
+                vel = int(vel * 1.05)
 
             if solo:
                 vel = int(vel * 1.05)
+
+            if quoted:
+                # The hook is the foreground — quote it with intent.
+                vel = int(vel * 1.08)
 
             vel = max(20, min(127, vel))
 
@@ -603,6 +750,7 @@ def render_into_timeline(
                         pitch=grace_pitch,
                         velocity=grace_vel,
                         channel=None,
+                        kind="slide_grace",
                     )
 
             timeline.add_note(
@@ -611,7 +759,128 @@ def render_into_timeline(
                 pitch=pitch,
                 velocity=vel,
                 channel=None,
+                kind=art,
+                expression=_draw_expression(h_dur),
             )
+            emitted_beats.append(local_beat)
+
+        # Theme-driven placement: a long held note in the hook (the money
+        # note) must sound even where the generated motif rests — otherwise
+        # the hook's defining sustain is silently dropped whenever no motif
+        # note happens to land near it. No articulation draw here (always
+        # sustain); humanize consumes its usual draws only when injecting.
+        if theme_notes:
+            for tn in theme_notes:
+                t_beat = float(tn["beat"])
+                t_dur = float(tn["duration_beats"])
+                if t_dur < 2.0:
+                    continue
+                if not (phrase_start - eps <= t_beat < phrase_end - eps):
+                    continue
+                if any(abs(t_beat - eb) <= 0.25 for eb in emitted_beats):
+                    continue
+                if lead_activity_windows and not any(
+                    start <= t_beat < end for start, end in lead_activity_windows
+                ):
+                    continue
+                t_pitch = octave_wrap_if_needed(int(tn["pitch"]), reg_min, reg_max)
+                t_duration = max(0.1, min(t_dur * dur_scale, phrase_end - t_beat))
+                t_vel = max(20, min(127, int(base_vel * 1.08)))
+                t_song_beat = section_start_beat + t_beat + offset_beats
+                t_song_beat, t_h_dur, t_vel = humanize_note(
+                    t_song_beat, t_duration, t_vel, section_rng, intensity
+                )
+                timeline.add_note(
+                    start_beat=t_song_beat,
+                    duration_beats=t_h_dur,
+                    pitch=t_pitch,
+                    velocity=t_vel,
+                    channel=None,
+                    kind="theme_sustain",
+                    expression=_draw_expression(t_h_dur),
+                )
+                emitted_beats.append(t_beat)
+
+    # Ring-out: notes otherwise cut dead at their grid cell while the rest
+    # that follows is silence — a player lets the note ring into the gap.
+    # Extend every note (except deliberate staccato and slide grace notes)
+    # into the following silence, leaving a small breath before the next
+    # onset. Pure post-pass over emitted events, so it adds no RNG draws.
+    ring_out = lead_extra.get("ring_out", 0.85)
+    try:
+        ring_out = max(0.0, min(float(ring_out), 1.0))
+    except (TypeError, ValueError):
+        ring_out = 0.85
+    ring_max = lead_extra.get("ring_max_beats", 4.0)
+    try:
+        ring_max = max(0.5, float(ring_max))
+    except (TypeError, ValueError):
+        ring_max = 4.0
+    if ring_out > 0:
+        section_events = sorted(
+            timeline.events[events_before:], key=lambda e: e.start_beat
+        )
+        sec_end = section_start_beat
+        if harmony_plan.chord_slots:
+            sec_end = section_start_beat + float(harmony_plan.chord_slots[-1].end_beat)
+        for i, ev in enumerate(section_events):
+            if ev.kind in ("staccato", "slide_grace"):
+                continue
+            ev_end = ev.start_beat + ev.duration_beats
+            next_start = (
+                section_events[i + 1].start_beat
+                if i + 1 < len(section_events)
+                else sec_end
+            )
+            gap = next_start - ev_end
+            if gap < 0.25:
+                continue
+            new_dur = min(
+                ev.duration_beats + gap * ring_out,
+                ring_max,
+                next_start - ev.start_beat - 0.05,
+            )
+            if new_dur > ev.duration_beats + 0.01:
+                ev.duration_beats = new_dur
+                # A note that grew past the vibrato threshold missed its gate
+                # draw at emission — give it a makeup draw. These draws happen
+                # at a fixed point (after all emission), keeping the stream
+                # deterministic.
+                expr = ev.expression or {}
+                if (
+                    new_dur >= 1.0
+                    and "vibrato" not in expr
+                    and "dive" not in expr
+                    and vibrato_rate > 0
+                    and section_rng.random() < vibrato_rate
+                ):
+                    expr = dict(expr)
+                    expr["vibrato"] = {
+                        "depth_cents": section_rng.uniform(15.0, 45.0),
+                        "period_beats": 60.0 / (song_bpm * section_rng.uniform(4.5, 6.5)),
+                        "delay_beats": section_rng.uniform(0.20, 0.35),
+                    }
+                    ev.expression = expr
+
+    # Signature move: a solo's final long held note always takes the dive
+    # bomb (when dives are enabled) — the last scream note is where a player
+    # reaches for the bar. This runs after all emission, so its draws sit at
+    # a fixed point in the section's RNG stream.
+    if solo and dive_rate > 0:
+        section_events = timeline.events[events_before:]
+        held = [ev for ev in section_events if ev.duration_beats >= 1.5]
+        if held:
+            last_note = max(held, key=lambda ev: ev.start_beat)
+            prev_expr = last_note.expression or {}
+            new_expr: dict = {
+                "dive": {
+                    "semitones": section_rng.choice([7, 12, 14]),
+                    "drop_beats": last_note.duration_beats * section_rng.uniform(0.55, 0.75),
+                }
+            }
+            if "swell" in prev_expr:
+                new_expr["swell"] = prev_expr["swell"]
+            last_note.expression = new_expr
 
     added = len(timeline.events) - events_before
     logger.debug(

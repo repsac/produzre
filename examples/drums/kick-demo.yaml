@@ -1,5 +1,6 @@
 version: 1
 song:
+  themes_auto: false  # isolate drum golden tests from theme coupling
   title: "KickDemo"
   bpm: 140
   key: C

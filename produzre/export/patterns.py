@@ -29,7 +29,7 @@ import yaml
 
 from ..model import RootConfig
 from ..timeline import InstrumentTimeline, SectionTiming
-from .midi import PPQ, add_tempo_and_name, program_for_instrument, write_timeline_to_track
+from .midi import PPQ, add_channel_setup, add_tempo_and_name, program_for_instrument, write_timeline_to_track
 
 
 def _quantize(value: float, grid: float) -> float:
@@ -202,21 +202,14 @@ def _write_pattern_midi(
         meter=meter or str(getattr(cfg.song, "meter", "4/4") or "4/4"),
     )
 
-    prog = program_for_instrument(cfg, inst_name)
-    if prog is not None and getattr(pat_tl, "events", None):
+    # Patch setup at time 0 (drum channel gets an explicit Standard Kit
+    # program so DAWs like FL Studio don't default it to piano).
+    if getattr(pat_tl, "events", None):
         try:
             ch0 = int(pat_tl.events[0].channel)
         except Exception:
             ch0 = 0
-        ch0 = max(0, min(15, ch0))
-        track.append(
-            mido.Message(
-                "program_change",
-                program=int(prog),
-                channel=ch0,
-                time=0,
-            )
-        )
+        add_channel_setup(track, cfg, inst_name, ch0)
 
     write_timeline_to_track(track, pat_tl)
     mid.save(out_path)

@@ -252,7 +252,7 @@ themes:
 
 | Key | Range or values | Default | What it does |
 |---|---|---|---|
-| `role` | `melody`, `riff`, `bass_motif` | `melody` | Choose the theme's musical role. |
+| `role` | `melody`, `riff`, `bass_motif`, `drum_groove` | `melody` | Choose the theme's musical role. A `drum_groove` theme maps degrees to kit voices; see below. |
 | `events` | Degree:duration string | Required unless using lists | Space-separated `degree:duration` tokens in quarter-note beats. |
 | `degrees`, `rhythm` | Equal-length degree and duration lists | Alternative to `events` | Equal-length lists of degrees and positive durations. |
 | `register` | MIDI bounds: 0 <= low <= high <= 127 | Role-dependent | Inclusive `[low, high]` MIDI range. |
@@ -273,16 +273,49 @@ register ranges and the treatment table.
 
 | Key | Range or values | Default | What it does |
 |---|---|---|---|
-| `bass.params.lock_to_riff` | 0-1 | 0 | Probability of quoting each realized bass-motif note, falling back to riff. Quoted pitches replace generic notes in that interval. |
+| `bass.params.lock_to_riff` | 0-1 | 0 | Probability of playing each riff onset. With no bass motif, the riff's realized pitches are quoted at the same rate. |
+| `bass.params.motif_quote_rate` | 0-1 | 0.7 when a `bass_motif` theme exists | Probability of playing each motif onset and quoting its pitch. Approach and pedal notes are left alone. |
 | `rhythm_gtr.params.lock_to_riff` | 0-1 | 0 | Probability of adding a riff onset to the accent targets. Chords retain their own voicings. |
 | `drums.params.riff_accent_rate` | 0-1 | 0 | Probability of adding a kick at a riff onset. Grid, backbeat spacing, and limb constraints still apply. |
 | `drums.params.riff_accent_boost` | Nonnegative multiplier | 1 | Velocity multiplier for existing kick/snare accents near riff onsets. |
+| `drums.params.groove_strength` | 0-1 | 1 when a `drum_groove` theme exists | Crossfade between the groove theme's kit pattern and the genre pattern. 0 disables the theme. |
 | `lead_gtr.params.theme_quote_rate` | 0-1 | 0.65 | Probability of quoting a nearby melody-theme pitch on eligible interior notes. |
 
-Bass, drums, and rhythm guitar require explicit coupling. Lead guitar, acoustic
-melody, and the phrase arpeggiator use the shared melody guide automatically.
-`grid`, MIDI `source`, drum-groove themes, and section-local theme blocks are not
-implemented. Unsupported keys inside a theme raise an error.
+Bass, drums, and rhythm guitar require explicit coupling to the riff. An
+authored `bass_motif` or `drum_groove` theme is itself the opt-in. Lead
+guitar, acoustic melody, and the phrase arpeggiator use the shared melody
+guide automatically. `grid`, MIDI `source`, and section-local theme blocks are
+not implemented. Unsupported keys inside a theme raise an error.
+
+### Drum groove themes
+
+A `drum_groove` theme is rhythm plus drum voice instead of rhythm plus pitch.
+Degrees select the voice:
+
+| Degree | Voice |
+|---|---|
+| `1` | Kick |
+| `2` | Snare |
+| `3` | Closed hat |
+| `4` | Open hat (joins the hat line, forced open) |
+| `5` | Crash (added as an extra hit) |
+| `6` | Ride (moves the top-cymbal line to ride) |
+| `7` | Tom (added as an extra hit, cycling high, mid, low) |
+
+```yaml
+  kit_groove:
+    role: drum_groove
+    allow_development: false
+    events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 4:.5"
+```
+
+The theme replaces the recipe's kick, snare, and hat steps. Voices the theme
+does not use stay on the recipe, and genre and persona still control
+velocities, ghosts, fills, and humanization. Crash and tom onsets are added
+alongside the recipe's own crashes and fills. Arc transforms apply unless the
+theme is locked, so a breakdown thins the kit. A groove theme needs no
+harmony, so it also plays in drums-only sections; the section length comes
+from `bars` and the meter. Pitched roles still need a harmony plan.
 
 ## Bass controls
 
@@ -304,7 +337,9 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 | `lock_to_kick`, `lock_to_snare`, `lock_to_hat` | 0-1 each | persona | Add notes at kick, accent, or top-cymbal attacks. Zero disables that source. Tight: 0.8, 0, 0. |
 | `lock_to_kicks` | Boolean | false | Alternate renderer based on drum kick attacks. Distinct from the probability above. |
 | `avoid_fills`, `octave` | Boolean; integer octave | true, 2 | Fill avoidance and starting octave in the alternate kick-locked renderer. |
-| `lock_to_riff` | 0-1 | 0 | Theme quotation; see Themes. |
+| `lock_to_riff`, `motif_quote_rate` | 0-1 each | 0; 0.7 with a bass motif | Theme coupling; see Themes. |
+| `slide_rate` | 0-1 | 0.2 | Chance a note slides in from one or two semitones below, written as pitch bend. |
+| `vibrato_rate` | 0-1 | 0.35 | Chance a note held half a beat or longer gets a gentle pitch-bend vibrato. |
 | `accent_strength` | Nonnegative multiplier | persona | Velocity multiplier on accents. Tight: 1.1. |
 | `slap_pop_rate`, `slap_thumb_rate`, `ghost_perc_rate` | 0-1 each | persona | Pop, thumb, and percussive ghost choices in slap mode. Tight: 0.4, 0.9, 0. |
 | `slap_velocity_floor`, `pop_velocity_boost` | Velocity 1-127; velocity-unit offset | persona | Slap minimum velocity and added pop velocity units. Tight: 70, 15. |
@@ -335,6 +370,7 @@ presets. Use the shared groove and `rhythm_pattern` instead.
 | `choke_rate`, `flam_rate`, `drag_rate` | 0-1 each | recipe | Performance ornament probabilities. Engine fallback: 0, 0, 0. |
 | `swing`, `swing_16th`, `push_pull`, `timing_jitter_ms`, `velocity_humanize` | See [Shared timing](#shared-timing) | See Shared timing | Drum timing and expression; see [Shared timing](#shared-timing). |
 | `riff_accent_rate`, `riff_accent_boost` | 0-1; nonnegative multiplier | 0, 1 | Theme kick additions and accent velocity. |
+| `groove_strength` | 0-1 | 1 with a drum groove theme | Crossfade between a `drum_groove` theme and the genre pattern; see Themes. |
 | `voices` | Voice mapping | recipe | Individual kit voices, below. Persona values supply the base settings. |
 | `constraints` | Constraint mapping | Enabled | Limb collisions, hat choking, fill ducking, and foot limits. |
 
@@ -423,6 +459,7 @@ renderer that follows drum density when drum features are available.
 | `section_contrast` | 0-1 | 0.7 | Blend section defaults into neutral defaults. |
 | `phrase_len_bars`, `phrase_development` | Integer >= 1; Boolean | 4, true | Phrase cycle and bar-to-bar variation. |
 | `lock_to_riff` | 0-1 | 0 | Probability of adopting riff accent positions. |
+| `vibrato_rate` | 0-1 | 0.4 | Chance a chord held 0.75 beats or longer gets a pitch-bend vibrato. Pitch bend is per channel, so the whole chord moves. |
 | `push_pull`, `pocket_ms`, `timing_jitter_ms`, `velocity_humanize` | See [Shared timing](#shared-timing) | See Shared timing | One shared feel pass. |
 
 Styles: `auto`, `straight_8s`, `chugs`, `syncopated`, `half_time`, `rock_riff`,
@@ -455,7 +492,19 @@ These controls are specific to that renderer.
 | `rest_probability` | 0-0.85 | persona | Leave gaps in the lead and inform accompaniment planning. Balanced: 0.25. |
 | `resolution_strength` | 0-1 | persona | Favor chord tones and stronger phrase endings. Balanced: 0.45. |
 | `contour_style` | `stepwise`, `balanced`, `leaping` | persona | Choose the melodic contour. Balanced persona: `balanced`. |
-| `theme_quote_rate` | 0-1 | 0.65 | Quote nearby theme pitches on eligible interior notes. |
+| `theme_quote_rate` | 0-1 | 0.65 | Quote nearby theme pitches on eligible interior notes. Quotes adopt the theme's duration as well as its pitch. |
+| `foreground` | `auto`, `full` | `auto` | `full` gives the lead the whole section, for instrumental music. `auto` uses call-and-answer windows. Set per section or as a song-level default. |
+| `ring_out` | 0-1 | 0.85 | How far a note rings into the silence after it. 0 cuts at the grid cell, 1 rings up to the next note. Staccato notes stay short. |
+| `ring_max_beats` | 0.5 or more | 4 | Longest note that ring-out may create. |
+| `vibrato_rate` | 0-1 | 0.65 | Chance a note held a beat or longer gets pitch-bend vibrato. |
+| `bend_rate` | 0-1 | 0.15 | Chance a note is approached with a short bend-in from below. |
+| `dive_rate` | 0-1 | 0.3 | Solo sections only. Chance a note held 1.5 beats or longer ends in a whammy dive of 7 to 14 semitones. The solo's final held note always dives when this is above 0. |
+| `swell_rate` | 0-1 | 0.25 | Chance a note held 1.5 beats or longer fades in under a volume swell on CC11. |
+
+Pitch expression is seeded and deterministic. Vibrato, bends, slides, and dives
+are written as pitch-bend messages at export, and the writer widens the bend
+range for a dive. Swells ride channel expression (CC11). Because pitch bend is
+per channel, one note's expression moves anything else sounding on that channel.
 
 Use direct `register: low`, `mid`, `high`, `very_high`, or `full`. Direct
 `solo: true` or `role: lead` increases activity and permits wider motion.

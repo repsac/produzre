@@ -47,9 +47,24 @@ why output can change across releases.
 - Authored themes keep their written sequence unless `allow_development: true`.
   Generated or unlocked themes can be quoted, sequenced, inverted, fragmented,
   displaced, thinned, stretched, compressed, or shifted by octave.
-- Bass plays realized `bass_motif` pitches, falling back to the active riff,
-  when `lock_to_riff` is enabled. Rhythm guitar uses riff accents; drums can
-  add constrained riff kicks.
+- Bass quotes a `bass_motif` theme's onsets and pitches (`motif_quote_rate`,
+  0.7 by default when a motif exists). With no motif, `lock_to_riff` locks
+  onsets and quotes the riff's pitches. Rhythm guitar uses riff accents;
+  drums can add constrained riff kicks.
+- `drum_groove` themes: degrees map to kit voices (kick, snare, hat, open
+  hat, crash, ride, tom) and the theme becomes the beat. `groove_strength`
+  crossfades against the genre pattern. Groove themes also play in
+  drums-only sections.
+- Seeded pitch expression written as pitch bend and CC11: lead vibrato,
+  bend-ins, volume swells, and a whammy dive on the solo's last held note;
+  bass slide-ins and vibrato; rhythm guitar vibrato on sustained chords.
+- Lead ring-out: notes sustain into the silence that follows them
+  (`ring_out`, `ring_max_beats`), and the lead sits louder in the mix.
+- Lead `foreground: full` gives the lead the whole section for instrumental
+  music instead of call-and-answer windows.
+- Drum tracks carry a Standard Kit program change so DAWs stop loading them
+  as piano.
+- New demos: `examples/theme_showcase.yaml` and `examples/lead_metal_demo.yaml`.
 
 ### Fixed
 

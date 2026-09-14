@@ -86,49 +86,55 @@ def test_density_controls_note_count():
 
 def test_rest_rate_creates_gaps():
     """Verify rest_rate parameter creates gaps in the bass line."""
-    # Build drive pattern with rest_rate=0.15
-    result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/rhythm/rhythm-drive.yaml"],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    assert result.returncode == 0
+    # Build the drive pattern as configured (rest_rate=0.15) and a copy with
+    # rest_rate=0.0. The engine now renders short 16th-note durations, so
+    # silence between notes is meaningless; the behavioral signal of
+    # rest_rate is that eligible slots are SKIPPED, i.e. fewer note onsets.
+    def build_and_count(yaml_path):
+        result = subprocess.run(
+            [sys.executable, "-m", "produzre.cli", "build", str(yaml_path)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, f"build failed: {result.stderr}"
+        export_lines = [l for l in result.stderr.splitlines() if "Export root:" in l]
+        assert export_lines, "No export root found"
+        export_root = export_lines[0].split("Export root:")[1].strip()
+        tsv_path = Path(export_root) / "analysis" / "bass" / "BassRhythm_Drive_bass.events.tsv"
+        assert tsv_path.exists(), f"TSV not found: {tsv_path}"
+        lines = tsv_path.read_text().strip().split("\n")
+        onsets = [float(ln.split("\t")[4]) for ln in lines[1:] if ln.strip()]
+        return len(onsets), onsets
 
-    # Extract export root
-    export_lines = [l for l in result.stderr.splitlines() if "Export root:" in l]
-    assert export_lines, "No export root found"
-    export_root = export_lines[0].split("Export root:")[1].strip()
+    src = Path("examples/bass/rhythm/rhythm-drive.yaml")
+    count_rests, onsets_rests = build_and_count(src)
 
-    # Read TSV
-    tsv_path = Path(export_root) / "analysis" / "bass" / "BassRhythm_Drive_bass.events.tsv"
-    assert tsv_path.exists(), f"TSV not found: {tsv_path}"
+    # Same config with rests disabled, written to a temp file.
+    import tempfile
+    mod = src.read_text(encoding="utf-8").replace("rest_rate: 0.15", "rest_rate: 0.0")
+    assert mod != src.read_text(encoding="utf-8"), "rest_rate line not found in example"
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=".yaml", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(mod)
+        tmp_yaml = f.name
+    try:
+        count_no_rests, _ = build_and_count(tmp_yaml)
+    finally:
+        Path(tmp_yaml).unlink(missing_ok=True)
 
-    content = tsv_path.read_text()
-    lines = content.strip().split("\n")
-    event_count = len(lines) - 1  # Subtract header
+    assert count_rests < count_no_rests, \
+        f"rest_rate=0.15 should skip slots ({count_rests} events) vs rest_rate=0.0 ({count_no_rests})"
 
-    # Parse events to check for gaps
-    events = []
-    for line in lines[1:]:
-        parts = line.split("\t")
-        if len(parts) >= 5:
-            events.append({
-                "beat": float(parts[4]),  # start_beat_abs
-            })
+    # And the surviving onsets must leave real holes: at least one onset gap
+    # wider than a quarter note (the drive grid runs on 8ths/16ths).
+    onset_gaps = [b - a for a, b in zip(onsets_rests, onsets_rests[1:])]
+    assert max(onset_gaps) > 0.25, \
+        f"rest_rate should open holes in the onset grid, max gap {max(onset_gaps)}"
 
-    # Check that there are gaps (events are not continuous)
-    # With rest_rate=0.15, we expect some gaps
-    gaps = 0
-    for i in range(1, len(events)):
-        gap = events[i]["beat"] - (events[i-1]["beat"] + 1.0)  # Assuming 1 beat duration
-        if gap > 0.1:  # More than a small epsilon
-            gaps += 1
-
-    # With rest_rate=0.15 and dense drive pattern, we should have some gaps
-    assert gaps > 0, "rest_rate should create gaps in the bass line"
-
-    print(f"✓ rest_rate creates gaps: {gaps} gaps found in {event_count} events")
+    print(f"✓ rest_rate creates gaps: {count_rests} vs {count_no_rests} events, "
+          f"max onset gap {max(onset_gaps):.2f} beats")
 
 
 def test_rhythm_determinism():

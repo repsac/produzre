@@ -180,6 +180,74 @@ def _strum_offsets(n: int, span_beats: float, direction: str) -> list[float]:
     return offs
 
 
+def _expression_rate(instrument_cfg, name: str, default: float) -> float:
+    """Read a pitch-expression rate from instrument params/extra blocks."""
+    raw = None
+    if instrument_cfg is not None:
+        if isinstance(instrument_cfg, dict):
+            raw = instrument_cfg.get(name)
+            if raw is None:
+                raw = (instrument_cfg.get("params") or {}).get(name)
+            if raw is None:
+                raw = (instrument_cfg.get("extra") or {}).get(name)
+        else:
+            raw = getattr(instrument_cfg, name, None)
+            for attr in ("params", "extra"):
+                if raw is not None:
+                    break
+                block = getattr(instrument_cfg, attr, None)
+                if isinstance(block, dict):
+                    if attr == "extra" and "extra" in block:
+                        block = block["extra"]
+                    raw = block.get(name)
+    if raw is None:
+        return default
+    try:
+        return max(0.0, min(float(raw), 1.0))
+    except (TypeError, ValueError):
+        return default
+
+
+def _section_expr_rng(cfg: Optional[RootConfig], section: SectionConfig, tag: str) -> random.Random:
+    """Private per-section expression stream. Kept separate from the shared
+    instrument RNG so expression draws never shift downstream pinned output."""
+    seed = getattr(getattr(cfg, "song", None), "seed", 42)
+    return random.Random(_stable_u32(f"{tag}:{section.id}:{seed}"))
+
+
+def _song_bpm(cfg: Optional[RootConfig]) -> float:
+    try:
+        return float(getattr(getattr(cfg, "song", None), "bpm", 120.0) or 120.0)
+    except Exception:
+        return 120.0
+
+
+def _draw_chord_vibrato(
+    expr_rng: random.Random,
+    dur_beats: float,
+    bpm: float,
+    vibrato_rate: float,
+) -> Optional[dict]:
+    """Seeded vibrato spec for a sustained chord, or None.
+
+    Only the chord's first emitted note carries the spec — pitchwheel is
+    channel-wide, so one tagged note wobbles the whole chord (like a player's
+    fretting hand) without spawning competing wheel streams.
+    """
+    if dur_beats < 0.75 or vibrato_rate <= 0:
+        return None
+    if expr_rng.random() >= vibrato_rate:
+        return None
+    depth = expr_rng.uniform(15.0, 30.0)
+    hz = expr_rng.uniform(4.0, 5.5)
+    return {
+        "vibrato": {
+            "depth_cents": depth,
+            "period_beats": 60.0 / (bpm * hz),
+            "delay_beats": expr_rng.uniform(0.20, 0.30),
+        }
+    }
+
 def _apply_rhythmic_pattern(play_pattern: Optional[str], beat_in_bar: float, base_place: bool) -> bool:
     """
     Minimal R2-C pattern override for rhythm placement.
@@ -741,6 +809,11 @@ def _render_pattern_based_guitar(
         except Exception:
             song_bpm = 120.0
 
+    # Pitch expression: sustained chords may get a seeded vibrato. The private
+    # stream keeps the shared RNG (and pinned regression output) untouched.
+    vibrato_rate = _expression_rate(instrument_cfg, "vibrato_rate", 0.40)
+    expr_rng = _section_expr_rng(cfg, section, "rhythm_expr")
+
     # Phase RG1: Pre-generate chord voicings for all harmony slots
     # Now delegates to shared instruments library for physically playable shapes
     chord_voicings: Dict[str, ChordShape] = {}
@@ -967,8 +1040,18 @@ def _render_pattern_based_guitar(
                 bpm=song_bpm,
             )
 
+            # Pitch expression: one seeded draw per chord hit. The spec rides
+            # only the first emitted note — pitchwheel is channel-wide, so a
+            # single tagged note wobbles the whole sustained chord.
+            chord_expr = _draw_chord_vibrato(
+                expr_rng,
+                max((n.duration for n, _ in articulated_notes_with_spread), default=0.0),
+                song_bpm,
+                vibrato_rate,
+            )
+
             # Phase RG4/RG6: Apply humanization and add to timeline
-            for note, strum_offset in articulated_notes_with_spread:
+            for note_idx, (note, strum_offset) in enumerate(articulated_notes_with_spread):
                 # Preserve short articulated strokes independently of the onset grid.
                 final_duration = note.duration
 
@@ -996,6 +1079,7 @@ def _render_pattern_based_guitar(
                     duration_beats=final_duration,
                     pitch=note.pitch,
                     velocity=final_velocity,
+                    expression=chord_expr if note_idx == 0 else None,
                 )
                 events_count += 1
 
@@ -1087,6 +1171,12 @@ def _render_legacy_rhythm_guitar(
     voice_leading = params.voice_leading
     vl_lo = params.vl_lo
     vl_hi = params.vl_hi
+
+    # Pitch expression: sustained chords may get a seeded vibrato (private
+    # stream, so pinned legacy output is untouched).
+    vibrato_rate = _expression_rate(instrument_cfg, "vibrato_rate", 0.40)
+    expr_rng = _section_expr_rng(cfg, section, "rhythm_expr")
+    song_bpm = _song_bpm(cfg)
 
     # Rhythm grid basics (needed for rendering logic)
     bpb = rhythm_grid.beats_per_bar
@@ -1406,7 +1496,11 @@ def _render_legacy_rhythm_guitar(
                 eff_strum_beats = eff_strum_beats * reattack_strum
             offs = _strum_offsets(len(pitches), eff_strum_beats, eff_dir)
 
-            for p, o in zip(pitches, offs):
+            # One seeded vibrato draw per chord hit; only the first note
+            # carries the spec (pitchwheel is channel-wide).
+            chord_expr = _draw_chord_vibrato(expr_rng, duration, song_bpm, vibrato_rate)
+
+            for note_idx, (p, o) in enumerate(zip(pitches, offs)):
                 start = song_beat + o
                 # Ensure the note doesn't extend beyond chord end.
                 dur = max(0.1, min(duration, max(0.0, (section_start_beat + chord_end) - start)))
@@ -1416,6 +1510,7 @@ def _render_legacy_rhythm_guitar(
                     pitch=p,
                     velocity=vel,
                     channel=None,
+                    expression=chord_expr if note_idx == 0 else None,
                 )
         # Always update chord/voice-leading state so subsequent hits see the
         # correct chord-change status even when this hit was silenced.

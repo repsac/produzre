@@ -13,7 +13,7 @@ Two input forms are supported per theme:
       degrees: [5, 5, 6, 5, 3]
       rhythm:  [0.5, 0.5, 0.5, 0.5, 2.0]
 
-Common keys: ``role`` (riff|melody|bass_motif), ``register: [lo, hi]``,
+Common keys: ``role`` (riff|melody|bass_motif|drum_groove), ``register: [lo, hi]``,
 ``length_beats`` (default: sum of durations), ``allow_development``.
 
 MIDI-clip import (``source: {midi: ...}``) is part of the design but is
@@ -116,9 +116,6 @@ def _parse_theme(name: str, spec: Dict[str, Any]) -> Theme:
             f"themes.{name}: unknown role {role_raw!r}; "
             f"expected one of: {', '.join(r.value for r in ThemeRole)}"
         )
-
-    if role is ThemeRole.DRUM_GROOVE:
-        raise ConfigError(f"themes.{name}: drum_groove themes are not yet supported")
 
     if "events" in spec:
         events = _parse_shorthand(str(spec["events"]))

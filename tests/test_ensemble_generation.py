@@ -76,6 +76,50 @@ def test_coordinator_exposes_role_density_and_activity_contract():
     assert coordinator.get_fill_owner("verse1") == "drums"
 
 
+# --- lead foreground: full (instrumental-lead mode) ------------------------
+
+@dataclass
+class _LeadCfg:
+    extra: dict = field(default_factory=dict)
+
+
+def test_lead_foreground_full_owns_the_whole_section():
+    section = _Section()
+    section.instruments["lead_gtr"] = _LeadCfg(extra={"foreground": "full"})
+    section_plan = build_ensemble_section_plan(_Config(), section, _Grid())
+
+    assert section_plan["lead_activity_windows"] == [(0.0, 16.0)]
+    assert section_plan["lead_rest_ratio"] == 0.0
+
+
+def test_lead_foreground_full_from_song_level_default():
+    @dataclass
+    class _RawConfig:
+        song: _Song = field(default_factory=_Song)
+        raw: dict = field(default_factory=lambda: {
+            "instruments": {"lead_gtr": {"extra": {"foreground": "full"}}}
+        })
+
+    section_plan = build_ensemble_section_plan(_RawConfig(), _Section(), _Grid())
+    assert section_plan["lead_activity_windows"] == [(0.0, 16.0)]
+
+
+def test_section_can_opt_out_of_song_level_foreground_full():
+    @dataclass
+    class _RawConfig:
+        song: _Song = field(default_factory=_Song)
+        raw: dict = field(default_factory=lambda: {
+            "instruments": {"lead_gtr": {"extra": {"foreground": "full"}}}
+        })
+
+    section = _Section()
+    section.instruments["lead_gtr"] = _LeadCfg(extra={"foreground": "auto"})
+    section_plan = build_ensemble_section_plan(_RawConfig(), section, _Grid())
+
+    # Back to vocal-style call-and-answer windows for this section only.
+    assert section_plan["lead_activity_windows"] == [(4.0, 12.0)]
+
+
 def test_bass_genre_cells_are_structurally_distinct():
     slots = [index / 4.0 for index in range(32)]
     rock = get_rhythm_pattern_rock_riff(slots, 4.0)

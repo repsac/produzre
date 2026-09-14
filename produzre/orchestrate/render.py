@@ -669,13 +669,16 @@ def render_section_instruments(
     # Derive melodic intent after harmony and all instrument planning hooks,
     # but before any engine renders.  A dedicated RNG keeps engine streams
     # stable when the melody planner evolves.
-    if performance_plan is not None and hplan is not None:
+    if performance_plan is not None:
         guide_dict = None
 
         # Theme-driven guide (design: docs/design/theme-bank-architecture.md).
         # When the song defines themes, the guide is built from the realized
         # MELODY theme under this section's arc treatment, and realized notes
         # for every role are published so engines can quote them directly.
+        # Pitched roles need the harmony plan (chord snapping), but a
+        # drum_groove theme is rhythm + voice: it only needs the section
+        # length, so it is published even for drums-only sections.
         theme_bank = performance_plan.get("themes.bank")
         if theme_bank is not None and getattr(theme_bank, "themes", None):
             from ..themes.arc import treatment_for
@@ -706,8 +709,32 @@ def render_section_instruments(
             realized_payload: dict[str, list] = {}
             realized_by_name: dict[str, list] = {}
             total_beats = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+            if total_beats <= 0.0:
+                # Drums-only section: no harmony plan, so take the length
+                # from the section's bar count and the rhythm grid meter.
+                beats_per_bar = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+                total_beats = float(getattr(sec, "bars", 0) or 0) * beats_per_bar
             for theme in theme_bank.themes.values():
                 t_name, t_params = treatment_for(theme, sec_type_key, occurrence)
+                if theme.role is ThemeRole.DRUM_GROOVE:
+                    # Groove themes are rhythm+voice, not pitch: publish
+                    # per-voice onsets for the drums engine instead of
+                    # pitch-realized notes.
+                    from ..themes.groove import realize_groove
+
+                    performance_plan.set(
+                        f"themes.groove.{sec.id}",
+                        realize_groove(theme, t_name, t_params, total_beats),
+                    )
+                    logger.info(
+                        "Section '%s': drum groove from theme '%s' (%s)",
+                        sec.id, theme.name, t_name,
+                    )
+                    continue
+                if hplan is None:
+                    # Pitched themes snap to chord tones; without a harmony
+                    # plan there is nothing meaningful to realize against.
+                    continue
                 notes = realize_for_section(
                     theme, t_name, t_params, hplan.chord_slots,
                     key=sec_key, mode=sec_mode, genre=sec_genre,
@@ -732,7 +759,7 @@ def render_section_instruments(
             performance_plan.set(f"themes.realized.{sec.id}", realized_payload)
             performance_plan.set(f"themes.realized_by_name.{sec.id}", realized_by_name)
 
-        if guide_dict is None:
+        if guide_dict is None and hplan is not None:
             melody_rng = random.Random(stable_seed_int(
                 "melody_guide", getattr(cfg.song, "seed", 42), sec.id,
                 section_start_beat, getattr(cfg.song, "genre", ""),
@@ -745,8 +772,9 @@ def render_section_instruments(
                 genre=getattr(cfg.song, "genre", ""),
                 rng=melody_rng,
             ).to_dict()
-        performance_plan.set(f"melody.guide.{sec.id}", guide_dict)
-        performance_plan.set("melody.guide", guide_dict)
+        if guide_dict is not None:
+            performance_plan.set(f"melody.guide.{sec.id}", guide_dict)
+            performance_plan.set("melody.guide", guide_dict)
 
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:

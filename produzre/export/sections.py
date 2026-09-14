@@ -23,7 +23,7 @@ import mido
 
 from ..model import RootConfig
 from ..timeline import InstrumentTimeline, SectionTiming
-from .midi import PPQ, add_tempo_and_name, program_for_instrument, write_timeline_to_track
+from .midi import PPQ, add_channel_setup, add_tempo_and_name, program_for_instrument, write_timeline_to_track
 
 
 def slice_timeline_for_section(
@@ -197,21 +197,14 @@ def write_section_midis(
                 track, float(cfg.song.bpm), f"{inst}_{st.id}", meter=meter
             )
 
-            prog = program_for_instrument(cfg, inst)
-            if prog is not None and getattr(sec_tl, "events", None):
+            # Patch setup at time 0 (drum channel gets an explicit Standard
+            # Kit program so DAWs like FL Studio don't default it to piano).
+            if getattr(sec_tl, "events", None):
                 try:
                     ch = int(sec_tl.events[0].channel)
                 except Exception:
                     ch = 0
-                ch = max(0, min(15, ch))
-                track.append(
-                    mido.Message(
-                        "program_change",
-                        program=int(prog),
-                        channel=ch,
-                        time=0,
-                    )
-                )
+                add_channel_setup(track, cfg, inst, ch)
 
             write_timeline_to_track(track, sec_tl)
             mid.save(out_path)

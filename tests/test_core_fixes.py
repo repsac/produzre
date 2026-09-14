@@ -57,7 +57,7 @@ arrangement:
 # ---------------------------------------------------------------------------
 
 def test_time_signature_meta_present_for_6_8_song(tmp_path):
-    cfg = _build_yaml(tmp_path, MINIMAL_68_SONG.format(exports_root=tmp_path / "exports"))
+    cfg = _build_yaml(tmp_path, MINIMAL_68_SONG.format(exports_root=(tmp_path / "exports").as_posix()))
     from produzre.orchestrate.build import build_song
 
     res = build_song(
@@ -223,7 +223,7 @@ arrangement:
 
 def test_repeated_sections_export_distinct_files(tmp_path):
     cfg = _build_yaml(
-        tmp_path, REPEATED_SECTIONS_SONG.format(exports_root=tmp_path / "exports")
+        tmp_path, REPEATED_SECTIONS_SONG.format(exports_root=(tmp_path / "exports").as_posix())
     )
     from produzre.orchestrate.build import build_song
 
@@ -686,7 +686,7 @@ def test_transitions_map_per_occurrence_keys():
 # ---------------------------------------------------------------------------
 
 def test_section_meta_falls_back_to_song_meter(tmp_path):
-    cfg = _build_yaml(tmp_path, MINIMAL_68_SONG.format(exports_root=tmp_path / "exports"))
+    cfg = _build_yaml(tmp_path, MINIMAL_68_SONG.format(exports_root=(tmp_path / "exports").as_posix()))
     from produzre.orchestrate.build import build_song
 
     res = build_song(
