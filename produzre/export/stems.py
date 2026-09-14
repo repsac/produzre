@@ -25,6 +25,7 @@ from ..model import RootConfig
 from ..timeline import InstrumentTimeline
 from .midi import (
     PPQ,
+    add_channel_setup,
     add_tempo_and_name,
     add_song_meter_changes,
     program_for_instrument,
@@ -100,22 +101,14 @@ def write_full_song_midi(
 
         track.append(mido.MetaMessage("track_name", name=f"{inst}", time=0))
 
-        # Program change (if configured) and if we have at least one event to infer channel.
-        prog = program_for_instrument(cfg, inst)
-        if prog is not None and getattr(tl, "events", None):
+        # Patch setup at time 0 (drum channel gets an explicit Standard Kit
+        # program so DAWs like FL Studio don't default it to piano).
+        if getattr(tl, "events", None):
             try:
                 ch = int(tl.events[0].channel)
             except Exception:
                 ch = 0
-            ch = max(0, min(15, ch))
-            track.append(
-                mido.Message(
-                    "program_change",
-                    program=int(prog),
-                    channel=ch,
-                    time=0,
-                )
-            )
+            add_channel_setup(track, cfg, inst, ch)
 
         write_timeline_to_track(track, tl)
 
@@ -183,21 +176,14 @@ def write_instrument_stems(
             meter=str(getattr(cfg.song, "meter", "4/4") or "4/4"),
         )
 
-        prog = program_for_instrument(cfg, inst)
-        if prog is not None and getattr(tl, "events", None):
+        # Patch setup at time 0 (drum channel gets an explicit Standard Kit
+        # program so DAWs like FL Studio don't default it to piano).
+        if getattr(tl, "events", None):
             try:
                 ch = int(tl.events[0].channel)
             except Exception:
                 ch = 0
-            ch = max(0, min(15, ch))
-            track.append(
-                mido.Message(
-                    "program_change",
-                    program=int(prog),
-                    channel=ch,
-                    time=0,
-                )
-            )
+            add_channel_setup(track, cfg, inst, ch)
 
         write_timeline_to_track(track, tl)
         add_song_meter_changes(track, cfg)

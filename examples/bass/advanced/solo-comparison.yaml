@@ -1,5 +1,6 @@
 version: 1
 song:
+  themes_auto: false  # isolate bass engine tests from theme coupling
   title: "Solo_Comparison"
   bpm: 110
   key: C

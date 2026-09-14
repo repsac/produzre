@@ -808,7 +808,7 @@ def build_bass_turnaround(
             start_beat=beat,
             duration_beats=note_duration * 0.9,  # Slight staccato
             velocity=velocity,
-            channel=0,
+            channel=0,  # placeholder: apply_transition_plan re-resolves via add_note()
         )
 
         turnaround_events.append(event)
@@ -888,22 +888,17 @@ def apply_transition_plan(
         # Use modest velocity for pickup (64-80 range)
         pickup_velocity = 72
 
-        # Add pickup note to timeline
-        # Note: timeline.add_note() expects (pitch, start_beat, duration_beats, velocity, channel)
-        # We'll create the event directly since we're modifying an existing timeline
+        # Add pickup note to timeline. add_note() resolves the instrument's
+        # own channel (engine spec / name map) — a bare NoteEvent(channel=0)
+        # would dump the pickup onto the piano channel in full-song MIDI.
         try:
-            # Import NoteEvent from timeline module
-            from ..timeline import NoteEvent
-
-            pickup_event = NoteEvent(
-                pitch=pickup_pitch,
+            timeline.add_note(
                 start_beat=pickup_beat,
                 duration_beats=pickup_duration,
+                pitch=pickup_pitch,
                 velocity=pickup_velocity,
-                channel=0,  # Use default channel
+                kind="pickup_transition",
             )
-
-            timeline.events.append(pickup_event)
             recipe.notes_added = 1
 
             if logger:
@@ -1081,8 +1076,19 @@ def apply_transition_plan(
                 if id(ev) not in conflicting_event_ids
             ]
 
-        # Add turnaround events
-        timeline.events.extend(turnaround_events)
+        # Add turnaround events. Route through add_note() so the instrument's
+        # own channel is resolved (engine spec / name map) — the events built
+        # by build_bass_turnaround carry a placeholder channel that would
+        # otherwise leak onto the piano channel in full-song MIDI.
+        for ev in turnaround_events:
+            timeline.add_note(
+                start_beat=ev.start_beat,
+                duration_beats=ev.duration_beats,
+                pitch=ev.pitch,
+                velocity=ev.velocity,
+                channel=None,
+                kind=getattr(ev, "kind", None) or "turnaround",
+            )
         recipe.notes_added = len(turnaround_events) - len(conflicting_events)
 
         if logger:

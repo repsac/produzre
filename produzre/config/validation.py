@@ -34,7 +34,7 @@ KNOWN_DRUM_PARAMS = {
     "kick_density", "snare_density", "hat_density", "fill_rate", "fill_chatter", "accent_strength",
     "swing", "swing_16th", "phrase_len_bars", "pickup_rate", "downbeat_rate", "fill_length",
     "phrase_end_emphasis", "choke_rate", "flam_rate", "drag_rate", "ghost_rate", "ghost_steps",
-    "riff_accent_rate", "riff_accent_boost", "constraints", "voices",
+    "riff_accent_rate", "riff_accent_boost", "groove_strength", "constraints", "voices",
 } | (KNOWN_COMMON_PARAMS - {"pocket_ms"})
 KNOWN_DRUM_CONSTRAINT_KEYS = {
     "enabled", "max_hand_hits", "max_foot_hits", "fill_duck_hats",
@@ -48,6 +48,7 @@ KNOWN_BASS_PARAMS = {
     "fill_rate", "fill_complexity", "fill_avoid_drums", "solo_density", "solo_register_high",
     "motif_repeat_rate", "motion_style", "register_low", "register_high", "max_passing_per_bar",
     "phrase_len_bars", "phrase_length_bars", "section_role_variation", "root_bias",
+    "motif_quote_rate", "slide_rate", "vibrato_rate",
 } | KNOWN_COMMON_PARAMS
 KNOWN_RHYTHM_GTR_PARAMS = {
     "style", "density", "mute", "contrast", "phrase_development", "phrase_len_bars", "sustain_mode",
@@ -56,10 +57,11 @@ KNOWN_RHYTHM_GTR_PARAMS = {
     "register", "register_min", "register_max", "accent_strength", "strum_ms", "chuck_rate",
     "humanize_velocity", "humanize_timing", "downbeat_boost", "sustain_cut_rate", "section_contrast",
     "follow_hats", "accent_syncopation", "octave", "lock_to_riff", "pattern", "reattack_vel",
-    "reattack_dur", "reattack_strum", "stab_beats",
+    "reattack_dur", "reattack_strum", "stab_beats", "vibrato_rate",
 } | KNOWN_COMMON_PARAMS
 KNOWN_LEAD_GTR_PARAMS = {
     "contour_style", "rest_probability", "phrase_len_bars", "resolution_strength", "theme_quote_rate",
+    "foreground", "vibrato_rate", "bend_rate", "dive_rate", "swell_rate", "ring_out", "ring_max_beats",
 } | KNOWN_COMMON_PARAMS
 KNOWN_ACOUSTIC_GTR_PARAMS = {
     "technique", "picking_pattern", "melody_amount", "phrase_variation", "voicing_style", "capo",
@@ -205,7 +207,15 @@ class ValidationHelper:
         else:
             return messages  # Custom engines define their own parameters
 
-        for key in params.keys():
+        for key, value in params.items():
+            if key == "extra" and isinstance(value, dict):
+                # A nested engine-control block; validate its contents instead.
+                messages.extend(
+                    ValidationHelper.validate_instrument_params(
+                        value, instrument_name, section_id, strict=strict
+                    )
+                )
+                continue
             if key not in known_params:
                 msg = ValidationHelper.format_suggestion_message(
                     key,

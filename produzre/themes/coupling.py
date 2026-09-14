@@ -13,7 +13,7 @@ streams stay stable.
 from __future__ import annotations
 
 from bisect import bisect_left
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 
 def get_theme_onsets(plan, section_id: str, role: str = "riff") -> List[float]:
@@ -34,6 +34,35 @@ def get_theme_onsets(plan, section_id: str, role: str = "riff") -> List[float]:
         return []
     notes = data.get(role) or []
     return sorted(float(n["beat"]) for n in notes if isinstance(n, dict) and "beat" in n)
+
+
+def get_theme_notes(plan, section_id: str, role: str = "bass_motif") -> List[Tuple[float, int]]:
+    """Return sorted (onset beat, pitch) pairs for a realized theme role.
+
+    Same source as get_theme_onsets, but keeps the realized pitch so an
+    engine can quote the theme's notes, not just its rhythm. Pitches are
+    already chord-snapped and voice-led within the theme's register.
+
+    Args:
+        plan: PerformancePlan (or None). Missing plan/themes -> empty list.
+        section_id: Section whose realized notes to read.
+        role: Theme role key ("bass_motif", "riff", "melody").
+
+    Returns:
+        Sorted list of (beat, pitch) tuples (empty when no themes are active).
+    """
+    if plan is None or not hasattr(plan, "get"):
+        return []
+    data = plan.get(f"themes.realized.{section_id}")
+    if not isinstance(data, dict):
+        return []
+    notes = data.get(role) or []
+    pairs = [
+        (float(n["beat"]), int(n["pitch"]))
+        for n in notes
+        if isinstance(n, dict) and "beat" in n and "pitch" in n
+    ]
+    return sorted(pairs, key=lambda bp: bp[0])
 
 
 def nearest_onset(onsets: List[float], beat: float, window: float) -> Optional[float]:

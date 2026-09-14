@@ -45,6 +45,13 @@ class NoteEvent:
     velocity: int
     channel: int = 9  # default to GM drums channel 10 (0-based index)
     kind: Optional[str] = None  # Optional metadata for debugging/analysis
+    # Optional pitch-expression spec rendered by the MIDI writer as pitchwheel
+    # messages. All values are precomputed in beat space by the engine so the
+    # writer never needs tempo context. Shape:
+    #   {"vibrato": {"depth_cents": float, "period_beats": float,
+    #                "delay_beats": float},
+    #    "bend_in": {"semitones": int, "ramp_beats": float}}
+    expression: Optional[dict] = None
 
 
 @dataclass
@@ -110,6 +117,7 @@ class InstrumentTimeline:
         velocity: int,
         channel: Optional[int] = None,
         kind: Optional[str] = None,
+        expression: Optional[dict] = None,
     ) -> None:
         """Append a note event to the timeline.
 
@@ -124,6 +132,9 @@ class InstrumentTimeline:
             channel: Optional MIDI channel (0-15). If None, an instrument
                 default channel is used.
             kind: Optional metadata tag for debugging/analysis (e.g., "kick", "ghost").
+            expression: Optional pitch-expression spec (see
+                `NoteEvent.expression`) rendered as pitchwheel messages at
+                export time.
 
         Returns:
             None
@@ -137,6 +148,7 @@ class InstrumentTimeline:
                 velocity=velocity,
                 channel=ch,
                 kind=kind,
+                expression=expression,
             )
         )
 

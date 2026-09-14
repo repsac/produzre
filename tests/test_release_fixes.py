@@ -29,15 +29,22 @@ def config(tmp_path, *, genre='rock', meter='4/4', instruments=None, themes=None
     return _load_cfg(tmp_path, yaml.safe_dump(data, sort_keys=False))
 
 
-@pytest.mark.parametrize('role', ['riff', 'bass_motif'])
-def test_realized_riff_pitches_reach_bass(tmp_path, role):
-    cfg = config(tmp_path, instruments={'bass': {'params': {'lock_to_riff': 1.0, 'register_low': 36, 'register_high': 60, 'pocket_ms': 0}}},
+@pytest.mark.parametrize('role, params', [
+    ('riff', {'lock_to_riff': 1.0}),
+    ('bass_motif', {'motif_quote_rate': 1.0}),
+])
+def test_realized_theme_pitches_reach_bass(tmp_path, role, params):
+    cfg = config(tmp_path, instruments={'bass': {'params': {'register_low': 36, 'register_high': 60, 'pocket_ms': 0, **params}}},
                  themes={'line': {'role': role, 'events': '1:.5 3:.5 4:1 5:1 1:1', 'register': [36, 60]}})
     timelines, result = _render_timelines(cfg)
     expected = result.performance_plan.get('themes.realized.v')[role]
-    actual = [n for n in timelines['bass'].events if n.kind == 'theme_riff']
-    assert [(n.start_beat, n.pitch) for n in actual] == [(n['beat'], n['pitch']) for n in expected]
-    assert result.performance_plan.get('performance.bass.v')['event_count'] == len(actual)
+    pc_by_beat = {round(float(n['beat']), 3): int(n['pitch']) % 12 for n in expected}
+    quoted = [n for n in timelines['bass'].events if n.kind == 'motif']
+    # Approach and pedal notes are left alone, so not every onset is quoted,
+    # but at rate 1.0 most of the theme must land with the theme's pitch.
+    assert len(quoted) >= len(expected) // 2
+    for n in quoted:
+        assert n.pitch % 12 == pc_by_beat[round(n.start_beat, 3)]
 
 
 def test_same_role_guide_and_lead_use_first_theme(tmp_path):
@@ -53,7 +60,7 @@ def test_same_role_guide_and_lead_use_first_theme(tmp_path):
 def test_theme_coupling_is_opt_in(tmp_path):
     cfg = config(tmp_path, genre='reggae')
     timelines, _ = _render_timelines(cfg)
-    assert not any(e.kind == 'theme_riff' for e in timelines['bass'].events)
+    assert not any(e.kind == 'motif' for e in timelines['bass'].events)
     assert not any(e.kind == 'kick_theme_lock' for e in timelines['drums'].events)
     assert any(e.pitch == 37 for e in timelines['drums'].events)
     assert not any(e.pitch == 38 for e in timelines['drums'].events)

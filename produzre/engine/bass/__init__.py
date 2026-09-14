@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import random
 from collections import namedtuple
 from typing import Optional, Dict
 
@@ -493,66 +495,97 @@ def render_into_timeline(
             )
         except Exception:
             rhythm_intent = None
-    # Coupling is opt-in. A bass motif takes priority over a general riff.
-    theme_notes = []
-    if plan is not None:
-        payload = plan.get(f"themes.realized.{section.id}") or {}
-        theme_notes = payload.get("bass_motif") or payload.get("riff") or []
-    lock_to_riff = max(0.0, min(float(params.get("lock_to_riff", 0.0)), 1.0))
-    events_before = len(timeline.events)
-    render = _render_rhythm_locked_bass if lock_to_kicks and drum_features is not None else _render_legacy_bass
-    result = render(
-        cfg=cfg, section=section, harmony_plan=harmony_plan,
-        rhythm_grid=rhythm_grid, section_start_beat=section_start_beat,
-        timeline=timeline, instrument_cfg=instrument_cfg, rng=rng,
-        rhythm_intent=rhythm_intent, drum_features=drum_features, logger=logger,
+    # Theme coupling: riff onsets are lock targets, gated by lock_to_riff.
+    # Coupling is opt-in (default 0) so the auto-composed riff never changes a
+    # song's bass line unless a recipe, persona, or the song asks for it.
+    riff_onsets: list = []
+    if plan is not None and section is not None:
+        from ...themes.coupling import get_theme_onsets
+
+        riff_onsets = get_theme_onsets(plan, section.id, "riff")
+
+    lock_to_riff = None
+    if isinstance(params, dict):
+        lock_to_riff = params.get("lock_to_riff")
+    if lock_to_riff is None:
+        lock_to_riff = getattr(params, "lock_to_riff", None)
+    try:
+        lock_to_riff = max(0.0, min(float(lock_to_riff or 0.0), 1.0))
+    except (TypeError, ValueError):
+        lock_to_riff = 0.0
+
+    # A bass_motif theme supplies pitched onsets the bass quotes outright:
+    # placement (play where the motif plays) and pitch (sing its notes) are
+    # both gated by motif_quote_rate. An authored motif defaults to 0.7. With
+    # no motif, the riff's realized pitches stand in, gated by lock_to_riff.
+    motif_notes: list = []
+    if plan is not None and section is not None:
+        from ...themes.coupling import get_theme_notes
+
+        motif_notes = get_theme_notes(plan, section.id, "bass_motif")
+    has_motif = bool(motif_notes)
+    if not motif_notes and riff_onsets and lock_to_riff > 0:
+        from ...themes.coupling import get_theme_notes
+
+        motif_notes = get_theme_notes(plan, section.id, "riff")
+
+    motif_quote_rate = None
+    if isinstance(params, dict):
+        motif_quote_rate = params.get("motif_quote_rate")
+    if motif_quote_rate is None:
+        motif_quote_rate = getattr(params, "motif_quote_rate", None)
+    if motif_quote_rate is None:
+        motif_quote_rate = 0.7 if has_motif else (lock_to_riff if motif_notes else 0.0)
+    try:
+        motif_quote_rate = max(0.0, min(float(motif_quote_rate), 1.0))
+    except (TypeError, ValueError):
+        motif_quote_rate = 0.7 if has_motif else 0.0
+
+    # Theme attacks count as accent targets so placed notes punch with them.
+    if (riff_onsets or motif_notes) and rhythm_intent is not None:
+        rhythm_intent.accent_beats = (
+            set(rhythm_intent.accent_beats or set())
+            | set(riff_onsets)
+            | {b for b, _ in motif_notes}
+        )
+
+    if lock_to_kicks and drum_features is not None and rng is not None:
+        return _render_rhythm_locked_bass(
+            cfg=cfg,
+            section=section,
+            harmony_plan=harmony_plan,
+            rhythm_grid=rhythm_grid,
+            section_start_beat=section_start_beat,
+            timeline=timeline,
+            drum_features=drum_features,
+            instrument_cfg=instrument_cfg,
+            rng=rng,
+            rhythm_intent=rhythm_intent,
+            riff_onsets=riff_onsets,
+            lock_to_riff=lock_to_riff,
+            motif_notes=motif_notes,
+            motif_quote_rate=motif_quote_rate,
+            logger=logger,
+        )
+
+    # Fall back to legacy rhythm grid mode
+    return _render_legacy_bass(
+        cfg=cfg,
+        section=section,
+        harmony_plan=harmony_plan,
+        rhythm_grid=rhythm_grid,
+        section_start_beat=section_start_beat,
+        timeline=timeline,
+        instrument_cfg=instrument_cfg,
+        rng=rng,
+        rhythm_intent=rhythm_intent,
+        drum_features=drum_features,  # Rule 2: kick-bass alignment
+        riff_onsets=riff_onsets,
+        lock_to_riff=lock_to_riff,
+        motif_notes=motif_notes,
+        motif_quote_rate=motif_quote_rate,
+        logger=logger,
     )
-    if theme_notes and lock_to_riff > 0:
-        from ...rng import make_voice_rng
-        theme_rng = make_voice_rng(rng, voice_name="theme", section_id=section.id, instrument_name="bass")
-        chosen = [n for n in theme_notes if theme_rng.random() < lock_to_riff]
-        low, high = int(params.get("register_low", 28)), int(params.get("register_high", 52))
-        intensity = getattr(instrument_cfg, "intensity", None)
-        if isinstance(instrument_cfg, dict):
-            intensity = instrument_cfg.get("intensity")
-        if intensity is None:
-            intensity = getattr(section, "intensity", None)
-        velocity = max(1, min(127, int(70 * (1.0 if intensity is None else intensity))))
-        windows = [(float(n["beat"]), min(float(n["beat"]) + float(n["duration_beats"]), rhythm_grid.total_beats)) for n in chosen]
-        kept = []
-        for ev in timeline.events[events_before:]:
-            rel = ev.start_beat - section_start_beat
-            if any(start - 1e-6 <= rel < end - 1e-6 for start, end in windows):
-                continue
-            for start, _end in windows:
-                if rel < start < rel + ev.duration_beats:
-                    ev.duration_beats = start - rel
-            kept.append(ev)
-        timeline.events[events_before:] = kept
-        for note, (start, end) in zip(chosen, windows):
-            if end <= start:
-                continue
-            timeline.add_note(start_beat=section_start_beat + start,
-                              duration_beats=end - start,
-                              pitch=clamp_to_register(int(note["pitch"]), low, high),
-                              velocity=velocity, channel=None, kind="theme_riff")
-        current = timeline.events[events_before:]
-        current.sort(key=lambda ev: (ev.start_beat, ev.pitch))
-        timeline.events[events_before:] = current
-        result.event_count = len(current)
-        result.onset_map = {}
-        result.accent_map = {}
-        for ev in current:
-            beat = ev.start_beat - section_start_beat
-            result.onset_map[beat] = result.onset_map.get(beat, 0) + 1
-            if ev.kind == "theme_riff":
-                result.accent_map[beat] = 1.0
-        if current:
-            pitches = [ev.pitch for ev in current]
-            result.register_profile = {"min_pitch": min(pitches), "max_pitch": max(pitches),
-                                       "avg_pitch": sum(pitches) / len(pitches),
-                                       "pitch_range": max(pitches) - min(pitches)}
-    return result
 
 
 def _render_legacy_bass(
@@ -567,6 +600,10 @@ def _render_legacy_bass(
     rhythm_intent: Optional[RhythmIntent],
     logger: logging.Logger,
     drum_features=None,  # Rule 2: RhythmFeatures from drums for kick alignment
+    riff_onsets=None,    # M3: section-relative riff attack beats (theme coupling)
+    lock_to_riff: float = 0.0,
+    motif_notes=None,    # M4b: (beat, pitch) pairs for the bass_motif theme
+    motif_quote_rate: float = 0.0,
 ) -> InstrumentNegotiationFeatures:
     """Legacy bass rendering using rhythm grid cells (original implementation).
 
@@ -701,6 +738,50 @@ def _render_legacy_bass(
         section_role_variation = bool(getattr(effective_params, "section_role_variation", False))
         # Inner-beat root inclusion probability (None = legacy default 0.65)
         root_bias = getattr(effective_params, "root_bias", None)
+
+    # Pitch expression (rendered as pitchwheel at export): slide-ins scoop up
+    # to the note from below; sustained notes may get a gentle vibrato. Draws
+    # use a private seeded stream so the shared RNG stream — and every pinned
+    # regression value derived from it — is left untouched.
+    def _expr_param(name, default):
+        if isinstance(effective_params, dict):
+            v = effective_params.get(name, default)
+        else:
+            v = getattr(effective_params, name, default)
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            v = default
+        return max(0.0, min(v, 1.0))
+
+    slide_rate = _expr_param("slide_rate", 0.20)
+    vibrato_rate = _expr_param("vibrato_rate", 0.35)
+
+    _song = getattr(cfg, "song", None)
+    _song_seed = getattr(_song, "seed", 42) if _song is not None else 42
+    _song_bpm = float(getattr(_song, "bpm", 120.0) or 120.0) if _song is not None else 120.0
+    _expr_seed = int.from_bytes(
+        hashlib.md5(f"bass_expr:{section.id}:{_song_seed}".encode()).digest()[:4], "big"
+    )
+    expr_rng = random.Random(_expr_seed)
+
+    def _draw_expression(dur_beats: float) -> Optional[dict]:
+        """Seeded per-note pitch expression. Fixed draw order (slide gate,
+        then vibrato gate) keeps the private stream stable across rate tweaks."""
+        expr: dict = {}
+        if slide_rate > 0 and expr_rng.random() < slide_rate:
+            semis = expr_rng.choice([1, 2, 2])  # whole-step slides dominate
+            ramp = min(expr_rng.uniform(0.15, 0.35), max(0.05, dur_beats * 0.8))
+            expr["bend_in"] = {"semitones": semis, "ramp_beats": ramp}
+        if dur_beats >= 0.5 and vibrato_rate > 0 and expr_rng.random() < vibrato_rate:
+            depth = expr_rng.uniform(20.0, 40.0)
+            hz = expr_rng.uniform(4.5, 6.0)
+            expr["vibrato"] = {
+                "depth_cents": depth,
+                "period_beats": 60.0 / (_song_bpm * hz),
+                "delay_beats": expr_rng.uniform(0.15, 0.30),
+            }
+        return expr or None
 
     # Phase B4: Apply style-based pattern bias if rhythm_pattern wasn't explicitly set
     # (Only if user didn't override rhythm_pattern in persona or config)
@@ -880,6 +961,27 @@ def _render_legacy_bass(
             )
 
 
+    # Theme coupling (M4b): motif onsets re-add dropped notes the same way,
+    # so the bassline actually plays where the bass_motif plays. Draws run
+    # after the riff loop, unconditionally, keeping the RNG stream fixed.
+    if motif_notes and rng is not None and motif_quote_rate > 0:
+        eligible_set = set(round(b, 3) for b in eligible_slots)
+        selected_set = set(round(b, 3) for b in selected_slots)
+        motif_adds: set = set()
+        for onset, _pitch in motif_notes:
+            draw = rng.random()  # unconditional: stream independent of placement
+            o_r = round(float(onset), 3)
+            if o_r in eligible_set and o_r not in selected_set and draw < motif_quote_rate:
+                motif_adds.add(float(onset))
+        if motif_adds:
+            selected_slots = set(selected_slots) | motif_adds
+            if logger:
+                logger.debug(
+                    "[THEMES] Section '%s': motif-bass alignment added %d beats",
+                    section.id,
+                    len(motif_adds),
+                )
+
     # Guarantee a cadence anchor: the density/rest filters can stochastically
     # empty the final chord span, leaving the section without resolution (and
     # root_cadence unreachable). If no selected slot falls in the final chord,
@@ -903,6 +1005,13 @@ def _render_legacy_bass(
     intent_accent_beats: set = set()
     if rhythm_intent and rhythm_intent.accent_beats:
         intent_accent_beats = {round(b, 3) for b in rhythm_intent.accent_beats}
+
+    # Theme coupling (M4b): motif pitch lookup for quoting at coincident
+    # onsets. Empty when quoting is disabled, which also skips the per-note
+    # draw so motif-free configs keep their RNG stream untouched.
+    motif_pitch_by_beat: dict = {}
+    if motif_notes and motif_quote_rate > 0:
+        motif_pitch_by_beat = {round(float(b), 3): int(p) for b, p in motif_notes}
 
     # Phase B5: Track bar boundaries to reset passing tone counter
     current_bar = -1
@@ -1230,6 +1339,7 @@ def _render_legacy_bass(
                     velocity=final_velocity,
                     channel=None,
                     kind=note_kind,
+                    expression=_draw_expression(styled_duration),
                 )
 
                 # Phase B11: Track negotiation features for fill notes
@@ -1317,6 +1427,22 @@ def _render_legacy_bass(
             total_octave_jumps += 1
             # Update note kind to reflect octave jump
             note_kind = f"{note_kind}_octave"
+
+        # Theme coupling (M4b): quote the bass_motif's pitch where the bassline
+        # coincides with a motif onset. Approach and pedal notes are left alone
+        # so chord resolutions and pedal holds stay intact. The draw is per-note
+        # and unconditional, keeping the RNG stream independent of coincidences.
+        if motif_pitch_by_beat:
+            motif_draw = rng.random()
+            quoted = motif_pitch_by_beat.get(round(local_beat, 3))
+            if (
+                quoted is not None
+                and motif_draw < motif_quote_rate
+                and note_kind != "pedal"
+                and not note_kind.startswith("approach")
+            ):
+                pitch = _clamp_to_register(quoted, register_low, register_high)
+                note_kind = "motif"
 
         # Phase B5: Track passing/approach tones
         if note_kind == "approach_diatonic":
@@ -1418,6 +1544,7 @@ def _render_legacy_bass(
             velocity=final_velocity,
             channel=None,  # resolved by timeline (instrument-aware)
             kind=note_kind,  # Voice label for TSV analysis
+            expression=_draw_expression(styled_duration),
         )
 
         # Phase B11: Track negotiation features
@@ -1485,6 +1612,10 @@ def _render_rhythm_locked_bass(
     rng,
     rhythm_intent: Optional[RhythmIntent],
     logger: logging.Logger,
+    riff_onsets=None,    # M3: section-relative riff attack beats (theme coupling)
+    lock_to_riff: float = 0.0,
+    motif_notes=None,    # M4b: (beat, pitch) pairs for the bass_motif theme
+    motif_quote_rate: float = 0.0,
 ) -> InstrumentNegotiationFeatures:
     """Render bass line that locks to drum kick patterns.
 
@@ -1561,11 +1692,43 @@ def _render_rhythm_locked_bass(
         len(strong_beats),
     )
 
+    # Theme coupling (M3): riff attacks join the lock targets so the bassline
+    # doubles the song's riff even where the kick doesn't play it.
+    if riff_onsets and rng is not None and lock_to_riff > 0:
+        combined = set(strong_beats)
+        for onset in riff_onsets:
+            draw = rng.random()  # unconditional: stream independent of coverage
+            if draw < lock_to_riff and not any(
+                abs(float(onset) - b) <= 0.15 for b in combined
+            ):
+                combined.add(float(onset))
+        strong_beats = sorted(combined)
+
+    # Theme coupling (M4b): motif onsets join too, so the bass plays the
+    # bass_motif's rhythm even where neither kick nor riff lands there.
+    # Draws run after the riff loop, unconditionally, keeping the stream fixed.
+    if motif_notes and rng is not None and motif_quote_rate > 0:
+        combined = set(strong_beats)
+        for onset, _pitch in motif_notes:
+            draw = rng.random()  # unconditional: stream independent of coverage
+            if draw < motif_quote_rate and not any(
+                abs(float(onset) - b) <= 0.15 for b in combined
+            ):
+                combined.add(float(onset))
+        strong_beats = sorted(combined)
+
     # Pre-round intent accent beats so membership checks don't depend on
     # exact float equality (matches kick-alignment rounding).
     intent_accent_beats: set = set()
     if rhythm_intent and rhythm_intent.accent_beats:
         intent_accent_beats = {round(b, 3) for b in rhythm_intent.accent_beats}
+
+    # Theme coupling (M4b): motif pitch lookup for quoting at coincident
+    # onsets. Empty when quoting is disabled, which also skips the per-note
+    # draw so motif-free configs keep their RNG stream untouched.
+    motif_pitch_by_beat: dict = {}
+    if motif_notes and motif_quote_rate > 0:
+        motif_pitch_by_beat = {round(float(b), 3): int(p) for b, p in motif_notes}
 
     eps = 1e-6
     for beat in strong_beats:
@@ -1591,6 +1754,18 @@ def _render_rhythm_locked_bass(
         root_midi += octave_offset
         root_midi = clamp_to_register(root_midi, int(params.get("register_low", 28)), int(params.get("register_high", 52)))
 
+        # Theme coupling (M4b): quote the bass_motif's pitch where this locked
+        # note lands on a motif onset. Motif pitches are already realized in
+        # the theme's register (default: bass range). The draw is per-note and
+        # unconditional, keeping the RNG stream independent of coincidences.
+        note_kind = "locked_root"
+        if motif_pitch_by_beat:
+            motif_draw = rng.random()
+            quoted = motif_pitch_by_beat.get(round(beat, 3))
+            if quoted is not None and motif_draw < motif_quote_rate:
+                root_midi = quoted
+                note_kind = "motif"
+
         # Velocity with slight variation
         velocity = max(1, min(127, base_vel + rng.randint(-5, 5)))
 
@@ -1611,7 +1786,7 @@ def _render_rhythm_locked_bass(
             pitch=root_midi,
             velocity=velocity,
             channel=None,
-            kind="locked_root",  # Voice label: bass locked to kick
+            kind=note_kind,  # "locked_root", or "motif" when quoting the theme
         )
 
         # Phase B11: Track negotiation features
