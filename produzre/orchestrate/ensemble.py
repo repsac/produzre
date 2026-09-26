@@ -86,6 +86,11 @@ def _lead_foreground_mode(cfg: Any, section: Any) -> str:
                         break
                 if mode is None and "foreground" in data:
                     mode = data.get("foreground")
+    if mode is None:
+        active = {name for name, part in (getattr(section, "instruments", None) or {}).items()
+                  if name != "harmony" and getattr(part, "enabled", True) is not False}
+        if active == {"lead_gtr"}:
+            mode = "full"
     return str(mode or "auto").strip().lower()
 
 

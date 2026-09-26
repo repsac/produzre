@@ -72,6 +72,10 @@ def compose_bass_dna(*, seed: int, genre: str) -> BassDNA:
         if sec == "chorus" and role == dna.roles.get("verse") and role != "engine":
             role = _pick(rng, {k: v for k, v in table[sec].items() if k != role})
         dna.roles[sec] = role
+    if "country" in g:
+        dna.roles = {sec: "boom_chick" for sec in dna.roles}
+    elif any(t in g for t in ("reggae", "jazz", "swing", "bossa")):
+        dna.roles = {sec: "engine" for sec in dna.roles}
     dna.approach = _pick(rng, {"below": 5, "scale": 3, "none": 2})
     dna.drop_eighths = tuple(sorted(rng.sample(range(1, 8), rng.choice([0, 1, 1, 2]))))
     dna.pop_eighth = rng.choice([None, None, 3, 5, 6, 7])
@@ -104,6 +108,21 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
     out: List[Tuple[float, float, int, bool]] = []
     span = chords.at(bar_start)
     if span is None:
+        return out
+    if role == "boom_chick":
+        for i, off in enumerate(range(0, int(bpb), 2)):
+            span = chords.at(bar_start + off)
+            pc = (span.root_pc + (7 if i % 2 else 0)) % 12
+            out.append((bar_start + off, min(1.4, span.end-bar_start-off),
+                        _root_pitch(pc, near), True))
+        nxt = chords.at(bar_start + bpb + .001) if bar_start + bpb < chords.total else None
+        if nxt and nxt.root_pc != span.root_pc and not last_bar and dna.approach != "none":
+            target = _root_pitch(nxt.root_pc, near)
+            scale = scale_pcs(chords.key, chords.mode)
+            approach_note = target - 1
+            while approach_note % 12 not in scale:
+                approach_note -= 1
+            out.append((bar_start + bpb - .5, .4, approach_note, False))
         return out
     if role == "whole":
         t = bar_start

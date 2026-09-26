@@ -21,7 +21,7 @@ bass locks to.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..rng import stable_seed_int
@@ -105,6 +105,9 @@ class DrumDNA:
     crash_every: int = 8           # bars between phrase crashes (sections always crash)
     two_bar: bool = False          # bar 2 of each pair varies its last beat
     feel: str = "straight"         # straight | laid_back | push | shuffle
+    hand_patterns: Dict[str, str] = field(default_factory=dict)
+    snare_pattern: str = ""
+    idiom: str = ""
     signature: str = ""
 
 
@@ -135,7 +138,7 @@ def _make_fill(rng: random.Random, beats: float, name: str) -> Fill:
     k = 0
     for b in range(n_beats):
         for o in _FILL_RHYTHMS[rhythm]:
-            offset = b + o / 4.0 if rhythm != "trip" else b + o / 4.0 * 0.75
+            offset = b + o / 4.0
             voice = path[min(len(path) - 1, int(k * len(path) / max(1, total)))]
             vel = 0.7 + 0.35 * (k / max(1, total - 1))   # crescendo into the downbeat
             if voice == "unison":
@@ -183,6 +186,38 @@ def compose_drum_dna(*, seed: int, genre: str, beats_per_bar: float = 4.0) -> Dr
         if draw <= 0:
             dna.feel = name
             break
+    g = str(genre).lower()
+    dna.idiom = next((t for t in ("country", "reggae", "jazz", "swing") if t in g), "")
+    if dna.idiom == "country":
+        dna.kick_verse = "x......." * max(1, (beats+1)//2)
+        dna.kick_chorus = dna.kick_verse
+        dna.grooves = {sec: (rng.choice(("hat8", "hat4", "ride8", "hat8_open")),
+                            rng.choice(("train", "train", "backbeat"))) for sec in _POOLS}
+        dna.snare_pattern = "".join(rng.choice(("x.x.", "..x.", "....", "x...")) for _ in range(beats))
+        if rng.random() < .5:
+            dna.kick_chorus = dna.kick_chorus[:beats*4-2] + "x."
+        dna.feel = rng.choice(("straight", "shuffle"))
+        dna.fills = {name: replace(fill, hits=tuple((t, "snare", v*.8) for t, _, v in fill.hits))
+                     for name, fill in dna.fills.items()}
+    elif dna.idiom == "reggae":
+        dna.kick_verse = "." * (beats*4)
+        dna.kick_chorus = dna.kick_verse
+        dna.grooves = {sec: (rng.choice(("hat8", "hat8_open", "hat16", "hat4", "ride8")), "one_drop") for sec in _POOLS}
+        dna.feel, dna.ghosts, dna.two_bar = "laid_back", "none", False
+    elif dna.idiom in ("jazz", "swing"):
+        dna.kick_verse = "x..." * beats
+        dna.kick_chorus = dna.kick_verse
+        dna.grooves = {sec: (rng.choice(("ride8", "ride_bell", "hat4", "hat8_open")),
+                            "jazz:" + "".join(rng.choice(("....", "..x.", "x...", "...x"))
+                                             for _ in range(beats))) for sec in _POOLS}
+        dna.kick_verse = "".join(rng.choice(("x...", "....", "....")) for _ in range(beats))
+        dna.kick_chorus = "".join(rng.choice(("x...", "....")) for _ in range(beats))
+        dna.feel = "shuffle"
+    if dna.idiom:
+        cells = (("..x.", "x.x.", "x...", "...x") if dna.idiom == "reggae" else
+                 ("x...", "x.x.", "x.xx", "..x.") if dna.idiom == "country" else
+                 ("x...", "x.x.", "....", "..x."))
+        dna.hand_patterns = {sec: "".join(rng.choice(cells) for _ in range(beats)) for sec in _POOLS}
     dna.signature = (f"kick {dna.kick_verse}/{dna.kick_chorus}, "
                      + ", ".join(f"{s}={t}/{b}" for s, (t, b) in sorted(dna.grooves.items()))
                      + f", ghosts={dna.ghosts}, fills every {dna.fill_every}"
@@ -199,7 +234,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                       next_section_type: Optional[str] = None,
                       prev_section_type: Optional[str] = None,
                       is_first_section: bool = False,
-                      groups: Optional[Sequence[float]] = None) -> List[DrumHit]:
+                      groups: Optional[Sequence[float]] = None, solo: bool = False, fills_enabled: bool = True) -> List[DrumHit]:
     """Arrange one section of drums from the song's DNA."""
     st = _ALIASES.get(str(section_type or "verse").lower(), str(section_type or "verse").lower())
     tk, backbeat = dna.grooves.get(st, dna.grooves.get("verse", ("hat8", "backbeat")))
@@ -223,7 +258,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         if b < enter:
             # Riff-alone intro: the guitar plays by itself; the drums come in
             # with a fill at the end of the bar before they enter.
-            if b == enter - 1:
+            if b == enter - 1 and fills_enabled:
                 fill = dna.fills["medium"]
                 hits += [DrumHit(start + bpb - fill.beats + off, v, vel, "fill")
                          for off, v, vel in fill.hits]
@@ -242,9 +277,11 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
             fill = dna.fills["medium"] if dna.fill_every <= 4 else dna.fills["big"]
         elif small:
             fill = dna.fills["small"]
+        if not fills_enabled:
+            fill = None
         fill_from = start + bpb - fill.beats if fill else start + bpb
         # Crash: every section start, and the song's phrase crash.
-        if b == 0 or (b % dna.crash_every == 0):
+        if not dna.idiom and (b == 0 or (b % dna.crash_every == 0)):
             # A pushed chorus already crashed on the "and" before its downbeat.
             if not (b == 0 and pushed_in) and not (
                     is_first_section and b == 0 and st == "intro" and arrangement.intro == "riff_alone"):
@@ -265,7 +302,9 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                 break
             beat_i, sub = divmod(s, 4)
             # Right hand.
-            if sub in offsets and not (voice == "crash" and b == 0 and s == 0):
+            hand = dna.hand_patterns.get(st)
+            hand_hit = hand[s % len(hand)] == "x" if hand else sub in offsets
+            if hand_hit and not (voice == "crash" and b == 0 and s == 0):
                 v = 1.0 if sub == 0 else (0.72 if sub == 2 else 0.58)
                 name = voice
                 if tk == "hat8_open" and s in dna.open_hat_steps:
@@ -274,13 +313,17 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
             if tk == "ride_bell" and sub == 2:
                 hits.append(DrumHit(t, "ride_bell", 0.8, "ride"))
             # Kick.
+            if backbeat == "one_drop" and s in snare_steps:
+                hits.append(DrumHit(t, "kick", 1.0, "kick"))
             if kick[s] == "x" and s not in snare_steps:
-                hits.append(DrumHit(t, "kick", 1.0 if sub == 0 else 0.9, "kick"))
+                hits.append(DrumHit(t, "kick", .45 if backbeat.startswith("jazz") else 1.0 if sub == 0 else 0.9, "kick"))
             elif backbeat == "stomp" and sub == 0:
                 hits.append(DrumHit(t, "kick", 1.0, "kick"))
             # Snare and ghosts.
             if s in snare_steps:
                 hits.append(DrumHit(t, "snare", 1.05, "snare"))
+            elif backbeat == "train" and dna.snare_pattern and dna.snare_pattern[s % len(dna.snare_pattern)] == "x":
+                hits.append(DrumHit(t, "snare", .4 if sub == 0 else .3, "snare_train"))
             elif _ghost(dna.ghosts, s, b, snare_steps):
                 hits.append(DrumHit(t, "snare", 0.32, "snare_ghost"))
             # Two-bar groove: the second bar's last beat answers.
@@ -289,7 +332,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         if fill:
             for off, v, vel in fill.hits:
                 hits.append(DrumHit(fill_from + off, v, vel, "fill"))
-        if last and device == "build" and next_section_type is not None:
+        if last and device == "build" and next_section_type is not None and fills_enabled:
             # Build: snare eighths through the bar under the fill's crescendo.
             for k in range(int(bpb * 2)):
                 t = start + k * 0.5
@@ -310,7 +353,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         if ending == "cold":
             # Everyone stops on the downbeat; the crash is choked.
             hits += [DrumHit(last, "crash", 1.15, "crash", 0.25), DrumHit(last, "kick", 1.1, "kick")]
-        elif ending == "big":
+        elif ending == "big" and fills_enabled:
             # The big rock finish: a hit, a roll that swells, a last crash.
             hits += [DrumHit(last, "crash", 1.15, "crash", 1.0), DrumHit(last, "kick", 1.1, "kick")]
             n = int(round((bpb - 1.0) * 4))
@@ -322,6 +365,8 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                      DrumHit(end - 0.5, "kick", 1.15, "kick")]
         else:
             hits += [DrumHit(last, "crash", 1.15, "crash", bpb), DrumHit(last, "kick", 1.1, "kick")]
+    if solo:
+        hits = solo_development(hits, dna, bars, bpb, next_section_type is None)
     return sorted(hits, key=lambda h: (h.beat, h.voice))
 
 
@@ -350,6 +395,32 @@ def _snare_steps(backbeat: str, beats: int, steps: int,
         if backbeat == "halftime":
             return {starts[len(starts) // 2]} if starts else {steps // 2}
         return set(starts) or {steps // 2}
+    if backbeat == "one_drop":
+        return {steps // 2}
+    if backbeat.startswith("jazz:"):
+        return {i for i, c in enumerate(backbeat[5:]) if c == "x" and i < steps}
     if backbeat == "halftime":
         return {((beats // 2) * 4) if beats >= 3 else 4}
     return {b * 4 for b in range(beats) if b % 2 == 1} or {(beats - 1) * 4}
+
+
+def solo_development(hits, dna, bars, bpb, closing):
+    """Keep the foot pulse while a recurring hand motif moves around the kit."""
+    out = []
+    voices = [v for _, v, _ in dna.fills["big"].hits if v.startswith("tom")]
+    answer = tuple(dict.fromkeys(voices)) or ("tom_high", "tom_low")
+    for h in hits:
+        bar = int(h.beat // bpb)
+        phase = bar % 4
+        if closing and bar == bars - 1:
+            out.append(h)
+            continue
+        # Statement, answer, stronger statement, response. The motif's
+        # rhythm survives the orchestration change and foot time continues.
+        voice, kind = h.voice, h.kind
+        if phase in (1, 3) and h.kind == "snare":
+            voice = answer[(int(h.beat % bpb) + bar // 4) % len(answer)]
+            kind = "solo_answer"
+        gain = (0.82, 0.9, 1.04, 0.94)[phase]
+        out.append(replace(h, voice=voice, kind=kind, vel=h.vel * gain))
+    return out

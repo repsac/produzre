@@ -112,7 +112,7 @@ def compose_arrangement_dna(*, seed: int, genre: str) -> ArrangementDNA:
     rock = heavy or "rock" in g or "blues" in g
     from dataclasses import replace
 
-    riff_driven = rng.random() < (0.75 if heavy else 0.45 if rock else 0.15)
+    riff_driven = rng.random() < (0.75 if heavy else 0.45 if rock else 0.15 if "funk" in g else 0.0)
     dna = replace(
         dna,
         riff_driven=riff_driven,
@@ -128,4 +128,9 @@ def compose_arrangement_dna(*, seed: int, genre: str) -> ArrangementDNA:
     funky = any(t in g for t in ("funk", "disco"))
     dna = replace(dna, comp_activity=_pick(busy_rng, {"busy": 5 if funky else 3, "normal": 5,
                                                       "sparse": 1 if funky else 2}))
+    if any(t in g for t in ("country", "reggae", "jazz", "swing", "bossa")):
+        dna = replace(dna, solo_ending="hold" if dna.solo_ending == "dive" else dna.solo_ending,
+                      ending="ring" if dna.ending == "big" else dna.ending,
+                      phrase_fill="walkup" if "country" in g else "none",
+                      intro="full")
     return replace(dna, signature=_signature(dna))

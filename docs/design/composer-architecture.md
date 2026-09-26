@@ -555,3 +555,30 @@ Strong-beat color notes in the inspected 7/8 and 5/4 anthem remain unchanged:
 held sevenths and sixths resolve to chord tones by leaps. No contextual weights
 were retuned. Short blues sections still use the recipe prefix; automatic form
 compression is not implied by the one-chord-per-bar default.
+
+## Solo and genre breadth review
+
+See [the breadth review](composer-breadth-review.md) for the three-revision
+comparison, six genre albums, solo and meter probes, audio pairs, and
+remaining diversity tradeoffs.
+
+A lone enabled lead defaults to full foreground unless the user explicitly
+chooses another role. Solo drums keep their foot pulse while a four-bar
+hand-voice and dynamic pattern develops the groove. An unpinned solo
+fingerpicking part uses `composer/acoustic.py`: seeded two-bar treble and
+thumb figures, chord-tone melody, root/fifth bass, chorus pinches, phrase
+answers and a final hold. Explicit picking patterns, other techniques,
+authored melodies and composer opt-outs retain their engines.
+
+Country uses root/fifth bass and comping, train/backbeat drum choices and
+short fills. Reggae has one-drop kick/rim placement with varied hand
+figures. Jazz has swing hand figures, feathered kicks and seeded snare
+comping. These genres no longer randomly request rock signature riffs;
+explicit arrangement overrides still apply. Reggae and jazz retain their
+bass engines instead of receiving generic pumping roles.
+
+Effective drum DNA is published after overrides for riff/bass pocket
+selection. Shared swing resets per bar, matching drums in odd meters.
+Triplet fills use thirds of a beat. Sparse bass approaches must occur
+within a quarter note of a chord change, preserving walking approaches
+without sustaining passing tones as long pedals.

@@ -277,6 +277,39 @@ def render_into_timeline(
         params.strum_density, params.base_vel,
     )
 
+    # Solo fingerstyle owns its figure unless the user chose a picking pattern.
+    if plan is not None and plan.get("composer.song") is not None:
+        from ...orchestrate.render import _flat_extra, _explicit_settings, _seed_override, _flag
+        from ...composer.acoustic import fingerstyle
+        from ...composer.song import section_groups
+        from ...composer.theory import ChordMap
+
+        extra = _flat_extra(instrument_cfg)
+        active = {name for name, part in section.instruments.items()
+                  if name != "harmony" and getattr(part, "enabled", True) is not False}
+        owned = _explicit_settings(instrument_cfg, extra, ("picking_pattern", "pattern", "recipe"))
+        if active == {"acoustic_gtr"} and params.technique == "fingerpicking" and not owned \
+                and _flag(extra.get("composer")) and not plan.get("composer.song").dna.authored:
+            composer = plan.get("composer.song")
+            seed = _seed_override(cfg, section, instrument_cfg)
+            chords = ChordMap(harmony_plan.chord_slots, section.key or cfg.song.key,
+                              section.mode or cfg.song.mode)
+            notes = fingerstyle(composer.seed if seed is None else seed, composer.genre,
+                chords, chord_voicings, bars=section_bars, bpb=bpb,
+                groups=section_groups(cfg, section, harmony_plan.meter),
+                section_type=params.section_type, melody_amount=params.melody_amount,
+                variation=params.phrase_variation, capo=params.capo,
+                closing=bool((kwargs.get("transition_context") or {}).get("is_last_section")))
+            for beat, dur, pitch, vel, kind in notes:
+                timeline.add_note(start_beat=section_start_beat + beat + params.offset_beats
+                    + rng.uniform(-params.timing_variation, params.timing_variation),
+                    duration_beats=dur, pitch=pitch, velocity=max(20, min(127,
+                        round(params.base_vel * vel) + rng.randint(-params.vel_variation, params.vel_variation))),
+                    channel=None, kind=kind)
+            plan.set(f"composer.acoustic.{section.id}", True)
+            logger.info("Composer: %s acoustic guitar plays a fingerstyle theme", section.id)
+            return
+
     # --- Dispatch ---
     if params.technique == "fingerpicking":
         _render_fingerpicking(

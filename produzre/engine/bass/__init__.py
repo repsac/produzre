@@ -1393,8 +1393,10 @@ def _render_legacy_bass(
                 # Phase B5: Pass chromatic_rate, mode_offsets, key_root for approach notes
                 # Only enable approach_rate on the last selected slot of the
                 # chord (and where passing tones are allowed), so approach
-                # tones always resolve directly into the next chord.
-                effective_approach_rate = approach_rate if (is_last_slot_in_chord and allow_passing) else 0.0
+                # tones resolve directly into the next chord. Sparse patterns
+                # must not turn a passing tone into a multi-beat pedal.
+                effective_approach_rate = approach_rate if (is_last_slot_in_chord and allow_passing
+                    and chord_end - local_beat <= 1.0 + eps) else 0.0
 
                 pitch, note_kind = _select_chord_tone_with_voice_leading(
                     chord_tones=chord_tones,

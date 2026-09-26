@@ -25,6 +25,22 @@ from produzre.composer.song import section_groups
 from tools.album_diversity import album_configs
 
 
+def part_summaries(rows):
+    """Coverage and dynamics expose sparse solos that similarity alone rewards."""
+    out = {}
+    instruments = sorted({i for r in rows for i in r.get('parts', {}) if i != 'harmony'})
+    for inst in instruments:
+        out[inst] = {}
+        for st in sorted({r['type'] for r in rows}):
+            selected = [r for r in rows if r['type'] == st]
+            notes = [n for r in selected for n in r['parts'].get(inst, [])]
+            out[inst][st] = dict(bars=len(selected), notes=len(notes),
+                attack_bars=sum(bool(r['parts'].get(inst)) for r in selected),
+                mean_velocity=round(sum(n[3] for n in notes)/max(1,len(notes)),2),
+                register=[min((n[1] for n in notes), default=0), max((n[1] for n in notes), default=0)])
+    return out
+
+
 def inspect(cfg):
     captured, sections = {}, []
     sort, render = build._sort_used_timelines, build._render_section_instruments
@@ -108,7 +124,9 @@ def inspect(cfg):
                 mean_velocity=round(sum(e.velocity for e in guitar)/max(1,len(guitar)),2),
                 figure=figure, drums=[round(t-a,3) for t in drum],
                 guitar=[[round(g[0].start_beat-a,3),[e.pitch for e in g],g[0].kind,round(max(e.duration_beats for e in g),3)] for g in gestures],
-                bass=[[round(e.start_beat-a,3),e.pitch,e.kind] for e in bass], clashes=clashes))
+                bass=[[round(e.start_beat-a,3),e.pitch,e.kind] for e in bass], clashes=clashes,
+                parts={inst:[[round(e.start_beat-a,3),e.pitch,round(e.duration_beats,3),e.velocity,e.kind]
+                             for e in es] for inst,es in ns.items()}))
     summaries = {}
     for st in sorted({r['type'] for r in rows}):
         selected=[r for r in rows if r['type']==st]
@@ -119,12 +137,15 @@ def inspect(cfg):
         ).most_common(2)) for occ in {r['occurrence'] for r in selected})
         totals['pocket']=round(totals['locked']/max(1,totals['accents']),4)
         summaries[st]=totals
-    return dict(summary=summaries,bars=rows,export=str(getattr(result,'export_root','')),result=str(result))
+    return dict(summary=summaries,parts=part_summaries(rows),bars=rows,export=str(getattr(result,'export_root','')),result=str(result))
 
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--out',type=Path,required=True)
+    ap.add_argument('--genre')
+    ap.add_argument('--songs',type=int,default=10)
+    ap.add_argument('--configs',nargs='+',type=Path)
     args=ap.parse_args()
     args.out.mkdir(parents=True,exist_ok=True)
     configs=album_configs('hard_rock',10)
@@ -141,6 +162,10 @@ def main():
         if meter in ('6/8','7/8'):
             cfg['song']['arrangement_style']={'riff_driven':True,'bass_doubles':True}
         configs.append(cfg)
+    if args.genre:
+        configs=album_configs(args.genre,args.songs)
+    if args.configs:
+        configs=[yaml.safe_load(p.read_text()) for p in args.configs]
     data={}
     for cfg in configs:
         title=cfg['song']['title'].replace(' ','_')

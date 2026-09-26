@@ -230,10 +230,18 @@ _CELLS: Dict[str, Dict[str, List[str]]] = {
         "stab": ["....", "X...", "..X.", "...m", "..Xm"],
     },
 }
+_CELLS["country"] = {
+    "low": ["r---", "r-a-", "f---", "r..a"],
+    "drive": ["x-u-", "d-u-", "X-u-", "x-ux"],
+    "build": ["x-ux", "d-ux", "x-xu"],
+    "contrast": ["r-a-", "a-a-", "X---"],
+    "stab": ["d...", "..d.", "S..."],
+}
+
 _CELL_FAMILY = {"rock": "rock", "punk": "rock", "emo": "rock", "metal": "metal",
                 "pop": "pop", "folk": "pop", "cinematic": "pop", "new_wave": "pop",
                 "electronic": "pop", "funk": "funk", "disco": "funk", "rnb": "funk",
-                "soul": "funk"}
+                "soul": "funk", "country": "country"}
 
 
 def synthesize_riff(rng: random.Random, family: str, tier: str, heavy: bool = False,
@@ -254,6 +262,9 @@ def synthesize_riff(rng: random.Random, family: str, tier: str, heavy: bool = Fa
     scored = []
     for k in range(tries):
         bar = [rng.choice(cells) for _ in range(4)]
+        if family == "country" and tier in ("low", "drive", "build"):
+            bar = [rng.choice(("r---", "r-a-")), rng.choice(("x-u-", "d-u-", "x-ux")),
+                   "f---", rng.choice(("x-u-", "d-ux", "x-w-"))]
         if bar[0][0] not in _EVENT_CHARS:
             continue
         steps = "".join(bar)
@@ -296,6 +307,8 @@ def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: boo
     for tier in ("drive", "low", "build", "contrast", "stab"):
         pool = [r for r in RIFFS if fam in r.families and r.tier == tier
                 and len(r.steps) == wanted_len]
+        if not pool and fam in ("country", "reggae", "jazz", "latin", "ska"):
+            pool = [r for r in RIFFS if fam in r.families and len(r.steps) == wanted_len]
         if not pool:
             pool = [r for r in RIFFS if "rock" in r.families and r.tier == tier
                     and len(r.steps) == wanted_len]

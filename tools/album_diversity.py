@@ -29,6 +29,7 @@ import re
 import statistics
 import subprocess
 import sys
+import tempfile
 from typing import Dict, List
 
 import yaml
@@ -51,12 +52,28 @@ PROGRESSIONS = {
 }
 
 
-def album_configs(genre: str, songs: int, seed: int = 1) -> List[dict]:
+# Corpus harmony is intentionally separate from the composer being measured.
+GENRE_PROGRESSIONS = {
+    "country": ["I IV V I", "I I IV V", "I vi IV V", "I IV I V"],
+    "pop": ["I V vi IV", "vi IV I V", "I vi ii V", "IV I V vi"],
+    "reggae": ["I IV V IV", "I V vi IV", "vi IV I V", "I ii IV V"],
+    "funk": ["i7 i7 iv7 i7", "i7 iv7 i7 bVII", "I7 IV7 I7 V7", "i7 bVII i7 iv7"],
+    "jazz": ["ii7 V7 Imaj7 Imaj7", "Imaj7 vi7 ii7 V7", "IVmaj7 ii7 V7 Imaj7"],
+}
+
+
+def album_configs(genre: str, songs: int, seed: int = 1, instruments=None, meter="4/4") -> List[dict]:
     rng = random.Random(seed)
+    selected = tuple(instruments or ("drums", "bass", "rhythm_gtr", "lead_gtr"))
     out = []
     for i in range(songs):
         mode = "minor" if rng.random() < 0.7 else "major"
-        prog = PROGRESSIONS[mode]
+        family = next((g for g in GENRE_PROGRESSIONS if g in genre.lower()), None)
+        if family:
+            mode = "minor" if family == "funk" else "major"
+        prog = PROGRESSIONS[mode] if family is None else {
+            st: GENRE_PROGRESSIONS[family] for st in ("verse", "prechorus", "chorus", "bridge")}
+
         instruments = {"harmony": {}, "drums": {}, "bass": {}, "rhythm_gtr": {}}
         with_lead = dict(instruments, lead_gtr={})
         sections = {
@@ -79,13 +96,20 @@ def album_configs(genre: str, songs: int, seed: int = 1) -> List[dict]:
         out.append({
             "version": 1,
             "song": {"title": f"Album {genre} {i + 1:02d}", "genre": genre, "key": rng.choice(KEYS),
-                     "mode": mode, "bpm": rng.randrange(96, 168, 4), "meter": "4/4",
-                     "seed": 1000 + i * 37, "exports_root": "exports"},
+                     "mode": mode, "bpm": rng.randrange(96, 168, 4), "meter": meter,
+                     "seed": 1000 + (seed - 1) * 100003 + i * 37, "exports_root": "exports"},
             "exports": {"midi_text": {"enabled": True, "views": ["events"], "subdiv": 16}},
             "sections": sections,
             "arrangement": ["intro", "verse", "prechorus", "chorus", "verse", "prechorus", "chorus",
                             "bridge", "solo", "chorus", "outro"],
         })
+        for section in out[-1]["sections"].values():
+            section["instruments"] = {"harmony": {}, **{n: {} for n in selected
+                if n != "lead_gtr" or len(selected) == 1 or "lead_gtr" in section["instruments"]}}
+        if selected == ("acoustic_gtr",):
+            out[-1]["instruments"] = {"acoustic_gtr": {"params": {"technique": "fingerpicking"}}}
+        if len(selected) == 1:
+            out[-1]["song"]["title"] += " " + selected[0]
     return out
 
 
@@ -126,7 +150,7 @@ def modal_bars(events: List[dict], bpb: float = 4.0, voice=None,
             continue
         if relative_pitch:
             tok = (tok, (int(e["pitch"]) - lowest[b]) % 12)
-        bars[b].add((round((t % bpb) * 4) % 16, tok))
+        bars[b].add((round((t % bpb) * 4) % max(1, round(bpb * 4)), tok))
         sec[b] = e["section_id"]
     per = collections.defaultdict(list)
     for b in sorted(bars):
@@ -139,14 +163,15 @@ def jaccard(a, b) -> float:
     return len(a & b) / len(a | b) if a | b else 1.0
 
 
-def fingerprint(root: str, log: str) -> dict:
+def fingerprint(root: str, log: str, bpb: float = 4.0) -> dict:
     fp: dict = {}
     drum = lambda e: _DRUM_CLASS.get(int(e["pitch"]), None)
-    fp["drums"] = modal_bars(_events(root, "drums"), voice=drum)
+    fp["drums"] = modal_bars(_events(root, "drums"), bpb=bpb, voice=drum)
     technique = lambda e: re.sub(r"^comp_(riff_|fill_|stop_)?", "", e["kind"] or "")
-    fp["bass"] = modal_bars(_events(root, "bass"), relative_pitch=True)
-    fp["rhythm_gtr"] = modal_bars(_events(root, "rhythm_gtr"), voice=technique, relative_pitch=True)
-    fp["lead_gtr"] = modal_bars(_events(root, "lead_gtr"), relative_pitch=True)
+    fp["bass"] = modal_bars(_events(root, "bass"), bpb=bpb, relative_pitch=True)
+    fp["rhythm_gtr"] = modal_bars(_events(root, "rhythm_gtr"), bpb=bpb, voice=technique, relative_pitch=True)
+    fp["lead_gtr"] = modal_bars(_events(root, "lead_gtr"), bpb=bpb, relative_pitch=True)
+    fp["acoustic_gtr"] = modal_bars(_events(root, "acoustic_gtr"), bpb=bpb, relative_pitch=True)
     # Bass interval habit: pitch classes relative to the most common one.
     bass = [int(e["pitch"]) for e in _events(root, "bass")]
     fp["bass_pitch_spread"] = len(set(p % 12 for p in bass))
@@ -166,19 +191,19 @@ def fingerprint(root: str, log: str) -> dict:
     fp["hook_rhythm"] = re.search(r"hook:([^|]*)", fp["dna"]).group(1) if dna else ""
     fp["licks"] = re.search(r"licks:(.*)$", fp["dna"]).group(1).split(",") if dna else []
     drums = _events(root, "drums")
-    crash_bars = sorted({int((float(e["start_beat_abs"]) + 0.06) // 4) for e in drums
+    crash_bars = sorted({int((float(e["start_beat_abs"]) + 0.06) // bpb) for e in drums
                          if _DRUM_CLASS.get(int(e["pitch"])) == "C"})
     fp["crash_every_4"] = bool(crash_bars) and all(b % 4 == 0 for b in crash_bars)
-    fill_bars = sorted({int((float(e["start_beat_abs"]) + 0.06) // 4) for e in drums if "fill" in e["kind"]})
+    fill_bars = sorted({int((float(e["start_beat_abs"]) + 0.06) // bpb) for e in drums if "fill" in e["kind"]})
     fp["fill_bar_mod4"] = collections.Counter(b % 4 for b in fill_bars).most_common(1)[0][0] if fill_bars else None
     return fp
 
 
 def report(fps: List[dict]) -> dict:
     out: dict = {"similarity": {}, "distinct": {}, "devices": {}, "vocabulary": {}}
-    for inst in ("drums", "bass", "rhythm_gtr", "lead_gtr"):
+    for inst in ("drums", "bass", "rhythm_gtr", "lead_gtr", "acoustic_gtr"):
         for sec in ("verse", "chorus", "bridge"):
-            pats = [fp[inst].get(sec) for fp in fps if fp[inst].get(sec)]
+            pats = [fp.get(inst, {}).get(sec) for fp in fps if fp.get(inst, {}).get(sec)]
             if len(pats) < 2:
                 continue
             sims = [jaccard(a, b) for a, b in itertools.combinations(pats, 2)]
@@ -199,7 +224,7 @@ def report(fps: List[dict]) -> dict:
     out["vocabulary"]["comp_riffs_used"] = dict(riffs.most_common(8))
     out["vocabulary"]["licks_used"] = dict(licks.most_common(8))
     out["vocabulary"]["distinct_hook_rhythms"] = f"{len(set(fp['hook_rhythm'] for fp in fps))}/{n}"
-    out["overall_similarity"] = round(statistics.fmean(out["similarity"].values()), 3)
+    out["overall_similarity"] = round(statistics.fmean(out["similarity"].values()) if out["similarity"] else 0.0, 3)
     return out
 
 
@@ -209,12 +234,16 @@ def main(argv=None) -> int:
     ap.add_argument("--songs", type=int, default=10)
     ap.add_argument("--out", default="/tmp/album")
     ap.add_argument("--album-seed", type=int, default=1)
+    ap.add_argument("--instruments", nargs="+", choices=("drums", "bass", "rhythm_gtr", "lead_gtr", "acoustic_gtr"))
+    ap.add_argument("--meter", default="4/4")
     args = ap.parse_args(argv)
     if args.songs < 2:
         ap.error("--songs must be at least 2")
     os.makedirs(args.out, exist_ok=True)
     fps = []
-    for cfg in album_configs(args.genre, args.songs, args.album_seed):
+    renders = tempfile.mkdtemp(prefix="renders-", dir=os.path.abspath(args.out))
+    for cfg in album_configs(args.genre, args.songs, args.album_seed, args.instruments, args.meter):
+        cfg["song"]["exports_root"] = renders
         path = os.path.join(args.out, cfg["song"]["title"].replace(" ", "_") + ".yaml")
         yaml.safe_dump(cfg, open(path, "w"), sort_keys=False)
         r = subprocess.run([sys.executable, "produzre_entry.py", "build", path],
@@ -223,7 +252,8 @@ def main(argv=None) -> int:
         if r.returncode or not m:
             print("build failed:", path, r.stderr[-500:])
             return 1
-        fps.append(fingerprint(m.group(1), r.stderr))
+        num, den = map(int, args.meter.split("/"))
+        fps.append(fingerprint(m.group(1), r.stderr, num * 4 / den))
     rep = report(fps)
     print(json.dumps(rep, indent=1))
     json.dump(rep, open(os.path.join(args.out, "album_report.json"), "w"), indent=1)

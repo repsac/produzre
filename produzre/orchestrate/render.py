@@ -1023,6 +1023,8 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
         return
     if inst_name == "rhythm_gtr" and performance_plan.get(f"composer.comp.{sec.id}"):
         return  # composed comping already has its bar form
+    if inst_name == "acoustic_gtr" and performance_plan.get(f"composer.acoustic.{sec.id}"):
+        return
     if inst_name == "drums" and performance_plan.get(f"composer.drums.{sec.id}"):
         return  # the composed drummer already has its bar form
     raw = getattr(cfg, "raw", None)
@@ -1264,13 +1266,14 @@ def _riff_pocket(composer, performance_plan, sec, bpb, groups):
         return (), ()
     from ..composer.drums import _snare_steps
 
-    dna = composer.drum_dna()
+    dna = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
     steps = max(1, int(round(bpb * 4)))
     beats = max(1, int(round(bpb)))
     backbeat = dna.grooves.get("verse", ("hat8", "backbeat"))[1]
     kick = (dna.kick_verse * 4)[:steps]
-    kicks = tuple(i * 0.25 for i, c in enumerate(kick) if c == "x")
-    snares = tuple(sorted(s * 0.25 for s in _snare_steps(backbeat, beats, steps, groups)))
+    snare_steps = _snare_steps(backbeat, beats, steps, groups)
+    kicks = tuple(i * 0.25 for i, c in enumerate(kick) if c == "x" and i not in snare_steps)
+    snares = tuple(sorted(s * 0.25 for s in snare_steps))
     return kicks, snares
 
 
@@ -1282,7 +1285,8 @@ _BASS_USER_MODES = ("rhythm_pattern", "walking", "lock_to_kick", "lock_to_riff",
 def _is_band_section(sec) -> bool:
     """Bass roles lock with a band: drums and at least one guitar. A bass
     alone keeps the engine's own line."""
-    names = set(getattr(sec, "instruments", {}) or {})
+    names = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+             if getattr(part, "enabled", True) is not False}
     return "drums" in names and bool(names & {"rhythm_gtr", "lead_gtr", "acoustic_gtr"})
 
 
@@ -1319,6 +1323,8 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
     tc = transition_context if isinstance(transition_context, dict) else {}
     enter = intro_entry_bar(arrangement, str(getattr(sec, "type", "")), bars,
                             bool(tc.get("is_first_section")))
+    if not _is_band_section(sec):
+        enter = 0
     start0 = float(section_start_beat)
     events = [e for e in new_events if e.start_beat - start0 >= enter * bpb - 0.02]
     if performance_plan.get(f"composer.bass_owned.{sec.id}", True):
@@ -1370,7 +1376,7 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
 
             bass_dna = compose_bass_dna(seed=reseed, genre=composer.genre)
         role = bass_dna.roles.get(st, "engine")
-        drums = composer.drum_dna()
+        drums = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
         kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
         if role != "engine":
             from dataclasses import replace as _replace
@@ -1555,13 +1561,21 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
     bars = int(round(total / bpb)) if bpb > 0 else 0
     tc = transition_context if isinstance(transition_context, dict) else {}
+    performance_plan.set(f"composer.drum_dna.{sec.id}", dna)
+    active = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+              if name != "harmony" and getattr(part, "enabled", True) is not False}
+    arrangement = composer.arrangement_dna()
+    if not active.intersection({"rhythm_gtr", "acoustic_gtr"}):
+        arrangement = _replace(arrangement, intro="full")
     hits = plan_drum_section(
-        dna, composer.arrangement_dna(), section_type=str(getattr(sec, "type", "") or ""),
+        dna, arrangement, section_type=str(getattr(sec, "type", "") or ""),
         bars=bars, beats_per_bar=bpb,
         next_section_type=None if tc.get("is_last_section") else (tc.get("next_section_type") or "verse"),
         prev_section_type=tc.get("prev_section_type"),
         is_first_section=bool(tc.get("is_first_section")),
         groups=section_groups(cfg, sec, getattr(hplan, "meter", None)) if hplan is not None else None,
+        solo=active == {"drums"},
+        fills_enabled=_as_float(feel.get("fill_rate")) != 0.0,
     )
     # The song's feel reaches the whole band through the groove clock, unless
     # the drums or the song's `groove:` block already set one.
@@ -1589,7 +1603,10 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
 def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan,
                               transition_context, logger) -> None:
     """Publish ``composer.lead.<section>`` for the lead engine to perform."""
-    if performance_plan is None or lead_cfg is None or hplan is None:
+    if performance_plan is None:
+        return
+    performance_plan.data.pop(f"composer.lead.{sec.id}", None)
+    if lead_cfg is None or hplan is None:
         return
     if not getattr(hplan, "chord_slots", None):
         return

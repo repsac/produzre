@@ -312,15 +312,13 @@ def apply_feel(
         feel: The resolved groove feel for the section.
         instrument: Instrument name (selects the pocket offset).
         bpm: Song tempo (ms -> beats conversions).
-        beats_per_bar: Section meter (kept for symmetry/diagnostics; swing
-            classification works on the quarter-beat fraction, which is
-            meter-proof exactly like the drums engine).
+        beats_per_bar: Reset swing at each bar, matching the drum clock
+            even when an odd-meter bar ends on an eighth note.
         rng_seed: Stable seed material for this (section, instrument) scope.
         section_start_beat: Song-relative section start (clamp floor).
         timing_jitter_ms: Per-event random jitter amount (+/- ms).
         velocity_humanize: 0..1: +/- fraction of nominal velocity noise.
     """
-    _ = beats_per_bar
     if not events:
         return
 
@@ -349,7 +347,8 @@ def apply_feel(
 
         shift = pocket_beats
 
-        swing_shift = swing_offset(rel, feel.swing, feel.swing_16th, _GRID_SNAP_WINDOW)
+        phase = rel % beats_per_bar if beats_per_bar > 0 else rel
+        swing_shift = swing_offset(phase, feel.swing, feel.swing_16th, _GRID_SNAP_WINDOW)
         if groups and beats_per_bar > 0:
             pulse = 0.0
             phase = rel % beats_per_bar
