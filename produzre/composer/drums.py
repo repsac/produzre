@@ -107,6 +107,11 @@ class DrumDNA:
     feel: str = "straight"         # straight | laid_back | push | shuffle
     hand_patterns: Dict[str, str] = field(default_factory=dict)
     snare_pattern: str = ""
+    train_patterns: Dict[str, str] = field(default_factory=dict)
+    kick_styles: Dict[str, str] = field(default_factory=dict)
+    rim_pickups: Dict[str, Tuple[int, ...]] = field(default_factory=dict)
+    crash_policy: str = "regular"
+    accent_voice: str = "crash"
     idiom: str = ""
     signature: str = ""
 
@@ -218,11 +223,64 @@ def compose_drum_dna(*, seed: int, genre: str, beats_per_bar: float = 4.0) -> Dr
                  ("x...", "x.x.", "x.xx", "..x.") if dna.idiom == "country" else
                  ("x...", "x.x.", "....", "..x."))
         dna.hand_patterns = {sec: "".join(rng.choice(cells) for _ in range(beats)) for sec in _POOLS}
+    if dna.idiom:
+        player = random.Random(stable_seed_int("composer.drums.idiom", seed, genre))
+        dna.crash_policy = player.choice(("chorus", "chorus", "section", "none"))
+        dna.accent_voice = player.choice(("crash", "crash", "ride", "china"))
+        if dna.idiom in ("country", "reggae"):
+            styles = (("two_beat", "two_beat", "pickup", "four_floor") if dna.idiom == "country"
+                      else ("one_drop", "one_drop", "one_drop", "rockers", "steppers"))
+            verse = player.choice(styles)
+            chorus = player.choice([v for v in styles if v != verse])
+            for sec in _POOLS:
+                style = chorus if sec in ("chorus", "solo", "outro") else verse
+                dna.kick_styles[sec] = style
+                tk, bb = dna.grooves[sec]
+                if sec == "chorus" and tk == dna.grooves["verse"][0]:
+                    tk = player.choice([v for v in ("hat8", "hat8_open", "ride8", "hat4") if v != tk])
+                if dna.idiom == "reggae":
+                    bb = style
+                dna.grooves[sec] = (tk, bb)
+                dna.train_patterns[sec] = "".join(player.choice(("x.x.", "..x.", "x...", "...."))
+                                                 for _ in range(beats))
+            if dna.train_patterns["chorus"] == dna.train_patterns["verse"]:
+                head = "..x." if dna.train_patterns["verse"][:4] != "..x." else "x..."
+                dna.train_patterns["chorus"] = head + dna.train_patterns["chorus"][4:]
+            if dna.idiom == "reggae":
+                rim_rng = random.Random(stable_seed_int("composer.drums.reggae.rim", seed, genre))
+                dna.rim_pickups = {sec: rim_rng.choice(((), (), (6,), (14,), (6, 14))) for sec in _POOLS}
+            dna.kick_verse = _idiom_kick(verse, beats_per_bar)
+            dna.kick_chorus = _idiom_kick(chorus, beats_per_bar)
+            dna.two_bar = False
+            if dna.idiom == "reggae":
+                dna.ghosts = player.choice(("none", "light", "light", "busy"))
+                dna.small_fill_every = player.choice((0, 0, 4))
+                dna.fills = {name: replace(fill, beats=min(fill.beats, 2),
+                    hits=tuple((t, v, vel*.8) for t, v, vel in fill.hits if t < 2))
+                    for name, fill in dna.fills.items()}
     dna.signature = (f"kick {dna.kick_verse}/{dna.kick_chorus}, "
                      + ", ".join(f"{s}={t}/{b}" for s, (t, b) in sorted(dna.grooves.items()))
                      + f", ghosts={dna.ghosts}, fills every {dna.fill_every}"
                      + f" ({dna.fills['big'].name}), crash every {dna.crash_every}, feel {dna.feel}")
     return dna
+
+
+def _idiom_kick(style, bpb, groups=None):
+    steps = max(1, int(round(bpb*4)))
+    if groups and (bpb != 4 or tuple(groups) != (2.0, 2.0)):
+        positions = ([0] if bpb == 3 and tuple(groups) == (1.0, 1.0, 1.0) else
+                     [int(round(sum(groups[:i])*4)) for i in range(len(groups))])
+    elif style == "one_drop":
+        positions = []  # The kick shares the cross-stick's drop below.
+    elif style in ("four_floor", "steppers"):
+        positions = list(range(0, steps, 4))
+    elif style == "rockers":
+        positions = [0, steps//2]
+    else:
+        positions = list(range(0, steps, 8))
+        if style == "pickup" and steps > 6:
+            positions += [6]
+    return "".join("x" if i in positions else "." for i in range(steps))
 
 
 _ALIASES = {"pre-chorus": "prechorus", "pre_chorus": "prechorus", "hook": "chorus",
@@ -243,6 +301,9 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
     beats = max(1, int(round(bpb)))
     steps = max(1, int(round(bpb * 4)))
     kick = (kick * 4)[:steps]
+    if st in dna.kick_styles:
+        kick = _idiom_kick(dna.kick_styles[st], bpb, groups)
+    train = dna.train_patterns.get(st, dna.snare_pattern)
     prev = _ALIASES.get(str(prev_section_type or "").lower(), str(prev_section_type or "").lower())
     pushed_in = st == "chorus" and prev not in ("", "chorus") and arrangement.into_chorus == "push"
     nxt = _ALIASES.get(str(next_section_type or "").lower(), str(next_section_type or "").lower())
@@ -281,7 +342,10 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
             fill = None
         fill_from = start + bpb - fill.beats if fill else start + bpb
         # Crash: every section start, and the song's phrase crash.
-        if not dna.idiom and (b == 0 or (b % dna.crash_every == 0)):
+        crash = ((b == 0 or b % dna.crash_every == 0) if dna.crash_policy == "regular" else
+                 b == 0 and (dna.crash_policy == "section" or
+                             dna.crash_policy == "chorus" and st in ("chorus", "solo")))
+        if crash:
             # A pushed chorus already crashed on the "and" before its downbeat.
             if not (b == 0 and pushed_in) and not (
                     is_first_section and b == 0 and st == "intro" and arrangement.intro == "riff_alone"):
@@ -315,16 +379,16 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
             # Kick.
             if backbeat == "one_drop" and s in snare_steps:
                 hits.append(DrumHit(t, "kick", 1.0, "kick"))
-            if kick[s] == "x" and s not in snare_steps:
+            if kick[s] == "x" and (s not in snare_steps or dna.idiom in ("country", "reggae")):
                 hits.append(DrumHit(t, "kick", .45 if backbeat.startswith("jazz") else 1.0 if sub == 0 else 0.9, "kick"))
             elif backbeat == "stomp" and sub == 0:
                 hits.append(DrumHit(t, "kick", 1.0, "kick"))
             # Snare and ghosts.
             if s in snare_steps:
                 hits.append(DrumHit(t, "snare", 1.05, "snare"))
-            elif backbeat == "train" and dna.snare_pattern and dna.snare_pattern[s % len(dna.snare_pattern)] == "x":
+            elif backbeat == "train" and train and train[s % len(train)] == "x":
                 hits.append(DrumHit(t, "snare", .4 if sub == 0 else .3, "snare_train"))
-            elif _ghost(dna.ghosts, s, b, snare_steps):
+            elif (s in dna.rim_pickups.get(st, ()) and b % 2 == 1) or _ghost(dna.ghosts, s, b, snare_steps):
                 hits.append(DrumHit(t, "snare", 0.32, "snare_ghost"))
             # Two-bar groove: the second bar's last beat answers.
             if dna.two_bar and b % 2 == 1 and beat_i == beats - 1 and sub == 2 and not fill:
@@ -365,6 +429,9 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                      DrumHit(end - 0.5, "kick", 1.15, "kick")]
         else:
             hits += [DrumHit(last, "crash", 1.15, "crash", bpb), DrumHit(last, "kick", 1.1, "kick")]
+    if dna.idiom:
+        hits = [replace(h, voice=dna.accent_voice, vel=h.vel*.8) if h.voice == "crash" else h
+                for h in hits if h.voice != "crash" or dna.crash_policy != "none"]
     if solo:
         hits = solo_development(hits, dna, bars, bpb, next_section_type is None)
     return sorted(hits, key=lambda h: (h.beat, h.voice))
@@ -395,7 +462,7 @@ def _snare_steps(backbeat: str, beats: int, steps: int,
         if backbeat == "halftime":
             return {starts[len(starts) // 2]} if starts else {steps // 2}
         return set(starts) or {steps // 2}
-    if backbeat == "one_drop":
+    if backbeat in ("one_drop", "rockers", "steppers"):
         return {steps // 2}
     if backbeat.startswith("jazz:"):
         return {i for i, c in enumerate(backbeat[5:]) if c == "x" and i < steps}

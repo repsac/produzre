@@ -688,8 +688,14 @@ def build_bass_turnaround(
     rng: Any,
     groove_cues: Optional[GrooveCues] = None,
     logger: Optional[logging.Logger] = None,
+    *, current_chords=None, incoming_chords=None, current_start=0.0,
+    beats_per_bar=4.0, groups=None, allow_turnaround=True, register=(28, 52),
 ) -> List[Any]:
     """Build a bass turnaround figure for the last bar of section A.
+
+    With chord maps, strong notes belong to the current chord and short
+    scale pickups approach the incoming root. Calls without harmonic
+    context retain the legacy note-derived figure.
 
     Creates a stepwise run that resolves into the first note of section B.
     The turnaround occupies the last 2 beats of section A.
@@ -716,6 +722,42 @@ def build_bass_turnaround(
         List[NoteEvent]: Turnaround events to add to timeline.
     """
     from ..timeline import NoteEvent
+
+    if not allow_turnaround:
+        return []
+    if current_chords is not None and incoming_chords is not None:
+        from ..composer.theory import nearest_in, metric_weight, scale_pcs
+
+        start = max(tail_start, tail_end - 2.0)
+        incoming = incoming_chords.at(0)
+        if incoming is None or not current_chords.spans:
+            return []
+        near = getattr(section_b_events[0], "pitch", 36) if section_b_events else 36
+        lo, hi = register
+        target = nearest_in((incoming.root_pc,), near, lo, hi)
+        # Strong attacks belong to the current chord. Scale neighbors are
+        # short, weak pickups; the next chord arrives at its own downbeat.
+        beats = [start, tail_end-1, tail_end-.5]
+        if groove_cues:
+            beats += [b for b in groove_cues.kick_beats if start <= b < tail_end-.5]
+        beats = sorted(set(b for b in beats if start <= b < tail_end))
+        result = []
+        scale = scale_pcs(current_chords.key, current_chords.mode)
+        for i, beat in enumerate(beats):
+            local = beat-current_start
+            span = current_chords.at(local)
+            strong = metric_weight(local % beats_per_bar, beats_per_bar, groups) >= .5
+            pcs = span.pcs if strong else scale
+            aim = target - (len(beats)-i)
+            pitch = nearest_in(pcs, aim, lo, hi)
+            if pitch % 12 not in pcs:
+                continue
+            end = min(beats[i+1] if i+1 < len(beats) else tail_end, current_start+span.end)
+            duration = min(end-beat-.03, .22 if pitch%12 not in span.pcs else .85)
+            if duration > .02:
+                result.append(NoteEvent(pitch=pitch, start_beat=beat, duration_beats=duration,
+                                        velocity=65+3*i, channel=0))
+        return result
 
     # Bass register bounds
     bass_min = 28  # E1
@@ -858,6 +900,10 @@ def apply_transition_plan(
     recipe = plan.recipe
 
     if recipe.kind == "none":
+        return
+
+    if instrument_name == "bass" and recipe.kind in ("pickup", "turnaround") and not (
+            plan.metadata.get("harmony", {}).get("allow_turnaround", True)):
         return
 
     # Handle pickup transitions
@@ -1069,6 +1115,7 @@ def apply_transition_plan(
             rng,
             groove_cues,
             logger,
+            **metadata.get("harmony", {}),
         )
 
         if not turnaround_events:
@@ -1079,12 +1126,17 @@ def apply_transition_plan(
             return
 
         # Remove existing events in turnaround window (last 2 beats) to avoid collisions
-        turnaround_start = tail_end - 2.0
+        turnaround_start = max(tail_start, tail_end - 2.0)
         turnaround_end = tail_end
 
         # Get events that conflict with turnaround
         conflicting_events = timeline.get_events_in_range(turnaround_start, turnaround_end)
         conflicting_event_ids = {id(ev) for ev in conflicting_events}
+
+        # A held note starting before the edit window must release too.
+        for ev in timeline.events:
+            if ev.start_beat < turnaround_start < ev.start_beat + ev.duration_beats:
+                ev.duration_beats = turnaround_start - ev.start_beat
 
         # Remove conflicting events
         if conflicting_event_ids:
@@ -1243,6 +1295,7 @@ def evaluate_transitions(
 
     # Build section timing lookup
     timing_by_id = {st.id: st for st in section_timings}
+    planned_sections = getattr(plan, "planned_sections", ())
 
     plans = []
 
@@ -1251,8 +1304,8 @@ def evaluate_transitions(
         section_a_id = arrangement[i]
         section_b_id = arrangement[i + 1]
 
-        timing_a = timing_by_id.get(section_a_id)
-        timing_b = timing_by_id.get(section_b_id)
+        timing_a = section_timings[i] if i < len(section_timings) else timing_by_id.get(section_a_id)
+        timing_b = section_timings[i+1] if i+1 < len(section_timings) else timing_by_id.get(section_b_id)
 
         if not timing_a or not timing_b:
             if debug:
@@ -1368,6 +1421,36 @@ def evaluate_transitions(
                         logger if debug else None,
                     )
 
+            harmony = {}
+            if inst_name == "bass" and i+1 < len(planned_sections):
+                from ..composer.theory import ChordMap
+                from ..composer.song import section_groups
+
+                a, b = planned_sections[i:i+2]
+                if a.harmony_plan and b.harmony_plan:
+                    def chord_map(ps):
+                        return ChordMap(ps.harmony_plan.chord_slots,
+                                        getattr(ps.sec, "key", None) or cfg.song.key,
+                                        getattr(ps.sec, "mode", None) or cfg.song.mode)
+                    harmony = dict(current_chords=chord_map(a), incoming_chords=chord_map(b),
+                                   current_start=timing_a.start_beat,
+                                   beats_per_bar=beats_per_bar,
+                                   groups=section_groups(cfg, a.sec, a.harmony_plan.meter))
+                    raw = getattr(cfg, "raw", {}) or {}
+                    bounds = {}
+                    for part in (raw.get("instruments", {}).get("bass", {}),
+                                 raw.get("sections", {}).get(section_a_id, {}).get("instruments", {}).get("bass", {})):
+                        if isinstance(part, dict):
+                            for source in (part, part.get("params", {})):
+                                if isinstance(source, dict):
+                                    bounds.update({k: source[k] for k in ("register_low", "register_high")
+                                                   if source.get(k) is not None})
+                    lo = int(bounds.get("register_low", 28))
+                    hi = int(bounds.get("register_high", max(52, lo+12)))
+                    harmony["register"] = (min(lo, hi), hi)
+                    harmony["allow_turnaround"] = not ("country" in str(cfg.song.genre).lower()
+                        and beats_per_bar == 3 and tuple(harmony["groups"]) == (1, 1, 1))
+
             # Build transition plan
             plan_obj = TransitionPlan(
                 section_a_id=section_a_id,
@@ -1379,6 +1462,7 @@ def evaluate_transitions(
                     "head": (head_start, head_end),
                 },
                 metadata={
+                    "harmony": harmony,
                     "profile_a": profile_a,
                     "profile_b": profile_b,
                     "rng": transition_rng,  # For deterministic pickup pitch selection

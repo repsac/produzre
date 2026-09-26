@@ -128,9 +128,14 @@ def compose_arrangement_dna(*, seed: int, genre: str) -> ArrangementDNA:
     funky = any(t in g for t in ("funk", "disco"))
     dna = replace(dna, comp_activity=_pick(busy_rng, {"busy": 5 if funky else 3, "normal": 5,
                                                       "sparse": 1 if funky else 2}))
-    if any(t in g for t in ("country", "reggae", "jazz", "swing", "bossa")):
-        dna = replace(dna, solo_ending="hold" if dna.solo_ending == "dive" else dna.solo_ending,
-                      ending="ring" if dna.ending == "big" else dna.ending,
-                      phrase_fill="walkup" if "country" in g else "none",
-                      intro="full")
+    family = next((t for t in ("country", "reggae", "jazz", "swing", "bossa") if t in g), "")
+    if family:
+        fills = ({"walkup": 6, "slide": 2, "none": 2} if family == "country" else
+                 {"none": 8, "slide": 2} if family == "reggae" else {"none": 7, "walkup": 3})
+        tables = {"phrase_fill": fills, "intro": {"full": 7, "riff_alone": 3},
+                  "solo_ending": {"hold": 6, "trill": 1, "slide_off": 3},
+                  "ending": {"ring": 6, "cold": 3, "big": 1}}
+        choices = {name: _pick(random.Random(stable_seed_int("composer.idiom.arrangement", seed, genre, name)), table)
+                   for name, table in tables.items()}
+        dna = replace(dna, **choices)
     return replace(dna, signature=_signature(dna))

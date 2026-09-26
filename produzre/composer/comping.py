@@ -704,7 +704,11 @@ def plan_comp_section(
                        if n.kind != "rsingle" or
                        (b if activity != "sparse" else b + 1) % tail_every == 0]
             continue
-        bar = riff_events(riff, start, bpb, chords, groups=groups)
+        if dna.family == "country" and bpb == 3 and tuple(groups or (1, 1, 1)) == (1, 1, 1):
+            bar = [CompEvent(start, .65, "root" if b % 2 == 0 else "fifth", accent=True),
+                   CompEvent(start+1, .65, "strum"), CompEvent(start+2, .65, "strum")]
+        else:
+            bar = riff_events(riff, start, bpb, chords, groups=groups)
         if activity == "sparse" and st != "bridge":
             # A slid chord is a phrase gesture, not a new slide every bar.
             allow_slide = (b + 1) % fill_every == 0 and phrase_fill != "slide"

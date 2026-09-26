@@ -1381,6 +1381,7 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
         if role != "engine":
             from dataclasses import replace as _replace
 
+            from ..composer.song import section_groups
             from ..composer.bass import bass_bar
             from ..composer.theory import ChordMap
 
@@ -1396,7 +1397,8 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
                 for t, d, p, acc in bass_bar(role, b * bpb, bpb, chords,
                                              approach=bass_dna.approach, near=near,
                                              last_bar=b == bars - 1 and not tc.get("next_section_type"),
-                                             dna=bass_dna, kick=kick):
+                                             dna=bass_dna, kick=kick, section_type=st,
+                                             groups=section_groups(cfg, sec, hplan.meter)):
                     written.append(_replace(template, start_beat=start0 + t,
                                             duration_beats=max(0.1, d), pitch=p,
                                             velocity=min(127, int(velocity * (1.06 if acc else 0.94))),
