@@ -1,0 +1,85 @@
+# Iron Horse Road: a riff-driven hard rock song with a singer.
+#
+# The whole band is built on one signature riff. The intro plays it alone
+# on the rhythm guitar, the bass doubles it an octave down once the band
+# comes in, and the verses ride it while the singer (not rendered) carries
+# the tune. The lead guitar plays around the voice (foreground: auto):
+# licks at phrase ends, a counter-line in the choruses, then a solo.
+#
+# Pins (song.arrangement_style): riff_driven, bass_doubles and intro:
+# riff_alone make sure this is a riff song with a riff-alone intro; every
+# other habit (fills, chorus form, comp activity, solo story) is drawn from
+# the seed, so a new seed gives the same song shape played by a new band.
+#
+# Listen for:
+#   - the riff alone for four bars, then drums and bass slam in with it
+#   - bass locked to the riff an octave down in intro, verses and outro
+#   - the prechorus climbing on iv to a held V, then the chorus opening up
+#   - the solo over the verse chords, then a final chorus up a whole step
+#   - turnarounds pulling each section home
+version: 1
+song:
+  title: "Iron Horse Road"
+  bpm: 124
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: hard_rock
+  seed: 5106
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    intro: riff_alone
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 81]
+  bass:
+    params: {articulation_style: pick}
+  drums:
+    params: {fill_rate: 0.3}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bVII bVI"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i i bVII bVI"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "iv iv bVI V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVI bVII i i bVI bVII V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i i bVII bVI"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i i bVII bVI"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, solo, prechorus, chorus, outro]

@@ -1,0 +1,87 @@
+# Country lead: a Bakersfield-style instrumental in G for one electric
+# lead guitar, with chicken picking, double stops and a solo.
+#
+# genre: country with the Bakersfield style pinned (arrangement_style) gives
+# the lead the country lick bank before its licks are composed: chicken-
+# picked staccato runs, unbent third and sixth double stops, and bright
+# hybrid-picked figures. A lone lead defaults to foreground: full, so the
+# composer writes the whole melody from one song DNA; the licks come out
+# in the solo, which trades short phrases (solo_story: trade). bend_rate is kept low
+# (country bends are few and deliberate) and dives are off.
+#
+# Listen for:
+#   - intro: the hook, stated once over I-IV-V
+#   - verse: a two-step melody on the verse idea, mostly chord tones with
+#     the major sixth and passing notes; verse 2 varies its rhythm slightly
+#   - chorus: the hook and its answer over IV-I-V, higher and louder,
+#     repeated note for note; the last chorus lifts it higher
+#   - bridge: the relative minor idea resolving to the dominant
+#   - solo (solo_story: trade): short chicken-picked phrases answered by
+#     staccato sixth double stops, ending on a held note (solo_ending: hold)
+#   - outro: the hook, then a held G
+version: 1
+song:
+  title: "Solo Lead Country Bakersfield"
+  bpm: 132
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: country
+  seed: 9312
+  turnarounds: true
+  arrangement_style:
+    country_style: bakersfield
+    solo_story: trade
+    solo_ending: hold
+    lead_fills: chatty
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      register: [55, 84]
+      bend_rate: 0.08
+      dive_rate: 0.0
+      vibrato_rate: 0.4
+      swell_rate: 0.0
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.6
+    harmony: {progression: "I IV V I"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I I IV I I V V I"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV IV I I V V I I"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi vi IV IV ii ii V V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I I IV IV V V I I"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

@@ -1,0 +1,99 @@
+# Streetlight Summer: a bright pop song built around its chorus hook.
+#
+# The lead guitar plays the vocal melody (foreground: full), so the tune
+# you would sing is in the MIDI. A piano (the arpeggiator) holds the song
+# together from the first bar. The first verse is kept small, piano, bass
+# and drums, and the guitar joins for verse 2. The prechorus climbs from ii
+# to a held V so the chorus lands as a release, and the last chorus goes up
+# a half step, the classic pop key change.
+#
+# Pins: chorus_form: anthem, so every chorus sings the hook three times
+# (hook, answer, hook, closing hook) instead of climbing away from it. Everything else (the drummer, the comp figures,
+# how the band goes into the chorus) is this seed's own band. The bass has
+# its own seed (seed: 6), which re-rolls only the bass player: this one
+# holds roots in the verses and jumps to octaves in the choruses.
+#
+# Listen for:
+#   - the verse 1 to verse 2 lift when the rhythm guitar enters
+#   - held bass roots in the verses, bouncing octaves in the choruses
+#   - the prechorus pushing up to V, then the chorus opening on I
+#   - the same chorus hook every time, and a key change for the last
+#   - the bridge thinning out on vi and IV before the band builds back
+version: 1
+song:
+  title: "Streetlight Summer"
+  bpm: 112
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: pop
+  seed: 5303
+  turnarounds: true
+  final_chorus: 1
+  exports_root: "exports"
+  arrangement_style:
+    chorus_form: anthem
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  rhythm_gtr: {program: 27}
+
+instruments:
+  bass: {seed: 6}
+  lead_gtr:
+    params:
+      foreground: full
+      register: [64, 84]
+  drums:
+    params: {ghost_rate: 0.2}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  verse_small:
+    type: verse
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii iii IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V vi IV I V IV IV"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      arpeggiator: {}
+      rhythm_gtr: {}
+      lead_gtr: {}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "vi IV I V vi IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse_small, prechorus, chorus, verse, prechorus, chorus, bridge, prechorus, chorus, outro]

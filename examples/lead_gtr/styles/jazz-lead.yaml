@@ -1,83 +1,52 @@
-# Jazz Lead Guitar
+# Jazz lead: head, a melodic solo, head.
 #
-# Jazz-style lead with stepwise voice leading and strong resolution.
-# Head-solo-head form over ii-V-I changes.
+# The lead is the melody (`foreground: full`) over ii-V-I changes. The
+# jazz drummer swings on the ride with feathered kicks and its own snare
+# comping, and the bass keeps its own engine line.
+# `arrangement_style` and the lead params set a singing solo:
 #
-# genre: jazz loads swing drums and shell voicing rhythm guitar.
-
+#   solo_story: melodic   the solo sings the hook, answers it, lifts it and
+#                         holds a summit before it resolves
+#   solo_ending: trill    a quick trill into a held last note
+#   bend_rate: 0          no bends: a clean jazz tone
+#   contour_style         stepwise: leaps cost more, so lines move by step
+#
+# Listen for the head returning after the solo, lifted and ornamented as
+# the song's last chorus.
 version: 1
-
 song:
-  title: "Jazz Lead"
-  bpm: 140
+  title: "Jazz Head and Solo"
+  bpm: 144
   key: F
   mode: major
   meter: "4/4"
   genre: jazz
-  seed: 800
+  seed: 5202
+  arrangement_style: {solo_story: melodic, solo_ending: trill}
   exports_root: "exports"
 
 exports:
   midi_text:
     enabled: true
-    views: ["events", "grid", "tab"]
+    views: [events, grid, tab]
     subdiv: 16
 
 instruments:
-  drums:
-    persona: "jazz-lite"
-  bass:
-    params:
-      articulation_style: "finger"
-      rhythm_pattern: "syncopated"
+  lead_gtr:
+    params: {foreground: full, bend_rate: 0.0, contour_style: stepwise}
 
 sections:
-  jazz_head:
-    type: verse
-    bars: 16
-    harmony:
-      progression: ["ii", "V", "I", "vi", "ii", "V", "I", "I"]
-    instruments:
-      harmony:
-        intensity: 0.6
-      drums:
-        intensity: 0.6
-      bass:
-        intensity: 0.7
-      rhythm_gtr:
-        intensity: 0.6
-      lead_gtr:
-        intensity: 0.7
-        extra:
-          rest_probability: 0.3
-          phrase_len_bars: 4
-          contour_style: "stepwise"
-          resolution_strength: 0.7
-
-  jazz_solo:
+  head:
+    type: chorus
+    bars: 8
+    harmony: {progression: ["ii7", "V7", "Imaj7", "vi7", "ii7", "V7", "Imaj7", "Imaj7"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
     type: solo
     bars: 16
     harmony:
-      progression: ["ii", "V", "I", "vi", "ii", "V", "I", "I"]
-    instruments:
-      harmony:
-        intensity: 0.7
-      drums:
-        intensity: 0.7
-      bass:
-        intensity: 0.8
-      rhythm_gtr:
-        intensity: 0.5
-      lead_gtr:
-        intensity: 0.85
-        solo: true
-        extra:
-          rest_probability: 0.15
-          phrase_len_bars: 4
-          contour_style: "balanced"
-          resolution_strength: 0.75
+      progression: ["ii7", "V7", "Imaj7", "vi7", "ii7", "V7", "Imaj7", "Imaj7",
+                    "iii7", "vi7", "ii7", "V7", "ii7", "V7", "Imaj7", "Imaj7"]
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
 
-arrangement:
-  - jazz_head
-  - jazz_solo
-  - jazz_head
+arrangement: [head, solo, head]

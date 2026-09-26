@@ -1,112 +1,86 @@
+# Fills: how often the composed drummer fills, set with `fill_rate`.
+#
+# The drummer is composed from the song's drum DNA: a fill vocabulary of
+# its own (toms, snare crescendos, around the kit, unisons, triplets) and a
+# habit for how often it fills. `fill_rate` overrides that habit for one
+# section. The four verses below play the same groove and chords, so only
+# the fills change:
+#
+#   verse_no_fills  fill_rate 0     no fills at all, not even into the next section
+#   verse_sparse    fill_rate 0.2   one big fill, in the last bar (every 8 bars)
+#   verse_phrase    fill_rate 0.6   a fill every 4 bars: bars 4 and 8 (plus
+#                                   one-beat fills if this drummer has that habit)
+#   verse_busy      fill_rate 0.9   bars 4 and 8, plus one-beat fills in bars 2 and 6
+#
+# `arrangement_style` pins two song habits so the ends are the same on every
+# machine: the last verse fills into the chorus (`into_chorus: fill`), and
+# the song closes on a big finish (`ending: big`).
+#
+# Listen for:
+#   - the kick, snare and hats stay locked with the bass and rhythm guitar;
+#     only the phrase ends change
+#   - the chorus has no fill_rate, so it plays the song's own fill habit
+#
+# Check it: analysis/drums/*.events.tsv marks fill hits with kind "fill".
 version: 1
 song:
-  themes_auto: false  # isolate drum golden tests from theme coupling
-  title: "FillsDemo"
-  bpm: 120
-  key: C
-  mode: major
+  title: "Composed Drum Fills"
+  bpm: 112
+  key: A
+  mode: minor
   meter: "4/4"
-  beats_per_bar: 4
-  seed: 42
-  variation: 0.0
-  humanize_velocity: 0.0
-  humanize_timing: 0.0
+  genre: rock
+  seed: 3167
+  arrangement_style: {into_chorus: fill, ending: big}
   exports_root: "exports"
-  pattern_bars: 2
-  pattern_merge_repeats: true
-  pattern_merge_max: 4
 
 exports:
   midi_text:
     enabled: true
-    views: ["events", "grid", "tab"]
+    views: [events, grid]
     subdiv: 16
 
 sections:
   verse_no_fills:
     type: verse
-    bars: 4
-    harmony:
-      progression: "I vi IV V"
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
     instruments:
-      drums:
-        intensity: 0.4
-        params:
-          # No fills - acceptance test
-          fill_rate: 0.0
-          fill_chatter: 0.0
-
-  chorus_short_fills:
-    type: chorus
-    bars: 4
-    harmony:
-      progression: "I V vi IV"
-    instruments:
-      drums:
-        intensity: 0.8
-        params:
-          # Short fills (1 beat) at phrase ends
-          fill_rate: 1.0
-          fill_length: "short"
-
-  bridge_medium_fills:
-    type: bridge
-    bars: 4
-    harmony:
-      progression: "IV I V vi"
-    instruments:
-      drums:
-        intensity: 0.6
-        params:
-          # Medium fills (2 beats) - default
-          fill_rate: 1.0
-          fill_length: "medium"
-
-  prechorus_long_fills:
-    type: prechorus
-    bars: 4
-    harmony:
-      progression: "IV V IV V"
-    instruments:
-      drums:
-        intensity: 0.7
-        params:
-          # Long fills (full bar)
-          fill_rate: 1.0
-          fill_length: "long"
-
-  verse_with_chatter:
+      harmony: {}
+      drums: {params: {fill_rate: 0.0}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_sparse:
     type: verse
     bars: 8
-    harmony:
-      progression: "I vi IV V I vi IV V"
+    harmony: {progression: "i bVI bIII bVII"}
     instruments:
-      drums:
-        intensity: 0.5
-        params:
-          # Phrase-end fills + experimental chatter
-          fill_rate: 0.8
-          fill_chatter: 0.4
-          fill_length: "medium"
-
-  solo_loose_persona:
-    type: solo
-    bars: 4
-    harmony:
-      progression: "I I IV I"
+      harmony: {}
+      drums: {params: {fill_rate: 0.2}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_phrase:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
     instruments:
-      drums:
-        intensity: 0.8
-        persona: "loose"
-        params:
-          # Loose persona favors experimental fill types
-          fill_rate: 1.0
-          fill_length: "long"
+      harmony: {}
+      drums: {params: {fill_rate: 0.6}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_busy:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.9}}
+      bass: {}
+      rhythm_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVI bVII i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
 
-arrangement:
-  - verse_no_fills
-  - chorus_short_fills
-  - bridge_medium_fills
-  - prechorus_long_fills
-  - verse_with_chatter
-  - solo_loose_persona
+arrangement: [verse_no_fills, verse_sparse, verse_phrase, verse_busy, chorus]

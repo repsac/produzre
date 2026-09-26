@@ -1,0 +1,78 @@
+# Six-eight drums: a rolling 6/8 rock ballad played by the kit alone.
+#
+# 6/8 pulses in two dotted quarters, so the composed drummer builds its
+# grooves on that two-beat pulse (not a 3/4 backbeat): kick on the first
+# pulse, snare on the second, hands on the eighths. Phrase fills fall every
+# two bars by default in this meter. Nothing about the kit is authored, so
+# the song seed draws the drummer; ghost_rate and fill_rate only shape it.
+# Each section still names a progression: no pitched part plays it, but it
+# gives the section a harmony plan, which is what carries the 6/8 beat
+# grouping to the drummer (without one the kit falls back to a 3/4 grid).
+#
+# Listen for:
+#   - the intro floats on a floor-tom pulse, then the verse settles the
+#     two-pulse lilt: kick on the first dotted quarter, snare on the second
+#   - bars 2 and 4 of each phrase answer the snare on the toms, and fills
+#     turn the four-bar phrase ends
+#   - the chorus changes what the hands play (a busier hat figure), and a
+#     build fill leads into every chorus
+#   - the bridge moves the hands to a washy half-open hat
+#   - the outro moves to the ride and ends on a ringing crash
+version: 1
+song:
+  title: "Solo Drums Six Eight"
+  bpm: 96
+  key: D
+  mode: major
+  meter: "6/8"
+  genre: soft_rock
+  seed: 6802
+  arrangement_style:
+    into_chorus: build
+    ending: ring
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 12
+
+instruments:
+  drums:
+    params:
+      ghost_rate: 0.2
+
+sections:
+  intro:
+    type: intro
+    harmony: {progression: "I IV"}
+    bars: 4
+    instruments:
+      drums: {}
+  verse:
+    type: verse
+    harmony: {progression: "I vi IV V"}
+    bars: 8
+    instruments:
+      drums: {}
+  chorus:
+    type: chorus
+    harmony: {progression: "IV I V vi"}
+    bars: 8
+    instruments:
+      drums: {params: {fill_rate: 0.6}}
+  bridge:
+    type: bridge
+    harmony: {progression: "vi IV I V"}
+    bars: 8
+    instruments:
+      drums: {}
+  outro:
+    type: outro
+    harmony: {progression: "IV I"}
+    bars: 4
+    instruments:
+      drums: {}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

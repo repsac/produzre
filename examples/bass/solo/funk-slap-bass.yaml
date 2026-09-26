@@ -1,0 +1,108 @@
+# Funk slap bass: an E dorian funk tune carried by the bass alone.
+#
+# Bass roles only run in band sections (drums plus a guitar), so a bass by
+# itself always plays the bass engine's own line, and every setting below
+# is heard directly. The funk persona brings slap articulation; the engine
+# mixes thumb notes, pops and percussive dead notes, and groove memory
+# settles a two-bar groove per section (funk uses two-bar cycles) that
+# varies at each phrase end.
+#
+# Listen for:
+#   - intro: a sparse, mostly ghosted slap figure on Em7 with lots of air
+#   - verse: the two-bar funk_16ths cell (5 attacks a bar) with thumb
+#     roots, ghosted dead notes and chromatic approaches, repeated as a
+#     motif (motif_repeat_rate)
+#   - chorus: a busier syncopated pattern over A7 and B7, louder, with
+#     more pops, fifth jumps and a fill into the next phrase
+#   - the solo section (solo: true) opens the register from low E up to
+#     B3 and plays the densest line of the piece, with octave leaps
+#   - the outro thins back to thumb notes and lands on the low E
+version: 1
+song:
+  title: "Solo Bass Funk Slap"
+  bpm: 100
+  key: E
+  mode: dorian
+  meter: "4/4"
+  genre: funk
+  seed: 7101
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+groove:
+  swing: 0
+  swing_16th: 0.15
+
+instruments:
+  bass:
+    persona: funk
+    params:
+      articulation_style: slap
+      register_low: 28
+      register_high: 57
+      slap_thumb_rate: 0.9
+      slap_pop_rate: 0.55
+      ghost_perc_rate: 0.25
+      slap_velocity_floor: 72
+      pop_velocity_boost: 20
+      octave_jump_rate: 0.3
+      approach_rate: 0.3
+      chromatic_rate: 0.5
+      fill_rate: 0.5
+      fill_complexity: 0.6
+      phrase_len_bars: 4
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.6
+    harmony: {progression: "i7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: anchor, density: 0.45, slap_pop_rate: 0.35, fill_rate: 0.0}
+  verse:
+    type: verse
+    bars: 8
+    intensity: 0.65
+    harmony: {progression: "i7 i7 IV7 i7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: funk_16ths, density: 1.0, rest_rate: 0.0, motif_repeat_rate: 0.6}
+  chorus:
+    type: chorus
+    bars: 8
+    intensity: 0.9
+    harmony: {progression: "IV7 IV7 i7 i7 IV7 IV7 V7 V7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: syncopated, density: 0.8, rest_rate: 0.08, slap_pop_rate: 0.7, fifth_jump_rate: 0.25}
+  solo:
+    type: solo
+    solo: true
+    bars: 8
+    intensity: 0.95
+    harmony: {progression: "i7 i7 IV7 i7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: syncopated, rest_rate: 0.05, solo_density: 0.95, solo_register_high: 67, octave_jump_rate: 0.45}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.6
+    harmony: {progression: "i7 IV7 i7 i7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: anchor, density: 0.5, fill_rate: 0.0}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

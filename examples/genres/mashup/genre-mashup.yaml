@@ -1,66 +1,104 @@
-# Genre Mashup Demo
+# Genre mashup: one song in E minor that changes genre section by section.
 #
-# Demonstrates per-instrument genre overrides. The song has a base genre
-# of "rock" but individual instruments pull from different genre recipes.
+# The song is rock (song.genre), so the intro, the choruses and the outro
+# are played by the composer's rock band: a composed drummer, composed
+# comping, and a lead guitar that plays around a singer (foreground: auto).
+# The other sections switch genre by choosing their parts explicitly, and
+# explicit choices always win over the composer:
+#   - the verses go reggae: a reggae drum recipe (one drop), the rhythm
+#     guitar's reggae_skank style, and a reggae bass
+#   - the bridge goes jazz: a swing drum recipe (its swing reaches the whole
+#     band in that section), a walking bass and jazz_comp guitar over
+#     seventh chords
+#   - the solo goes metal: a metal drum recipe, palm-muted gallop chugs
+#     (the grid renderer's chug style) and a picked bass following the
+#     kick drum (lock_to_kicks), under a lead solo
+# All sections share one key, one tempo and the song's melodic DNA, so the
+# hook still ties the song together.
 #
-# Instruments work together because they share the same harmony plan:
-# genre only affects rhythm patterns, density, and voicings, not pitch.
+# Why not just set a section instrument's genre? A genre override selects
+# that genre's recipe for the instrument, but the composer draws its drums,
+# comping and bass roles from song.genre, so a composed part keeps playing
+# rock. Choosing the part (recipe, style, rhythm_pattern) is what switches
+# it.
 #
-# Fallback chain: section instrument genre → global instrument genre → song genre
-
+# Listen for:
+#   - the rock intro and chorus against the offbeat skank of the verse
+#   - the one-drop verse drums (nothing on 1, kick and rim on 3)
+#   - the bridge swinging, with a walking bass under iv7 bVII7 bIIImaj7
+#   - the solo over gallop chugs and a metal beat, then back to the rock
+#     chorus
 version: 1
-
 song:
-  title: "Genre Mashup"
-  bpm: 110
+  title: "Crossfade City"
+  bpm: 100
   key: E
   mode: minor
   meter: "4/4"
-  genre: rock       # Base genre (fallback for instruments without override)
-  seed: 42
+  genre: rock
+  seed: 4242
+  turnarounds: true
   exports_root: "exports"
 
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
 instruments:
-  drums:
-    genre: funk      # All sections use funk drum recipes by default
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 81]
 
 sections:
-  verse:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse_reggae:
     type: verse
     bars: 8
-    harmony:
-      progression: ["i", "bVII", "bVI", "bVII"]
+    harmony: {progression: "i iv i iv"}
     instruments:
-      harmony:
-        intensity: 0.8
-      drums:
-        intensity: 0.8
-        # Inherits genre: funk from global instruments block
-      bass:
-        intensity: 0.8
-      rhythm_gtr:
-        genre: reggae   # Section override: reggae skank rhythm
-        intensity: 0.7
-
-  chorus:
+      harmony: {}
+      drums: {recipe: reggae_straight}
+      bass: {genre: reggae, params: {density: 0.8, rest_rate: 0.12, fifth_jump_rate: 0.05}}
+      rhythm_gtr: {genre: reggae, params: {style: reggae_skank}}
+      lead_gtr: {}
+  chorus_rock:
     type: chorus
     bars: 8
-    harmony:
-      progression: ["i", "bVII", "bVI", "V"]
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge_jazz:
+    type: bridge
+    bars: 8
+    harmony: {progression: "iv7 bVII7 bIIImaj7 bVImaj7 iiø7 V7 i7 V7"}
     instruments:
-      harmony:
-        intensity: 1.0
-      drums:
-        genre: rock     # Override global funk: rock drums for the chorus
-        intensity: 1.0
+      harmony: {}
+      drums: {recipe: jazz_swing}
       bass:
-        intensity: 1.0
-      rhythm_gtr:
-        intensity: 0.9
-        # No genre override: falls back to song genre = rock
+        genre: jazz
+        params: {rhythm_pattern: walking, density: 1.0, rest_rate: 0.0, lock_to_kick: 0,
+                 lock_to_hat: 0, lock_to_snare: 0, fifth_jump_rate: 0, octave_jump_rate: 0}
+      rhythm_gtr: {genre: jazz, params: {style: jazz_comp}}
+  solo_metal:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bVII i"}
+    instruments:
+      harmony: {}
+      drums: {recipe: metal_straight}
+      bass: {genre: metal, params: {articulation_style: pick, lock_to_kicks: true}}
+      rhythm_gtr: {genre: metal, params: {use_patterns: false, style: chug, pattern: gallop}}
+      lead_gtr: {}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
 
-arrangement:
-  - verse
-  - chorus
-  - verse
-  - chorus
+arrangement: [intro, verse_reggae, chorus_rock, verse_reggae, chorus_rock, bridge_jazz, solo_metal, chorus_rock, outro]

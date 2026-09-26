@@ -1,0 +1,102 @@
+# Metal lead: an instrumental where the guitar is the singer.
+#
+# In the Satriani direction: E aeolian, 140 bpm, and a lead that carries
+# the melody everywhere (`foreground: full`). The hook is authored below,
+# so the composer builds the song around it instead of choosing its own:
+# the intro and every chorus state it, and each chorus repeats the first
+# note for note, a little louder each time. (An authored hook keeps its
+# written pitches, so the last chorus is not lifted the way a composed
+# hook would be.)
+#
+# `arrangement_style` pins the band's habits:
+#
+#   riff_driven, bass_doubles   intro, verses and outro ride a signature riff
+#                               on the low strings, locked to the drummer's
+#                               kick, and the bass doubles it an octave down
+#   into_chorus: push           the band anticipates each chorus by an eighth
+#   solo_story: trade           the solo trades licks with the band, the
+#                               hottest one at the climax
+#   solo_ending: dive           the solo's last note ends in a whammy dive
+#
+# The breakdown drops the lead for four bars so the final chorus lands.
+# Degrees: 1=E 2=F# 3=G 4=A 5=B 6=C 7=D.
+version: 1
+song:
+  title: "Flying High"
+  bpm: 140
+  key: E
+  mode: aeolian
+  meter: "4/4"
+  genre: metal
+  seed: 23
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    into_chorus: push
+    solo_story: trade
+    solo_ending: dive
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, tab]
+    subdiv: 16
+
+instruments:
+  drums: {persona: metal}
+  rhythm_gtr: {persona: aggressive}
+  lead_gtr:
+    params: {foreground: full}
+
+themes:
+  # The singable hook: climbs B C D to the high B, then walks back down
+  # to E. Playable on the high E string (frets 7 to 19).
+  lead_hook:
+    role: melody
+    register: [64, 83]          # E4..B5
+    events: "5:1 6:.5 7:.5 5+:.5 6:.5 5:.5 4:1.5 3:1 2:.5 1:1.5"
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "bVI bVII i bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVI bVII i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {register: full}
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony: {progression: "i i i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i i i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, solo, breakdown, chorus, outro]

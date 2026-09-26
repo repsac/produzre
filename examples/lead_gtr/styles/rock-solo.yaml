@@ -1,108 +1,57 @@
-# Rock Guitar Solo
+# Rock solo: a band with a singer, and a solo that climbs.
 #
-# Demonstrates rock-style lead guitar building from sparse verse fills
-# to a dense, wide-interval solo. Uses the "full" register preset
-# (E3-E6) for maximum range during the solo section.
+# The lead plays around a singer (`foreground: auto`, the default): licks
+# at verse phrase ends, octave stabs under the chorus, then a featured
+# solo. No vocal part is written; the space is left for one.
+# `arrangement_style` pins the lead's habits:
 #
-# genre: rock drives drum/rhythm_gtr/harmony recipes.
-# type: solo activates orchestration rules (rhythm reduces during solo).
-
+#   counter: octaves       under the sung chorus, octave stabs on the changes
+#   lead_fills: sparse     verse licks every eight bars
+#   solo_story: climb      hook quote, development up the neck, a climax lick
+#                          and bend, a resolving phrase
+#   solo_ending: slide_off the last note falls away
+#
+# The solo uses `register: full`, so it can climb well past the chorus
+# register. Listen for the second chorus repeating the first note
+# for note, and the final chorus lifting after the solo.
 version: 1
-
 song:
-  title: "Rock Solo"
-  bpm: 140
+  title: "Rock Solo Climb"
+  bpm: 138
   key: D
   mode: minor
   meter: "4/4"
   genre: rock
-  seed: 400
+  seed: 5203
+  arrangement_style: {counter: octaves, lead_fills: sparse, solo_story: climb, solo_ending: slide_off}
   exports_root: "exports"
 
 exports:
   midi_text:
     enabled: true
-    views: ["events", "grid", "tab"]
+    views: [events, grid, tab]
     subdiv: 16
-
-instruments:
-  drums:
-    persona: "rock"
-  bass:
-    params:
-      rhythm_pattern: "drive"
-      articulation_style: "pick"
 
 sections:
   verse:
     type: verse
     bars: 8
-    harmony:
-      progression: ["i", "bVII", "bVI", "V7"]
-    instruments:
-      harmony:
-        intensity: 0.6
-      drums:
-        intensity: 0.6
-      bass:
-        intensity: 0.6
-      rhythm_gtr:
-        intensity: 0.6
-      lead_gtr:
-        intensity: 0.5
-        extra:
-          rest_probability: 0.4
-          phrase_len_bars: 2
-          contour_style: "stepwise"
-
+    harmony: {progression: ["i", "bVII", "bVI", "V7"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
   chorus:
     type: chorus
     bars: 8
-    harmony:
-      progression: ["i", "bVII", "bVI", "V7"]
-    instruments:
-      harmony:
-        intensity: 0.8
-      drums:
-        intensity: 0.8
-      bass:
-        intensity: 0.8
-      rhythm_gtr:
-        intensity: 0.8
-      lead_gtr:
-        intensity: 0.75
-        extra:
-          rest_probability: 0.25
-          phrase_len_bars: 2
-          contour_style: "balanced"
-          resolution_strength: 0.6
-
+    harmony: {progression: ["bVI", "bVII", "i", "i"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
   guitar_solo:
     type: solo
     bars: 16
-    harmony:
-      progression: ["i", "bVII", "bVI", "V7"]
+    harmony: {progression: ["i", "bVII", "bVI", "V7"]}
     instruments:
-      harmony:
-        intensity: 0.9
-      drums:
-        intensity: 0.9
-      bass:
-        intensity: 0.9
-      rhythm_gtr:
-        intensity: 0.5
-      lead_gtr:
-        intensity: 1.0
-        solo: true
-        register: "full"
-        extra:
-          rest_probability: 0.05
-          phrase_len_bars: 4
-          contour_style: "leaping"
-          resolution_strength: 0.7
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {register: full}
 
-arrangement:
-  - verse
-  - chorus
-  - guitar_solo
-  - chorus
+arrangement: [verse, chorus, verse, chorus, guitar_solo, chorus]

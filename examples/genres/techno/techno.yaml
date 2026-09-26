@@ -1,0 +1,105 @@
+# Techno: a hypnotic A minor track at 130 BPM built on a four-on-the-floor kit.
+#
+# The kit is an authored drum_groove theme: kick on every beat and an open
+# hat on every offbeat, the "boom tss" of techno; the snare and fills come
+# from the drum engine around it. A synth bass rolls under a sixteenth-note
+# synth ostinato (the arpeggiator), the chords move slowly (two bars each),
+# and a synth lead (the lead guitar engine on a square-wave patch, foreground:
+# full) states a short hook in the drops. The breakdown drops the kick and
+# leaves the ostinato and the lead; the builds bring the kit back.
+#
+# Pinned, and why:
+#   - themes.four_floor (role drum_groove, locked): the composed drummer
+#     is a band drummer, so a club kit is written out; a drum_groove theme
+#     keeps the drum engine and plays exactly this pattern
+#   - drums recipe house: the club drum engine supplies the snare, claps
+#     and fills around the theme and keeps the top line on hats, not ride
+#   - bass lock_to_hat 1 with lock_to_kick 0 and a low density: the bass
+#     plays the offbeats between the kicks, the rolling techno bass;
+#     octave pops on, fifth jumps off, so it stays on the chord tones
+#   - arpeggiator pattern ostinato in sixteenths: a repeating four-note
+#     cell per chord, the sequencer sound of the genre
+#   - harmony chord_rate 8: one chord every two bars, so the track breathes
+#   - engines: synth bass, sawtooth arpeggio, square-wave lead
+# The bass pitches, the snare pickups and the lead hook come from the seed.
+#
+# Listen for:
+#   - the kick on every beat and the offbeat open hat, bar after bar
+#   - the bass on the offbeats, answering each kick
+#   - the sixteenth-note ostinato turning over each chord
+#   - the breakdown without drums, then the build and the second drop
+#   - the lead hook in the first drop, lifted and ornamented in the last
+version: 1
+song:
+  title: "Concrete Pulse"
+  bpm: 130
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: techno
+  seed: 9130
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  bass: {program: 38}          # GM Synth Bass 1
+  arpeggiator: {program: 81}   # GM Lead 2 (sawtooth)
+  lead_gtr: {program: 80}      # GM Lead 1 (square)
+
+themes:
+  four_floor:
+    role: drum_groove
+    allow_development: false
+    events: "1:.5 4:.5 1:.5 4:.5 1:.5 4:.5 1:.5 4:.5"
+
+instruments:
+  drums:
+    recipe: house
+  bass:
+    params:
+      lock_to_hat: 1.0
+      lock_to_kick: 0
+      density: 0.3
+      rest_rate: 0.0
+      octave_jump_rate: 0.3
+      fifth_jump_rate: 0
+  arpeggiator:
+    params: {pattern: ostinato, note_duration: 0.25, octave_range: 2}
+  lead_gtr:
+    params:
+      foreground: full
+      register: [64, 84]
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony: {progression: "i", chord_rate: 8}
+    instruments: {harmony: {}, drums: {}, bass: {}}
+  build:
+    type: prechorus
+    bars: 8
+    harmony: {progression: "i bVII", chord_rate: 8}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}}
+  drop:
+    type: chorus
+    bars: 16
+    harmony: {progression: "i bVI bVII i", chord_rate: 8}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  breakdown:
+    type: breakdown
+    bars: 8
+    harmony: {progression: "bVI bVII", chord_rate: 8}
+    instruments: {harmony: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 8
+    harmony: {progression: "i", chord_rate: 8}
+    instruments: {harmony: {}, drums: {}, bass: {}}
+
+arrangement: [intro, build, drop, breakdown, build, drop, outro]

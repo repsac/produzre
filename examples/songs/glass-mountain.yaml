@@ -1,0 +1,89 @@
+# Glass Mountain: an instrumental arena rock anthem.
+#
+# There is no singer: the lead guitar is the melody (foreground: full).
+# The composer writes one hook for the whole song, states it in the intro,
+# builds the verses as an eight-bar period, and turns every chorus into
+# hook lines that climb to a summit. The solo is a story told over sixteen
+# bars: a quote of the hook, development up the neck, a climax, and a dive.
+#
+# Pins: only solo_ending: dive, so the solo ends on a whammy dive. The seed
+# chose every other band habit (a climbing solo story, an anthem chorus, a
+# busy rhythm guitar, the band dropping out for a beat before each chorus).
+# The chorus bass is set to rhythm_pattern: drive so it pumps eighths under
+# the hook; everywhere else the bass plays the role the composer gives it.
+#
+# Listen for:
+#   - the hook in the intro coming back note for note in every chorus
+#   - the bass pedalling eighths in the verses, driving harder in choruses
+#   - verse 2 repeating the verse tune with small rhythm changes
+#   - the bridge turning to bVII and IV, ending on V to set up the solo
+#   - a sixteen-bar solo that climbs, peaks, and ends on a dive
+#   - the last chorus lifted higher and ornamented, then a held tonic
+version: 1
+song:
+  title: "Glass Mountain"
+  bpm: 116
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: arena_rock
+  seed: 5203
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    solo_ending: dive
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: full
+      register: [62, 86]
+  bass:
+    params: {articulation_style: pick}
+  drums:
+    params: {fill_rate: 0.35}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "IV I V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I vi IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi IV I V V"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {params: {rhythm_pattern: drive}}
+      rhythm_gtr: {}
+      lead_gtr: {}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi IV bVII IV vi IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 16
+    harmony: {progression: "I vi IV V I vi IV V vi IV I V vi IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV I V I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, chorus, outro]

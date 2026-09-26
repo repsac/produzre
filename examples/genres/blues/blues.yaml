@@ -1,0 +1,76 @@
+# Blues: a 12-bar shuffle in A with a singer, answered by the guitar.
+#
+# Every verse is the full 12-bar form with dominant sevenths and a quick
+# change to IV in bar 2. The lead guitar plays around an imagined singer
+# (foreground: auto), so it answers the vocal lines with licks at the ends
+# of phrases, then takes a whole chorus as a solo.
+#
+# Pinned, and why:
+#   - groove swing 0.66: a true triplet shuffle for the whole band (an
+#     explicit swing also keeps the drummer's drawn feel out, so the shuffle
+#     is guaranteed)
+#   - solo_story: blues, a slow-blues solo built on the song's licks
+#   - bass rhythm_pattern: walking (density 0.9, rest_rate 0): a steady
+#     walking line through every bar of the form
+# The drummer, the boogie comp figures and the licks are drawn from the
+# seed.
+#
+# Listen for:
+#   - the intro starts on the V7 turnaround, like a band counting in
+#   - guitar licks fill the gaps between the singer's lines in each verse
+#   - bars 9 to 12 turn around (V7 IV7 I7 V7) back to the top of the form
+#   - verse 2 keeps verse 1's licks with small changes
+#   - the solo chorus, then a last verse and a short tag ending on I7
+version: 1
+song:
+  title: "Lowdown Kitchen Shuffle"
+  bpm: 96
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: blues
+  seed: 7331
+  exports_root: "exports"
+  arrangement_style:
+    solo_story: blues
+
+groove:
+  swing: 0.66
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [57, 81]
+  bass:
+    params: {rhythm_pattern: walking, density: 0.9, rest_rate: 0}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I7 IV7 I7 I7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, verse, solo, verse, outro]

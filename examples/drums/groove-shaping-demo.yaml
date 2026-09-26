@@ -1,0 +1,121 @@
+# Groove shaping: the four settings that steer the composed drummer.
+#
+# The drummer's groove comes from the song's drum DNA. Four drum params
+# shape it per section without replacing it:
+#
+#   ghost_rate    0 no ghost notes; below 0.3 a grace note before the
+#                 backbeat every other bar; 0.3 or more a grace before and
+#                 after every backbeat
+#   kick_density  0.3 or less: kick on 1 and 3 only; 0.7 or more: the
+#                 verse borrows the busier chorus kick pattern
+#   hat_density   0.3 or less: quarter-note hats; 0.8 or more: sixteenths
+#                 (verse and prechorus hands)
+#   fill_rate     how often it fills (see fills-demo.yaml); every verse here
+#                 uses 0.2, so each section ends with one fill
+#
+# Each verse changes one setting against the first verse, which plays the
+# drummer's own choices. Bass and rhythm guitar keep their parts, except
+# in the two kick verses: the signature riff is chosen to lock with the
+# drummer's kick, so it changes with it. That is the band listening.
+# `arrangement_style` pins the riff (`riff_driven: true`), the fill into the
+# chorus and the ending, so every machine hears the same arrangement.
+#
+# Check it: analysis/drums/*.events.tsv marks ghost notes with kind
+# "snare_ghost"; kicks are pitch 36, closed hats 42.
+version: 1
+song:
+  title: "Composed Drum Shaping"
+  bpm: 100
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 3386
+  arrangement_style: {into_chorus: fill, ending: ring, riff_driven: true}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_no_ghosts:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2, ghost_rate: 0.0}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_busy_ghosts:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2, ghost_rate: 0.5}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_sparse_kick:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2, kick_density: 0.2}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_driving_kick:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2, kick_density: 0.8}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_quarter_hats:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2, hat_density: 0.2}}
+      bass: {}
+      rhythm_gtr: {}
+  verse_sixteenth_hats:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {params: {fill_rate: 0.2, hat_density: 0.9}}
+      bass: {}
+      rhythm_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V vi I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement:
+  - verse
+  - verse_no_ghosts
+  - verse_busy_ghosts
+  - verse_sparse_kick
+  - verse_driving_kick
+  - verse_quarter_hats
+  - verse_sixteenth_hats
+  - chorus

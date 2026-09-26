@@ -1,0 +1,91 @@
+# Arena rock: a stadium anthem in A major at 126 BPM, with a singer.
+#
+# A piano arpeggio (the arpeggiator) opens the song and returns in the
+# verses, bridge and outro, the way arena rock power ballads do. The
+# chorus is the big I V vi IV singalong, and the last chorus shifts up a
+# whole step for the gear change. The lead guitar plays around an imagined
+# singer (foreground: auto).
+#
+# Pinned, and why:
+#   - chorus_form: anthem, the hook stated again and again in every chorus
+#   - into_chorus: build and ending: big, the stadium drama
+#   - solo_story: melodic, a singable solo
+#   - final_chorus: modulate, the whole-step lift into the last chorus
+# The drummer, bass roles, comp figures and licks are drawn from the seed.
+#
+# Listen for:
+#   - piano and guitar alone for the first two bars (this seed drew a
+#     riff-alone intro), then piano eighths under the verses
+#   - the band building into each chorus, then the I V vi IV hook
+#   - the solo singing the melody before the modulated final chorus
+#   - a big finish on the last chord
+version: 1
+song:
+  title: "Lighters Over Lakeside"
+  bpm: 126
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: arena_rock
+  seed: 7392
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    chorus_form: anthem
+    into_chorus: build
+    solo_story: melodic
+    ending: big
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 84]
+  arpeggiator:
+    params: {pattern: phrase, note_duration: 0.5, rest_probability: 0.05}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}, arpeggiator: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV vi V I IV ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}, arpeggiator: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "IV V vi V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi IV I V vi IV bVII V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}, arpeggiator: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}, arpeggiator: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

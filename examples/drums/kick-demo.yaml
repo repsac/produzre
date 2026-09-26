@@ -1,13 +1,18 @@
+# Kick voice controls: double kicks and syncopated placements.
+#
+# `voices` is a part selector: every section here sets drum voices, so the
+# classic drum engine plays them with its kit-voice controls instead of
+# the composed drummer. See README.md for the composed drum demos.
 version: 1
 song:
-  themes_auto: false  # isolate drum golden tests from theme coupling
+  themes_auto: false  # keep automatic themes out of the kit comparison
   title: "KickDemo"
   bpm: 140
   key: C
   mode: major
   meter: "4/4"
   beats_per_bar: 4
-  seed: 42
+  seed: 4002
   variation: 0.0
   humanize_velocity: 0.0
   humanize_timing: 0.0

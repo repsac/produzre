@@ -74,6 +74,7 @@ python produzre_entry.py build examples/bass/baseline/baseline-demo.yaml
 ### Advanced
 
 - [advanced/motion-style-demo.yaml](advanced/motion-style-demo.yaml): compare `motion_style: stepwise`, `leaping`, and `mixed` across a full band arrangement; articulation and density change too.
+- [solo/](solo/): the bass on its own, as a feature.
 - [advanced/solo-comparison.yaml](advanced/solo-comparison.yaml): hear the same bass settings move from verse to `solo: true` and back over the same progression.
 - [advanced/solo-funk.yaml](advanced/solo-funk.yaml): hear a slap bass feature with `role: lead`, syncopated attacks, and `chromatic_rate: 0.3`.
 - [advanced/solo-pocket.yaml](advanced/solo-pocket.yaml): hear fingerstyle accompaniment become a solo over `I vi ii V`, then return to the verse.

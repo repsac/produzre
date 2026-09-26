@@ -1,0 +1,110 @@
+# Strum and slap: an upbeat singer-songwriter groove in E minor for acoustic
+# guitar alone, using every technique the acoustic engine has.
+#
+# Each section names its technique, and the fingerpicked sections name a
+# picking_pattern, so the acoustic engine plays everything (the composed
+# fingerstyle only takes over unpinned fingerpicking). The percussive
+# persona gives a harder touch with more muted strokes.
+#
+# Listen for:
+#   - intro: a rolling fingerpicked arpeggio (picking_pattern: roll)
+#   - verse: hybrid playing, picked notes in the first half of the bar and
+#     strummed chords in the second, with a few dampened strokes
+#   - prechorus: Travis picking (picking_pattern: travis) building up
+#   - chorus: the loudest part, a strum on every beat (strum_density 0.9)
+#     with short muted "chuck" strokes mixed in (mute_ratio)
+#   - breakdown: percussive playing, body taps and short chord stabs with
+#     space in between (body_tap_ratio, mute_ratio)
+#   - bridge: a slow cinematic arpeggio with a high, held treble melody
+#   - the last chorus strums hardest and the outro strums sparsely to a stop
+version: 1
+song:
+  title: "Solo Acoustic Strum and Slap"
+  bpm: 112
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: pop
+  seed: 8303
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  acoustic_gtr:
+    persona: percussive
+    params:
+      voicing_style: open
+      vel_variation: 10
+      timing_variation: 0.015
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: fingerpicking, picking_pattern: roll}
+  verse:
+    type: verse
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "i bVI bIII bVII i bVI bIII bVII"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: hybrid, strum_density: 0.5, mute_ratio: 0.15}
+  prechorus:
+    type: prechorus
+    bars: 4
+    intensity: 0.7
+    harmony: {progression: "iv iv bVI bVII"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: fingerpicking, picking_pattern: travis}
+  chorus:
+    type: chorus
+    bars: 8
+    intensity: 0.85
+    harmony: {progression: "bIII bVII i bVI bIII bVII iv bVII"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: strumming, strum_density: 0.9, mute_ratio: 0.25}
+  breakdown:
+    type: breakdown
+    bars: 4
+    intensity: 0.55
+    harmony: {progression: "i i bVI bVII"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: percussive, body_tap_ratio: 0.5, mute_ratio: 0.4}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "bVI bVII bIII i bVI bVII iv V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: fingerpicking, picking_pattern: cinematic}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "bVI bVII i i"}
+    instruments:
+      harmony: {}
+      acoustic_gtr:
+        params: {technique: strumming, strum_density: 0.5, mute_ratio: 0.1}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, breakdown, bridge, chorus, outro]

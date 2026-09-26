@@ -1,0 +1,90 @@
+# Funk: a two-chord E dorian groove at 102 BPM, with a singer.
+#
+# Funk is the groove: drums, bass and rhythm guitar lock a two-bar pattern
+# per section (groove memory uses two-bar cycles for funk) and vary it at
+# phrase ends. The verse vamps on i7 and IV7, the dorian major IV; the
+# chorus climbs through bVII7 and IV7. The lead guitar plays around an
+# imagined singer (foreground: auto), with rhythmic stabs on the hook's
+# attacks under the chorus.
+#
+# Pinned, and why:
+#   - comp_activity: busy, so the rhythm guitar plays its full chank
+#     figure every bar
+#   - counter: stabs, the lead punctuates the chorus like a horn section
+#   - bass hook_response: true, the bass answers the lead in its gaps
+#   - bass articulation_style: slap with rhythm_pattern: funk_16ths
+#     (density 0.8, rest_rate 0.1): a busy slap line that keeps the
+#     engine's kick-locked sixteenths
+#   - drums ghost_rate 0.35 and fill_rate 0.15: a ghost-note snare with
+#     fills saved for phrase ends
+# The drummer, the chank figures and the licks are drawn from the seed.
+#
+# Listen for:
+#   - the two-bar call and response between the bars of each groove
+#   - ghost notes around the backbeat and sixteenth-note chanks
+#   - the bass filling holes after the lead's phrases
+#   - the bridge on bVI7 and bVII7, then a solo over the vamp
+version: 1
+song:
+  title: "Sixteen Shades of Grease"
+  bpm: 102
+  key: E
+  mode: dorian
+  meter: "4/4"
+  genre: funk
+  seed: 7432
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    comp_activity: busy
+    counter: stabs
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 81]
+  bass:
+    params: {articulation_style: slap, rhythm_pattern: funk_16ths, density: 0.8, rest_rate: 0.1, hook_response: true}
+  drums:
+    params: {ghost_rate: 0.35, fill_rate: 0.15}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVII7 bVII7 IV7 IV7 bVII7 bVII7 IV7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "bVI7 bVII7 bVI7 bVII7 bVI7 bVII7 IV7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i7 IV7 i7 i7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

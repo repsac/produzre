@@ -1,16 +1,14 @@
-# Seed & Variation: Instrument Seed Override
+# Seed variation: an instrument seed override.
 #
-# Identical to base-song.yaml EXCEPT the drums in the chorus section
-# has seed: 777. This re-rolls ONLY the drum pattern in the chorus
-# while bass, guitar, and all other sections stay the same.
-#
-# Compare the chorus drums MIDI output against base-song.yaml to hear
-# the difference. All other instruments and sections should be identical.
-
+# Identical to base-song.yaml except that the chorus drums have
+# `seed: 777`: a different drummer in the chorus only. The bass and rhythm
+# guitar keep their notes (the second chorus bass only changes a few
+# velocities where it listens to the new drummer), and every other section
+# is unchanged.
 version: 1
 
 song:
-  title: "Seed Variation Base"
+  title: "Seed Variation Drum Seed"
   bpm: 120
   key: E
   mode: minor
@@ -66,7 +64,7 @@ sections:
         intensity: 1.0
       drums:
         intensity: 1.0
-        seed: 777                # ← ONLY CHANGE: instrument-level seed override
+        seed: 777
       bass:
         intensity: 1.0
       rhythm_gtr:

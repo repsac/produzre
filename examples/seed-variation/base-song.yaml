@@ -1,17 +1,14 @@
-# Seed & Variation: Base Song (Source)
+# Seed variation: the base song.
 #
-# This is the baseline song. The 4 sibling files in this folder are
-# identical copies with ONE change each, so you can A/B compare builds:
+# The other files in this folder are copies of this song with one change
+# each, so you can compare builds:
 #
-#   base-song.yaml              ← you are here (unchanged baseline)
-#   section-seed-override.yaml  ← chorus has a different seed
-#   section-variation.yaml      ← chorus has variation: 0.6
-#   instrument-seed-override.yaml ← drums in chorus has a different seed
-#   instrument-variation.yaml   ← drums in chorus has variation: 0.8
+#   base-song.yaml                 unchanged reference
+#   section-seed-override.yaml     the chorus section has `seed: 999`
+#   instrument-seed-override.yaml  the chorus drums have `seed: 777`
+#   song-take.yaml                 the song has `take: 1`
 #
-# Build all 5 and compare the MIDI output to see how granular
-# seed/variation control affects individual sections and instruments.
-
+# All four share the song seed on purpose: only the named change differs.
 version: 1
 
 song:

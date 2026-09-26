@@ -1,0 +1,95 @@
+# Jazz: a medium-up swing tune in Bb for guitar trio (plus a comping guitar).
+#
+# The head is written like a standard: an A section of ii-V-I motion with
+# secondary dominants, a B section that moves to IV and returns through the
+# backdoor (iv7 bVII7), then A again. The lead guitar plays the melody
+# (foreground: full, an instrumental), takes a solo over the A changes, and
+# plays the head out.
+#
+# The composer provides the jazz idioms: the drummer swings on the ride
+# with feathered kicks and its own snare comping, the walking bass plays
+# quarter notes that approach each change, and the comping guitar draws a
+# swing comp figure per song.
+#
+# Pinned, and why:
+#   - bass persona walking, with density 1 and rest_rate 0 so no quarter
+#     note drops out (the jazz recipe is sparser), the kick, snare and
+#     ride locks at 0 so the walk stays in plain quarters instead of
+#     doubling the drummer's swung eighths, and fifth_jump_rate 0 so every
+#     change starts on its root
+#   - arrangement_style.solo_story: trade, the solo plays a phrase and
+#     leaves a bar for the band to answer, like trading with the drummer
+#   - engines: jazz guitar and acoustic bass sounds instead of the rock
+#     defaults
+# The drummer's comping, the comp figures and the melody come from the seed.
+#
+# Listen for:
+#   - swung eighths on the ride and bell, a feathered kick, and snare
+#     comping between the beats
+#   - a walking bass that lands on the root of each change and approaches
+#     the next one chromatically or by step
+#   - the head melody returning note for note in every A section
+#   - the B section's move to Eb and the backdoor Ab7 back home
+#   - a solo that trades phrases with the band, then the head out
+version: 1
+song:
+  title: "Backdoor Blue Room"
+  bpm: 156
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: jazz
+  seed: 5242
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    solo_story: trade
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  lead_gtr: {program: 26}    # GM Electric Guitar (jazz)
+  rhythm_gtr: {program: 26}
+  bass: {program: 32}        # GM Acoustic Bass
+
+instruments:
+  bass:
+    persona: walking
+    params: {density: 1.0, rest_rate: 0.0, lock_to_kick: 0, lock_to_hat: 0, lock_to_snare: 0, fifth_jump_rate: 0}
+  lead_gtr:
+    params:
+      foreground: full
+      register: [58, 79]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "ii7 V7 iii7 VI7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  head_a:
+    type: verse
+    bars: 8
+    harmony: {progression: "Imaj7 VI7 ii7 V7 iii7 VI7 ii7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  head_b:
+    type: bridge
+    bars: 8
+    harmony: {progression: "v7 I7 IVmaj7 IVmaj7 iv7 bVII7 ii7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 16
+    harmony: {progression: "Imaj7 VI7 ii7 V7 iii7 VI7 ii7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "ii7 V7 Imaj7 Imaj7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, head_a, head_a, head_b, head_a, solo, head_a, outro]

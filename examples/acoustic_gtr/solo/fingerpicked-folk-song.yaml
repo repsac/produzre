@@ -1,0 +1,86 @@
+# Fingerpicked folk: a country-folk song in G for fingerpicked acoustic
+# guitar alone.
+#
+# Every section fingerpicks and no picking_pattern is set, so the composed
+# fingerstyle plays the whole piece. The song seed draws the player's
+# picking DNA once: a thumb style (alternating Travis bass, steady roots,
+# or a walking thumb), a right-hand figure for the verses and a different
+# one for the choruses, and where the melody notes sit against the beat.
+# A top-voice melody follows the chords on the treble strings while the
+# thumb keeps time; the last section closes on a held chord.
+#
+# Listen for:
+#   - intro and verses: the thumb keeps an independent bass pulse (roots
+#     and fifths) while a melody rides on top, louder than the inner strings
+#   - each two-bar figure recurs and answers itself at phrase ends
+#   - the chorus switches to the second right-hand figure, lifts the melody
+#     higher and adds inner-string pinches, then the verse figure returns
+#   - the bridge moves to the relative minor and back to the dominant
+#   - the outro slows the figure and ends on a held G chord
+version: 1
+song:
+  title: "Solo Acoustic Fingerpicked Folk"
+  bpm: 100
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 8101
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  acoustic_gtr:
+    params:
+      technique: fingerpicking
+      voicing_style: open
+      melody_amount: 0.8
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "I IV I V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  verse:
+    type: verse
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "I I IV I I vi V V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    intensity: 0.8
+    harmony: {progression: "IV I V I IV I V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.65
+    harmony: {progression: "vi iii IV I vi iii ii V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {melody_amount: 0.6}}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "IV I V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

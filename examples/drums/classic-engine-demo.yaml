@@ -1,0 +1,94 @@
+# classic-engine demo
+#
+# The classic drum engine, kept for the knobs the composed drummer does
+# not use. `composer: false` on the drums hands every section to the
+# engine's genre templates, and these params work again:
+#
+#   choke_rate, flam_rate, drag_rate     cymbal chokes, snare flams and drags
+#   fill_length, phrase_len_bars,        fill size, phrase length and the
+#   phrase_end_emphasis, fill_chatter    extra weight on the last fill
+#   pickup_rate, downbeat_rate           snare pickups before a new section,
+#                                        crash and kick on its downbeat
+#   section `energy`                     low energy keeps closed hats, high
+#                                        energy moves to the ride
+#
+#   verse_plain        no ornaments, one medium fill per 4-bar phrase
+#   verse_ornaments    chokes, flams and drags together
+#   chorus_short       two-bar phrases, short fills, no pickup into the next section
+#   bridge_long        a six-bar phrase with long fills and a big final fill
+#   chorus_high        `energy: high` and fill chatter
+#   outro_no_downbeat  `downbeat_rate: 0`: no crash on its first beat
+#
+# The composed drummer is the default everywhere else; see README.md for
+# the demos that use it. PERFORMANCE.md describes the ornaments.
+version: 1
+song:
+  title: "Classic Drum Engine"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  seed: 3905
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    params: {composer: false}
+
+sections:
+  verse_plain:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV V I"}
+    instruments:
+      drums:
+        params: {fill_rate: 1.0, phrase_len_bars: 4, fill_length: medium,
+                 choke_rate: 0.0, flam_rate: 0.0, drag_rate: 0.0}
+  verse_ornaments:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV V I"}
+    instruments:
+      drums:
+        params: {fill_rate: 1.0, phrase_len_bars: 4, fill_length: medium,
+                 choke_rate: 0.6, flam_rate: 0.4, drag_rate: 0.25}
+        voices:
+          hats: {open: {rate: 0.3}}
+  chorus_short:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      drums:
+        params: {fill_rate: 1.0, phrase_len_bars: 2, fill_length: short, pickup_rate: 0.0}
+  bridge_long:
+    type: bridge
+    bars: 6
+    harmony: {progression: "vi IV I V vi V"}
+    instruments:
+      drums:
+        params: {fill_rate: 1.0, phrase_len_bars: 6, fill_length: long,
+                 phrase_end_emphasis: 2.0, flam_rate: 0.3}
+  chorus_high:
+    type: chorus
+    energy: high
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      drums:
+        params: {fill_rate: 0.6, fill_chatter: 0.4, phrase_len_bars: 4}
+  outro_no_downbeat:
+    type: outro
+    bars: 4
+    harmony: {progression: "I IV V I"}
+    instruments:
+      drums:
+        params: {downbeat_rate: 0.0, fill_rate: 1.0, fill_length: long}
+
+arrangement: [verse_plain, verse_ornaments, chorus_short, bridge_long, chorus_high, outro_no_downbeat]

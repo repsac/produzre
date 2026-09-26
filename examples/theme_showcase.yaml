@@ -18,14 +18,20 @@ exports:
 # ---------------------------------------------------------------------------
 # Theme showcase: every role, every drum voice, one drums-only breakdown.
 #
-#   main_riff    - locked (allow_development: false): quoted verbatim in
-#                  every section, all arc treatments bypassed.
-#   chorus_hook  - develops: intro/verse treatments apply, and the second
-#                  chorus statement lifts the hook an octave.
-#   bass_hook    - bass quotes its pitches and locks to its onsets.
+#   main_riff    - locked (allow_development: false). The rhythm guitar
+#                  takes its accent positions (`lock_to_riff: 1.0`, which
+#                  hands the guitar to the classic engine); its chords keep
+#                  their own voicings.
+#   chorus_hook  - the song's hook: the composer builds the lead around it.
+#                  The lead is the melody here (`foreground: full`), so both
+#                  choruses state it with its written pitches.
+#   bass_hook    - the bass quotes its pitches and onsets in every section
+#                  (`motif_quote_rate: 0.7`, set explicitly).
 #   kit_groove   - 2-bar kit pattern using all seven drum voices:
 #                  signature double kick on the "e of 3", an open hat at the
 #                  end of bar 1, an off-beat crash and a bar-end tom in bar 2.
+#                  A drum_groove theme is the beat, so the classic drum
+#                  engine plays it instead of the composed drummer.
 #                  Locked: arc inversion would swap voices nonsensically.
 #
 # Degrees are key-relative (E major): 1=E 2=F# 3=G# 4=A 5=B 6=C# 7=D#.
@@ -55,6 +61,11 @@ themes:
     # bar 2: kick, hat, snare, hat, kick + off-beat CRASH, snare, TOM pickup
     events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 4:.5 1:.5 3:.5 2:.5 3:.5 1:.5 5:.5 2:.5 7:.5"
 
+instruments:
+  lead_gtr: {params: {foreground: full}}
+  rhythm_gtr: {params: {lock_to_riff: 1.0}}
+  bass: {params: {motif_quote_rate: 0.7}}
+
 sections:
   intro:
     type: intro
@@ -74,9 +85,9 @@ sections:
   breakdown:
     type: breakdown
     bars: 4
-    # No harmony block, drums only: the signature groove still plays --
-    # the rock recipe moves the line to ride here (open-hat onsets degrade
-    # to ride hits), while the crash and tom accents punch through.
+    # No harmony block, drums only: the signature groove still plays.
+    # The rock recipe moves the line to ride here (open-hat onsets become
+    # ride hits), while the crash and tom accents punch through.
     instruments: { drums: {} }
   chorus2:
     type: chorus

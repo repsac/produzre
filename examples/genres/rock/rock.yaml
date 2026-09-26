@@ -1,0 +1,93 @@
+# Rock: a riff-driven classic rock song in A mixolydian with a singer.
+#
+# The flat seventh of mixolydian gives the riff its swagger: the verse
+# rides I bVII IV I under a signature riff (power-chord moves and a
+# single-note tail, bar two answering bar one), the chorus opens out on
+# IV V I. The intro starts with the riff alone, the drums crash in, and
+# the lead guitar plays around the singer (foreground: auto) before taking
+# a solo over the verse riff. The song ends on a big finish.
+#
+# Pinned, and why:
+#   - arrangement_style.riff_driven: true and intro: riff_alone, the
+#     classic rock opening
+#   - arrangement_style.bass_doubles: false, the bass keeps its own line
+#     locked to the kick instead of doubling the riff
+#   - arrangement_style.ending: big, a held last chord with a drum roll
+#   - drums fill_rate 0.6: a fill every four bars, a rock drummer who
+#     marks every phrase
+# The riff, the drummer's kick pattern and the solo's story come from the
+# seed.
+#
+# Listen for:
+#   - the riff alone for two bars, then the band
+#   - the bass locked to the kick under the riff
+#   - the G chord (bVII) in the verse riff
+#   - a drum fill at the end of every four-bar phrase
+#   - the chorus opening up on IV V I
+#   - turnarounds into each section, and a big final chord
+version: 1
+song:
+  title: "Highway Sixty Nights"
+  bpm: 132
+  key: A
+  mode: mixolydian
+  meter: "4/4"
+  genre: rock
+  seed: 6401
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    intro: riff_alone
+    bass_doubles: false
+    ending: big
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    params: {fill_rate: 0.6}
+  bass:
+    params: {articulation_style: pick}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I bVII IV I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I bVII IV I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii IV ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I bVII IV I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I bVII IV I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, solo, chorus, outro]

@@ -1,0 +1,140 @@
+# classic-engine demo
+#
+# Jazz ride and cross-stick: a medium swing tune on the kit alone, with every
+# voice authored. `composer: false` and the explicit `voices` blocks keep the
+# classic drum engine, so each control below is heard exactly as written.
+# The jazz_swing recipe supplies the ride cymbal, the swing clock (0.65, a
+# triplet feel) and the base ghost vocabulary; the voices place the rest.
+#
+# Kit map used throughout:
+#   ride (hats.pattern)  spang-a-lang: 1, 2, 2&, 3, 4, 4& (the "&" is swung)
+#   hi-hat foot          2 and 4 (hats.pedal)
+#   kick                 a light anchor on 1, a few "bombs" on the "&"
+#   snare                cross-stick on 2 and 4 in the head, soft ghosts
+#                        (brush-like taps) on the triplet partials
+#
+# Listen for:
+#   - intro and head: cross-stick backbeat, quiet ghost taps, the ride's
+#     skip note, hi-hat chick on 2 and 4
+#   - the strain (chorus) opens up: full snare, ride accents on 2 and 4,
+#     more ghost comping and occasional kick bombs
+#   - the drum solo: the time stays on the ride and hi-hat foot while the
+#     left hand moves to the toms, with flams, drags and a long fill at
+#     each four-bar phrase end
+#   - the bridge drops back to cross-stick with no fills, then the last
+#     head and a short tag that ends on a crash
+version: 1
+song:
+  title: "Solo Drums Jazz Ride Kit"
+  bpm: 144
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: jazz
+  seed: 5207
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: jazz-lite
+    recipe: jazz_swing
+    voices:
+      ride:
+        bell_rate: 0.0
+      hats:
+        pattern: {rate: 1.0, placements: ["1", "2", "2&", "3", "4", "4&"]}
+        pedal: {rate: 1.0, placements: ["2", "4"]}
+        open: {rate: 0.0}
+        accents: {rate: 0.6, placements: ["2", "4"], boost: 10, bias: -6}
+      kick:
+        density: 0.4
+        syncopation: {rate: 0.08, placements: ["2&", "4&"]}
+        double: {rate: 0.0}
+      snare:
+        articulation: {default: crossstick}
+        ghosts: {rate: 0.3, placements: ["1&", "2a", "3&", "4a"], velocity_bias: -10}
+    params:
+      composer: false
+      swing: 0.65
+      velocity_humanize: 0.08
+      timing_jitter_ms: 4
+      push_pull: 0.0
+      phrase_len_bars: 4
+      fill_length: short
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.45
+    instruments:
+      drums:
+        params: {fill_rate: 0.0}
+  head:
+    type: verse
+    bars: 8
+    intensity: 0.55
+    instruments:
+      drums:
+        params: {fill_rate: 0.25}
+  strain:
+    type: chorus
+    bars: 8
+    intensity: 0.75
+    instruments:
+      drums:
+        voices:
+          snare:
+            articulation: {default: normal}
+            ghosts: {rate: 0.45, placements: ["1&", "2a", "3&", "4e", "4a"], velocity_bias: -8}
+          kick:
+            density: 0.5
+            syncopation: {rate: 0.2, placements: ["1&", "2&", "3&", "4&"]}
+        params:
+          fill_rate: 0.5
+  drum_solo:
+    type: solo
+    bars: 8
+    intensity: 0.9
+    instruments:
+      drums:
+        voices:
+          toms: {groove: {rate: 0.6}, fills: {rate: 1.0}}
+          snare:
+            articulation: {default: normal}
+            ghosts: {rate: 0.5, placements: ["1&", "1a", "2a", "3&", "3a", "4a"], velocity_bias: -6}
+        params:
+          fill_rate: 1.0
+          fill_length: long
+          fill_chatter: 0.3
+          flam_rate: 0.15
+          drag_rate: 0.1
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.5
+    instruments:
+      drums:
+        voices:
+          snare:
+            ghosts: {rate: 0.15, placements: ["2a", "4a"], velocity_bias: -12}
+        params:
+          fill_rate: 0.0
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.6
+    instruments:
+      drums:
+        voices:
+          crash: {rate: 1.0, placements: ["1"]}
+        params:
+          fill_rate: 1.0
+
+arrangement: [intro, head, strain, head, strain, drum_solo, bridge, head, outro]

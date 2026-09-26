@@ -30,7 +30,6 @@ instruments:
   drums:
     params:
       kick_density: 1.0
-      snare_density: 1.0
       hat_density: 1.0
       fill_rate: 0.3
 

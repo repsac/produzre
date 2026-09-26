@@ -1,0 +1,86 @@
+# Blue Lantern: a jazz waltz with a walking bass.
+#
+# A small group in 3/4: jazz guitar on the melody (foreground: full), a
+# second guitar comping four-note seventh chords, an upright bass walking
+# a note on every beat, and a drummer keeping swung time. The head is an
+# AABA tune built from ii-V-I movement in F: the A section circles I, vi,
+# ii, V with a secondary dominant (VI7), and the bridge moves to the IV
+# chord through its own ii-V before turning back home.
+#
+# Pins: no arrangement_style pins; the jazz genre gives the band its swing.
+# Choices made on purpose:
+#   - bass: rhythm_pattern walking, density 1.0 and no rests for a note on
+#     every beat, and groove_memory off so the walk keeps moving instead of
+#     restating one bar
+#   - rhythm_gtr: style jazz_comp pins the seventh-chord comping pattern
+#   - drums: seed 2 re-rolls just the drummer, for steady hi-hat time
+#   - GM programs: jazz guitar (26) for both guitars, acoustic bass (32)
+#
+# Listen for:
+#   - the bass walking a note on every beat, stepping into each change
+#   - the melody stated in A, repeated in the second A, contrasted in B
+#   - two solo choruses over the A changes, then the head again
+#   - the outro: two last ii-V-I turns to close on Imaj7
+version: 1
+song:
+  title: "Blue Lantern"
+  bpm: 150
+  key: F
+  mode: major
+  meter: "3/4"
+  genre: jazz
+  seed: 5801
+  turnarounds: true
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 12
+
+engines:
+  lead_gtr: {program: 26}
+  rhythm_gtr: {program: 26}
+  bass: {program: 32}
+
+instruments:
+  drums: {seed: 2}
+  rhythm_gtr:
+    params: {style: jazz_comp}
+  bass:
+    persona: walking
+    params: {rhythm_pattern: walking, groove_memory: false, density: 1.0, rest_rate: 0, approach_rate: 0.5}
+  lead_gtr:
+    params:
+      foreground: full
+      register: [58, 82]
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony: {progression: "ii7 V7 Imaj7 Imaj7 ii7 V7 Imaj7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  head_a:
+    type: verse
+    bars: 16
+    harmony: {progression: "Imaj7 Imaj7 vi7 vi7 ii7 ii7 V7 V7 iii7 VI7 ii7 V7 Imaj7 vi7 ii7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  head_b:
+    type: bridge
+    bars: 16
+    harmony: {progression: "v7 v7 I7 I7 IVmaj7 IVmaj7 iv7 bVII7 iii7 iii7 VI7 VI7 ii7 ii7 V7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 16
+    harmony: {progression: "Imaj7 Imaj7 vi7 vi7 ii7 ii7 V7 V7 iii7 VI7 ii7 V7 Imaj7 vi7 ii7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 8
+    harmony: {progression: "ii7 V7 Imaj7 vi7 ii7 V7 Imaj7 Imaj7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, head_a, head_a, head_b, head_a, solo, solo, head_a, outro]

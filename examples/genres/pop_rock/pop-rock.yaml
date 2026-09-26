@@ -1,0 +1,89 @@
+# Pop rock: a guitar-band song in A major with a singer and a melodic solo.
+#
+# Electric rhythm guitar and a strummed acoustic share the chords, the
+# bass and drums lock a groove per section, and the lead guitar plays
+# around the singer (foreground: auto): the hook in the intro, licks at
+# the ends of verse phrases, rhythmic stabs on the hook's attacks in the
+# chorus, and a solo that sings the hook before the last chorus.
+#
+# Pinned, and why:
+#   - arrangement_style.counter: stabs, the lead punches the chorus hook
+#     rhythm with the band instead of playing a long counter-melody
+#   - arrangement_style.solo_story: melodic, a pop rock solo you can hum
+#   - arrangement_style.into_chorus: build, a snare build and fill into
+#     each chorus
+# The drummer, the comp figures, the bass roles and the hook come from the
+# seed.
+#
+# Listen for:
+#   - verse (I IV vi V) to prechorus (ii IV V) to a big chorus (I V IV)
+#   - the acoustic strumming along with the electric in the choruses
+#   - lead stabs lining up with the chorus hook
+#   - a melodic solo quoting the hook, then the final chorus
+#   - turnarounds pointing each section home
+version: 1
+song:
+  title: "Summer on Fifth Street"
+  bpm: 124
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 2419
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    counter: stabs
+    solo_story: melodic
+    into_chorus: build
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [61, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I V IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV vi V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 4
+    harmony: {progression: "vi IV ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I V IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I V IV I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

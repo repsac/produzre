@@ -1,0 +1,107 @@
+# Dance pop: a four-on-the-floor single in F at 122 BPM, with a singer.
+#
+# A radio dance-pop song: the kit plays an authored drum_groove theme
+# (kick on every beat, open hat on every offbeat) with the drum engine's
+# backbeat, the bass drives eighths, a busy rhythm guitar plays
+# sixteenth-note strum figures, and a synth arpeggio (the arpeggiator on
+# GM program 81) sparkles over the choruses. The lead part is a synth
+# (the lead_gtr engine on GM program 80) playing hooks and fills around an
+# imagined singer (foreground: auto). The final chorus jumps up a whole step.
+#
+# Pinned, and why:
+#   - a locked drum_groove theme: the composed drummer has no
+#     four-on-the-floor pattern, and the theme gives the exact dance pulse
+#   - instrument programs: synth bass (38), square lead (80) and saw
+#     arpeggio (81)
+#   - comp_activity: busy, the guitar plays its full figure every bar
+#   - intro: full, the whole band from the first bar (the themed drums
+#     always start there, so the bass should too)
+#   - bass rhythm_pattern: drive (density 0.9, rest_rate 0): steady
+#     eighths under the kick
+#   - lead bend_rate 0 and dive_rate 0: a synth does not bend like a guitar
+#   - final_chorus: modulate, the pop key change
+# The guitar figures, the hook and the fills come from the seed.
+#
+# Listen for:
+#   - the vi IV I V verse, a prechorus that climbs to V, then the I V vi IV
+#     chorus hook
+#   - the arpeggio entering on the choruses
+#   - the bridge dropping the drums, on IV and vi, before the key change
+version: 1
+song:
+  title: "Glitter on the Night Bus"
+  bpm: 122
+  key: F
+  mode: major
+  meter: "4/4"
+  genre: dance_pop
+  seed: 7471
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    comp_activity: busy
+    intro: full
+
+themes:
+  dance_pulse:
+    role: drum_groove
+    allow_development: false
+    events: "1:.5 4:.5 1:.5 4:.5 1:.5 4:.5 1:.5 4:.5"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    program: 80
+    params:
+      foreground: auto
+      register: [65, 86]
+      bend_rate: 0
+      dive_rate: 0
+      vibrato_rate: 0.2
+  bass:
+    program: 38
+    params: {articulation_style: pick, rhythm_pattern: drive, density: 0.9, rest_rate: 0}
+  arpeggiator:
+    program: 81
+    params: {pattern: up_down, note_duration: 0.25, octave_range: 2}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "vi IV I V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "vi IV I V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii iii IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}, arpeggiator: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "IV IV vi vi IV IV V V"}
+    instruments: {harmony: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}, arpeggiator: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, chorus, outro]

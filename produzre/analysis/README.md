@@ -244,10 +244,10 @@ Because TSV is deterministic (for fixed seeds), diffs are meaningful.
 
 ```bash
 # build A
-python -m produzre.cli build examples/song.yaml
+python -m produzre.cli build examples/songs/iron-horse-road.yaml
 
 # build B (after a change)
-python -m produzre.cli build examples/song.yaml
+python -m produzre.cli build examples/songs/iron-horse-road.yaml
 
 # diff the event dumps
 diff -u exports/<runA>/instruments/drums/<Song>_drums.events.tsv \

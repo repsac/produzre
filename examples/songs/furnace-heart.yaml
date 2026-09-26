@@ -1,0 +1,91 @@
+# Furnace Heart: a fast, driving metal song with a singer.
+#
+# E minor at 168 BPM, with the flat second (F) giving the riff its
+# Phrygian bite. A palm-muted chugging riff drives the verses with the
+# bass doubling it an octave down, the chorus pounds power-chord eighths
+# over a pedalling bass, and the drummer adds extra kicks around the
+# backbeat. The lead guitar plays around the voice (foreground: auto) and
+# takes a melodic solo. The breakdown drops to half-time on the same
+# i and bII chords before the solo lifts everything back up.
+#
+# Pins: riff_driven and bass_doubles for a riff song with the bass in
+# unison. Feel settings shape the composed parts without replacing them:
+# palm_mute on the rhythm guitar turns plain strums into chugs, and
+# kick_density on the drums adds extra kicks.
+#
+# Listen for:
+#   - the riff alone in the intro, then the whole band in unison with it
+#   - the bII (F) chord against the E pedal in verse and breakdown
+#   - the prechorus ending on V (B major) to set up the chorus
+#   - the breakdown's half-time weight, then the solo and last chorus
+version: 1
+song:
+  title: "Furnace Heart"
+  bpm: 168
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: metal
+  seed: 6204
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 84]
+  rhythm_gtr:
+    params: {palm_mute: 0.6}
+  bass:
+    params: {articulation_style: pick}
+  drums:
+    params: {kick_density: 1.4}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse:
+    type: verse
+    bars: 16
+    harmony: {progression: "i i bII i i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "iv iv bVI V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII i bVI V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  breakdown:
+    type: breakdown
+    bars: 8
+    harmony: {progression: "i i bII bII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i i bII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, breakdown, solo, chorus, outro]

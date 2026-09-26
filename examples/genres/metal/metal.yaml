@@ -1,0 +1,100 @@
+# Metal: a riff-driven song in E minor with a singer, a breakdown and a solo.
+#
+# The song rides one signature riff: palm-muted chugs and power-chord moves
+# on the low strings, bar two answering bar one, chosen to lock with the
+# drummer's kick. The bass doubles it an octave down. The chorus opens up
+# into big power chords, the breakdown drops to the bII for a heavy
+# half-bar lurch, and the lead (foreground: auto) plays around the singer,
+# then takes a solo that climbs to a peak and ends in a whammy dive.
+#
+# Pinned, and why:
+#   - arrangement_style.riff_driven and bass_doubles: true, the defining
+#     sound of the genre, so every seed shows it
+#   - arrangement_style.solo_story: climb and solo_ending: dive
+#   - arrangement_style.ending: cold, the band stops dead on the last hit
+#   - drums kick_density 0.8: the verse kick plays the chorus pattern, a
+#     busier foot like a double-kick player
+#   - bass articulation pick, for attack under the chugs
+# Everything else (the riff itself, the drummer's fills, the licks) comes
+# from the seed.
+#
+# Listen for:
+#   - the intro riff alone before the band crashes in
+#   - kick, palm-muted guitar and picked bass hitting the same sixteenths
+#   - the chorus power chords over i bVI bIII bVII
+#   - the breakdown's E to F (i to bII) grind
+#   - the solo climbing to its peak and diving out
+#   - a cold stop at the very end
+version: 1
+song:
+  title: "Iron Meridian"
+  bpm: 168
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: metal
+  seed: 6606
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    intro: riff_alone
+    solo_story: climb
+    solo_ending: dive
+    ending: cold
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    params: {kick_density: 0.8}
+  bass:
+    params: {articulation_style: pick}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 84]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "iv iv bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony: {progression: "i bII i bII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, breakdown, solo, chorus, outro]

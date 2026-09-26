@@ -1,0 +1,78 @@
+# Two Dollar Jukebox: a honky-tonk shuffle for a barroom dance floor.
+#
+# A singer carries the verses (not rendered). Around the voice, a clean
+# electric lead plays chicken-picked licks and a solo (foreground: auto),
+# an acoustic guitar strums the chorus, and the band shuffles: bass on
+# roots and fifths with walks into the changes, boom-chuck guitar, and a
+# drummer on a train beat or backbeat with the swing that honky-tonk
+# shares across the band. The chorus takes a II7 (a secondary dominant)
+# on its way to V, and the last chorus goes up a whole step.
+#
+# Pins: country_style: honky_tonk. Plain `genre: country` would draw one of
+# six country styles per seed; this song wants the shuffle. The players
+# (bass figures, guitar figures, the drummer's hands) are still the seed's.
+#
+# Listen for:
+#   - the shuffle feel shared by drums, bass and guitars
+#   - bass walking up or down into each chord change
+#   - chicken-picking fills at the ends of vocal phrases
+#   - the II7 to V in the chorus, and the final chorus key change
+version: 1
+song:
+  title: "Two Dollar Jukebox"
+  bpm: 152
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: country
+  seed: 5504
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    country_style: honky_tonk
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  rhythm_gtr: {program: 27}
+  lead_gtr: {program: 27}
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 84]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "V IV I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 16
+    harmony: {progression: "I I IV IV V V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV IV I I II7 II7 V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I I IV IV V V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

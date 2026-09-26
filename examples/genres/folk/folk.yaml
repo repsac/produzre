@@ -1,0 +1,92 @@
+# Folk: a fingerpicked song in D at 100 BPM, with a singer and harmonica.
+#
+# The acoustic guitar is the heart of the song. Alone in the intro and
+# outro it is composed (seeded treble and thumb figures, a chord-tone
+# melody, a held final chord); with the band it Travis-picks the verses
+# and strums the choruses. An upright-style acoustic bass holds the
+# bottom, light drums join only for the choruses and the break, and
+# the lead part is a harmonica (the lead_gtr engine on GM program 22)
+# playing around an imagined singer (foreground: auto).
+#
+# Pinned, and why:
+#   - instrument programs: acoustic bass (32) and harmonica (22) for
+#     the folk instrumentation
+#   - acoustic_gtr picking_pattern: travis in the verses, the folk picking
+#   - solo_story: melodic and solo_ending: hold, a singing harmonica break
+#     with no guitar dive (dive_rate 0)
+#   - drums hat_density 0.6 and fill_rate 0.1, a light touch
+#   - bass density 0.8 and rest_rate 0: the folk bass recipe rests a lot,
+#     so this keeps a steady root and fifth under every bar
+# The drummer's figures, bass line and harmonica licks come from the seed.
+#
+# Listen for:
+#   - the guitar alone, then Travis picking under the verse
+#   - harmonica answers at the ends of the singer's lines
+#   - the band opening up in the chorus on IV, then a harmonica break
+#   - the guitar alone again at the end, holding the last chord
+version: 1
+song:
+  title: "Lantern by the Ferry Road"
+  bpm: 100
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 7421
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    solo_story: melodic
+    solo_ending: hold
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    program: 22
+    params:
+      foreground: auto
+      register: [62, 84]
+      dive_rate: 0
+  bass:
+    program: 32
+    params: {articulation_style: finger, density: 0.8, rest_rate: 0}
+  drums:
+    params: {hat_density: 0.6, fill_rate: 0.1}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I IV I V"}
+    instruments: {harmony: {}, acoustic_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV I V I IV V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+      bass: {}
+      lead_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi IV I V I"}
+    instruments: {harmony: {}, acoustic_gtr: {}, bass: {}, drums: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "vi IV I V vi IV V V"}
+    instruments: {harmony: {}, acoustic_gtr: {}, bass: {}, drums: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV I V I"}
+    instruments: {harmony: {}, acoustic_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

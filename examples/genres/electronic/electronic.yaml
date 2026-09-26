@@ -1,0 +1,100 @@
+# Electronic: a four-on-the-floor club track in A minor at 126 BPM.
+#
+# An instrumental dance track built in layers: intro, build, drop,
+# breakdown, a second build and drop, and an outro that strips back down.
+# The kit plays an authored drum_groove theme (kick on every beat, open hat
+# on every offbeat) over the drum engine's electronic backbeat, a synth
+# bass pulses under a sixteenth-note synth arpeggio (the arpeggiator on
+# GM program 81), and a synth lead (the lead_gtr engine on GM program 80)
+# carries the hook as the melody (foreground: full).
+#
+# Pinned, and why:
+#   - a drum_groove theme, locked (allow_development: false): the composed
+#     drummer has no four-on-the-floor pattern, and the theme opts the
+#     drums into the drum engine with the exact club pulse
+#   - instrument programs: synth bass (38), square lead (80) and saw
+#     arpeggio (81)
+#   - bass rhythm_pattern: drive (density 0.9, rest_rate 0): steady
+#     eighths on the chord tones under the four-on-the-floor kick
+#   - lead bend_rate 0 and dive_rate 0: no guitar bends on a synth
+#   - arpeggiator pattern: ostinato at sixteenths (note_duration 0.25)
+#   - section intensities shape the builds, drops and breakdown
+# The hook, its answer and the developments come from the seed.
+#
+# Listen for:
+#   - the kick and offbeat hats from the first bar, the arpeggio on top
+#   - the bass arriving in the build, the lead hook landing in the drop
+#   - the breakdown with no drums, just arpeggio, bass and melody
+#   - the second drop recalling the first, then the outro thinning out
+version: 1
+song:
+  title: "Afterglow Frequency"
+  bpm: 126
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: electronic
+  seed: 7461
+  exports_root: "exports"
+
+themes:
+  club_pulse:
+    role: drum_groove
+    allow_development: false
+    events: "1:.5 4:.5 1:.5 4:.5 1:.5 4:.5 1:.5 4:.5"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    program: 80
+    params:
+      foreground: full
+      register: [64, 84]
+      bend_rate: 0
+      dive_rate: 0
+      vibrato_rate: 0.2
+  bass:
+    program: 38
+    params: {articulation_style: pick, rhythm_pattern: drive, density: 0.9, rest_rate: 0}
+  arpeggiator:
+    program: 81
+    params: {pattern: ostinato, note_duration: 0.25, octave_range: 2, rest_probability: 0}
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    intensity: 0.5
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, arpeggiator: {}}
+  build:
+    type: prechorus
+    bars: 8
+    intensity: 0.7
+    harmony: {progression: "iv bVI bVII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}}
+  drop:
+    type: chorus
+    bars: 16
+    intensity: 0.95
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  breakdown:
+    type: bridge
+    bars: 8
+    intensity: 0.5
+    harmony: {progression: "bVI bVII i i"}
+    instruments: {harmony: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 8
+    intensity: 0.5
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, arpeggiator: {}}
+
+arrangement: [intro, build, drop, breakdown, build, drop, outro]

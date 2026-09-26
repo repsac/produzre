@@ -1,0 +1,83 @@
+# Backstreet Strut: a funk instrumental where guitar, bass and drums lock.
+#
+# Tight funk in E dorian. The verses ride a signature riff that the slap
+# bass doubles an octave down, the choruses switch to busy sixteenth-note
+# chanks over popping bass octaves, the bass answers the melody when it
+# breathes (hook_response), and the drummer keeps a ghost-note groove. The lead guitar plays the
+# tune (foreground: full): a short syncopated hook that returns in every
+# chorus.
+#
+# Pins: comp_activity: busy, so the rhythm guitar plays its full figure
+# every bar (the point of the song is the interlock). The seed chose the
+# rest: a riff-driven verse with the bass doubling it, the band dropping
+# out before each chorus, a chatty lead.
+#
+# Listen for:
+#   - guitar riff and slap bass in unison through the verses
+#   - two-bar call and response grooves in drums, bass and guitar
+#   - snare ghost notes around the backbeat (ghost_rate)
+#   - the bass answering the lead's hook in the holes it leaves
+#   - the breakdown: just drums and slap bass, then the band crashes back
+#   - the chorus moving to bIII7 and IV7 before landing back on i7
+version: 1
+song:
+  title: "Backstreet Strut"
+  bpm: 98
+  key: E
+  mode: dorian
+  meter: "4/4"
+  genre: funk
+  seed: 5402
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    comp_activity: busy
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params: {foreground: full, register: [62, 81]}
+  bass:
+    persona: funk
+    params: {hook_response: true}
+  drums:
+    params: {ghost_rate: 0.45, hat_density: 1.0}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bIII7 IV7 i7 i7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, breakdown, solo, chorus, outro]

@@ -2,6 +2,21 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Examples for the current app
+
+- New `examples/songs/`: twelve complete songs across genres and meters.
+- New solo-track folders: `drums/solo`, `bass/solo`, `acoustic_gtr/solo`
+  and `lead_gtr/solo`, each with three full pieces for one instrument.
+- One current song per genre replaces the simple, full and recipe-showcase
+  files (31 files instead of about 90).
+- Drum, lead, rhythm guitar, orchestration, persona and seed demos are
+  rewritten around settings the composer honors; each instrument keeps one
+  `composer: false` classic-engine demo. `drums/transitions/` plays one song
+  with each into-chorus device.
+- Tests read frozen copies under `tests/fixtures/examples/`, so examples can
+  change freely. App findings from writing them are in
+  `docs/reviews/2026-09-26-examples-findings.md`.
+
 ### Country waltzes and style hints
 
 - Country waltzes get a per-song waltz band: bass on 1 with its own

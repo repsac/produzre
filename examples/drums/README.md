@@ -3,41 +3,48 @@
 Build a demo and assign a General MIDI drum kit to channel 10 in your DAW:
 
 ```bash
-python produzre_entry.py build examples/drums/hats-demo.yaml -v
+python produzre_entry.py build examples/drums/fills-demo.yaml
 ```
 
-## Choose a demo
+The drums are composed by default: each song draws its own drummer (kick
+patterns, a groove per section type, ghost notes, fills, crash habits and
+a feel) and the band locks to it. The build log prints the drummer and
+what it plays in each section. [PERFORMANCE.md](PERFORMANCE.md) explains
+what you can shape and what belongs to the classic engine.
 
-### Kit voices
+## The composed drummer
 
-- [hats-demo.yaml](hats-demo.yaml): compare open and pedal hat rates 1.0 with 0.5, plus different placements and accent boosts.
-- [kick-demo.yaml](kick-demo.yaml): compare `double.rate` 0, 1.0, and 0.3 alongside different syncopated kick placements.
-- [snare-demo.yaml](snare-demo.yaml): hear crossstick, rimshot, and normal snare with ghost rates 0.3, 0.15, and 0.5.
+Most demos play with a bass and rhythm guitar, as a band drummer would.
 
-### Fills and transitions
+- [groove-shaping-demo.yaml](groove-shaping-demo.yaml): the four drum settings the composed drummer honors, one per verse: `ghost_rate`, `kick_density`, `hat_density` (and `fill_rate`).
+- [fills-demo.yaml](fills-demo.yaml): `fill_rate` 0, 0.2, 0.6 and 0.9 over the same verse.
+- [phrasing-demo.yaml](phrasing-demo.yaml): where phrase fills land in 8, 6 and 12-bar sections, in 6/8 and in 7/8. Notes: [PHRASING.md](PHRASING.md).
+- [section-types-demo.yaml](section-types-demo.yaml): the groove changes per section type, intro to outro.
+- [transitions-demo.yaml](transitions-demo.yaml): a riff-alone intro, walk-ups, stop-time into every chorus, and a cold ending, pinned with `song.arrangement_style`. Notes: [TRANSITIONS.md](TRANSITIONS.md).
+- [transitions/](transitions/): five short songs, one per `into_chorus` value (`stop`, `build`, `fill`, `push`, `drop`), with the same band.
+- [take-demo.yaml](take-demo.yaml): `song.take` for a new performance of the same parts, and a drum `seed` for a new drummer.
+- [solo/](solo/): the drums on their own, as a feature.
 
-- [fills-demo.yaml](fills-demo.yaml): compare `fill_rate` 0 with 1.0, then short, medium, and long fills and `fill_chatter: 0.4`.
-- [transitions-demo.yaml](transitions-demo.yaml): compare `pickup_rate: 0.7` with 0 and `downbeat_rate: 0.8` with 0 around section changes.
-- [phrasing-demo.yaml](phrasing-demo.yaml): compare two-bar and four-bar phrase endings, a six-bar section, and a final 6/8 section.
-- [performance-demo.yaml](performance-demo.yaml): hear chokes, flams, and drags separately, then combined; the first section sets all three rates to 0.
+## The classic engine
 
-### Arrangement and color
+Part selectors hand a section to the classic drum engine: `composer: false`,
+`voices`, `recipe`, `pattern`, `riff_accent_rate`, a section `intent`, or a
+`drum_groove` theme.
 
-- [energy-demo.yaml](energy-demo.yaml): compare automatic energy with forced `low`, `high`, and numeric 0.75 while also changing section intensity.
-- [cymbals-demo.yaml](cymbals-demo.yaml): hear a ride chorus with `bell_rate: 0.3`, splash/china additions, and an outro crash on beat 1.
-- [toms-demo.yaml](toms-demo.yaml): compare `groove.rate: 0.2` with `fills.rate: 0.8`, then combine groove and fill toms at 0.4 and 0.5.
-- [take-demo.yaml](take-demo.yaml): start at `take: 0`, then rebuild with `take: 1` to compare a new performance of the repeated verse and chorus.
-- [bridge-demo.yaml](bridge-demo.yaml): compare `drop`, `half_time`, `build`, `open`, and `stomp` intents through contrasting sections.
+- [classic-engine-demo.yaml](classic-engine-demo.yaml): `composer: false` with the engine-only knobs: chokes, flams and drags, `fill_length`, `phrase_len_bars`, `phrase_end_emphasis`, `fill_chatter`, `pickup_rate`, `downbeat_rate`, and section `energy`.
+- [bridge-demo.yaml](bridge-demo.yaml): the five section intents (`drop`, `half_time`, `build`, `open`, `stomp`) between composed sections.
+- [hats-demo.yaml](hats-demo.yaml): open and pedal hat rates 1.0 against 0.5, with different placements and accent boosts.
+- [kick-demo.yaml](kick-demo.yaml): `double.rate` 0, 1.0 and 0.3 alongside different syncopated kick placements.
+- [snare-demo.yaml](snare-demo.yaml): cross-stick, rimshot and normal snare with ghost rates 0.3, 0.15 and 0.5.
+- [cymbals-demo.yaml](cymbals-demo.yaml): a ride chorus with `bell_rate: 0.3`, splash and china additions, and an outro crash on beat 1.
+- [toms-demo.yaml](toms-demo.yaml): `groove.rate: 0.2` against `fills.rate: 0.8`, then groove and fill toms together at 0.4 and 0.5.
 
-## Change the kit part
-
-Voice controls go under `drums.voices`. Placements count quarter notes from 1
-within a bar: `2&` means 1.5 beats after the bar starts. In 6/8, the fourth
-eighth note is also placement `2&`. The engine uses quarter-note beat units
-for every meter.
+Kit-voice controls go under `drums.voices`. Placements count quarter notes
+from 1 within a bar: `2&` means 1.5 beats after the bar starts. In 6/8, the
+fourth eighth note is also placement `2&`.
 
 ```yaml
-# Inside an instruments block:
+# Inside an instruments block (this selects the classic engine):
 drums:
   voices:
     snare:
@@ -46,17 +53,13 @@ drums:
     hats:
       open: {rate: 0.25, placements: ["4&"]}
       pedal: {rate: 0.4, placements: ["2", "4"]}
-  params:
-    fill_rate: 0.2
 ```
 
-Recipes can set voices too; see [preset order](../../docs/llm-song-config-reference.md#recipes-and-personas).
-Energy supplies values only when a recipe
-or user setting leaves them open. Physical constraints may remove an otherwise
-requested hit, such as a third hand strike or a pedal hat during dense kicks.
-
-See the [drum reference](../../docs/llm-song-config-reference.md#drum-controls)
-for every voice control and the [shared timing reference](../../docs/llm-song-config-reference.md#shared-timing)
+Physical constraints may remove a requested hit, such as a third hand
+strike or a pedal hat during dense kicks. See the
+[drum reference](../../docs/llm-song-config-reference.md#drum-controls) for
+every voice control and the
+[shared timing reference](../../docs/llm-song-config-reference.md#shared-timing)
 for swing and pocket units.
 
 ## Inspect the output
@@ -71,21 +74,23 @@ analysis/drums/<Song>_drums.grid.txt
 ```
 
 Enable text views through `exports.midi_text`.
-The [output guide](../../README.md#output-files) defines the TSV columns.
-The grid shows the voices that played in this groove.
+The [output guide](../../README.md#output-files) defines the TSV columns;
+the `kind` column names each hit (`fill`, `snare_ghost`, `crash`,
+`snare_pickup`, and so on).
 
-Common GM pitches are kick 35/36, crossstick 37, snare 38/40, closed hat 42,
-open hat 46, pedal hat 44, ride 51, crash 49, and toms 45/47/50. Grid symbols
-represent velocity; consult [grid_format.py](../../produzre/analysis/grid_format.py)
-for the exact display thresholds.
+Common GM pitches are kick 35/36, cross-stick 37, snare 38/40, closed hat 42,
+open hat 46, pedal hat 44, ride 51, ride bell 53, crash 49, and toms
+45/47/50. Grid symbols represent velocity; consult
+[grid_format.py](../../produzre/analysis/grid_format.py) for the exact
+display thresholds.
 
 ## Check a change
 
 ```bash
-python produzre_entry.py build examples/drums/hats-demo.yaml --strict-determinism
-python tests/test_golden_drums.py
+python produzre_entry.py build examples/drums/fills-demo.yaml --strict-determinism
 ```
 
-The first command checks repeatability. The second checks the three saved
-hats, kick, and fill outputs. Listen to the MIDI too, and check whether
-the groove suits the song. See [testing](../../tests/README.md) for baseline updates.
+This checks repeatability. The drum golden tests build frozen copies under
+`tests/fixtures/`, so editing these demos does not change them. Listen to
+the MIDI too, and check whether the groove suits the song. See
+[testing](../../tests/README.md) for baseline updates.

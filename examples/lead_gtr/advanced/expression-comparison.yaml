@@ -1,0 +1,86 @@
+# Lead expression: the same composed line, played dry or wet.
+#
+# The composed lead carries technique hints (bends, slides, vibrato,
+# staccato, a final dive) and the lead engine performs them as pitch bend
+# and CC11 volume swells. Expression settings change the performance, not
+# the notes. The three choruses play the same remembered hook line:
+#
+#   chorus_dry      bend_rate 0, vibrato_rate 0, swell_rate 0: no bends and
+#                   no swells; vibrato only where the composer wrote it (the
+#                   held cadence notes)
+#   chorus          the defaults: some bends, vibrato on most held notes
+#   chorus_wet      vibrato_rate 1, swell_rate 1: vibrato on every note held a
+#                   beat or longer, a volume swell on every note held 1.5 beats
+#   solo            dive_rate 1: every long held note in the solo ends in a
+#                   whammy dive, and so does the solo's last note
+#                   (`solo_ending: dive`, rock and metal only)
+#   chorus_final    the defaults again, lifted and ornamented as a last chorus
+#
+# `bend_rate` keeps a share of the composed bends up to its 0.15 default;
+# higher values do not add bends to the composed line. Pitch bend is per
+# MIDI channel, so assign the lead its own channel in your DAW.
+version: 1
+song:
+  title: "Lead Expression Comparison"
+  bpm: 108
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: hard_rock
+  seed: 5103
+  arrangement_style: {solo_ending: dive}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params: {foreground: full}
+
+sections:
+  chorus_dry:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {bend_rate: 0.0, vibrato_rate: 0.0, swell_rate: 0.0}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus_wet:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {vibrato_rate: 1.0, swell_rate: 1.0}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {dive_rate: 1.0}}
+  chorus_final:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [chorus_dry, chorus, chorus_wet, solo, chorus_final]

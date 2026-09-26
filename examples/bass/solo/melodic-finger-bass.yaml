@@ -1,0 +1,121 @@
+# Melodic finger bass: a pop ballad in D where the bass alone sings the
+# song, from a quiet intro to a high melodic solo.
+#
+# A bass by itself plays the bass engine's own line, so each control is
+# heard directly. Finger articulation with slides and vibrato (written as
+# pitch bend), diatonic passing notes between chord tones, fills at phrase
+# ends, and a different rhythm pattern for each part of the form.
+#
+# Listen for:
+#   - intro: quiet quarter notes on D and G roots and fifths
+#   - verse: a quarter-note line that climbs each chord (root, third,
+#     fifth) with a few slides and chromatic approaches into changes
+#   - prechorus: a push pattern, two notes a bar, anticipating the changes
+#   - chorus: a busier syncopated line, louder, with octave jumps and a
+#     diatonic fill at the end of each four-bar phrase
+#   - bridge: the relative minor, long held roots with pushes into the
+#     next chord, the calm before the solo
+#   - the bass solo (solo: true) opens up to C#4 with sixteenth pickups,
+#     longer held notes with vibrato, and motif repeats
+#   - the last chorus returns and the outro settles back on the D root
+version: 1
+song:
+  title: "Solo Bass Melodic Finger"
+  bpm: 84
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: pop
+  seed: 7303
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    persona: pocket
+    params:
+      articulation_style: finger
+      register_low: 38
+      register_high: 57
+      motion_style: mixed
+      approach_rate: 0.3
+      chromatic_rate: 0.1
+      max_passing_per_bar: 2
+      slide_rate: 0.25
+      vibrato_rate: 0.5
+      fill_rate: 0.5
+      fill_complexity: 0.5
+      phrase_len_bars: 4
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "I IV I IV"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: anchor, density: 1.0, rest_rate: 0.0, fill_rate: 0.0}
+  verse:
+    type: verse
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "I V vi IV I V IV IV"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: anchor, density: 1.0, fifth_jump_rate: 0.3, rest_rate: 0.0}
+  prechorus:
+    type: prechorus
+    bars: 4
+    intensity: 0.7
+    harmony: {progression: "ii iii IV V"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: push, density: 1.0, rest_rate: 0.0}
+  chorus:
+    type: chorus
+    bars: 8
+    intensity: 0.85
+    harmony: {progression: "IV I V vi IV I V V"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: syncopated, density: 0.8, octave_jump_rate: 0.3, rest_rate: 0.05}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.65
+    harmony: {progression: "vi iii IV I vi iii ii V"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: push, density: 0.9, rest_rate: 0.0, approach_rate: 0.5, chromatic_rate: 0.5}
+  bass_solo:
+    type: solo
+    solo: true
+    bars: 8
+    intensity: 0.9
+    harmony: {progression: "I V vi IV I V IV V"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: syncopated, solo_density: 0.8, solo_register_high: 62, motif_repeat_rate: 0.5, octave_jump_rate: 0.25}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "IV I IV I"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: anchor, density: 1.0, rest_rate: 0.0, fill_rate: 0.0}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, bass_solo, chorus, outro]

@@ -1,0 +1,85 @@
+# Clockwork Tide: an odd-meter prog rock instrumental in 7/8 and 5/4.
+#
+# The verses and choruses are in 7/8, grouped 2+2+3 (long last beat), so
+# the riff limps forward and the melody breathes in the same groups. The
+# chorus regroups the same meter as 3+2+2 (long first beat) for a lift
+# without changing tempo. The bridge changes meter to 5/4 (3+2), and the
+# solo returns to 7/8. The lead guitar carries the melody (foreground:
+# full), and the rhythm guitar and bass are built on one signature riff.
+#
+# Pins: riff_driven and bass_doubles, so the verses, intro and outro ride
+# a signature riff with the bass in unison an octave down (the prog
+# signature). The seed chose the rest: a climbing solo, the push into each
+# chorus, how busy the comping is.
+#
+# Listen for:
+#   - count the verse bars: 1-2, 1-2, 1-2-3
+#   - the chorus feeling different in the same 7/8: 1-2-3, 1-2, 1-2
+#   - the bridge opening up into 5/4, then the solo snapping back to 7/8
+#   - the melody phrasing in the meter's groups instead of fighting them
+version: 1
+song:
+  title: "Clockwork Tide"
+  bpm: 132
+  key: F#
+  mode: minor
+  meter: "7/8"
+  meter_grouping: "2+2+3"
+  genre: prog_rock
+  seed: 6101
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 14
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: full
+      register: [61, 85]
+  bass:
+    params: {articulation_style: pick}
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 16
+    harmony: {progression: "i i bVI bVII i i iv V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    meter_grouping: "3+2+2"
+    harmony: {progression: "bIII bVII bVI bVII bIII bVII iv V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    meter: "5/4"
+    meter_grouping: "3+2"
+    harmony: {progression: "iv iv bVI bVI bVII bVII V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 16
+    harmony: {progression: "i i bVI bVII i i iv V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

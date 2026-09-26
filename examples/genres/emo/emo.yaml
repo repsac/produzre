@@ -1,0 +1,82 @@
+# Emo: fast, bright and heartbroken, in G major at 158 BPM, with a singer.
+#
+# Major-key harmony with a sad lean on iii and vi, played fast with
+# driving eighths. The lead guitar plays around an imagined singer
+# (foreground: auto) and answers the chorus with melodic fills instead of
+# a sustained counter-line. The bridge drops to half time for the
+# breakdown before the last chorus.
+#
+# Pinned, and why:
+#   - counter: fills, the lead answers the singer in the chorus gaps
+#   - into_chorus: push, the band anticipates each chorus downbeat
+#   - bridge intensity 0.55, a quieter half-time breakdown for contrast
+#   - drums ghost_rate 0.05: a straight, punchy snare, not a funky one
+# The drummer, bass roles, comp figures and licks are drawn from the seed.
+#
+# Listen for:
+#   - the verse's I iii IV motion, then a chorus that leans into vi
+#   - lead fills answering the chorus lines
+#   - the pulled-back bridge, then the final chorus at full power
+version: 1
+song:
+  title: "Notebook Margins in July"
+  bpm: 158
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: emo
+  seed: 7404
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    counter: fills
+    into_chorus: push
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 86]
+  drums:
+    params: {ghost_rate: 0.05}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I iii IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I iii IV IV I iii IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "vi V IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V vi I IV V vi vi"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.55
+    harmony: {progression: "vi IV I V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, chorus, outro]

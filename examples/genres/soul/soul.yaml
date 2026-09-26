@@ -1,0 +1,93 @@
+# Soul: a Stax-style song in C major with an organ, a singer, and a key change.
+#
+# The verse turns on the classic I vi ii V, the chorus rocks I I7 IV iv
+# (the borrowed minor iv is pure soul), and the bridge walks iii vi ii V
+# back in. The organ (the arpeggiator on a drawbar organ patch, in quarter
+# notes) pulses the chords, the guitar chanks, and the lead guitar plays
+# around the singer (foreground: auto). The bass answers the melody in
+# the gaps and develops its answers each time a section returns. The last
+# chorus goes up a whole step.
+#
+# Pinned, and why:
+#   - bass hook_response: develop, answers that rotate through the hook's
+#     head, its tail and the answer motif as sections return
+#   - arrangement_style.chorus_form: call, the gospel call and response
+#   - arrangement_style.into_chorus: stop, the band stops for a beat and
+#     the singer carries the pickup into the chorus
+#   - song.final_chorus: modulate, the soul key change
+#   - drums ghost_rate 0.3: a busy snare hand around the backbeat
+#   - engines: drawbar organ for the arpeggiator
+# The drummer, the comp figures and the hook come from the seed. Groove
+# memory gives soul a two-bar groove.
+#
+# Listen for:
+#   - I vi ii V in the verse, the organ in quarter notes
+#   - the minor iv (Fm) at the end of each chorus line
+#   - stop-time before the chorus
+#   - the bass filling the holes between vocal phrases, a new answer each time
+#   - the final chorus up a whole step
+version: 1
+song:
+  title: "Sweet Mercy Street"
+  bpm: 104
+  key: C
+  mode: major
+  meter: "4/4"
+  genre: soul
+  seed: 6806
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    chorus_form: call
+    into_chorus: stop
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  arpeggiator: {program: 16}   # GM Drawbar Organ
+
+instruments:
+  drums:
+    params: {ghost_rate: 0.3}
+  bass:
+    params: {hook_response: develop}
+  arpeggiator:
+    params: {pattern: phrase, note_duration: 1.0}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I vi ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I vi ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I I7 IV iv"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "iii vi ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I I7 IV iv"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

@@ -1,0 +1,84 @@
+# Section types: the composed drummer plays a groove per section type.
+#
+# Each song's drummer draws a right-hand timekeeper (closed or open hats,
+# sixteenths, quarters, ride, ride bell, crash-ride, floor-tom pulse, pedal
+# hat, washy hats) and a backbeat (backbeat, half-time or stomp) for every
+# section type. The verse and chorus always contrast, bridges and
+# breakdowns lean toward half-time, and every section starts with a crash.
+# The build log names each choice:
+#
+#   [INFO] Composer: chorus drums play ride8/backbeat
+#
+# The section type is what moves the composed drummer. Section `intensity`
+# and `energy` do not change its pattern (the classic engine reads them; see
+# classic-engine-demo.yaml). The second chorus recalls the first one's
+# groove, and the song closes with a big finish (`ending: big`).
+#
+# Listen for:
+#   - the hands and the backbeat change at every section boundary, while
+#     the kick keeps the song's own two patterns (one for verse-like
+#     sections, a busier one for chorus, solo and outro)
+#   - the bar before each chorus uses the song's way into a chorus (a stop,
+#     a build, a fill, a push or a drop; see transitions/)
+#   - bass and rhythm guitar change figures with the drummer at every section
+version: 1
+song:
+  title: "Drummer Section Types"
+  bpm: 118
+  key: D
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 3419
+  arrangement_style: {ending: big}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "bVI bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 4
+    harmony: {progression: "iv iv bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  breakdown:
+    type: breakdown
+    bars: 4
+    harmony: {progression: "i i bVI bVI"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVII bVI i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, bridge, breakdown, solo, chorus, outro]

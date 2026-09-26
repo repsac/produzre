@@ -1,0 +1,104 @@
+# Jazz walking bass: a medium swing tune in Bb, the bass alone walking
+# ii-V-I changes and taking a solo.
+#
+# A bass by itself plays the bass engine's own line. The walking persona
+# plus rhythm_pattern: walking give a quarter note on every beat, chord
+# tones on strong beats, and diatonic or chromatic approach notes into each
+# chord change. The groove block swings the eighth-note pickups and fills.
+#
+# Listen for:
+#   - intro: a two-feel (half notes, roots and fifths) over a ii-V turnaround
+#   - the head (verse) walks four to the bar through ii-V-I in Bb, landing
+#     on each new chord's root and approaching it a step or half step away
+#   - the second strain (chorus) moves through a iii-VI-ii-V cycle with more
+#     chromatic approaches and a fill at each four-bar phrase end
+#   - the bass solo (solo: true) leaves strict quarters for a denser,
+#     higher, syncopated line with octave leaps, then the head returns
+#   - the outro walks the last ii-V home to the Bb root
+version: 1
+song:
+  title: "Solo Bass Jazz Walk"
+  bpm: 160
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: jazz
+  seed: 7202
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+groove:
+  swing: 0.6
+
+instruments:
+  bass:
+    persona: walking
+    params:
+      articulation_style: finger
+      rhythm_pattern: walking
+      register_low: 28
+      register_high: 55
+      density: 1.0
+      rest_rate: 0.0
+      approach_rate: 0.45
+      chromatic_rate: 0.4
+      max_passing_per_bar: 2
+      motion_style: mixed
+      root_bias: 0.5
+      fill_rate: 0.25
+      fill_complexity: 0.4
+      phrase_len_bars: 4
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.55
+    harmony: {progression: "ii7 V7 ii7 V7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: anchor, density: 1.0, approach_rate: 0.2, fifth_jump_rate: 0.5, fill_rate: 0.0}
+  head:
+    type: verse
+    bars: 8
+    intensity: 0.65
+    harmony: {progression: "ii7 V7 Imaj7 vi7 ii7 V7 Imaj7 Imaj7"}
+    instruments:
+      harmony: {}
+      bass: {}
+  strain:
+    type: chorus
+    bars: 8
+    intensity: 0.8
+    harmony: {progression: "iii7 VI7 ii7 V7 iii7 VI7 ii7 V7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {chromatic_rate: 0.6, approach_rate: 0.55, fill_rate: 0.5}
+  bass_solo:
+    type: solo
+    solo: true
+    bars: 8
+    intensity: 0.9
+    harmony: {progression: "ii7 V7 Imaj7 vi7 ii7 V7 Imaj7 Imaj7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {rhythm_pattern: syncopated, solo_density: 0.9, solo_register_high: 62, octave_jump_rate: 0.3, motion_style: mixed, fill_rate: 0.5}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.55
+    harmony: {progression: "ii7 V7 Imaj7 Imaj7"}
+    instruments:
+      harmony: {}
+      bass:
+        params: {fill_rate: 0.0}
+
+arrangement: [intro, head, strain, head, bass_solo, strain, head, outro]

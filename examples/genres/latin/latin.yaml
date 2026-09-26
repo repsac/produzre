@@ -1,0 +1,87 @@
+# Latin: an instrumental in A minor with a clave-driven band and a nylon guitar.
+#
+# The verse sits on the salsa staple i iv V7 i; the chorus descends the
+# Andalusian cadence (i bVII bVI V7). The lead guitar carries the melody
+# (foreground: full) and the nylon-string acoustic fingerpicks the verses
+# and strums the choruses under it. Groove memory gives Latin a two-bar
+# groove, so drums, bass and the comping guitar lock a bar pair that
+# answers itself, like a clave.
+#
+# Pinned, and why:
+#   - arrangement_style.chorus_form: call, so the chorus melody works as
+#     call and response (A B A B'), the coro and pregon shape of the style
+#   - arrangement_style.solo_story: melodic, a solo that sings the hook
+#     rather than shredding
+#   - bass register_high 50: keeps the bass line below the nylon guitar
+#   - engines: nylon guitar for the acoustic and a clean electric for the
+#     lead, the usual sounds of a Latin guitar band
+# The drummer, the comp figures (clave hits, montuno arpeggios) and the
+# melody come from the seed.
+#
+# Listen for:
+#   - the two-bar comp figure in the verse that answers itself, bar to bar
+#   - the bass locking to the syncopated kick pattern
+#   - the nylon guitar fingerpicking the verse, strumming the chorus
+#   - the chorus melody as a call, then its answer
+#   - a turnaround V7 at the end of each section leading home to i
+version: 1
+song:
+  title: "Calle de la Luna"
+  bpm: 100
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: latin
+  seed: 4410
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    chorus_form: call
+    solo_story: melodic
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  acoustic_gtr: {program: 24}   # GM Acoustic Guitar (nylon)
+  lead_gtr: {program: 27}       # GM Electric Guitar (clean)
+
+instruments:
+  bass:
+    params: {register_high: 50}   # keep the bass under the nylon guitar
+  lead_gtr:
+    params:
+      foreground: full
+      register: [60, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i iv V7 i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i iv V7 i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVII bVI V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "iv V7 i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "iv V7 i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

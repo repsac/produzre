@@ -1,0 +1,79 @@
+# Blues rock: a riff in E, a 12-bar solo, and a singer's chorus.
+#
+# A signature riff drives the intro, verses and outro, with the bass
+# doubling it an octave down so guitar and bass hit every accent together.
+# The verse is an 8-bar blues on E7 and A7, the chorus lifts through the
+# rock move bVI bVII, and the solo is a full 12-bar blues chorus. The lead
+# guitar plays around an imagined singer (foreground: auto).
+#
+# Pinned, and why:
+#   - riff_driven and bass_doubles: blues rock lives on the riff played in
+#     unison by guitar and bass
+#   - solo_story: blues, so the solo is built from the song's blues licks
+#   - turnarounds: true, the V7 turnaround back into each section
+# The drummer, feel, chorus figures and licks are drawn from the seed.
+#
+# Listen for:
+#   - the riff with the bass locked underneath it
+#   - the chorus lifting through C and D (bVI bVII) with the bass pumping
+#     octaves
+#   - the 12-bar solo telling a blues story, then a final chorus and the
+#     riff again in the outro
+version: 1
+song:
+  title: "Mudflap Boogie Engine"
+  bpm: 118
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: blues_rock
+  seed: 7354
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    solo_story: blues
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 83]
+  bass:
+    params: {articulation_style: pick}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I7 I7 IV7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I7 I7 IV7 I7 IV7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVI bVII I I bVI bVII V7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I7 I7 IV7 I7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

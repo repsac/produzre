@@ -1,0 +1,93 @@
+# Heavy metal: a galloping riff in E minor at 168 BPM, with a singer.
+#
+# Classic heavy metal: one signature riff on the low strings, doubled by
+# the bass, a harmonic-minor V chord for tension, a big chorus, and a solo
+# that ends in a whammy dive. The lead guitar plays around an imagined
+# singer (foreground: auto).
+#
+# Pinned, and why:
+#   - riff_driven and bass_doubles: guitar and bass play the riff together
+#   - intro: riff_alone, the riff by itself before the band crashes in
+#   - solo_story: trade and solo_ending: dive, the metal solo habit
+#   - drums kick_density 1.3 and ghost_rate 0.05: a busier kick and a
+#     straight snare, no funky ghost notes
+# The drummer's grooves, the comp figures and the licks come from the seed.
+#
+# Listen for:
+#   - the riff alone, then the whole band locked to it
+#   - the riff under the verse, chugging power chords and a galloping
+#     bass in the chorus
+#   - the major V (B) in the prechorus and bridge pulling back to E minor
+#   - the solo trading phrases and ending in a dive, then a last chorus
+version: 1
+song:
+  title: "Anvil of the Night"
+  bpm: 168
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: heavy_metal
+  seed: 7361
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    intro: riff_alone
+    solo_story: trade
+    solo_ending: dive
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 84]
+  bass:
+    params: {articulation_style: pick}
+  drums:
+    params: {kick_density: 1.3, ghost_rate: 0.05}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i i bVI bVII i i bVI V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "iv bVI V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "bVI bVII i i bVI bVII V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVII bVI V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

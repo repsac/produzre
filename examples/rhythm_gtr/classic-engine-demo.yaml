@@ -1,0 +1,93 @@
+# classic-engine demo
+#
+# The classic rhythm guitar engine, kept for the controls composed comping
+# does not use. `composer: false` hands the part to the engine's pattern
+# renderer, where a `style` picks a fixed pattern vocabulary and these
+# settings work again:
+#
+#   style             straight_8s, chugs, syncopated, half_time, pop_push,
+#                     rock_riff, funk_chanks, jazz_comp, blues_shuffle,
+#                     country_boom_chuck, reggae_skank, latin_clave
+#   strum_style       balanced, downbeat_heavy or upbeat_heavy: which strokes
+#                     the pattern keeps and accents
+#   phrase_len_bars   the phrase cycle for bar-to-bar variation
+#   section_contrast  how far each section type moves from neutral defaults
+#
+#   verse_eighths      straight_8s
+#   prechorus_chugs    chugs with power chords and heavy palm muting
+#   chorus_push        pop_push, downbeat_heavy
+#   bridge_half_time   half_time, low section contrast
+#   verse_syncopated   syncopated, upbeat_heavy, a two-bar phrase cycle
+#
+# Even here `style`, `strum_style` and the other part selectors are enough
+# on their own to pick the engine; `composer: false` makes it explicit for
+# every section. The rest of the band stays composed.
+version: 1
+song:
+  title: "Classic Rhythm Engine"
+  bpm: 112
+  key: G
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 6204
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  rhythm_gtr:
+    params: {composer: false}
+
+sections:
+  verse_eighths:
+    type: verse
+    bars: 8
+    harmony: {progression: ["i", "bVII", "bVI", "V"]}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {params: {style: straight_8s}}
+  prechorus_chugs:
+    type: prechorus
+    bars: 4
+    harmony: {progression: ["bVI", "bVII", "bVI", "bVII"]}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {params: {style: chugs, voicing: power, palm_mute: 0.8}}
+  chorus_push:
+    type: chorus
+    bars: 8
+    harmony: {progression: ["i", "bVI", "bIII", "bVII"]}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {params: {style: pop_push, strum_style: downbeat_heavy}}
+  bridge_half_time:
+    type: bridge
+    bars: 4
+    harmony: {progression: ["iv", "iv", "bVI", "V"]}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {params: {style: half_time, section_contrast: 0.2}}
+  verse_syncopated:
+    type: verse
+    bars: 8
+    harmony: {progression: ["i", "bVII", "bVI", "V"]}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {params: {style: syncopated, strum_style: upbeat_heavy, phrase_len_bars: 2}}
+
+arrangement: [verse_eighths, prechorus_chugs, chorus_push, bridge_half_time, verse_syncopated]

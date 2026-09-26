@@ -1,0 +1,100 @@
+# Classical: a rondo for violin, piano and cello in G major, 3/4, 112 BPM.
+#
+# A small chamber piece in rondo form (A B A C A): the main theme returns
+# three times with contrasting episodes between. There are no drums or
+# guitars. The piano (the arpeggiator) plays broken chords, the cello (the
+# bass engine on GM program 42) holds the harmony underneath, and the
+# violin (the lead_gtr engine on GM program 40) carries the melody as an
+# instrumental voice (foreground: full).
+#
+# Pinned, and why:
+#   - instrument programs: violin (40) and cello (42); the piano is the
+#     arpeggiator's default program
+#   - foreground: full, the violin is the melody, not an accompanist
+#   - bass register 36 to 57 (the cello's range), density 0.8 and
+#     rest_rate 0: a steady line under every bar
+#   - bend_rate 0 and dive_rate 0: no guitar bends or whammy dives on a
+#     violin; vibrato and swells stay on for bowed expression
+#   - section keys: the first episode moves to the dominant (D major), the
+#     second to the relative minor (E minor), then home for the last A
+#   - ending: ring, the coda ends on a held chord, never a rock-style
+#     cold stop
+#   - classical cadences (ii V7 I, IV V7 I) instead of rock progressions
+# The melody's hook, periods and developments come from the seed.
+#
+# Listen for:
+#   - the theme (the "chorus" section) stated, answered and closed
+#   - the D major episode, the theme again, then the darker E minor episode
+#   - the last statement of the theme lifted and ornamented
+#   - a quiet coda closing on a held tonic
+version: 1
+song:
+  title: "Rondo for a Garden Party"
+  bpm: 112
+  key: G
+  mode: major
+  meter: "3/4"
+  genre: classical
+  seed: 7451
+  exports_root: "exports"
+  arrangement_style:
+    ending: ring
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 12
+
+instruments:
+  lead_gtr:
+    program: 40
+    params:
+      foreground: full
+      register: [62, 88]
+      bend_rate: 0
+      dive_rate: 0
+      vibrato_rate: 0.5
+      swell_rate: 0.35
+  bass:
+    program: 42
+    params: {articulation_style: finger, register_low: 36, register_high: 57, density: 0.8, rest_rate: 0}
+  arpeggiator:
+    params: {pattern: phrase, note_duration: 0.5, rest_probability: 0}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.45
+    harmony: {progression: "I IV V7 I"}
+    instruments: {harmony: {}, arpeggiator: {}, bass: {}, lead_gtr: {}}
+  theme:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V I IV ii V7 I I"}
+    instruments: {harmony: {}, arpeggiator: {}, bass: {}, lead_gtr: {}}
+  episode_dominant:
+    type: verse
+    bars: 8
+    key: D
+    mode: major
+    intensity: 0.6
+    harmony: {progression: "I IV V7 I vi ii V7 I"}
+    instruments: {harmony: {}, arpeggiator: {}, bass: {}, lead_gtr: {}}
+  episode_minor:
+    type: bridge
+    bars: 8
+    key: E
+    mode: minor
+    intensity: 0.7
+    harmony: {progression: "i iv V7 i VI iv V7 V7"}
+    instruments: {harmony: {}, arpeggiator: {}, bass: {}, lead_gtr: {}}
+  coda:
+    type: outro
+    bars: 4
+    intensity: 0.4
+    harmony: {progression: "IV V7 I I"}
+    instruments: {harmony: {}, arpeggiator: {}, bass: {}, lead_gtr: {}}
+
+arrangement: [intro, theme, episode_dominant, theme, episode_minor, theme, coda]

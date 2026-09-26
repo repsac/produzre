@@ -1,34 +1,45 @@
 # Song examples
 
-Start with [minimal.yaml](minimal.yaml) for one short section, or
-[rock-simple.yaml](genres/rock/rock-simple.yaml) for a recipe-based arrangement.
+Start with [songs/](songs/README.md) to hear what Produzre writes: twelve
+complete songs across genres and meters. Then pick a genre or an instrument.
 Run commands from the repository root:
 
 ```bash
-python produzre_entry.py build examples/minimal.yaml
-python produzre_entry.py build examples/genres/rock/rock-full-arrangement.yaml
+python produzre_entry.py build examples/songs/iron-horse-road.yaml
+python produzre_entry.py build examples/genres/country/country.yaml
+python produzre_entry.py build examples/drums/solo/rock-drum-feature.yaml
 ```
 
 The build log prints the export directory. Open its full-song MIDI in a DAW
 and play it. The [root README](../README.md#output-files) describes the output files.
 
+Composed parts draw on the song seed combined with your local project seed,
+so your build can hear a different drummer, picking figure or lick bank than
+the one a header describes. Settings a file pins (for example in
+`song.arrangement_style`) are the same everywhere.
+
 ## Find an example
 
 | Directory or file | What to try |
 |---|---|
-| [composer](composer/) | The composer's full song: a hook that returns, a narrative solo, grooves that lock, turnarounds, and a final-chorus key change. `instrumental_anthem.yaml` makes the lead the melody; `band_with_singer.yaml` plays around a singer; `funk_instrumental.yaml` shows two-bar grooves. |
-| [genres](genres/README.md) | Short songs, longer arrangements, and recipe comparisons across 30 genres, plus a mashup. |
-| [bass](bass/README.md) | Articulation, walking, drum locking, fills, slap, and solos. |
-| [drums](drums/README.md) | Kit voices, ghosts, fills, transitions, and timing. |
-| [rhythm_gtr](rhythm_gtr/README.md) | Strum accents and sustained chords. |
-| [lead_gtr](lead_gtr/README.md) | Phrase length, contour, rests, and resolution. |
-| [acoustic_gtr](acoustic_gtr/README.md) | Picking, strumming, and percussion. |
-| [orchestration](orchestration/README.md) | Bass and drums playing together. |
-| [personas](personas/README.md) | Instrument character presets. |
-| [seed-variation](seed-variation/README.md) | Section and instrument seed overrides. |
-| [themes_demo.yaml](themes_demo.yaml) | An authored riff and melody with explicit bass, drum, and rhythm-guitar coupling. |
-| [seed-variation-basic.yaml](seed-variation-basic.yaml), [seed-variation-advanced.yaml](seed-variation-advanced.yaml) | Song-level seed and variation settings. |
-| [tiny.yaml](tiny.yaml) | A small config for quick checks. |
+| [songs](songs/README.md) | Twelve complete songs with their own genre, meter and band: riff rock, an instrumental anthem, pop, funk, honky-tonk, a country waltz, reggae, a jazz waltz, folk, 12/8 blues, 7/8 prog and metal. |
+| [genres](genres/README.md) | One complete, current song for each of 30 genres, plus a mashup that changes genre section by section. |
+| [composer](composer/) | The composer showcases: `band_with_singer.yaml` plays around a singer, `instrumental_anthem.yaml` makes the lead the melody, `funk_instrumental.yaml` shows two-bar grooves. |
+| [drums](drums/README.md) | The composed drummer's feel knobs, fills, phrasing, section types and into-chorus devices ([transitions/](drums/transitions/)); kit voices on the classic engine; [solo drum pieces](drums/solo/README.md). |
+| [bass](bass/README.md) | Articulation, walking, drum locking, fills, slap and grooves on the bass engine; [solo bass pieces](bass/solo/README.md). |
+| [rhythm_gtr](rhythm_gtr/README.md) | Composed comping feel, the signature riff, and the classic pattern engine. |
+| [lead_gtr](lead_gtr/README.md) | Foreground, density, expression, solo stories and lead styles; [solo lead pieces](lead_gtr/solo/README.md). |
+| [acoustic_gtr](acoustic_gtr/README.md) | Picking, strumming and percussion; [solo acoustic pieces](acoustic_gtr/solo/README.md), including composed fingerstyle. |
+| [orchestration](orchestration/README.md) | Bass, drums and guitar locking together. |
+| [personas](personas/README.md) | Instrument character presets for timing and touch. |
+| [seed-variation](seed-variation/README.md) | Takes, section and instrument seed overrides. |
+| [themes_demo.yaml](themes_demo.yaml), [theme_showcase.yaml](theme_showcase.yaml) | Authored riffs and melodies with explicit bass, drum and rhythm-guitar coupling. |
+| [seed-variation-basic.yaml](seed-variation-basic.yaml), [seed-variation-advanced.yaml](seed-variation-advanced.yaml) | Song-level seed settings. |
+| [minimal.yaml](minimal.yaml), [tiny.yaml](tiny.yaml) | The smallest configs, for quick checks. |
+
+Every instrument folder keeps one explicit classic-engine demo
+(`composer: false`) for the older generators' knobs. Everything else uses
+settings the current composer honors.
 
 ## Change one thing at a time
 
@@ -48,7 +59,7 @@ controls between engines without checking that reference.
 python produzre_entry.py validate examples/minimal.yaml
 python produzre_entry.py show-config examples/minimal.yaml --format json
 python produzre_entry.py build examples/minimal.yaml --dry-run -v
-python produzre_entry.py build examples/themes_demo.yaml --strict-determinism
+python produzre_entry.py build examples/songs/iron-horse-road.yaml --strict-determinism
 ```
 
 A dry run checks loading, planning, and rendering without writing exports.
