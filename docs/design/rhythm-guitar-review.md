@@ -268,3 +268,30 @@ I left repeated slides that demonstrably support the groove, existing
 chorus forms, lead hooks, short blues colors, and genre vocabulary intact.
 The unresolved long-note clashes and imperfect pocket are real limitations;
 none is concealed by the successful build and determinism checks.
+
+## Follow-up: restraint as a habit, locked riffs
+
+The review above left restraint opt-in and the pocket bias off by default.
+The follow-up makes `comp_activity` a per-song habit (roughly 3 busy, 5
+normal, 2 sparse for rock), scores every signature riff against the song's
+drum DNA, rules out accents a sixteenth off the backbeat, chokes riff power
+moves that clash with a held lead note, and lets a doubling bass play the
+tails the guitar leaves open. Measured on the same ten-song album with
+`tools/rhythm_review.py`:
+
+| Album measurement | Before | After |
+|---|---:|---:|
+| Verse attacks/bar | 8.61 | 7.61 |
+| Verse bars with a tail | 112/160 | 88/160 |
+| Verse near-miss accents/bar | 0.97 | 0.46 |
+| Verse loud-accent alignment | 57.3% | 59.0% |
+| Verse silence, beats/bar | 1.02 | 1.30 |
+| Outro sustained guitar/lead clashes | 18 | 0 |
+| All sustained guitar/lead clashes | 22 | 2 |
+
+Verse loud-accent alignment in the showcases: singer and anthem 65% to
+86%, funk 61% to 87%, punk 38% to 71%. Choruses, prechoruses and bridges
+are unchanged. Album similarity rises from 0.162 to 0.168 (album seed 2:
+0.165 to 0.169), almost all in bass verses (0.08 to 0.14): more riffs now
+sit on root chugs, which resemble the driving-eighths bass role of other
+songs. Every part remains far below the 0.41 of the original generator.

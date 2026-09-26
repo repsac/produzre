@@ -573,6 +573,37 @@ def _stop_bar(bar_start: float, bpb: float) -> List[CompEvent]:
                       direction="up", tag="comp_stop")]
 
 
+_CLASH = (1, 6, 11)   # minor second, tritone, major seventh
+
+
+def yield_to_lead(events: Sequence[CompEvent], lead: Sequence[dict],
+                  chord_slots, key: str, mode: str) -> List[CompEvent]:
+    """Choke riff power moves that would ring against a held lead note.
+
+    A power chord moved to the b7 or 4 is riff language, but held under a
+    lead note a semitone or tritone away it is a sustained clash, not a
+    color. The move keeps its attack (the riff's rhythm and shape stay)
+    and is cut to a stab, so the clash passes like a blue note.
+    """
+    if not lead:
+        return list(events)
+    chords = ChordMap(chord_slots, key, mode)
+    held = [(float(n["beat"]), float(n["beat"]) + float(n["duration_beats"]), int(n["pitch"]) % 12)
+            for n in lead if float(n.get("duration_beats") or 0) >= 0.5]
+    out = []
+    for e in events:
+        if e.kind == "rpower" and e.interval != 0 and e.dur > 0.3:
+            span = chords.at(e.beat)
+            pcs = set() if span is None else {(span.root_pc + e.interval) % 12,
+                                               (span.root_pc + e.interval + 7) % 12}
+            if any(min(e.beat + e.dur, end) - max(e.beat, start) >= 0.25 and
+                   any((pc - pc_l) % 12 in _CLASH for pc in pcs)
+                   for start, end, pc_l in held):
+                e = replace(e, dur=0.24)
+        out.append(e)
+    return out
+
+
 def plan_comp_section(
     dna: CompDNA,
     *,

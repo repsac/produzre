@@ -12,6 +12,14 @@
   retain transition/ending bars, and use actual scale neighbors for approaches.
 - Add opt-in `comp_activity: normal` and `sparse`, with repeated open bars,
   spaced phrase devices and drum-aware riff candidate scoring.
+- `comp_activity` is now a per-song habit (busy, normal, sparse), drawn
+  like the other arrangement habits and pinned by `arrangement_style`.
+- Signature riffs lock with the drummer in every mode: kick and snare
+  unisons score up, sixteenths off the backbeat are ruled out. Verse
+  near-misses against the drums halve across the benchmark album.
+- Riff power moves under a clashing held lead note are choked to a stab
+  (sustained guitar/lead clashes on the album: 22 to 2).
+- A doubling bass plays the riff tail alone where the guitar leaves it open.
 - Add a rendered bar audit and regression tests. Default guitar album
   similarity is unchanged; see the [review](docs/design/rhythm-guitar-review.md)
   for the bass tradeoff, rejected automatic changes and audio comparisons.

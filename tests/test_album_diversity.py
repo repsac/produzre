@@ -224,3 +224,50 @@ def test_bass_doubles_a_riff_driven_song(tmp_path):
     doubled = [e for e in tl["bass"].events if e.kind == "riff_double"]
     assert riff and doubled
     assert {round(e.start_beat % 4, 2) for e in doubled} <= {round(r["beat"] % 4, 2) for r in riff}
+
+
+# --- groove restraint ------------------------------------------------------------
+
+def test_comp_activity_is_a_per_song_habit():
+    songs = [compose_arrangement_dna(seed=s, genre="hard_rock").comp_activity for s in range(40)]
+    assert set(songs) == {"busy", "normal", "sparse"}
+    assert songs.count("busy") < 20                    # most players leave room
+    pinned = apply_overrides(compose_arrangement_dna(seed=1, genre="rock"),
+                             {"comp_activity": "sparse"})
+    assert pinned.comp_activity == "sparse"
+
+
+def test_signature_riff_never_smears_the_backbeat():
+    snares = (1.0, 3.0)
+    for seed in range(30):
+        riff = compose_signature_riff(seed=seed, genre="hard_rock", pocket=(0.0, 2.5),
+                                      backbeat=snares)
+        for n in riff.bars[0]:
+            if n.accent and n.kind != "rsingle":
+                gap = min(abs(n.onset - s) for s in snares)
+                assert gap < .05 or gap > .3, (seed, n)
+
+
+def test_riff_moves_choke_under_a_clashing_lead_note():
+    from produzre.composer.comping import CompEvent, yield_to_lead
+
+    slots = _slots(["I"])                                  # E major, root E
+    move = CompEvent(2.25, 1.0, "rpower", True, tag="comp_riff", interval=10)   # D power chord
+    root = CompEvent(0.0, 1.0, "rpower", True, tag="comp_riff", interval=0)
+    lead = [{"beat": 2.0, "duration_beats": 2.0, "pitch": 68}]                    # G#
+    out = yield_to_lead([root, move], lead, slots, "E", "major")
+    assert out[0].dur == 1.0                               # E5 under G#: consonant
+    assert out[1].dur <= 0.25 and out[1].beat == 2.25      # D5 under G#: a stab now
+    assert yield_to_lead([move], [], slots, "E", "major")[0].dur == 1.0
+
+
+def test_bass_answers_where_the_guitar_leaves_the_tail_open(tmp_path):
+    tl, result = _render_timelines(_song(tmp_path, 4, style={
+        "riff_driven": True, "bass_doubles": True, "comp_activity": "normal"}))
+    comp = result.performance_plan.get("composer.comp.verse")
+    assert comp["answers"]
+    guitar_tails = {int(e["beat"] // 4) for e in comp["events"] if e["kind"] == "rsingle"}
+    for a in comp["answers"]:
+        assert int(a["beat"] // 4) not in guitar_tails
+    bass = {round(e.start_beat, 2) for e in tl["bass"].events if e.kind == "riff_double"}
+    assert all(round(a["beat"], 2) in bass for a in comp["answers"])

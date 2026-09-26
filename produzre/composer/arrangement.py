@@ -121,4 +121,11 @@ def compose_arrangement_dna(*, seed: int, genre: str) -> ArrangementDNA:
         lead_fills=_pick(rng, {"sparse": 3, "normal": 5, "chatty": 2}),
         ending=_pick(rng, {"ring": 4, "cold": 3, "big": 3 if heavy else 2}),
     )
+    # How busy the rhythm guitarist is: most players state the figure and
+    # leave room, some decorate every bar. Its own stream, so the habits
+    # above stay as they were.
+    busy_rng = random.Random(stable_seed_int("composer.comp_activity", seed, genre))
+    funky = any(t in g for t in ("funk", "disco"))
+    dna = replace(dna, comp_activity=_pick(busy_rng, {"busy": 5 if funky else 3, "normal": 5,
+                                                      "sparse": 1 if funky else 2}))
     return replace(dna, signature=_signature(dna))

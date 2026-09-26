@@ -1208,17 +1208,8 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
                                     shuffle=comp_family(composer.genre) in ("blues", "jazz"))
     groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
     arrangement = composer.arrangement_dna()
-    pocket = []
-    if arrangement.comp_activity != "busy":
-        # Score against the composed drummer after its explicit controls
-        # and part seed have been applied. Skip entrance and fill bars.
-        hits = performance_plan.get(f"composer.drums.{sec.id}") or []
-        for bar in list(range(1, max(1, bars - 1))) + [0]:
-            pocket = sorted({round(float(h["beat"]) - bar * bpb, 4) for h in hits
-                             if bar * bpb <= float(h["beat"]) < (bar + 1) * bpb
-                             and h["kind"] in ("kick", "snare")})
-            if pocket:
-                break
+    kicks, snares = _riff_pocket(composer, performance_plan, sec, bpb, groups)
+    signature = composer.signature_riff(bpb, groups, reseed, kicks, snares)
     events, riff, ring = plan_comp_section(
         comp_dna,
         section_type=sec_type, occurrence=occurrence, is_final_of_type=is_final,
@@ -1231,12 +1222,29 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         groups=groups,
         arrangement=arrangement,
         prev_section_type=(transition_context or {}).get("prev_section_type"),
-        signature_riff=composer.signature_riff(bpb, groups, reseed, pocket),
+        signature_riff=signature,
     )
     if not events:
         return
+    from ..composer.comping import yield_to_lead
+
+    events = yield_to_lead(events, performance_plan.get(f"composer.lead.{sec.id}") or [],
+                           hplan.chord_slots,
+                           getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+                           getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"))
+    # Tails the guitar left open: a doubling bass answers the riff there.
+    answers = []
+    riff_bars = sorted({int(e.beat // bpb) for e in events if e.tag == "comp_riff"})
+    for b in riff_bars:
+        if signature is None or any(e.tag == "comp_riff" and e.kind == "rsingle"
+                                    and b * bpb <= e.beat < (b + 1) * bpb for e in events):
+            continue
+        answers += [{"beat": round(b * bpb + n.onset, 4), "dur": n.dur, "kind": n.kind,
+                     "accent": n.accent, "interval": n.interval}
+                    for n in signature.notes_for_bar(b) if n.kind == "rsingle"]
     genre = str(getattr(cfg.song, "genre", "") or "").lower()
     performance_plan.set(f"composer.comp.{sec.id}", {
+        "answers": answers,
         "riff": riff, "ring": ring, "heavy": any(t in genre for t in _HEAVY_COMP),
         "user": feel,
         "events": [{"beat": e.beat, "dur": e.dur, "kind": e.kind, "accent": e.accent,
@@ -1245,6 +1253,25 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
                    for e in events],
     })
     logger.info("Composer: %s rhythm guitar plays '%s'", sec.id, riff)
+
+
+def _riff_pocket(composer, performance_plan, sec, bpb, groups):
+    """The composed drummer's verse kick and backbeat in one bar, so the
+    signature riff locks with them. Taken from the song's drum DNA rather
+    than one section's hits, so every riff section plays the same riff.
+    Songs whose drums the user wrote get no bias."""
+    if not performance_plan.get(f"composer.drums.{sec.id}"):
+        return (), ()
+    from ..composer.drums import _snare_steps
+
+    dna = composer.drum_dna()
+    steps = max(1, int(round(bpb * 4)))
+    beats = max(1, int(round(bpb)))
+    backbeat = dna.grooves.get("verse", ("hat8", "backbeat"))[1]
+    kick = (dna.kick_verse * 4)[:steps]
+    kicks = tuple(i * 0.25 for i, c in enumerate(kick) if c == "x")
+    snares = tuple(sorted(s * 0.25 for s in _snare_steps(backbeat, beats, steps, groups)))
+    return kicks, snares
 
 
 # Bass settings that choose the line itself keep the bass engine.
@@ -1273,7 +1300,8 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
                                  events_before, section_start_beat, performance_plan,
                                  transition_context, logger) -> None:
     """The bass follows the song's arrangement DNA: it waits out a riff-alone
-    intro, and (when the song chose it) doubles the signature riff."""
+    intro, and (when the song chose it) doubles the signature riff, playing
+    the single-note tail alone where the guitar leaves it open."""
     if inst_name != "bass" or performance_plan is None or hplan is None:
         return
     composer = performance_plan.get("composer.song")
@@ -1310,7 +1338,8 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
         velocity = velocities[len(velocities) // 2]
         template = new_events[0]
         doubled = []
-        for r in riff:
+        # The bass answers in the bars where the guitar leaves its tail open.
+        for r in riff + list((comp or {}).get("answers", [])):
             span = chords.at(float(r["beat"]))
             if span is None or float(r["beat"]) < enter * bpb - 1e-6:
                 continue

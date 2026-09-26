@@ -110,19 +110,41 @@ def _grouped_bar(rng: random.Random, groups: Sequence[float]) -> List[RiffNote]:
     return events
 
 
-def pocket_score(bar: Sequence[RiffNote], pocket: Sequence[float]) -> float:
-    """Favor shared accents over competing sixteenths in restrained riffs."""
-    if not pocket:
-        return 0.0
-    accents = [n for n in bar if n.accent and n.kind != "rsingle"]
-    return sum(1.5 if min(abs(n.onset - t) for t in pocket) < .05 else
-               -1.0 if min(abs(n.onset - t) for t in pocket) <= .26 else 0.0
-               for n in accents) / max(1, len(accents))
+def pocket_score(bar: Sequence[RiffNote], kicks: Sequence[float],
+                 snares: Sequence[float] = ()) -> float:
+    """How the riff's accents sit with the drummer.
+
+    Accents in unison with the kick or snare lock the band (a syncopated
+    accent the kick also plays is the hard rock pocket). An accent a
+    sixteenth off a drum attack flams against it; a sixteenth off the
+    backbeat is the worst, because it smears the snare.
+    """
+    score = 0.0
+    for n in bar:
+        if not n.accent or n.kind == "rsingle":
+            continue
+        k = min((abs(n.onset - t) for t in kicks), default=9.0)
+        sn = min((abs(n.onset - t) for t in snares), default=9.0)
+        if min(k, sn) < .05:
+            score += 0.6 + (0.4 if k < .05 and abs(n.onset - round(n.onset)) > 1e-6 else 0.0)
+        elif sn <= .3:
+            score -= 2.0
+        elif k <= .3:
+            score -= 1.0
+    return score
+
+
+def _smears_backbeat(bar: Sequence[RiffNote], snares: Sequence[float]) -> bool:
+    return any(n.accent and n.kind != "rsingle" and
+               .05 <= min((abs(n.onset - t) for t in snares), default=9.0) <= .3 for n in bar)
 
 
 def compose_signature_riff(*, seed: int, genre: str, beats_per_bar: float = 4.0,
                            tries: int = 40, groups: Optional[Sequence[float]] = None,
-                           pocket: Sequence[float] = ()) -> Optional[SignatureRiff]:
+                           pocket: Sequence[float] = (),
+                           backbeat: Sequence[float] = ()) -> Optional[SignatureRiff]:
+    """``pocket`` and ``backbeat`` are the drummer's kick and snare onsets in
+    one bar; when given, candidates are chosen to lock with them."""
     if beats_per_bar < 3:
         return None
     rng = random.Random(stable_seed_int("composer.riff", seed, genre, beats_per_bar))
@@ -139,9 +161,12 @@ def compose_signature_riff(*, seed: int, genre: str, beats_per_bar: float = 4.0,
         b2 = tuple(sorted(body + tail_b, key=lambda n: n.onset))
         b2 = tuple(replace(n, dur=min(n.dur, b2[i+1].onset-n.onset-.02))
                    if i+1 < len(b2) else n for i, n in enumerate(b2))
-        scored.append((_score(a) + pocket_score(body, pocket)
+        scored.append((_score(a) + pocket_score(body, pocket, backbeat)
                        + 0.5 * (tail_b != [n for n in a if n.kind == "rsingle"]),
                        k, (tuple(a), b2)))
+    # Never pick a riff that smears the backbeat when another one doesn't.
+    clean = [t for t in scored if not _smears_backbeat(t[2][0], backbeat)]
+    scored = clean or scored
     scored.sort(key=lambda t: (-t[0], t[1]))
     bars = rng.choice(scored[:4])[2]
     sig = "".join(("P" if n.kind == "rpower" else "p" if n.kind == "rchug" else "s")

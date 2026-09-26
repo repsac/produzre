@@ -157,21 +157,23 @@ class SongComposer:
                 getattr(self, "arrangement_overrides", None))
         return self._arrangement_dna
 
-    def signature_riff(self, beats_per_bar=None, groups=None, seed=None, pocket=()):
+    def signature_riff(self, beats_per_bar=None, groups=None, seed=None, pocket=(),
+                       backbeat=()):
         """One signature per meter, grouping, part seed and drum pocket."""
         from .theory import default_groups
 
         bpb = self.bpb if beats_per_bar is None else float(beats_per_bar)
         groups = tuple(groups) if groups else self.groups if bpb == self.bpb else default_groups(bpb)
         seed = self.seed if seed is None else seed
-        key = (bpb, groups, seed, tuple(pocket))
+        key = (bpb, groups, seed, tuple(pocket), tuple(backbeat))
         if not hasattr(self, "_signature_riffs"):
             self._signature_riffs = {}
         if key not in self._signature_riffs:
             from .riff import compose_signature_riff
 
             self._signature_riffs[key] = compose_signature_riff(
-                seed=seed, genre=self.genre, beats_per_bar=bpb, groups=groups, pocket=pocket)
+                seed=seed, genre=self.genre, beats_per_bar=bpb, groups=groups, pocket=pocket,
+                backbeat=backbeat)
         return self._signature_riffs[key]
 
     def bass_dna(self):

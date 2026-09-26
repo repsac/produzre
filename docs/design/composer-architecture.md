@@ -355,23 +355,32 @@ or song `humanize_timing` keeps the song's feel out; instrument and section
 ## Rhythm review: restraint and correctness
 
 The rhythm audit found that repeated figures already dominate sections;
-the main excess was a single-note tail in every signature-riff bar, plus
-some figures with a slide every bar. Automatic simplification and pocket
-reranking made some albums more alike, so restraint is opt-in through
-`song.arrangement_style.comp_activity`. `busy` preserves the full figures.
-`normal` alternates a full signature statement and a body-only bar.
-`sparse` keeps three body bars before a tail, spaces added fills eight bars
-apart, and limits slides outside bridge figures. Transition and ending
-devices retain priority. Sparse slides settle into a seeded plain chord
-gesture, preserving differences between players.
+the main excess was a single-note tail in every signature-riff bar, some
+figures with a slide every bar, and riff accents a sixteenth off the
+drummer's kick and snare. Restraint is a per-song habit,
+`ArrangementDNA.comp_activity`, drawn on its own seed stream (so the other
+habits are unchanged) and pinned by `song.arrangement_style`. `busy` plays
+the full figure. `normal` alternates a full signature statement and a
+body-only bar; the render prepass publishes the open tails as `answers`,
+and a doubling bass plays them alone. `sparse` keeps three body bars before
+a tail, spaces added fills eight bars apart, and limits slides outside
+bridge figures. Transition and ending devices retain priority. Sparse
+slides settle into a seeded plain chord gesture, preserving differences
+between players.
 
-Normal and sparse signature candidates score shared kick/snare accents
-and penalize nearby competing sixteenths, using the composed drum plan
-after its explicit settings and seed. This is a bias, not a forced lock.
-An explicit drum pattern remains owned by its engine. Signature recall
-keys include meter, grouping, part seed and pocket; grouped riffs attack
-each group and keep their tails inside it. Bar-two answers cannot overlap
-the body. The default 4/4 candidate selection is unchanged.
+Signature candidates are scored against the song's drum DNA (verse kick
+string and backbeat, `_riff_pocket` in render.py) in every mode, so every
+riff section of a song plays the same riff. Kick or snare unisons score
+up, a syncopated accent the kick doubles scores more, and an accent within
+a sixteenth of the backbeat is excluded whenever a candidate avoids it.
+After the lead is composed, `yield_to_lead` chokes riff power moves that
+would sustain a semitone, tritone, or major seventh against a held lead
+note; the attack stays, so the riff keeps its rhythm and shape.
+
+An explicit drum pattern remains owned by its engine, and a song whose
+drums the user wrote gets no pocket bias. Signature recall keys include
+meter, grouping, part seed and pocket; grouped riffs attack each group and
+keep their tails inside it. Bar-two answers cannot overlap the body.
 
 Performed riff pitches no longer overwrite the velocity baseline. Drum
 humanization, like the shared groove clock, preserves group starts.
