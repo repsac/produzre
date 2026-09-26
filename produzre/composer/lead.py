@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..rng import stable_seed_int
@@ -51,6 +51,7 @@ from .theory import ChordMap, scale_pcs, tonic_pc
 # surprising as the top fifth of human phrases, a cadence settled.
 IC_TARGET = {"establish": 2.5, "develop": 4.0, "climax": 5.3, "cadence": 2.0}
 IC_WEIGHT = 0.9
+CONTEXT_WEIGHT = 4.0
 
 
 @dataclass
@@ -71,6 +72,11 @@ class LeadContext:
     foreground: str = "auto"
     next_section_type: Optional[str] = None
     register: Tuple[int, int] = (60, 76)
+    strict_register: bool = False
+    # User shaping of the composed line (lead `rest_probability` and
+    # `contour_style`); None / "balanced" leave the composer's choices alone.
+    rest_probability: Optional[float] = None
+    contour: str = "balanced"
 
 
 @dataclass(frozen=True)
@@ -101,7 +107,8 @@ class SongComposer:
                  beats_per_bar: float, melody_theme=None,
                  hook_slots: Optional[Sequence] = None,
                  verse_slots: Optional[Sequence] = None,
-                 register: Tuple[int, int] = (60, 76)):
+                 register: Tuple[int, int] = (60, 76),
+                 verse_context: Optional[Tuple[str, str, float]] = None):
         self.seed = int(seed)
         self.genre = str(genre or "")
         self.family = genre_family(self.genre)
@@ -113,10 +120,10 @@ class SongComposer:
             seed=self.seed, genre=self.genre, key=key, mode=mode, beats_per_bar=self.bpb,
             melody_theme=melody_theme,
             hook_fit=self._fitter(hook_slots, lo + 0.62 * (hi - lo), register),
-            verse_fit=self._fitter(verse_slots, lo + 0.38 * (hi - lo), register),
+            verse_fit=self._fitter(verse_slots, lo + 0.38 * (hi - lo), register, verse_context),
         )
         self.listener = Listener()
-        self._plans: Dict[Tuple[str, int, str], List[PlanItem]] = {}
+        self._plans: Dict[tuple, List[PlanItem]] = {}
         self._realized: Dict[tuple, List[Note]] = {}
         self._dna_views: Dict[float, SongDNA] = {}
         self._fill_counter = 0
@@ -137,16 +144,20 @@ class SongComposer:
         return ([n.onset for n in self.dna.hook.notes]
                 + [self.dna.hook.length + n.onset for n in self.dna.hook_answer.notes])
 
-    def _fitter(self, slots: Optional[Sequence], anchor: float, register: Tuple[int, int]):
+    def _fitter(self, slots: Optional[Sequence], anchor: float, register: Tuple[int, int],
+                context=None):
         """Realize a candidate idea over a section's opening bar (DNA ranking)."""
         if not slots:
             return None
-        chords = ChordMap(slots, self.key, self.mode)
+        key, mode, bpb = context or (self.key, self.mode, self.bpb)
+        chords = ChordMap(slots, key, mode)
         lo, hi = register
 
         def fit(cell: Cell):
-            got, cost = realize_cell(cell, 0.0, chords, key=self.key, mode=self.mode,
-                                     lo=lo, hi=hi, anchor=anchor, beats_per_bar=self.bpb)
+            if abs(bpb - self.bpb) > 1e-6:
+                cell = C.fit_length(cell, bpb) if cell.length > bpb else C.Cell(cell.notes, bpb, cell.name)
+            got, cost = realize_cell(cell, 0.0, chords, key=key, mode=mode,
+                                     lo=lo, hi=hi, anchor=anchor, beats_per_bar=bpb)
             return [n.pitch for n in got], cost
 
         return fit
@@ -161,7 +172,7 @@ class SongComposer:
             return []
         rng = random.Random(stable_seed_int("composer.section", self.seed, ctx.section_id,
                                             st, ctx.occurrence))
-        memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar)
+        memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register)
         base_dna = self.dna
         self.dna = self._dna_for(ctx.beats_per_bar)
         try:
@@ -203,11 +214,18 @@ class SongComposer:
         # A returning section over the same chords plays exactly what the
         # listener already knows; only deliberate recall changes (final
         # chorus lift, second-verse rhythm) produce new notes.
-        exact_key = (memory_key, chords.signature(), ctx.register, ctx.key, ctx.mode)
+        exact_key = (memory_key, chords.signature(), ctx.register, ctx.key, ctx.mode,
+                     ctx.rest_probability, ctx.contour)
         if recalled and not lifted and exact_key in self._realized:
             notes = list(self._realized[exact_key])
         else:
             notes = _tidy(self._realize_plan(plan, ctx, chords, rng), ctx.total_beats)
+            if ctx.strict_register:
+                lo, hi = ctx.register
+                notes = [replace(n, pitch=min(
+                    (p for p in range(lo, hi + 1) if p % 12 == n.pitch % 12),
+                    key=lambda p: (abs(p - n.pitch), p), default=max(lo, min(hi, n.pitch))))
+                         for n in notes]
             if st != "solo" and not lifted:
                 self._realized.setdefault(exact_key, notes)
         self.listener.observe([n.pitch for n in notes], [n.dur for n in notes])
@@ -579,14 +597,31 @@ class SongComposer:
     # ------------------------------------------------------------------
     # Realization
     # ------------------------------------------------------------------
+    def _apply_rests(self, plan: List[PlanItem], ctx: LeadContext) -> List[PlanItem]:
+        """Honor the lead's ``rest_probability``: drop non-structural phrase
+        items (answers, developments, fills) so the line leaves more space,
+        on a dedicated seeded stream so default output is untouched."""
+        rate = ctx.rest_probability
+        if rate is None or rate <= 0:
+            return plan
+        rng = random.Random(stable_seed_int("composer.rests", self.seed, ctx.section_id,
+                                            ctx.occurrence))
+        kept = []
+        for it in plan:
+            structural = it.tag in _REST_PROOF_TAGS or it.cadence is not None
+            if structural or rng.random() >= min(0.9, float(rate)):
+                kept.append(it)
+        return kept
+
     def _realize_plan(self, plan: List[PlanItem], ctx: LeadContext, chords: ChordMap,
                       rng: random.Random) -> List[Note]:
         lo, hi = ctx.register
         solo = _normalize_type(ctx.section_type) == "solo"
-        if solo:
+        if solo and not ctx.strict_register:
             hi = _solo_top(lo, hi)
         notes: List[Note] = []
         prev: Optional[int] = None
+        plan = self._apply_rests(plan, ctx)
         climax_at = min((i.start for i in plan if i.tag in ("solo_climax", "solo_peak")),
                         default=None)
         peak_hi = hi
@@ -647,7 +682,8 @@ class SongComposer:
                                      lo=lo, hi=hi, anchor=it.anchor, prev_pitch=prev,
                                      cadence_pcs=cad_pcs, beats_per_bar=ctx.beats_per_bar,
                                      exact_degrees=exact,
-                                     entry_after_rest=after_rest)
+                                     entry_after_rest=after_rest,
+                                     leap_scale=_LEAP_SCALE.get(ctx.contour, 1.0))
             if not got:
                 continue
             score = cost
@@ -655,6 +691,8 @@ class SongComposer:
                 ic = self.listener.mean_information([n.pitch for n in got], [n.dur for n in got],
                                                     context)
                 score += IC_WEIGHT * abs(ic - IC_TARGET.get(it.role, 3.0))
+                score += CONTEXT_WEIGHT * self.listener.contextual_cost(
+                    got, chords, ctx.beats_per_bar)
                 score += 0.05 * k  # ties favor the plainer development
             if best is None or score < best[0]:
                 best = (score, got)
@@ -664,7 +702,7 @@ class SongComposer:
         """A sustained descant: one chord tone per chord, moving by step in a
         planned direction (down across one phrase, up across the next), with
         occasional anticipations and passing tones for forward motion."""
-        spans = [sp for sp in chords.spans if it.start - 1e-6 <= sp.start < it.end - 1e-6]
+        spans = [sp for sp in chords.spans if sp.end > it.start + 1e-6 and sp.start < it.end - 1e-6]
         if not spans:
             return []
         anchor = it.anchor
@@ -697,7 +735,7 @@ class SongComposer:
 
             pitch = min(cands, key=lambda p: (cost(p), p))
             end = min(span.end, it.end)
-            start = span.start
+            start = max(span.start, it.start)
             # Anticipate every other change on longer chords (a syncopated push).
             if i % 2 == 1 and end - start >= 2 and start - 0.5 >= it.start and out:
                 start -= 0.5
@@ -725,6 +763,13 @@ class SongComposer:
         return out
 
 
+_LEAP_SCALE = {"stepwise": 2.0, "balanced": 1.0, "leaping": 0.4}
+# Phrase items a rest never removes: the hook statement, cadences, and the
+# solo's structural moments carry the form.
+_REST_PROOF_TAGS = ("hook", "solo_statement", "solo_climax", "solo_peak", "solo_final",
+                    "outro_final", "outro_ring", "pre_hold")
+
+
 def _solo_top(lo: int, hi: int) -> int:
     """Solo ceiling: extend a normal register up to D6 (licks may reach E6,
     the top of a 24-fret neck), but never shrink a register already set high."""
@@ -744,7 +789,7 @@ def _sub_context(ctx: LeadContext, bars: int) -> LeadContext:
     return LeadContext(ctx.section_id, ctx.section_type, ctx.occurrence, ctx.is_final_of_type,
                        bars, ctx.beats_per_bar, bars * ctx.beats_per_bar, ctx.key, ctx.mode,
                        ctx.chord_slots, ctx.intensity, ctx.foreground, ctx.next_section_type,
-                       ctx.register)
+                       ctx.register, ctx.strict_register)
 
 
 def _tidy(notes: List[Note], total: float) -> List[Note]:

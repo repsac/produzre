@@ -44,15 +44,16 @@ def _walk_pitch(target_pc: Optional[int], distance: int, near: int, key: str, mo
     target = near + ((target_pc - near) % 12 or 12)
     if target - near > 7:
         target -= 12
-    if distance <= 0:
-        return target - 1
     scale = sorted(scale_pcs(key, mode))
     p = target
     for _ in range(2):
         p -= 1
         while p % 12 not in scale:
             p -= 1
-    return p
+    while p < 40:
+        p += 12
+        target += 12
+    return target - 1 if distance <= 0 else p
 
 
 def perform_comp(
@@ -69,8 +70,32 @@ def perform_comp(
     rng: random.Random,
     strum_ms: float = 14.0,
     timing_jitter_ms: float = 6.0,
+    feel: Optional[dict] = None,
+    beats_per_bar: float = 4.0,
 ) -> int:
-    """Render composed comp events; returns the number of notes written."""
+    """Render composed comp events; returns the number of notes written.
+
+    ``feel`` carries the user's explicit rhythm settings: ``density`` below
+    0.7 thins weak off-beat gestures, ``palm_mute`` turns plain strums into
+    chugs, ``chuck_rate`` turns light upstrokes into dead-note chucks,
+    ``sustain_cut_rate`` cuts strums to stabs, and ``accent_strength``,
+    ``downbeat_boost`` and ``humanize_velocity`` shape dynamics. They use
+    their own random stream, so a default build is unchanged.
+    """
+    feel = dict(feel or {})
+    feel_rng = random.Random(7919 + len(events))
+
+    def _f(name: str) -> Optional[float]:
+        try:
+            return float(feel[name]) if feel.get(name) is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    density, palm, chuck_rate = _f("density"), _f("palm_mute"), _f("chuck_rate")
+    cut, accent_strength = _f("sustain_cut_rate"), _f("accent_strength")
+    downbeat_boost, vel_humanize = _f("downbeat_boost"), _f("humanize_velocity")
+    accent_gain = 1.0 + 0.24 * accent_strength if accent_strength is not None else 1.12
+    vel_spread = int(round(8 * vel_humanize)) if vel_humanize is not None else 4
     base = int(80 * max(0.45, min(1.3, intensity)))
     beats_per_ms = bpm / 60000.0
     written = 0
@@ -85,15 +110,28 @@ def perform_comp(
         full, power, numeral = shape
         full = sorted(full) or sorted(power)
         power = sorted(power) or full[:2]
+        if not full:
+            continue
         # Chugs, boogies and bass-string lines live on the low strings.
-        while power and power[0] >= 50:
+        while power and power[0] - 12 >= 40:
             power = [p - 12 for p in power]
         # The bass-string root: the lowest sounding root among both shapes.
         root_pc = power[0] % 12
         root = min((p for p in full + power if p % 12 == root_pc), default=power[0])
         accent = bool(ev.get("accent"))
         tag = str(ev.get("tag") or "comp")
-        vel = base * (1.12 if accent else 0.95)
+        on_beat = abs(beat - round(beat)) < 1e-6
+        if density is not None and density < 0.7 and not accent and not on_beat \
+                and tag == "comp" and feel_rng.random() >= density / 0.7:
+            continue
+        if palm is not None and kind == "strum" and not accent and tag == "comp" \
+                and feel_rng.random() < palm:
+            kind = "chug"
+        if chuck_rate is not None and kind == "up" and feel_rng.random() < chuck_rate:
+            kind = "chuck"
+        vel = base * (accent_gain if accent else 0.95)
+        if downbeat_boost is not None and beats_per_bar > 0 and abs(beat % beats_per_bar) < 1e-6:
+            vel *= 1.0 + downbeat_boost
         expression: Optional[dict] = None
         notes: List[Tuple[int, float, float]] = []  # (pitch, offset, dur)
         direction = str(ev.get("direction") or "down")
@@ -103,6 +141,8 @@ def perform_comp(
             ps = full if direction == "down" else sorted(full)[-max(3, len(full) - 2):]
             # A stop-time hit or a final chord rings through its silence.
             d = dur if tag == "comp_stop" else min(dur, ring)
+            if cut is not None and tag == "comp" and feel_rng.random() < cut:
+                d = min(d, 0.15)
             notes = [(p, 0.0, d) for p in ps]
             if direction == "up":
                 vel *= 0.82
@@ -170,7 +210,8 @@ def perform_comp(
         start = section_start_beat + beat + (abs(jitter) if beat == 0 else jitter)
         step = strum_ms * beats_per_ms / max(1, len(notes) - 1) if spread and len(notes) > 1 else 0.0
         for n_i, (pitch, offset, d) in enumerate(notes):
-            v = int(vel * (1.0 - 0.03 * n_i if direction == "down" else 1.0)) + rng.randint(-4, 4)
+            v = int(vel * (1.0 - 0.03 * n_i if direction == "down" else 1.0)) + \
+                rng.randint(-4, 4) * vel_spread // 4
             timeline.add_note(
                 start_beat=start + offset + (n_i * step if offset == 0 else 0.0),
                 duration_beats=max(0.04, d),

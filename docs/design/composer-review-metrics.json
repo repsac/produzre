@@ -1,0 +1,115 @@
+{
+  "cases_per_arm": 288,
+  "seeds": 24,
+  "genres": [
+    "rock",
+    "pop",
+    "funk"
+  ],
+  "beats_per_bar": [
+    4,
+    3,
+    3.5,
+    5
+  ],
+  "chord_rates": [
+    4,
+    1.5,
+    2,
+    3
+  ],
+  "listener_ab": {
+    "before": {
+      "notes": 37.90625,
+      "step_ratio": 0.392112,
+      "leap_recovery": 0.357152,
+      "exact_repeat": 0.075231,
+      "varied_repeat": 0.262731,
+      "novel": 0.662037,
+      "rhythm_recur": 0.624566,
+      "self_ic": 3.89073,
+      "ic_spread": 1.956913,
+      "climax_share": 0.530382,
+      "exposure": 0.082692,
+      "strong_chord_tones": 0.581597
+    },
+    "after": {
+      "notes": 37.805556,
+      "step_ratio": 0.383065,
+      "leap_recovery": 0.35181,
+      "exact_repeat": 0.076389,
+      "varied_repeat": 0.256944,
+      "novel": 0.666667,
+      "rhythm_recur": 0.61849,
+      "self_ic": 3.884388,
+      "ic_spread": 1.954341,
+      "climax_share": 0.532986,
+      "exposure": 0.078047,
+      "strong_chord_tones": 0.582031
+    }
+  },
+  "exported_lead_hygiene": {
+    "band_with_singer_1": {
+      "notes": 168,
+      "overlaps": 0,
+      "minimum": 62,
+      "maximum": 79
+    },
+    "funk_instrumental_1": {
+      "notes": 275,
+      "overlaps": 0,
+      "minimum": 62,
+      "maximum": 79
+    },
+    "instrumental_anthem_1": {
+      "notes": 316,
+      "overlaps": 0,
+      "minimum": 60,
+      "maximum": 79
+    },
+    "meter_edges_1": {
+      "notes": 43,
+      "overlaps": 0,
+      "minimum": 61,
+      "maximum": 74
+    }
+  },
+  "build_verification": {
+    "instrumental_anthem": {
+      "hash_seeds": [
+        1,
+        77,
+        999
+      ],
+      "midi_files": 5,
+      "byte_identical": true
+    },
+    "funk_instrumental": {
+      "hash_seeds": [
+        1,
+        77,
+        999
+      ],
+      "midi_files": 5,
+      "byte_identical": true
+    },
+    "band_with_singer": {
+      "hash_seeds": [
+        1,
+        77,
+        999
+      ],
+      "midi_files": 5,
+      "byte_identical": true
+    },
+    "meter_edges": {
+      "hash_seeds": [
+        1,
+        77,
+        999
+      ],
+      "midi_files": 5,
+      "byte_identical": true
+    }
+  }
+}

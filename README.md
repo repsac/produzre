@@ -174,6 +174,13 @@ trained on the song as it plays, picks each development so its surprise suits
 the phrase: settled when the hook returns, fresher in a development, highest
 at a climax.
 
+The listener also weighs dissonance against metric position and chord changes,
+including notes held across a change. Explicit lead phrase and technique
+controls select the legacy performer; numeric `register: [low, high]` bounds
+are kept exactly. Rhythm density, voicing, and performance controls also take
+precedence over comping. See the [composer review](docs/design/composer-review.md)
+for reproductions, measurements, and remaining limits.
+
 With `foreground: full` the lead carries the melody, for instrumental
 songs. With the default `auto`, it plays the band's guitar part around a
 singer: the hook in the intro, licks at the end of verse phrases, a sustained

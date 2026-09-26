@@ -67,6 +67,7 @@ def realize_cell(
     contour_weight: float = 1.2,
     exact_degrees: bool = False,
     entry_after_rest: bool = True,
+    leap_scale: float = 1.0,
 ) -> Tuple[List[Note], float]:
     """Realize ``cell`` starting at section beat ``start``.
 
@@ -77,6 +78,8 @@ def realize_cell(
             as the register pull, used for arcs toward a climax).
         cadence_pcs: Pitch classes the final note must land on.
         exact_degrees: Honor ``CellNote.degree`` strictly (authored themes).
+        leap_scale: Weight on leap costs (the lead's ``contour_style``):
+            above 1 favors stepwise lines, below 1 frees wider leaps.
         entry_after_rest: The cell starts out of silence, so its first note
             cannot be a prepared dissonance and should be a chord tone.
 
@@ -98,7 +101,7 @@ def realize_cell(
         beat = start + cn.onset
         span = chords.at(beat)
         chord_pcs = span.pcs if span else scale
-        mw = metric_weight(cn.onset % beats_per_bar, beats_per_bar)
+        mw = metric_weight(beat % beats_per_bar, beats_per_bar)
         is_last = i == n_notes - 1
         reg_target = (target_curve[i] if target_curve is not None and i < len(target_curve)
                       else anchor)
@@ -145,7 +148,9 @@ def realize_cell(
                         c += 0.9
                     leap = abs(move)
                     if leap > 7:
-                        c += 0.6 * (leap - 7)
+                        c += 0.6 * leap_scale * (leap - 7)
+                    if leap_scale > 1.0 and leap > 4:
+                        c += 0.5 * (leap_scale - 1.0) * (leap - 4)
                     if leap > 12:
                         c += 6.0
                     # Leap recovery: after a leap, prefer contrary motion.

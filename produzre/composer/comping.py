@@ -355,23 +355,21 @@ def riff_events(riff: CompRiff, bar_start: float, bpb: float, chords: ChordMap,
         while j < len(steps) and steps[j] == "-":
             j += 1
         beat = bar_start + i * step
-        dur = (j - i) * step
+        dur = min((j - i) * step, bar_start + bpb - beat)
+        if dur <= 1e-6:
+            break
         kind = _KIND[c]
         on_beat = i % sub == 0
         direction = "up" if (kind == "up" or (kind == "strum" and not on_beat and sub != 3)) \
             else "down"
         target = None
         if kind == "walk":
-            nxt = chords.at(min(bar_start + bpb + 1e-3, chords.total - 1e-3)) \
-                if bar_start + bpb < chords.total else chords.at(beat)
-            # Walk toward the next chord change inside this bar, if any.
-            for k in range(j, len(steps)):
-                if steps[k] in _EVENT_CHARS:
-                    nxt = chords.at(bar_start + k * step)
-                    break
+            current = chords.at(beat)
+            nxt = next((sp for sp in chords.spans if sp.start > beat + 1e-6
+                        and (current is None or sp.pcs != current.pcs)), current)
             target = nxt.root_pc if nxt is not None else None
         events.append(CompEvent(round(beat, 4), dur, kind, accent=c in "XPS/", direction=direction,
-                                arp_index=arp_i, target_pc=target, tag=tag))
+                                arp_index=arp_i if kind == "arp" else 0, target_pc=target, tag=tag))
         if kind == "arp":
             arp_i += 1
         i = j

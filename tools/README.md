@@ -317,3 +317,11 @@ The `genre_stats.json` output contains an array of genre objects:
 Each metric field contains `{n, mean, median, stdev, min, max}` computed across
 all files in that genre.  See `GenreStats` in `batch_analyze.py` for the full
 list of tracked metrics.
+
+### Composer review A/B
+
+`python tools/composer_review.py --seeds 24 --lead-sheets` compares contextual
+listener scoring on/off over 288 section cases. It prints musicality metrics,
+metric-weighted harmonic exposure, and optional chord/note lead sheets. Both
+arms include the correctness fixes; the contextual scoring weight is the only
+A/B variable. See `docs/design/composer-review.md` for interpretation.

@@ -138,6 +138,37 @@ class Listener:
         ics = self.information(pitches, durations, context)
         return sum(ics) / len(ics) if ics else 0.0
 
+    def contextual_cost(self, notes, chords, beats_per_bar: float) -> float:
+        """Metric-weighted dissonance exposure, separate from calibrated IC.
+
+        Evaluate held notes across chord boundaries as well as at attacks.
+        Short, stepwise passing tones are cheaper than exposed dissonances.
+        This is a musical heuristic, not a probability learned from the prior.
+        """
+        from .theory import metric_weight
+
+        if not notes or beats_per_bar <= 0:
+            return 0.0
+        cost = total = 0.0
+        for i, note in enumerate(notes):
+            end = note.beat + note.dur
+            passing = (0 < i < len(notes) - 1 and note.dur <= 0.5
+                       and 0 < abs(note.pitch - notes[i - 1].pitch) <= 2
+                       and 0 < abs(notes[i + 1].pitch - note.pitch) <= 2
+                       and (note.pitch - notes[i - 1].pitch)
+                       * (notes[i + 1].pitch - note.pitch) > 0)
+            for span in chords.spans:
+                start, stop = max(note.beat, span.start), min(end, span.end)
+                if stop <= start:
+                    continue
+                duration = stop - start
+                total += duration
+                if note.pitch % 12 in span.pcs:
+                    continue
+                weight = metric_weight(start % beats_per_bar, beats_per_bar)
+                cost += duration * (0.25 + 0.75 * weight) * (0.35 if passing else 1.0)
+        return cost / total if total else 0.0
+
     # -- learning --------------------------------------------------------
     def observe(self, pitches: Sequence[int], durations: Sequence[float]) -> None:
         ivs = [_clip(b - a) for a, b in zip(pitches, pitches[1:])]

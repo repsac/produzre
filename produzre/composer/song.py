@@ -53,6 +53,7 @@ def lead_register(cfg: Any, lead_cfg: Any = None) -> Tuple[int, int]:
                 or (data.get("extra") or {}).get("register")
     if isinstance(reg, (list, tuple)) and len(reg) == 2:
         lo, hi = int(reg[0]), int(reg[1])
+        return max(0, min(127, lo)), max(0, min(127, hi))
     else:
         lo, hi = get_register_bounds(str(reg) if reg else "mid")
     # Melodies need a little headroom above the preset's comfortable top.
@@ -61,15 +62,13 @@ def lead_register(cfg: Any, lead_cfg: Any = None) -> Tuple[int, int]:
     return lo, min(125, hi)  # licks may reach 2 above: stay inside MIDI
 
 
-def _first_slots(plan: Any, types: Sequence[str]) -> Optional[Sequence]:
+def _first_source(plan: Any, types: Sequence[str]):
     for ps in getattr(plan, "planned_sections", ()):
         hp = getattr(ps, "harmony_plan", None)
         if hp is None or not getattr(hp, "chord_slots", None):
             continue
         if _normalize_type(getattr(ps.sec, "type", "")) in types:
-            bpb = float(getattr(hp.meter, "beats_per_bar", 4.0) or 4.0) \
-                if getattr(hp, "meter", None) is not None else 4.0
-            return [s for s in hp.chord_slots if s.start_beat < bpb * 2 - 1e-6]
+            return ps
     return None
 
 
@@ -86,18 +85,32 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
             if getattr(theme.role, "value", "") == "melody" and "user" in theme.tags:
                 melody_theme = theme
                 break
-    bpb = float(getattr(song, "beats_per_bar", 4) or 4)
-    hook_slots = _first_slots(plan, ("chorus",)) or _first_slots(plan, ("verse", "intro"))
-    verse_slots = _first_slots(plan, ("verse",)) or hook_slots
+    hook_source = (_first_source(plan, ("chorus",)) or _first_source(plan, ("verse", "intro"))
+                   or next((ps for ps in getattr(plan, "planned_sections", ())
+                            if getattr(getattr(ps, "harmony_plan", None), "chord_slots", None)), None))
+    verse_source = _first_source(plan, ("verse",)) or hook_source
+
+    def source_context(source):
+        sec = source.sec if source is not None else song
+        hp = source.harmony_plan if source is not None else None
+        bpb = float(getattr(getattr(hp, "meter", None), "beats_per_bar", None)
+                    or getattr(song, "beats_per_bar", 4) or 4)
+        slots = [s for s in hp.chord_slots if s.start_beat < bpb * 2 - 1e-6] if hp else None
+        return (slots, getattr(sec, "key", None) or song.key,
+                getattr(sec, "mode", None) or song.mode, bpb)
+
+    hook_slots, key, mode, bpb = source_context(hook_source)
+    verse_slots, verse_key, verse_mode, verse_bpb = source_context(verse_source)
     composer = SongComposer(
         seed=int(getattr(song, "seed", 0) or 0),
         genre=str(getattr(song, "genre", "") or ""),
-        key=str(getattr(song, "key", "C") or "C"),
-        mode=str(getattr(song, "mode", "major") or "major"),
+        key=str(key or "C"),
+        mode=str(mode or "major"),
         beats_per_bar=bpb,
         melody_theme=melody_theme,
         hook_slots=hook_slots,
         verse_slots=verse_slots,
+        verse_context=(verse_key, verse_mode, verse_bpb),
         register=lead_register(cfg),
     )
     composer.hook_slots = hook_slots

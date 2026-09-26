@@ -503,10 +503,24 @@ song draws its own signature figures from an idiomatic vocabulary: dead-note
 chucks, bass-string walks, sus4 hammer-ons, slid chords, boogie dyads, stabs,
 and gallops. It arranges them so the verse, chorus, and bridge contrast.
 Phrases walk up into the next phrase, and the bar before a chorus is
-stop-time. Setting any of `style`, `strum_style`, `sustain_mode`,
-`playstyle`, `pattern`, `play_pattern`, `follow_hats`, `use_patterns`, or
-`lock_to_riff` keeps your choice, and so does `composer: false`. `strum_ms`
-and `humanize_timing` still shape the performance.
+stop-time. Settings that choose a different part keep your choice: `style`,
+`strum_style`, `sustain_mode`, `playstyle`, `pattern`, `play_pattern`,
+`follow_hats`, `use_patterns`, `recipe`, `lock_to_riff`, and
+`composer: false`. Feel settings shape the composed part instead:
+
+| Setting | Effect on composed comping |
+|---|---|
+| `density` | Below 0.7, thins weak off-beat gestures. |
+| `palm_mute` | Chance a plain strum becomes a palm-muted chug. |
+| `chuck_rate` | Chance a light upstroke becomes a dead-note chuck. |
+| `sustain_cut_rate` | Chance a strum is cut to a stab. |
+| `voicing` | `power` or `octaves` plays power shapes throughout. |
+| `register_min`, `register_max` | Shapes shift by octaves to fit. |
+| `accent_strength`, `downbeat_boost`, `humanize_velocity` | Dynamics. |
+| `strum_ms`, `humanize_timing`, `offset_beats`, `style_bias` | Timing and intensity. |
+
+`phrase_len_bars`, `phrase_development`, and `section_contrast` tune only the
+pattern engine; the build logs that they are unused.
 
 ## Lead guitar controls
 
@@ -518,7 +532,7 @@ and `humanize_timing` still shape the performance.
 | `contour_style` | `stepwise`, `balanced`, `leaping` | persona | Choose the melodic contour. Balanced persona: `balanced`. |
 | `theme_quote_rate` | 0-1 | 0.65 | Quote nearby theme pitches on eligible interior notes. Quotes adopt the theme's duration as well as its pitch. |
 | `foreground` | `auto`, `full` | `auto` | `full`: the lead carries the melody (instrumental music). `auto`: the lead plays around a singer, with hooks, fills, counter-lines, and solos. Set per section or as a song-level default. |
-| `composer` | Boolean | true | Per-section opt-out of the composer. The legacy motif controls below apply only when this is false. |
+| `composer` | Boolean | true | Per-section opt-out of the composer. The only lead setting that selects the legacy engine. |
 | `ring_out` | 0-1 | 0.85 | How far a note rings into the silence after it. 0 cuts at the grid cell, 1 rings up to the next note. Staccato notes stay short. |
 | `ring_max_beats` | 0.5 or more | 4 | Longest note that ring-out may create. |
 | `vibrato_rate` | 0-1 | 0.65 | Chance a note held a beat or longer gets pitch-bend vibrato. |
@@ -536,9 +550,34 @@ Use direct `register: low`, `mid`, `high`, `very_high`, or `full`. Direct
 Genre selects motif vocabulary; successive phrases develop that motif.
 Use contour, rest probability, resolution, and intensity to shape the part.
 
+With the composer on, your lead settings shape the composed line instead of
+replacing it. `rest_probability` drops answers, developments, and fills (never
+the hook, cadences, or the solo's structural moments). `contour_style` of
+`stepwise` or `leaping` changes how leaps are weighed. `vibrato_rate`,
+`bend_rate` (0 removes bends), `dive_rate`, and `swell_rate` shape the
+expression, including zero values. `phrase_len_bars`, `theme_quote_rate`,
+`resolution_strength`, `ring_out`, and `ring_max_beats` tune only the legacy
+generator: the build logs that they are unused and names `composer: false`
+as the way to use them. Persona defaults never count as your choice; values
+you set in a section's own `extra:` block always do. A numeric `register: [low, high]` is a hard MIDI-note range,
+including solos; named presets retain their comfortable-range headroom.
+Extremely narrow ranges can constrain authored pitches and melodic contour.
+
+Rhythm `density`, `palm_mute`, `voicing`, `register_min`, `register_max`,
+`accent_strength`, `push_pull`, `chuck_rate`, `humanize_velocity`,
+`downbeat_boost`, `sustain_cut_rate`, `section_contrast`, `phrase_len_bars`,
+and `phrase_development` also select the legacy path when explicitly set.
+Direct instrument `recipe`, `voicing`, humanization, `style_bias`, or
+`offset_beats` overrides do likewise. Composed rhythm still supports
+`params.strum_ms` and `params.humanize_timing` directly.
+
 ### The composer
 
 With the composer on (the default), the lead is written from the song's DNA.
+DNA selection uses the source section's actual key, mode, and meter. The
+listener separately penalizes exposed dissonance according to metric position
+and harmony, including held notes across changes. This heuristic does not
+change the calibrated interval surprise targets.
 Once per song it chooses a hook, an answer, a verse idea, a bridge idea, and
 three signature licks, picking the most memorable candidates as heard over
 your chorus and verse chords. Sections use phrase forms:
@@ -689,3 +728,8 @@ picked bass, a chugging guitar pattern, and fewer rests.
 Use [the examples](../examples/README.md) for complete arrangements, including
 rock, funk, acoustic jazz, and theme demonstrations. See
 [DETERMINISM.md](../DETERMINISM.md) for seed overrides and project sharing.
+
+Groove recall compares top-level instrument settings as well as nested params.
+Changing a register, seed, variation, or playing configuration starts a new
+memory identity. Intensity remains separate, allowing dynamics to scale a
+recalled groove. Nested configuration order does not affect this identity.

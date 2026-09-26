@@ -2,6 +2,23 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Composer review fixes and extension
+
+- Respect explicit lead phrase and technique controls, numeric lead register
+  bounds, and rhythm density, voicing, and performance controls.
+- Fit song DNA using the source section's key, mode, and meter. Counter-lines
+  include chords already sounding at phrase entry; realization uses actual
+  section-relative metric position.
+- Walk toward the next harmonic change, independent of arpeggio state. Keep
+  power chords and walking notes above standard guitar's low E.
+- Groove recall includes top-level configuration and canonical nested params.
+- Keep slide graces MIDI-safe and the final lead monophonic after transitions.
+- Add metric and harmonic exposure scoring to listener development choices,
+  plus a reproducible A/B tool and readable lead sheets. Exposure fell 5.6%
+  on 288 controlled section cases; other metrics show small tradeoffs.
+- Existing affected songs intentionally change. No golden files regenerated.
+  See [the review report](docs/design/composer-review.md).
+
 ### What changes for existing songs
 
 Existing YAML produces different MIDI. The lead guitar is now composed, and
@@ -20,6 +37,11 @@ the rhythm section settles into grooves.
   keeps the engine's own last bar. Choruses recall their groove.
   `song.groove_memory: false`, or `groove_memory: false` per instrument,
   restores bar-by-bar output. The bass golden baseline was regenerated.
+- **Your settings shape composed parts.** Part selectors (`style`,
+  `pattern`, `sustain_mode`, `recipe`, `composer: false`) keep the previous
+  engines. Lead `rest_probability`, `contour_style` and expression rates, and
+  rhythm `density`, `palm_mute`, `chuck_rate`, `voicing`, register and dynamics,
+  shape the composed parts. Legacy-only tuning is logged as unused.
 - **Rhythm guitar** is composed unless a part pins its own style or mode.
   Each song gets signature comp riffs (chucks, walks, sus hammer-ons,
   slides, boogies, gallops), with verse, chorus, and bridge contrast,

@@ -723,7 +723,21 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
     from .composed import perform_comp
     from .voicings import choose_voicing
 
-    heavy = bool(comp.get("heavy"))
+    feel = dict(comp.get("user") or {})
+    heavy = bool(comp.get("heavy")) or str(feel.get("voicing") or "").lower() in ("power", "octaves")
+
+    def _fit(pitches):
+        """Octave-shift a shape into an explicit register_min/max."""
+        ps = list(pitches)
+        lo, hi = feel.get("register_min"), feel.get("register_max")
+        try:
+            while hi is not None and ps and max(ps) > int(hi) and min(ps) - 12 >= 28:
+                ps = [p - 12 for p in ps]
+            while lo is not None and ps and min(ps) < int(lo) and max(ps) + 12 <= 100:
+                ps = [p + 12 for p in ps]
+        except (TypeError, ValueError):
+            pass
+        return ps
     shapes = []
     prev_full = prev_power = None
     for slot in harmony_plan.chord_slots:
@@ -737,8 +751,8 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
         full_pitches = list(full.pitches)
         if heavy and len(full_pitches) < 3:
             full_pitches = sorted(set(full_pitches + [full_pitches[0] + 12]))
-        shapes.append((float(slot.start_beat), float(slot.end_beat), full_pitches,
-                       list(power.pitches), slot.numeral))
+        shapes.append((float(slot.start_beat), float(slot.end_beat), _fit(full_pitches),
+                       _fit(power.pitches), slot.numeral))
 
     def shape_at(beat: float):
         for start, end, f, p, numeral in shapes:
@@ -749,6 +763,12 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
     intensity = getattr(instrument_cfg, "intensity", None) if instrument_cfg is not None else None
     if intensity is None:
         intensity = getattr(section, "intensity", None)
+    try:
+        intensity = (float(intensity) if intensity is not None else 0.75) + \
+            float(feel.get("style_bias") or 0.0)
+        offset = float(feel.get("offset_beats") or 0.0)
+    except (TypeError, ValueError):
+        offset = 0.0
     from ...groove import effective_params_dict
 
     params = effective_params_dict(instrument_cfg)
@@ -762,7 +782,7 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
     written = perform_comp(
         comp["events"],
         timeline=timeline,
-        section_start_beat=section_start_beat,
+        section_start_beat=section_start_beat + offset,
         shape_at=shape_at,
         key=(section.key or cfg.song.key or "C").strip(),
         mode=getattr(section, "mode", None) or cfg.song.mode or "major",
@@ -773,6 +793,8 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
         strum_ms=_num("strum_ms", 14.0),
         # humanize_timing is 0-1 in the pattern engine; 1.0 ~ 12 ms here.
         timing_jitter_ms=_num("humanize_timing", 0.5) * 12.0,
+        feel=feel,
+        beats_per_bar=float(getattr(harmony_plan.meter, "beats_per_bar", 4.0) or 4.0),
     )
     if logger:
         logger.debug("Section '%s': performed composed comp '%s' (%d notes)",

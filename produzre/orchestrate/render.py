@@ -955,6 +955,18 @@ def _flag(value: Any, default: bool = True) -> bool:
     return bool(value)
 
 
+def _groove_signature(value):
+    """Canonical configuration identity, including nested params and sets."""
+    if isinstance(value, dict):
+        return tuple(sorted((str(k), _groove_signature(v)) for k, v in value.items()
+                            if not str(k).startswith("_")))
+    if isinstance(value, (list, tuple)):
+        return tuple(_groove_signature(v) for v in value)
+    if isinstance(value, (set, frozenset)):
+        return tuple(sorted((_groove_signature(v) for v in value), key=repr))
+    return value
+
+
 def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timeline,
                               events_before, section_start_beat, performance_plan,
                               transition_context, section_rng, logger) -> None:
@@ -991,10 +1003,13 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
         performance_plan.set("composer.groove_memory", memory)
     # A section type recalls its groove only when the part is configured the
     # same way; intensity is excluded so escalating repeats still recall.
-    signature = tuple(sorted(
-        (str(k), repr(v)) for k, v in params.items()
-        if not str(k).startswith("_") and k not in ("intensity", "seed", "variation")
-    ))
+    settings = {f.name: getattr(inst_cfg, f.name) for f in fields(inst_cfg)
+                if f.name not in ("extra", "intensity", "patterns")}
+    raw_extra = getattr(inst_cfg, "extra", None) or {}
+    settings["params"] = {k: v for k, v in {
+        **{k: v for k, v in raw_extra.items() if k != "extra"}, **params
+    }.items() if k != "intensity"}
+    signature = _groove_signature(settings)
     persona = getattr(inst_cfg, "persona", None)
     memory_key = (inst_name, str(getattr(sec, "type", "") or "").strip().lower(), bpb,
                   stable_seed_int("groove_sig", persona, signature))
@@ -1030,10 +1045,52 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
         )
 
 
-# Rhythm-guitar keys that ask for a specific legacy or authored behavior; when
-# the user sets one, the composer leaves that part alone.
+# Settings that choose a *different kind of part* (a pinned style, pattern,
+# sustain mode, recipe, or the legacy generators' own phrase controls). When
+# the user sets one, the composer steps aside for that part.
 _RHYTHM_USER_MODES = ("style", "strum_style", "sustain_mode", "playstyle", "play_pattern",
-                      "pattern", "follow_hats", "use_patterns")
+                      "pattern", "follow_hats", "use_patterns", "recipe")
+# Tuning for the legacy generators only. They do not choose a different part,
+# so the composer keeps the section and the build says the setting is unused.
+_RHYTHM_LEGACY_ONLY = ("phrase_len_bars", "phrase_development", "section_contrast")
+_LEAD_LEGACY_ONLY = ("phrase_len_bars", "theme_quote_rate", "resolution_strength",
+                     "ring_out", "ring_max_beats")
+# Feel settings the composed rhythm performer honors instead of opting out.
+_RHYTHM_FEEL_KEYS = ("density", "palm_mute", "chuck_rate", "voicing", "accent_strength",
+                     "humanize_velocity", "downbeat_boost", "sustain_cut_rate",
+                     "register_min", "register_max", "offset_beats", "style_bias")
+
+
+def _note_legacy_only(logger, sec, inst: str, settings: dict) -> None:
+    if settings:
+        logger.info(
+            "Section '%s': %s %s tune the legacy generator and are unused by the "
+            "composer; set `composer: false` on %s to use them.",
+            sec.id, inst, ", ".join(sorted(settings)), inst,
+        )
+
+
+def _explicit_settings(inst_cfg, extra: dict, keys) -> dict:
+    """User-set values for ``keys``: config fields plus non-persona params.
+
+    Recipe defaults are merged later inside the engines, so they never count
+    as the user's choice here.
+    """
+    persona_keys = set(extra.get("_persona_keys") or [])
+    raw = getattr(inst_cfg, "extra", None)
+    # The loader nests the user's own params one level down; a key there is
+    # the user's even when the persona tag still lists the persona's value.
+    nested = raw.get("extra") if isinstance(raw, dict) and isinstance(raw.get("extra"), dict) else {}
+    out = {}
+    for k in keys:
+        v = getattr(inst_cfg, k, None)
+        if v is not None and not isinstance(v, dict):
+            out[k] = v
+        if k in extra and extra[k] is not None and (k in nested or k not in persona_keys):
+            out[k] = extra[k]
+    return out
+
+
 _HEAVY_COMP = ("metal", "punk", "grunge", "hard_rock", "thrash")
 
 
@@ -1054,9 +1111,11 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
             extra.update(raw_extra["extra"])
     if not _flag(extra.get("composer")) or getattr(rhythm_cfg, "enabled", True) is False:
         return
-    persona_keys = set(extra.get("_persona_keys") or [])
-    if any(k in extra and k not in persona_keys for k in _RHYTHM_USER_MODES):
+    if _explicit_settings(rhythm_cfg, extra, _RHYTHM_USER_MODES):
         return
+    feel = _explicit_settings(rhythm_cfg, extra, _RHYTHM_FEEL_KEYS)
+    _note_legacy_only(logger, sec, "rhythm_gtr", _explicit_settings(rhythm_cfg, extra,
+                                                                     _RHYTHM_LEGACY_ONLY))
     try:
         if float(extra.get("lock_to_riff", 0) or 0) > 0:
             return
@@ -1095,6 +1154,7 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
     genre = str(getattr(cfg.song, "genre", "") or "").lower()
     performance_plan.set(f"composer.comp.{sec.id}", {
         "riff": riff, "ring": ring, "heavy": any(t in genre for t in _HEAVY_COMP),
+        "user": feel,
         "events": [{"beat": e.beat, "dur": e.dur, "kind": e.kind, "accent": e.accent,
                     "direction": e.direction, "arp_index": e.arp_index,
                     "target_pc": e.target_pc, "tag": e.tag} for e in events],
@@ -1119,12 +1179,15 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
         extra = {k: v for k, v in raw_extra.items() if k != "extra"}
         if isinstance(raw_extra.get("extra"), dict):
             extra.update(raw_extra["extra"])
+    shaping = _explicit_settings(lead_cfg, extra, ("rest_probability", "contour_style"))
     opt = extra.get("composer", True)
     if isinstance(opt, str):
         opt = opt.strip().lower() not in ("false", "off", "no", "legacy", "0")
     if not opt or getattr(lead_cfg, "enabled", True) is False:
         performance_plan.data.pop(f"composer.lead.{sec.id}", None)
         return
+    _note_legacy_only(logger, sec, "lead_gtr",
+                      _explicit_settings(lead_cfg, extra, _LEAD_LEGACY_ONLY))
 
     from ..composer.lead import LeadContext
     from ..composer.song import lead_register
@@ -1163,11 +1226,16 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
         foreground=_lead_foreground_mode(cfg, sec),
         next_section_type=(transition_context or {}).get("next_section_type"),
         register=lead_register(cfg, lead_cfg),
+        rest_probability=_as_float(shaping.get("rest_probability")),
+        contour=str(shaping.get("contour_style") or "balanced").strip().lower(),
+        strict_register=isinstance(extra.get("register", getattr(lead_cfg, "register", None)),
+                                   (list, tuple)),
     )
     notes = composer.compose_lead(ctx)
     payload = [
         {"beat": n.beat, "duration_beats": n.dur, "pitch": n.pitch, "accent": n.accent,
-         "tech": n.tech, "role": n.role}
+         "tech": None if ctx.strict_register and n.tech == "slide"
+         and n.pitch - 2 < ctx.register[0] else n.tech, "role": n.role}
         for n in notes
     ]
     performance_plan.set(f"composer.lead.{sec.id}", payload)

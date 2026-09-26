@@ -150,6 +150,7 @@ def _perform_composed(
     vibrato_rate: float,
     dive_rate: float,
     swell_rate: float,
+    bend_rate: float = 0.15,
 ) -> None:
     """Perform composer notes: velocity shape, technique, pitch expression.
 
@@ -157,11 +158,13 @@ def _perform_composed(
     bend up into the note, ``slide`` adds a grace from below, ``vib`` a wide
     delayed vibrato, ``dive`` a whammy dive, ``stac`` a short pick,
     ``hammer`` a light hammered grace. Untagged long notes get vibrato at
-    ``vibrato_rate``. Timing humanization is tighter than the legacy path:
+    ``vibrato_rate``; a ``bend_rate`` below its 0.15 default keeps only that
+    share of the composed bends (0 removes them). Timing humanization is tighter than the legacy path:
     composed rhythm is the identity of the line.
     """
     from ...composer.theory import metric_weight
 
+    events_before = len(timeline.events)
     ordered = sorted(notes, key=lambda n: float(n["beat"]))
     for i, n in enumerate(ordered):
         local = float(n["beat"])
@@ -169,6 +172,10 @@ def _perform_composed(
         pitch = int(n["pitch"])
         tech = n.get("tech")
         role = str(n.get("role") or "melody")
+        if tech in ("bend1", "bend2") and bend_rate < 0.15:
+            # Own stream: the default performance's draws are unchanged.
+            keep = random.Random(int(round(local * 1000)) * 131 + pitch).random() < bend_rate / 0.15
+            tech = tech if keep else None
         next_local = float(ordered[i + 1]["beat"]) if i + 1 < len(ordered) else None
 
         mw = metric_weight(local % beats_per_bar, beats_per_bar) if beats_per_bar > 0 else 0.5
@@ -226,7 +233,7 @@ def _perform_composed(
         h_dur = max(0.05, h_dur)
 
         if tech == "slide":
-            grace = pitch - 2
+            grace = max(0, pitch - 2)
             g_start = song_beat - 0.12
             if g_start > section_start_beat:
                 timeline.add_note(start_beat=g_start, duration_beats=0.12, pitch=grace,
@@ -234,6 +241,13 @@ def _perform_composed(
                                   kind="slide_grace")
         timeline.add_note(start_beat=song_beat, duration_beats=h_dur, pitch=pitch,
                           velocity=vel, channel=None, kind=kind, expression=expression)
+
+    # Humanization and slide graces change actual attacks. Clip against those
+    # attacks, not the unperformed plan, including grace-note overlaps.
+    performed = sorted(timeline.events[events_before:], key=lambda e: e.start_beat)
+    for a, b in zip(performed, performed[1:]):
+        a.duration_beats = min(a.duration_beats, max(0.0, b.start_beat - a.start_beat))
+    timeline.events[events_before:] = [e for e in performed if e.duration_beats > 1e-6]
 
 
 def contribute_plan(
@@ -656,6 +670,7 @@ def render_into_timeline(
             vibrato_rate=vibrato_rate,
             dive_rate=dive_rate,
             swell_rate=swell_rate,
+            bend_rate=bend_rate,
         )
         logger.debug(
             "Section '%s': performed %d composed lead notes",

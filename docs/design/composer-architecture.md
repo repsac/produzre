@@ -208,10 +208,16 @@ dyads, partial-chord stabs, and palm-muted gallops.
   a sus4 that pulls off to the third while the other strings ring, and slides
   written as pitch bend.
 
-Explicit user choices win. When a rhythm part sets `style`, `strum_style`,
-`sustain_mode`, `playstyle`, `pattern` or `play_pattern`, `follow_hats`,
-`use_patterns`, or a riff lock, the engine plays it as before. Set
-`composer: false` on the part to opt out. Composed comping carries its own
+Explicit user choices win, in three tiers. Settings that choose a different
+part (`style`, `strum_style`, `sustain_mode`, `playstyle`, `pattern`,
+`play_pattern`, `follow_hats`, `use_patterns`, `recipe`, a riff lock, or
+`composer: false`) keep the engine's previous behavior. Feel settings
+(`density`, `palm_mute`, `chuck_rate`, `voicing`, register bounds, dynamics,
+timing) are honored by the composed performer. Legacy-engine tuning with no
+composed meaning is reported in the build log as unused. The lead follows
+the same rule: `rest_probability` and `contour_style` shape the composed line,
+expression rates shape its performance, and only `composer: false` selects the
+legacy generator. Composed comping carries its own
 bar form, so groove memory skips it.
 
 Across the genre examples, section-main rhythm patterns went from 78 to 111
@@ -319,5 +325,35 @@ from 1.11 to 0.29 standard deviations.
 - Harmony changes are limited to turnarounds and the final lift. Reharmonizing
   repeats (substitutions, secondary dominants) needs numeral spelling for
   applied chords.
-- The listener models pitch intervals and durations, not meter position or
-  harmony. Adding metric position would let it judge syncopation surprise.
+- The listener now adds metric-weighted harmonic exposure to development
+  selection. The contextual weights are heuristic; metric grouping (such as
+  6/8 versus 3/4) and learned syncopation expectations remain future work.
+
+## Review extension: contextual listening and ownership
+
+The listener keeps its calibrated interval/duration IC unchanged and adds a
+separate `contextual_cost` when selecting generated developments. It integrates
+non-chord-tone duration across overlapping chord spans, weighted by metric
+position. Short stepwise passing tones receive a discount. This avoids mixing
+an uncalibrated harmonic heuristic into the published IC percentiles. Authored
+cells are not subjected to variant selection.
+
+DNA fitting uses the chosen chorus or fallback section's key, mode, and bar
+length; verse fitting uses its own source context. A guide phrase includes the
+chord already sounding at its start. Realization computes metric strength from
+section-relative attacks, not cell-relative attacks.
+
+Explicit lead phrase and technique parameters select the legacy engine;
+numeric registers are hard bounds even during solos. Explicit rhythm density,
+voicing, and performance controls likewise take precedence. Groove memory
+identifies a part by top-level settings and canonical nested parameters, with
+intensity handled separately. Final timeline cleanup follows transition ramps
+so later lengthening cannot undo lead monophony.
+
+The [review report](composer-review.md) records confirmed reproductions,
+measurements, musical reading, and remaining risks. Reproduce the listener A/B:
+
+```bash
+.venv/bin/python tools/composer_review.py --seeds 24 --lead-sheets
+.venv/bin/python -m pytest tests/test_composer_review.py -q
+```
