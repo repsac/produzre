@@ -210,6 +210,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="/tmp/album")
     ap.add_argument("--album-seed", type=int, default=1)
     args = ap.parse_args(argv)
+    if args.songs < 2:
+        ap.error("--songs must be at least 2")
     os.makedirs(args.out, exist_ok=True)
     fps = []
     for cfg in album_configs(args.genre, args.songs, args.album_seed):
@@ -218,9 +220,9 @@ def main(argv=None) -> int:
         r = subprocess.run([sys.executable, "produzre_entry.py", "build", path],
                            capture_output=True, text=True)
         m = re.search(r"Export root: (\S+)", r.stderr)
-        if not m:
+        if r.returncode or not m:
             print("build failed:", path, r.stderr[-500:])
-            continue
+            return 1
         fps.append(fingerprint(m.group(1), r.stderr))
     rep = report(fps)
     print(json.dumps(rep, indent=1))

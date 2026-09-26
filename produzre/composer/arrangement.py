@@ -29,6 +29,7 @@ class ArrangementDNA:
     lead_fills: str = "normal"  # sparse (every 8 bars) | normal (4) | chatty (2)
     ending: str = "ring"        # ring | cold | big
     signature: str = ""
+    comp_activity: str = "busy"  # sparse | normal | busy (existing full figures)
 
 
 def intro_entry_bar(arrangement: "ArrangementDNA", section_type: str, bars: int,
@@ -61,6 +62,7 @@ _CHOICES = {
     "chorus_form": ("lift", "anthem", "call"),
     "lead_fills": ("sparse", "normal", "chatty"),
     "ending": ("ring", "cold", "big"),
+    "comp_activity": ("sparse", "normal", "busy"),
 }
 
 
@@ -68,7 +70,8 @@ def _signature(dna: "ArrangementDNA") -> str:
     return (f"into chorus={dna.into_chorus}, phrase ends={dna.phrase_fill}, intro={dna.intro}, "
             f"solo={dna.solo_story}/{dna.solo_ending}, counter={dna.counter}, "
             f"riff-driven={dna.riff_driven}, bass doubles={dna.bass_doubles}, "
-            f"chorus={dna.chorus_form}, lead fills={dna.lead_fills}, ending={dna.ending}")
+            f"chorus={dna.chorus_form}, lead fills={dna.lead_fills}, ending={dna.ending}, "
+            f"comp activity={dna.comp_activity}")
 
 
 def apply_overrides(dna: ArrangementDNA, overrides) -> ArrangementDNA:

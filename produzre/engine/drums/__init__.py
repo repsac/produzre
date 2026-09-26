@@ -1473,6 +1473,8 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         except Exception:
             pass
 
+    from ...composer.song import section_groups
+
     notes = humanize_events(
         events=events,
         section_start_beat=section_start_beat,
@@ -1484,6 +1486,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         push_pull=push_pull,
         velocity_humanize=velocity_humanize,
         rng=rng,
+        groups=section_groups(cfg, section, meter),
     )
 
     for start_beat, duration_beats, pitch, vel, kind in notes:

@@ -36,7 +36,7 @@ performs the events with its own playable chord shapes.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from ..rng import stable_seed_int
@@ -186,6 +186,7 @@ class CompDNA:
     family: str
     riffs: Dict[str, CompRiff] = field(default_factory=dict)  # tier -> riff
     alternates: Dict[str, CompRiff] = field(default_factory=dict)
+    plain_gesture: str = "strum"  # the player's undecorated chord attack
 
     def signature(self) -> str:
         return ",".join(f"{t}:{r.name}" for t, r in sorted(self.riffs.items()))
@@ -288,6 +289,9 @@ def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: boo
     heavy = any(t in str(genre).lower() for t in ("hard", "metal", "punk", "grunge"))
     wanted_len = 12 if shuffle else 16
     dna = CompDNA(fam)
+    touch_rng = random.Random(stable_seed_int("composer.touch", seed, genre))
+    dna.plain_gesture = touch_rng.choice(("power", "chug", "dyad", "stab") if heavy else
+                                         ("strum", "up", "dyad"))
     used: set = set()
     for tier in ("drive", "low", "build", "contrast", "stab"):
         pool = [r for r in RIFFS if fam in r.families and r.tier == tier
@@ -619,6 +623,9 @@ def plan_comp_section(
     prev = _ALIASES.get(str(prev_section_type or "").lower(), str(prev_section_type or "").lower())
     pushed_in = arrangement is not None and st == "chorus" and prev not in ("", "chorus") \
         and into == "push"
+    activity = getattr(arrangement, "comp_activity", "normal")
+    tail_every = 1 if activity == "busy" else (4 if activity == "sparse" else 2)
+    fill_every = 8 if activity == "sparse" else 4
     slide_next = False
     for b in range(bars):
         start = b * bpb
@@ -645,13 +652,28 @@ def plan_comp_section(
                                         accent=True, tag="comp_stop"))
             continue
         if riff_section:
-            # Riff-driven: the song's signature riff, moving with the chord
-            # root; its own single-note tail answers every phrase.
+            # Normal players state the full figure, then leave an answer
+            # bar open. Sparse players save the tail for the phrase end.
             events += [CompEvent(round(start + n.onset, 4), n.dur, n.kind, n.accent,
                                  tag="comp_riff", interval=n.interval)
-                       for n in signature_riff.notes_for_bar(b)]
+                       for n in signature_riff.notes_for_bar(b)
+                       if n.kind != "rsingle" or
+                       (b if activity != "sparse" else b + 1) % tail_every == 0]
             continue
         bar = riff_events(riff, start, bpb, chords, groups=groups)
+        if activity == "sparse" and st != "bridge":
+            # A slid chord is a phrase gesture, not a new slide every bar.
+            allow_slide = (b + 1) % fill_every == 0 and phrase_fill != "slide"
+            used_slide = False
+            restrained = []
+            for e in bar:
+                if e.kind == "slide":
+                    if not allow_slide or used_slide:
+                        e = replace(e, kind=dna.plain_gesture)
+                    else:
+                        used_slide = True
+                restrained.append(e)
+            bar = restrained
         if slide_next and bar:
             # The previous phrase ended by sliding into this chord.
             first = next((i for i, e in enumerate(bar) if e.kind in ("strum", "power")), None)
@@ -664,7 +686,7 @@ def plan_comp_section(
             # The chord already arrived on the push; the downbeat rests.
             bar = [e for e in bar if e.beat > start + 1e-6 or e.kind not in ("strum", "power",
                                                                              "slide", "stab")]
-        if phrase_end and st in ("verse", "chorus", "outro", "solo", "intro") and bpb >= 3:
+        if phrase_end and (b + 1) % fill_every == 0 and st in ("verse", "chorus", "outro", "solo", "intro") and bpb >= 3:
             if phrase_fill == "walkup":
                 # Keep the head of the bar, answer the phrase with a walk-up.
                 bar = [e for e in bar if e.beat < start + bpb - 1.0 - 1e-6]

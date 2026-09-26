@@ -808,12 +808,12 @@ def render_section_instruments(
             cfg, sec, hplan, rgrid, effective_cfgs.get("lead_gtr"),
             performance_plan, transition_context, logger,
         )
-        _compose_rhythm_for_section(
-            cfg, sec, hplan, rgrid, effective_cfgs.get("rhythm_gtr"),
-            performance_plan, transition_context, logger,
-        )
         _compose_drums_for_section(
             cfg, sec, hplan, rgrid, effective_cfgs.get("drums"),
+            performance_plan, transition_context, logger,
+        )
+        _compose_rhythm_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("rhythm_gtr"),
             performance_plan, transition_context, logger,
         )
         # Decide bass ownership before the bass engine merges its recipe
@@ -822,6 +822,9 @@ def render_section_instruments(
         if bass_cfg is not None:
             performance_plan.set(f"composer.bass_owned.{sec.id}", bool(
                 _explicit_settings(bass_cfg, _flat_extra(bass_cfg), _BASS_USER_MODES)))
+            performance_plan.set(f"composer.bass_register.{sec.id}",
+                                 _explicit_settings(bass_cfg, _flat_extra(bass_cfg),
+                                                    ("register_low", "register_high")))
 
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
@@ -1203,6 +1206,19 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         comp_dna = compose_comp_dna(seed=reseed, genre=composer.genre, key=composer.key,
                                     mode=composer.mode,
                                     shuffle=comp_family(composer.genre) in ("blues", "jazz"))
+    groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
+    arrangement = composer.arrangement_dna()
+    pocket = []
+    if arrangement.comp_activity != "busy":
+        # Score against the composed drummer after its explicit controls
+        # and part seed have been applied. Skip entrance and fill bars.
+        hits = performance_plan.get(f"composer.drums.{sec.id}") or []
+        for bar in list(range(1, max(1, bars - 1))) + [0]:
+            pocket = sorted({round(float(h["beat"]) - bar * bpb, 4) for h in hits
+                             if bar * bpb <= float(h["beat"]) < (bar + 1) * bpb
+                             and h["kind"] in ("kick", "snare")})
+            if pocket:
+                break
     events, riff, ring = plan_comp_section(
         comp_dna,
         section_type=sec_type, occurrence=occurrence, is_final_of_type=is_final,
@@ -1211,11 +1227,11 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
         next_section_type=nxt if nxt else (None if (transition_context or {}).get(
             "is_last_section") else "verse"),
-        hook_onsets=composer.hook_onsets(bpb, section_groups(cfg, sec, getattr(hplan, "meter", None))),
-        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
-        arrangement=composer.arrangement_dna(),
+        hook_onsets=composer.hook_onsets(bpb, groups),
+        groups=groups,
+        arrangement=arrangement,
         prev_section_type=(transition_context or {}).get("prev_section_type"),
-        signature_riff=composer.signature_riff(),
+        signature_riff=composer.signature_riff(bpb, groups, reseed, pocket),
     )
     if not events:
         return
@@ -1277,6 +1293,9 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
                             bool(tc.get("is_first_section")))
     start0 = float(section_start_beat)
     events = [e for e in new_events if e.start_beat - start0 >= enter * bpb - 0.02]
+    if performance_plan.get(f"composer.bass_owned.{sec.id}", True):
+        timeline.events[events_before:] = events
+        return
     comp = performance_plan.get(f"composer.comp.{sec.id}")
     riff = [e for e in (comp or {}).get("events", []) if e.get("tag") == "comp_riff"]
     if riff and arrangement.bass_doubles:
@@ -1305,10 +1324,12 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
                                                                       else 0.95))),
                                     kind="riff_double", expression=None))
         if doubled:
-            events = sorted(doubled, key=lambda e: (e.start_beat, e.pitch))
+            riff_bars = {int(float(r["beat"]) / bpb) for r in riff}
+            # Transition and ending bars still need their engine bass line.
+            kept = [e for e in events if int((e.start_beat - start0 + .02) / bpb) not in riff_bars]
+            events = sorted(kept + doubled, key=lambda e: (e.start_beat, e.pitch))
             logger.info("Section '%s': bass doubles the signature riff", sec.id)
-    elif not performance_plan.get(f"composer.bass_owned.{sec.id}", True) and \
-            _is_band_section(sec):
+    elif _is_band_section(sec):
         # The song's bass role for this section (composer/bass.py).
         st = str(getattr(sec, "type", "") or "").strip().lower()
         st = {"pre-chorus": "prechorus", "hook": "chorus", "solo": "chorus",
@@ -1348,6 +1369,13 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
             if written:
                 events = written
                 logger.info("Section '%s': bass plays %s", sec.id, role)
+    register = performance_plan.get(f"composer.bass_register.{sec.id}") or {}
+    if register:
+        from ..engine.bass.voicing import clamp_to_register
+
+        lo, hi = int(register.get("register_low", 0)), int(register.get("register_high", 127))
+        for e in events:
+            e.pitch = clamp_to_register(e.pitch, lo, hi)
     timeline.events[events_before:] = events
 
 

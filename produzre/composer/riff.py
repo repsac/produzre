@@ -15,7 +15,7 @@ chugs, few enough attacks to hum). Each song draws its own.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import List, Optional, Sequence, Tuple
 
 from ..rng import stable_seed_int
@@ -91,22 +91,56 @@ def _score(bar: Sequence[RiffNote]) -> float:
     return score
 
 
+def _grouped_bar(rng: random.Random, groups: Sequence[float]) -> List[RiffNote]:
+    events = []
+    start = 0.0
+    for i, length in enumerate(groups):
+        unit = min(.25, length / 3)
+        head_end = length - 2 * unit if i == len(groups) - 1 else length
+        events.append(RiffNote(start, min(.45, head_end - .02),
+                               "rpower" if i == 0 else "rchug", 0, True))
+        if i == len(groups) - 1:
+            for k, iv in enumerate(rng.sample((0, 3, 5, 7, 10), 2)):
+                events.append(RiffNote(start + length - 2 * unit + k * unit, unit - .02,
+                                       "rsingle", iv, False))
+        elif length >= 1 and rng.random() < .7:
+            events.append(RiffNote(start + length - .5, .23, "rpower",
+                                   rng.choice(_POWER_MOVES), True))
+        start += length
+    return events
+
+
+def pocket_score(bar: Sequence[RiffNote], pocket: Sequence[float]) -> float:
+    """Favor shared accents over competing sixteenths in restrained riffs."""
+    if not pocket:
+        return 0.0
+    accents = [n for n in bar if n.accent and n.kind != "rsingle"]
+    return sum(1.5 if min(abs(n.onset - t) for t in pocket) < .05 else
+               -1.0 if min(abs(n.onset - t) for t in pocket) <= .26 else 0.0
+               for n in accents) / max(1, len(accents))
+
+
 def compose_signature_riff(*, seed: int, genre: str, beats_per_bar: float = 4.0,
-                           tries: int = 40) -> Optional[SignatureRiff]:
+                           tries: int = 40, groups: Optional[Sequence[float]] = None,
+                           pocket: Sequence[float] = ()) -> Optional[SignatureRiff]:
     if beats_per_bar < 3:
         return None
     rng = random.Random(stable_seed_int("composer.riff", seed, genre, beats_per_bar))
     scored = []
+    grouped = groups and tuple(groups) != (2.0, 2.0)
     for k in range(tries):
-        a = _bar(rng, beats_per_bar, 0)
-        b = _bar(rng, beats_per_bar, 1)
+        a = _grouped_bar(rng, groups) if grouped else _bar(rng, beats_per_bar, 0)
+        b = _grouped_bar(rng, groups) if grouped else _bar(rng, beats_per_bar, 1)
         # Bar two keeps bar one's body and answers with its own tail.
         body = [n for n in a if n.kind != "rsingle"]
         tail_b = [n for n in b if n.kind == "rsingle" and n.onset > max(x.onset for x in body)]
         if not tail_b:
             tail_b = [n for n in a if n.kind == "rsingle"]
         b2 = tuple(sorted(body + tail_b, key=lambda n: n.onset))
-        scored.append((_score(a) + 0.5 * (tail_b != [n for n in a if n.kind == "rsingle"]),
+        b2 = tuple(replace(n, dur=min(n.dur, b2[i+1].onset-n.onset-.02))
+                   if i+1 < len(b2) else n for i, n in enumerate(b2))
+        scored.append((_score(a) + pocket_score(body, pocket)
+                       + 0.5 * (tail_b != [n for n in a if n.kind == "rsingle"]),
                        k, (tuple(a), b2)))
     scored.sort(key=lambda t: (-t[0], t[1]))
     bars = rng.choice(scored[:4])[2]

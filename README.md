@@ -201,6 +201,10 @@ end, whether the riff opens the song alone, the solo's story and ending,
 the chorus form, and the ending. Riff-driven songs get a signature riff the
 bass can double. Pin any habit with `song.arrangement_style`; see the
 [configuration reference](docs/llm-song-config-reference.md#every-song-its-own-band).
+For more space, try `song.arrangement_style.comp_activity: normal` or
+`sparse`. These opt-in modes reduce riff tails; sparse also spaces phrase
+devices. See the measured [rhythm-guitar review](docs/design/rhythm-guitar-review.md)
+for the benefits, tradeoffs, and before/after previews.
 
 The rhythm section gets groove memory. Drums, bass, and rhythm guitar settle
 into one pattern per section and vary it at phrase ends. The pattern moves

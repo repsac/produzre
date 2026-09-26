@@ -2,6 +2,20 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Rhythm-guitar groove review
+
+- Keep riff pitch calculations from changing subsequent note velocities.
+- Fit signature riffs to section meter/grouping and honor rhythm part seeds;
+  trim bar-two body notes before the answering tail.
+- Keep drum group starts on the same compound pulse as the guitars.
+- Preserve explicit bass line choices and registers through riff doubling,
+  retain transition/ending bars, and use actual scale neighbors for approaches.
+- Add opt-in `comp_activity: normal` and `sparse`, with repeated open bars,
+  spaced phrase devices and drum-aware riff candidate scoring.
+- Add a rendered bar audit and regression tests. Default guitar album
+  similarity is unchanged; see the [review](docs/design/rhythm-guitar-review.md)
+  for the bass tradeoff, rejected automatic changes and audio comparisons.
+
 ### Composer review, round 2
 
 - Correct compound shuffle grids and preserve group starts through shared swing.

@@ -352,6 +352,38 @@ the composed drummer; an explicit `swing`, `push_pull`, `timing_jitter_ms`,
 or song `humanize_timing` keeps the song's feel out; instrument and section
 `seed` overrides re-roll that part's DNA.
 
+## Rhythm review: restraint and correctness
+
+The rhythm audit found that repeated figures already dominate sections;
+the main excess was a single-note tail in every signature-riff bar, plus
+some figures with a slide every bar. Automatic simplification and pocket
+reranking made some albums more alike, so restraint is opt-in through
+`song.arrangement_style.comp_activity`. `busy` preserves the full figures.
+`normal` alternates a full signature statement and a body-only bar.
+`sparse` keeps three body bars before a tail, spaces added fills eight bars
+apart, and limits slides outside bridge figures. Transition and ending
+devices retain priority. Sparse slides settle into a seeded plain chord
+gesture, preserving differences between players.
+
+Normal and sparse signature candidates score shared kick/snare accents
+and penalize nearby competing sixteenths, using the composed drum plan
+after its explicit settings and seed. This is a bias, not a forced lock.
+An explicit drum pattern remains owned by its engine. Signature recall
+keys include meter, grouping, part seed and pocket; grouped riffs attack
+each group and keep their tails inside it. Bar-two answers cannot overlap
+the body. The default 4/4 candidate selection is unchanged.
+
+Performed riff pitches no longer overwrite the velocity baseline. Drum
+humanization, like the shared groove clock, preserves group starts.
+Bass ownership is checked before doubling; explicit line controls and
+registers win, and non-riff transition bars retain their bass. Scale
+approaches use a real scale neighbor on the side of the incoming root
+closest to the previous root; chromatic-below approaches retain their
+existing behavior.
+
+See [the review](rhythm-guitar-review.md), its rendered bar sheets and
+metrics for the musical findings and limits of the pocket measurements.
+
 ## Groove memory
 
 `apply_groove_memory` runs right after each accompaniment engine renders

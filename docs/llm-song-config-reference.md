@@ -660,6 +660,7 @@ song:
     intro: riff_alone        # full | riff_alone
     riff_driven: true        # verses, intro and outro ride a signature riff
     bass_doubles: true       # the bass doubles the riff an octave down
+    comp_activity: sparse   # busy (default) | normal | sparse
     solo_story: melodic      # climb | melodic | trade | blues
     solo_ending: hold        # dive | hold | trill | slide_off
     counter: stabs           # guide | octaves | stabs | fills (lead under a singer)
@@ -668,11 +669,23 @@ song:
     ending: big              # ring | cold | big
 ```
 
+`comp_activity` is opt-in restraint. `busy` preserves the existing full
+figures. `normal` alternates a signature-riff statement with a bar whose
+tail rests. `sparse` repeats the body for three bars, then answers on bar
+four; it spaces added phrase fills eight bars apart and reserves slides
+for phrase gestures outside bridges. Section transitions and endings keep
+their selected devices. Normal and sparse signature riffs also score their
+accents against an undecorated bar of the composed drum part. Explicit
+drum patterns are not inferred or rewritten. These options can reselect a
+riff and change album similarity, so they are not enabled automatically.
+
 In band sections (drums and a guitar) the bass plays a per-song role for
 each section: the engine's line, the song's kick pattern, root eighths,
 octaves, a gallop, or held roots, each with the song's own variations.
 `rhythm_pattern`, `walking`, `lock_to_kick`, `lock_to_riff`, or a motif
 quote keep the engine's line.
+Those choices also take precedence over automatic `bass_doubles`.
+Explicit bass register bounds apply after composed roles and doubling.
 
 The drums are composed unless their params set `voices`, `recipe`,
 `pattern`, or `riff_accent_rate`, the section sets `intent`, or a

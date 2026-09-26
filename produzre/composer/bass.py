@@ -6,7 +6,7 @@ pedal that pushes a hard rock chorus forward), pumping octaves, a gallop,
 sustained roots that leave a verse room to breathe, or the kick-locked line
 the engine already plays. ``compose_bass_dna`` picks a role per section type
 for each song (verse and chorus contrast), and ``bass_bar`` writes one bar
-of a role over the harmony, approaching each chord change from a step below.
+of a role over the harmony, approaching chord changes with neighbor tones.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from ..rng import stable_seed_int
-from .theory import ChordMap
+from .theory import ChordMap, scale_pcs
 
 ROLES = ("engine", "kick", "pedal8", "octaves", "gallop", "whole")
 
@@ -39,7 +39,7 @@ _WEIGHTS = {
 @dataclass
 class BassDNA:
     roles: Dict[str, str] = field(default_factory=dict)
-    approach: str = "below"       # below (chromatic) | scale (a scale step) | none
+    approach: str = "below"       # below (chromatic) | scale (neighbor toward root) | none
     # Per-song variation inside the roles, so a role is a player's habit and
     # not a template every song shares.
     drop_eighths: Tuple[int, ...] = ()     # pedal/octave eighths left silent
@@ -155,12 +155,19 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         nxt_off = next((o for o, _ in steps if o > off + 1e-6), bpb)
         dur = max(0.12, min(0.95, nxt_off - off) - 0.05)
         out.append((t, dur, pitch, abs(off % 2) < 1e-6))
-    # Approach the next chord from a step below on the last eighth.
+    # Approach the next chord with a neighbor on the last eighth.
     nxt = chords.at(bar_start + bpb + 1e-3) if bar_start + bpb < chords.total else None
     if approach != "none" and nxt is not None and nxt.root_pc != chords.at(bar_start + bpb - 0.25).root_pc \
             and out and not last_bar:
         target = _root_pitch(nxt.root_pc, near)
-        lead_in = target - 1 if approach == "below" else target - 2
+        lead_in = target - 1
+        if approach == "scale":
+            scale = scale_pcs(chords.key, chords.mode)
+            current = _root_pitch(chords.at(bar_start + bpb - 0.25).root_pc, near)
+            direction = 1 if current > target else -1
+            lead_in = target + direction
+            while lead_in % 12 not in scale:
+                lead_in += direction
         t, d, _, a = out[-1]
         if t >= bar_start + bpb - 0.5 - 1e-6:
             out[-1] = (t, min(d, 0.45), lead_in, False)
