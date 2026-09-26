@@ -51,6 +51,8 @@ the rhythm section settles into grooves.
   5/4 = 3+2; `meter_grouping` overrides). Without an explicit `chord_rate`,
   chords change once per bar in every meter (previously every 4 beats, which
   drifted against 7/8 and 6/8 bars). 4/4 output is unchanged.
+- Bass `hook_response: true` (opt-in): the bass answers the composed lead at
+  phrase ends with the hook's rhythm and contour, starting on a kick.
 - **Turnarounds**: preset and recipe progressions now lead into sections
   that start on the tonic (the last half bar moves to V, V7, or bVII).
   Explicit progressions are unchanged unless you opt in.

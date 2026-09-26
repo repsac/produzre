@@ -833,6 +833,10 @@ def render_section_instruments(
             cfg, sec, inst_name, effective_cfg, hplan, rgrid, timeline, events_before,
             section_start_beat, performance_plan, transition_context, section_rng, logger,
         )
+        _apply_bass_response_pass(
+            cfg, sec, inst_name, effective_cfg, hplan, timeline, events_before,
+            section_start_beat, performance_plan, logger, rhythm_features=rhythm_features,
+        )
 
         # Shared groove clock: post-process the newly added events with the
         # section's resolved feel. Drums are excluded: they already swing
@@ -1162,6 +1166,64 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
                     "target_pc": e.target_pc, "tag": e.tag} for e in events],
     })
     logger.info("Composer: %s rhythm guitar plays '%s'", sec.id, riff)
+
+
+def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, events_before,
+                              section_start_beat, performance_plan, logger,
+                              rhythm_features=None) -> None:
+    """Opt-in (bass ``hook_response: true``): answer the lead's holes with the hook."""
+    if inst_name != "bass" or performance_plan is None or hplan is None:
+        return
+    if not _flag(effective_params_dict(inst_cfg).get("hook_response"), default=False):
+        return
+    composer = performance_plan.get("composer.song")
+    lead = performance_plan.get(f"composer.lead.{sec.id}")
+    if composer is None or not lead or not getattr(hplan, "chord_slots", None):
+        return
+    from ..composer.bass_response import align_to_kicks, lead_holes, phrase_holes, respond
+    from ..composer.theory import ChordMap
+
+    total = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+    bpb = float(getattr(hplan.meter, "beats_per_bar", 4.0) or 4.0)
+    holes = phrase_holes(lead_holes([(float(n["beat"]), float(n["duration_beats"]))
+                                     for n in lead], total), bpb, total)
+    kicks = getattr((rhythm_features or {}).get("drums"), "strong_beats", None)
+    if kicks:
+        holes = align_to_kicks(holes, [float(t) for t in kicks])
+    new_events = timeline.events[events_before:]
+    if not holes or not new_events:
+        return
+    key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+    mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+    pitches = sorted(e.pitch for e in new_events)
+    reference = pitches[len(pitches) // 2]
+    answer = respond(composer.dna.hook, holes, ChordMap(hplan.chord_slots, key, mode),
+                     key=key, mode=mode, reference=reference)
+    if not answer:
+        return
+    used = [h for h in holes if any(h[0] - 1e-6 <= n.beat < h[1] for n in answer)]
+    velocities = sorted(e.velocity for e in new_events)
+    velocity = min(127, int(velocities[len(velocities) // 2] * 1.05))
+    template = new_events[0]
+    kept = []
+    for ev in new_events:
+        local = float(ev.start_beat) - float(section_start_beat)
+        if any(a - 0.02 <= local < b for a, b in used):
+            continue  # the groove steps aside for the answer
+        for a, _ in used:
+            if local < a and local + ev.duration_beats > a:
+                ev.duration_beats = max(0.05, a - local - 0.02)
+        kept.append(ev)
+    from dataclasses import replace as _replace
+
+    for n in answer:
+        kept.append(_replace(template, start_beat=float(section_start_beat) + n.beat,
+                             duration_beats=n.dur, pitch=n.pitch, velocity=velocity,
+                             kind="hook_response", expression=None))
+    kept.sort(key=lambda e: (e.start_beat, e.pitch))
+    timeline.events[events_before:] = kept
+    logger.info("Section '%s': bass answers the lead in %d hole(s) with the hook's rhythm",
+                sec.id, len(used))
 
 
 def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan,

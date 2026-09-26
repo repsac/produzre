@@ -252,6 +252,27 @@ The 7/8 and 5/4 chord-tone dips come from the lead now landing on group
 starts it used to skip, sometimes with a color tone (a ninth on the "+2" of
 5/4). They are the next thing to tune.
 
+## Bass responses (opt-in)
+
+`composer/bass_response.py` gives the bass a conversational role. The lead's
+composed notes define its holes: 1.25 to 4 beats without an attack, opening
+half a beat after the last one so the held note is heard. One hole per 4-bar
+phrase (its last), plus the section's close, gets an answer: the hook's
+first few attacks and diatonic contour, from the chord root near the bass's
+own register, landing on a chord tone and starting on a nearby kick. The
+engine's notes inside the hole step aside; everything else keeps its groove.
+
+| Metric (6 songs, bass `hook_response` off to on) | Off | On |
+|---|---|---|
+| Bass notes that are answers | 0.00 | 0.14 |
+| Bass attacks colliding with a lead attack | 0.213 | 0.200 |
+| Bass groove lock (top-pattern share) | 0.698 | 0.682 |
+| Bass onsets on a kick | 0.588 | 0.554 |
+
+An answer on every hole (tried first) made 26% of bass notes answers and cut
+groove lock to 0.55, so the phrase-end rule is deliberate. It stays opt-in
+until a listening comparison settles the balance per genre.
+
 ## Groove memory
 
 `apply_groove_memory` runs right after each accompaniment engine renders
@@ -347,9 +368,9 @@ from 1.11 to 0.29 standard deviations.
 
 - The memorability score is a heuristic. The next step is fitting its
   weights against a labeled set of hooks.
-- The composer writes the lead and the rhythm guitar. The bass gains form
-  through groove memory but does not yet derive lines from the DNA. A bass
-  counter-line from the hook's rhythm is the natural next piece.
+- The composer writes the lead and the rhythm guitar; the bass answers the
+  lead only when `hook_response` is on. A full bass line derived from the
+  DNA (a counter-riff, not just answers) is still open.
 - Harmony changes are limited to turnarounds and the final lift. Reharmonizing
   repeats (substitutions, secondary dominants) needs numeral spelling for
   applied chords.

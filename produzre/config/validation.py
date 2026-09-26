@@ -42,7 +42,7 @@ KNOWN_DRUM_CONSTRAINT_KEYS = {
     "kick_density_hihat_pedal_limit",
 }
 KNOWN_BASS_PARAMS = {
-    "groove_memory", "groove_cycle_bars",
+    "groove_memory", "groove_cycle_bars", "hook_response",
     "density", "rest_rate", "rhythm_pattern", "lock_to_kick", "lock_to_snare", "lock_to_hat",
     "lock_to_kicks", "avoid_fills", "octave", "lock_to_riff", "articulation_style", "chromatic_rate",
     "approach_rate", "octave_jump_rate", "fifth_jump_rate", "pedal_rate", "accent_strength",

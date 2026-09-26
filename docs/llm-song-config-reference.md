@@ -643,6 +643,17 @@ before its next picked note. Body taps use short low MIDI notes.
 
 The phrase pattern follows the shared melody guide. See [file structure](#file-structure) to enable it in a section.
 
+### Bass hook responses
+
+`hook_response: true` in the bass params (off by default) lets the bass answer
+the composed lead. When the lead holds or breathes for 1.25 to 4 beats after
+a phrase, the bass fills that hole with the hook's opening rhythm and
+contour, over the current chord, starting on a nearby kick and landing on a
+chord tone. It answers once per 4-bar phrase and at a section's close; the
+groove plays everywhere else. Across six example songs, responses made up
+14% of bass notes and cut simultaneous lead and bass attacks by 6%, at a cost
+of 2% groove repetition and 6% kick alignment.
+
 ## Groove memory
 
 Engines draw each bar fresh, so without help a bass line or drum beat never
