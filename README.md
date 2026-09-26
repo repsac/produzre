@@ -216,6 +216,13 @@ explains it, with measurements against human melodies. Use
 `tools/musicality.py` to measure a build, and `tools/preview_audio.py` to
 render a quick MP3 without a DAW.
 
+Bass can answer the lead with `instruments.bass.params.hook_response: true`.
+Use `hook_response: develop` to alternate hook openings, tails and answer motifs
+across the song. Both are off by default: more conversation can reduce groove
+repetition. Compound shuffle riffs follow dotted-quarter pulses, and generated
+ideas adapt to section meter changes. See the [second review](docs/design/composer-review-round2.md)
+for reproductions, measurements and listening pairs.
+
 ## CLI reference
 
 | Command | Purpose |

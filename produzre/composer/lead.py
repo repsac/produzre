@@ -111,7 +111,7 @@ class SongComposer:
                  hook_slots: Optional[Sequence] = None,
                  verse_slots: Optional[Sequence] = None,
                  register: Tuple[int, int] = (60, 76),
-                 verse_context: Optional[Tuple[str, str, float]] = None,
+                 verse_context: Optional[Tuple[str, str, float, Tuple[float, ...]]] = None,
                  groups: Optional[Tuple[float, ...]] = None):
         self.seed = int(seed)
         self.genre = str(genre or "")
@@ -131,7 +131,7 @@ class SongComposer:
         self.listener = Listener()
         self._plans: Dict[tuple, List[PlanItem]] = {}
         self._realized: Dict[tuple, List[Note]] = {}
-        self._dna_views: Dict[float, SongDNA] = {}
+        self._dna_views: Dict[Tuple[float, Optional[Tuple[float, ...]]], SongDNA] = {}
         self._fill_counter = 0
         self.log: List[str] = []
 
@@ -145,24 +145,25 @@ class SongComposer:
                                               mode=self.mode, shuffle=shuffle)
         return self._comp_dna
 
-    def hook_onsets(self) -> List[float]:
+    def hook_onsets(self, bpb=None, groups=None) -> List[float]:
         """Attack times of the hook line (hook bar, then answer bar)."""
-        return ([n.onset for n in self.dna.hook.notes]
-                + [self.dna.hook.length + n.onset for n in self.dna.hook_answer.notes])
+        dna = self._dna_for(bpb, groups) if bpb is not None else self.dna
+        return ([n.onset for n in dna.hook.notes]
+                + [dna.hook.length + n.onset for n in dna.hook_answer.notes])
 
     def _fitter(self, slots: Optional[Sequence], anchor: float, register: Tuple[int, int],
                 context=None):
         """Realize a candidate idea over a section's opening bar (DNA ranking)."""
         if not slots:
             return None
-        key, mode, bpb = context or (self.key, self.mode, self.bpb)
+        key, mode, bpb = context[:3] if context else (self.key, self.mode, self.bpb)
         chords = ChordMap(slots, key, mode)
         lo, hi = register
 
         def fit(cell: Cell):
             if abs(bpb - self.bpb) > 1e-6:
                 cell = C.fit_length(cell, bpb) if cell.length > bpb else C.Cell(cell.notes, bpb, cell.name)
-            groups = self.groups if abs(bpb - self.bpb) < 1e-6 else None
+            groups = context[3] if context and len(context) > 3 else self.groups if abs(bpb - self.bpb) < 1e-6 else None
             got, cost = realize_cell(cell, 0.0, chords, key=key, mode=mode,
                                      lo=lo, hi=hi, anchor=anchor, beats_per_bar=bpb,
                                      groups=groups)
@@ -180,26 +181,42 @@ class SongComposer:
             return []
         rng = random.Random(stable_seed_int("composer.section", self.seed, ctx.section_id,
                                             st, ctx.occurrence))
-        memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register)
+        memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register, ctx.groups)
         base_dna = self.dna
-        self.dna = self._dna_for(ctx.beats_per_bar)
+        self.dna = self._dna_for(ctx.beats_per_bar, ctx.groups)
         try:
             return self._compose(st, ctx, chords, rng, memory_key)
         finally:
             self.dna = base_dna
 
-    def _dna_for(self, bpb: float) -> SongDNA:
+    def _dna_for(self, bpb: float, groups=None) -> SongDNA:
         """The DNA fitted to a section's bar length (meter changes)."""
-        if abs(bpb - self.bpb) < 1e-6 or self.dna.authored:
+        target_groups = tuple(groups) if groups else self.groups if abs(bpb - self.bpb) < 1e-6 else None
+        if (abs(bpb - self.bpb) < 1e-6 and target_groups == self.groups) or self.dna.authored:
             return self.dna
-        cached = self._dna_views.get(bpb)
+        view_key = (bpb, target_groups)
+        cached = self._dna_views.get(view_key)
         if cached is None:
             d = self.dna
             fit = lambda c: C.fit_length(c, bpb) if c.length > bpb + 1e-6 else \
                 C.Cell(c.notes, bpb, c.name)
+            if target_groups:
+                from .dna import group_figure
+
+                def fit(cell):
+                    rng = random.Random(stable_seed_int("composer.meter", self.seed, cell.name,
+                                                        bpb, target_groups))
+                    figure = group_figure(rng, target_groups, "anthem")
+                    steps, sounded = [], 0
+                    for duration in figure:
+                        steps.append(cell.notes[sounded % len(cell.notes)].step if cell.notes else 0)
+                        if duration > 0:
+                            sounded += 1
+                    return C.cell_from([abs(d) for d in figure], steps,
+                                       rests=[d < 0 for d in figure], length=bpb, name=cell.name)
             cached = SongDNA(fit(d.hook), fit(d.hook_answer), fit(d.verse), fit(d.bridge),
                              d.licks, d.signature, d.authored)
-            self._dna_views[bpb] = cached
+            self._dna_views[view_key] = cached
         return cached
 
     def _line_bars(self, bpb: float) -> int:

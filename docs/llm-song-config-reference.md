@@ -654,6 +654,24 @@ groove plays everywhere else. Across six example songs, responses made up
 14% of bass notes and cut simultaneous lead and bass attacks by 6%, at a cost
 of 2% groove repetition and 6% kick alignment.
 
+`hook_response: develop` uses the same windows but rotates the hook opening,
+hook tail and answer motif. The rotation advances with returning section types.
+Authored degree/accidental contours are retained relative to the current chord.
+Bass `register_low` and `register_high` constrain responses. A very narrow range
+may require clamping a pitch when no octave equivalent fits. Neither `true` nor
+`develop` is enabled by genre defaults.
+
+Compound shuffle riffs keep dotted-quarter group starts through shared swing.
+Generated ideas rephrase for a section's meter/grouping; authored themes keep
+their written rhythms. Section settings override global settings even when one
+uses a config field and the other uses nested params. Composed rhythm honors
+`humanize_timing`, `strum_ms`, octave voicing and explicit register bounds through
+its final gestures. The three-tier selector/shaping/legacy rule is unchanged.
+
+Recipe chord rates are bar-relative unless explicitly overridden. A short
+section uses a recipe's prefix, so a four-bar blues verse may remain on the
+tonic. Use 12 bars for the full form or supply an explicit short progression.
+
 ## Groove memory
 
 Engines draw each bar fresh, so without help a bass line or drum beat never

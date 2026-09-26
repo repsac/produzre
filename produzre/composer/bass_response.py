@@ -82,7 +82,7 @@ def lead_holes(lead: Sequence[Tuple[float, float]], total: float) -> List[Tuple[
     return holes
 
 
-def _signature(hook: Cell, room: float) -> List[Tuple[float, float, int]]:
+def _signature(hook: Cell, room: float):
     """The hook's opening (onset, duration, step) that fits in ``room``."""
     notes = [n for n in hook.notes]
     if not notes:
@@ -93,12 +93,12 @@ def _signature(hook: Cell, room: float) -> List[Tuple[float, float, int]]:
         onset = n.onset - base
         if onset >= room - 0.2:
             break
-        out.append((onset, n.dur, n.step if out else 0))
+        out.append((onset, n.dur, n.step if out else 0, n.degree, n.alter))
     # Each note lasts until the next attack, the last until the window ends.
     fitted = []
-    for i, (o, d, s) in enumerate(out):
+    for i, (o, d, s, degree, alter) in enumerate(out):
         end = out[i + 1][0] if i + 1 < len(out) else room
-        fitted.append((o, max(0.2, min(d, end - o) - 0.02), s))
+        fitted.append((o, max(0.01, min(d, end - o) - 0.02), s, degree, alter))
     return fitted
 
 
@@ -112,12 +112,22 @@ def respond(
     reference: Optional[int] = None,
     lo: int = 28,
     hi: int = 55,
+    develop: bool = False,
+    occurrence: int = 0,
+    answer: Optional[Cell] = None,
 ) -> List[BassNote]:
     """Answer every hole with the hook's signature, chord-relatively."""
     out: List[BassNote] = []
     tonic = tonic_pc(key)
-    for start, end in holes:
-        sig = _signature(hook, end - start)
+    for hole_index, (start, end) in enumerate(holes):
+        motif = hook
+        if develop:
+            variant = (hole_index + occurrence) % 3
+            if variant == 1 and len(hook.notes) >= 3:
+                motif = Cell(hook.notes[len(hook.notes) // 2:], hook.length, hook.name)
+            elif variant == 2 and answer is not None:
+                motif = answer
+        sig = _signature(motif, end - start)
         if len(sig) < 2:
             continue
         span = chords.at(start)
@@ -128,19 +138,22 @@ def respond(
                    key=lambda p: (abs(p - near), p), default=near)
         idx = diatonic_index(root, key, mode)
         pitches = []
-        for k, (_, _, step) in enumerate(sig):
-            idx = round(idx) + (step if k else 0)
-            pitches.append(diatonic_pitch(int(idx), key, mode, tonic))
+        first_degree, first_alter = sig[0][3:]
+        for k, (_, _, step, degree, alter) in enumerate(sig):
+            if first_degree is not None and degree is not None:
+                offset = (diatonic_pitch(degree, key, mode, tonic) + alter
+                          - diatonic_pitch(first_degree, key, mode, tonic) - first_alter)
+                pitches.append(root + offset)
+            else:
+                idx = round(idx) + (step if k else 0)
+                pitches.append(root if k == 0 else diatonic_pitch(int(idx), key, mode, tonic))
         # Land on a chord tone of the chord sounding at the last note.
         last_span = chords.at(start + sig[-1][0]) or span
         if pitches[-1] % 12 not in last_span.pcs:
-            pitches[-1] = min((p for p in range(pitches[-1] - 2, pitches[-1] + 3)
-                               if p % 12 in last_span.pcs),
+            pitches[-1] = min((p for p in range(lo, hi + 1) if p % 12 in last_span.pcs),
                               key=lambda p: (abs(p - pitches[-1]), p), default=pitches[-1])
-        for (o, d, _), p in zip(sig, pitches):
-            while p < lo:
-                p += 12
-            while p > hi:
-                p -= 12
-            out.append(BassNote(round(start + o, 4), d, p))
+        for (o, d, _, _, _), p in zip(sig, pitches):
+            p = min((q for q in range(lo, hi + 1) if q % 12 == p % 12),
+                    key=lambda q: (abs(q - p), q), default=max(lo, min(hi, p)))
+            out.append(BassNote(round(start + o, 4), min(d, end - start - o), p))
     return out

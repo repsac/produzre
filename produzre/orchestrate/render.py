@@ -331,6 +331,29 @@ def _merge_instrument_config(base: Any, override: Any) -> Any:
             del merged["params"]
         merged["extra"] = {**merged_params, **(merged.get("extra", {}) or {})}
 
+    # A section override wins even when the global and section settings use
+    # different representations (a config field versus nested params).
+    own_extra = (override_map.get("extra", {}) if override_map is not None
+                 else getattr(override, "extra", None)) or {}
+    own_nested = own_extra.get("extra") if isinstance(own_extra.get("extra"), dict) else {}
+    own_params = {**{k: v for k, v in own_extra.items() if k != "extra"},
+                  **override_params, **own_nested}
+    persona_keys = set(own_extra.get("_persona_keys") or [])
+    merged["extra"] = dict(merged.get("extra") or {})
+    nested = merged["extra"].get("extra")
+    if isinstance(nested, dict):
+        merged["extra"]["extra"] = dict(nested)
+    for f in fields(base):
+        if f.name == "extra":
+            continue
+        own_field = override_map.get(f.name) if override_map is not None else getattr(override, f.name, None)
+        if own_field is not None:
+            merged["extra"].pop(f.name, None)
+            if isinstance(nested, dict):
+                merged["extra"]["extra"].pop(f.name, None)
+        elif own_params.get(f.name) is not None and (f.name in own_nested or f.name not in persona_keys):
+            merged[f.name] = own_params[f.name]
+
     # Only pass fields that the dataclass actually accepts
     valid_fields = {f.name for f in fields(base)}
     filtered = {k: v for k, v in merged.items() if k in valid_fields}
@@ -835,7 +858,7 @@ def render_section_instruments(
         )
         _apply_bass_response_pass(
             cfg, sec, inst_name, effective_cfg, hplan, timeline, events_before,
-            section_start_beat, performance_plan, logger, rhythm_features=rhythm_features,
+            section_start_beat, performance_plan, logger, rhythm_features=rhythm_features, transition_context=transition_context,
         )
 
         # Shared groove clock: post-process the newly added events with the
@@ -878,6 +901,8 @@ def render_section_instruments(
                     feel_seed = stable_seed_int(
                         "groove", seed_material, sec.id, arrangement_index, inst_name
                     )
+                    from ..composer.song import section_groups
+
                     apply_feel(
                         new_events,
                         groove_feel,
@@ -888,6 +913,7 @@ def render_section_instruments(
                         section_start_beat=float(section_start_beat),
                         timing_jitter_ms=jitter_ms,
                         velocity_humanize=vel_humanize,
+                        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
                     )
 
         # A lead guitar is monophonic: after feel and humanization, no note
@@ -1062,7 +1088,7 @@ _LEAD_LEGACY_ONLY = ("phrase_len_bars", "theme_quote_rate", "resolution_strength
 # Feel settings the composed rhythm performer honors instead of opting out.
 _RHYTHM_FEEL_KEYS = ("density", "palm_mute", "chuck_rate", "voicing", "accent_strength",
                      "humanize_velocity", "downbeat_boost", "sustain_cut_rate",
-                     "register_min", "register_max", "offset_beats", "style_bias")
+                     "register_min", "register_max", "offset_beats", "style_bias", "humanize_timing", "strum_ms")
 
 
 def _note_legacy_only(logger, sec, inst: str, settings: dict) -> None:
@@ -1152,7 +1178,7 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
         next_section_type=nxt if nxt else (None if (transition_context or {}).get(
             "is_last_section") else "verse"),
-        hook_onsets=composer.hook_onsets(),
+        hook_onsets=composer.hook_onsets(bpb, section_groups(cfg, sec, getattr(hplan, "meter", None))),
         groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
     )
     if not events:
@@ -1170,11 +1196,15 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
 
 def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, events_before,
                               section_start_beat, performance_plan, logger,
-                              rhythm_features=None) -> None:
+                              rhythm_features=None, transition_context=None) -> None:
     """Opt-in (bass ``hook_response: true``): answer the lead's holes with the hook."""
     if inst_name != "bass" or performance_plan is None or hplan is None:
         return
-    if not _flag(effective_params_dict(inst_cfg).get("hook_response"), default=False):
+    raw_extra = getattr(inst_cfg, "extra", None) or {}
+    params = {**{k: v for k, v in raw_extra.items() if k != "extra"},
+              **(raw_extra.get("extra") or {})}
+    response_mode = params.get("hook_response")
+    if not _flag(response_mode, default=False):
         return
     composer = performance_plan.get("composer.song")
     lead = performance_plan.get(f"composer.lead.{sec.id}")
@@ -1197,8 +1227,17 @@ def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, ev
     mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
     pitches = sorted(e.pitch for e in new_events)
     reference = pitches[len(pitches) // 2]
-    answer = respond(composer.dna.hook, holes, ChordMap(hplan.chord_slots, key, mode),
-                     key=key, mode=mode, reference=reference)
+    from ..composer.song import section_groups
+
+    dna = composer._dna_for(bpb, section_groups(cfg, sec, hplan.meter))
+    index = int((transition_context or {}).get("arrangement_index", 0))
+    sections = list(getattr(performance_plan, "sections", ()) or ())
+    occurrence = sum(getattr(s, "type", None) == getattr(sec, "type", None) for s in sections[:index])
+    answer = respond(dna.hook, holes, ChordMap(hplan.chord_slots, key, mode),
+                     key=key, mode=mode, reference=reference,
+                     lo=int(params.get("register_low", 28)), hi=int(params.get("register_high", 55)),
+                     develop=str(response_mode).lower() == "develop", occurrence=occurrence,
+                     answer=dna.hook_answer)
     if not answer:
         return
     used = [h for h in holes if any(h[0] - 1e-6 <= n.beat < h[1] for n in answer)]

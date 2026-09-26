@@ -68,7 +68,7 @@ def lead_register(cfg: Any, lead_cfg: Any = None) -> Tuple[int, int]:
         extra = getattr(lead_cfg, "extra", None)
         if reg is None and isinstance(extra, dict):
             nested = extra.get("extra") if isinstance(extra.get("extra"), dict) else {}
-            reg = extra.get("register") or nested.get("register")
+            reg = nested.get("register") or extra.get("register")
     if reg is None:
         raw = getattr(cfg, "raw", None)
         data = (raw.get("instruments") or {}).get("lead_gtr") if isinstance(raw, dict) else None
@@ -125,7 +125,7 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
                 section_groups(cfg, sec if source is not None else None, getattr(hp, "meter", None)))
 
     hook_slots, key, mode, bpb, groups = source_context(hook_source)
-    verse_slots, verse_key, verse_mode, verse_bpb, _ = source_context(verse_source)
+    verse_slots, verse_key, verse_mode, verse_bpb, verse_groups = source_context(verse_source)
     composer = SongComposer(
         seed=int(getattr(song, "seed", 0) or 0),
         genre=str(getattr(song, "genre", "") or ""),
@@ -135,7 +135,7 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
         melody_theme=melody_theme,
         hook_slots=hook_slots,
         verse_slots=verse_slots,
-        verse_context=(verse_key, verse_mode, verse_bpb),
+        verse_context=(verse_key, verse_mode, verse_bpb, verse_groups),
         register=lead_register(cfg),
         groups=groups,
     )

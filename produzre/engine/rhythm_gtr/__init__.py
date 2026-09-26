@@ -724,7 +724,10 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
     from .voicings import choose_voicing
 
     feel = dict(comp.get("user") or {})
-    heavy = bool(comp.get("heavy")) or str(feel.get("voicing") or "").lower() in ("power", "octaves")
+    heavy = bool(comp.get("heavy"))
+    voicing = str(feel.get("voicing") or ("power" if heavy else "triad")).lower()
+    if voicing == "auto":
+        voicing = "power" if heavy else "triad"
 
     def _fit(pitches):
         """Octave-shift a shape into an explicit register_min/max."""
@@ -744,8 +747,8 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
         root = _rhythm_root_for_numeral(cfg, section, slot.numeral, instrument_cfg)
         power = choose_voicing(root_midi=root, numeral=slot.numeral, voicing_style="power",
                                prev_chord_shape=prev_power, rng=rng)
-        full = power if heavy else choose_voicing(root_midi=root, numeral=slot.numeral,
-                                                  voicing_style="triad",
+        full = power if voicing == "power" else choose_voicing(root_midi=root, numeral=slot.numeral,
+                                                  voicing_style=voicing,
                                                   prev_chord_shape=prev_full, rng=rng)
         prev_full, prev_power = full, power
         full_pitches = list(full.pitches)
@@ -775,7 +778,7 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
 
     def _num(name, default):
         try:
-            return float(params[name]) if params.get(name) is not None else default
+            return float(feel.get(name, params.get(name))) if feel.get(name, params.get(name)) is not None else default
         except (TypeError, ValueError):
             return default
 

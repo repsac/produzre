@@ -210,6 +210,11 @@ def perform_comp(
         start = section_start_beat + beat + (abs(jitter) if beat == 0 else jitter)
         step = strum_ms * beats_per_ms / max(1, len(notes) - 1) if spread and len(notes) > 1 else 0.0
         for n_i, (pitch, offset, d) in enumerate(notes):
+            lo, hi = _f("register_min"), _f("register_max")
+            if lo is not None or hi is not None:
+                low, high = max(0, int(lo) if lo is not None else 0), min(127, int(hi) if hi is not None else 127)
+                pitch = min((p for p in range(low, high + 1) if p % 12 == pitch % 12),
+                            key=lambda p: (abs(p - pitch), p), default=max(low, min(high, pitch)))
             v = int(vel * (1.0 - 0.03 * n_i if direction == "down" else 1.0)) + \
                 rng.randint(-4, 4) * vel_spread // 4
             timeline.add_note(

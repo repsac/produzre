@@ -2,6 +2,20 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Composer review, round 2
+
+- Correct compound shuffle grids and preserve group starts through shared swing.
+- Include grouping in lead recall and adapt generated ideas to section meters.
+- Preserve authored bass contours, avoid fast-answer overlaps and honor bounds.
+- Honor section settings across field/param layers, nested lead registers,
+  composed rhythm timing, octave voicing and final gesture register bounds.
+- Add opt-in `hook_response: develop` for rotating hook fragments and answers.
+  Responses remain off by default in every genre.
+- Add 37 regression/probe cases, a 216-build before/after matrix, and four
+  blinded listening pairs. The three existing 4/4 composer examples retain
+  byte-identical MIDI; no goldens regenerated. See the
+  [second review](docs/design/composer-review-round2.md).
+
 ### Composer review fixes and extension
 
 - Respect explicit lead phrase and technique controls, numeric lead register

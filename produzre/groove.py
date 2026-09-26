@@ -286,6 +286,7 @@ def apply_feel(
     section_start_beat: float = 0.0,
     timing_jitter_ms: float = 0.0,
     velocity_humanize: float = 0.0,
+    groups=None,
 ) -> None:
     """Apply a resolved groove feel to timeline events in place.
 
@@ -349,6 +350,14 @@ def apply_feel(
         shift = pocket_beats
 
         swing_shift = swing_offset(rel, feel.swing, feel.swing_16th, _GRID_SNAP_WINDOW)
+        if groups and beats_per_bar > 0:
+            pulse = 0.0
+            phase = rel % beats_per_bar
+            for group in groups:
+                if min(abs(phase - pulse), abs(phase - pulse - beats_per_bar)) < _GRID_SNAP_WINDOW:
+                    swing_shift = 0.0
+                    break
+                pulse += group
         shift += swing_shift
         if swing_shift > 0.0:
             # A swung off-beat is late *and short*: its end stays on the

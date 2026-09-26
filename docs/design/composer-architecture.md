@@ -406,3 +406,32 @@ measurements, musical reading, and remaining risks. Reproduce the listener A/B:
 .venv/bin/python tools/composer_review.py --seeds 24 --lead-sheets
 .venv/bin/python -m pytest tests/test_composer_review.py -q
 ```
+
+
+## Second review: grouping and bass development
+
+See [the round-two report](composer-review-round2.md) for reproductions, the
+216-build comparison, raw lead sheets and blinded listening pairs.
+
+Compound shuffle riffs map each three-step beat onto a dotted quarter. Shared
+swing preserves group starts while retaining pocket and jitter. Changed section
+meters get deterministic grouped DNA views, with grouping included in recall
+keys; authored themes keep their rhythms. Comp hook alignment and bass answers
+use the same section view.
+
+Bass `hook_response: develop` rotates head, tail and answer cells and advances
+on section-type recurrence. Authored contours use relative semitone offsets,
+including accidentals. Fast-note durations and explicit bounds survive the
+response pass. The default remains off because greater variety has measurable
+groove costs. The engine and groove memory still supply the underlying bass.
+
+Settings merge respects section precedence across fields and nested params.
+Explicit lead registers, rhythm timing, octave voicing and gesture bounds now
+reach the performers. Part selectors still opt out and legacy-only tuning is
+still logged unused. The three existing 4/4 examples are byte-identical to
+`8ecd293`; affected explicit settings and response modes intentionally change.
+
+Strong-beat color notes in the inspected 7/8 and 5/4 anthem remain unchanged:
+held sevenths and sixths resolve to chord tones by leaps. No contextual weights
+were retuned. Short blues sections still use the recipe prefix; automatic form
+compression is not implied by the one-chord-per-bar default.

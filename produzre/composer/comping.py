@@ -362,11 +362,29 @@ def _fit_steps(steps: str, bpb: float, groups: Optional[Sequence[float]] = None)
     return out
 
 
+def _performance_grid(riff: CompRiff, bpb: float, groups):
+    """Keep shuffle gestures on the actual pulse in compound meters."""
+    if riff.subdivision == 3 and groups and all(abs(g - 1.5) < 1e-6 for g in groups):
+        # A triplet quarter in 4/4 becomes one dotted-quarter pulse: three
+        # eighths. Retain successive beats of the riff, including its rests.
+        chunks = []
+        for i in range(len(groups)):
+            chunk = list(riff.steps[(i % 4) * 3:(i % 4 + 1) * 3])
+            if chunk[0] in "-.":
+                chunk[0] = "X" if i == 0 else "x"
+            chunks.extend(chunk)
+        return "".join(chunks), 2
+    if riff.subdivision == 3 and groups and any(abs(g * 3 - round(g * 3)) > 1e-6 for g in groups):
+        # Mixed eighth-note groups need a common grid for triplets and halves.
+        steps = "".join(c + ("." if c == "." else "-") for c in riff.steps)
+        return _fit_steps(steps, bpb, groups), 6
+    return _fit_steps(riff.steps, bpb, groups), riff.subdivision
+
+
 def riff_events(riff: CompRiff, bar_start: float, bpb: float, chords: ChordMap,
                 *, tag: str = "comp", groups: Optional[Sequence[float]] = None) -> List[CompEvent]:
     """Expand one bar of a riff into events."""
-    steps = _fit_steps(riff.steps, bpb, groups)
-    sub = riff.subdivision
+    steps, sub = _performance_grid(riff, bpb, groups)
     step = 1.0 / sub
     events: List[CompEvent] = []
     arp_i = 0
