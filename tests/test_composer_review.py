@@ -246,9 +246,9 @@ def test_realizer_uses_section_metric_position(monkeypatch):
     from produzre.composer.cells import Cell, CellNote
     seen = []
     original = module.metric_weight
-    def spy(beat, bpb):
+    def spy(beat, bpb, groups=None):
         seen.append(beat)
-        return original(beat, bpb)
+        return original(beat, bpb, groups)
     monkeypatch.setattr(module, 'metric_weight', spy)
     module.realize_cell(Cell((CellNote(0, .5, 0),), 1), 1.5,
                         ChordMap(_slots(['I']), 'C', 'major'), key='C', mode='major',

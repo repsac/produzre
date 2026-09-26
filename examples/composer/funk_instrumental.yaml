@@ -22,8 +22,6 @@ exports:
 instruments:
   lead_gtr:
     params: {foreground: full, register: [62, 79]}
-  rhythm_gtr:
-    params: {style: funk_chanks}
 
 sections:
   intro:

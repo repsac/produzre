@@ -127,6 +127,13 @@ def build_harmony_plan(
     total_beats = resolve_total_beats(cfg, section, meter)
 
     chord_rate = float(section.harmony.chord_rate)
+    rate_is_default = bool((section.harmony.extra or {}).get("_chord_rate_default"))
+    bar_beats = float(meter.beats_per_bar or 4.0)
+    if rate_is_default and abs(bar_beats - 4.0) > 1e-6:
+        # The default is "one chord per bar". A fixed 4 beats would drift
+        # against a 3.5-beat (7/8) or 3-beat (6/8, 3/4) bar and change
+        # chords mid-bar.
+        chord_rate = bar_beats
     if chord_rate <= 0:
         chord_rate = float(total_beats) if total_beats > 0 else 0.0
 
@@ -237,7 +244,9 @@ def build_harmony_plan(
                     try:
                         _rate = float(_recipe_rate)
                         if _rate > 0:
-                            chord_rate = _rate
+                            # Recipe rates are written in 4/4 bars; keep
+                            # them bar-relative in other meters.
+                            chord_rate = _rate * bar_beats / 4.0
                             logger.debug(
                                 "Section '%s': using recipe '%s' chord_rate=%.2f",
                                 section.id, _recipe_name, chord_rate,

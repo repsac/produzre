@@ -86,6 +86,17 @@ natural minor. Lydian raises the fourth of major; mixolydian lowers its seventh.
 
 ### Meter and beat units
 
+Odd and compound meters phrase by their beat groups. 6/8 pulses in two dotted
+quarters, 7/8 groups its eighths 2+2+3, 5/4 groups its quarters 3+2, and 12/8
+pulses in four dotted quarters. Melodies are built group by group, comp riffs
+open every group with an attack, and group starts count as strong beats for
+chord tones. `song.meter_grouping` (or a section's `meter_grouping`) sets
+another grouping, in the meter's own units: `"3+2+2"` for 7/8, `"2+3"` for 5/4.
+A grouping that does not add up to a section's bar is ignored there.
+
+Unless you set `chord_rate`, a progression changes chords once per bar in
+every meter; a recipe's rate is scaled to the section's bar length.
+
 Every internal beat is a quarter note. A bar lasts 4 beats in 4/4, 3 in 3/4 or
 6/8, 3.5 in 7/8, and 5 in 5/4. The drum grid has four steps per quarter note.
 6/8 groups eighth notes into two dotted-quarter pulses; it does not use the

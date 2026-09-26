@@ -1123,6 +1123,7 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         pass
 
     from ..composer.comping import plan_comp_section
+    from ..composer.song import section_groups
 
     arrangement_index = 0
     if isinstance(transition_context, dict):
@@ -1148,6 +1149,7 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         next_section_type=nxt if nxt else (None if (transition_context or {}).get(
             "is_last_section") else "verse"),
         hook_onsets=composer.hook_onsets(),
+        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
     )
     if not events:
         return
@@ -1190,7 +1192,7 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
                       _explicit_settings(lead_cfg, extra, _LEAD_LEGACY_ONLY))
 
     from ..composer.lead import LeadContext
-    from ..composer.song import lead_register
+    from ..composer.song import lead_register, section_groups
     from .ensemble import _lead_foreground_mode
 
     arrangement_index = 0
@@ -1228,6 +1230,7 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
         register=lead_register(cfg, lead_cfg),
         rest_probability=_as_float(shaping.get("rest_probability")),
         contour=str(shaping.get("contour_style") or "balanced").strip().lower(),
+        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
         strict_register=isinstance(extra.get("register", getattr(lead_cfg, "register", None)),
                                    (list, tuple)),
     )

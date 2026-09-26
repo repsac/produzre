@@ -50,6 +50,15 @@ def _candidates(intended: float, chord_pcs, scale, lo: int, hi: int,
     return cands
 
 
+def _on_group_start(beat_in_bar: float, groups: Sequence[float]) -> bool:
+    t = 0.0
+    for g in groups[:-1]:
+        t += g
+        if abs(beat_in_bar - t) < 1e-3:
+            return True
+    return False
+
+
 def realize_cell(
     cell: Cell,
     start: float,
@@ -68,6 +77,7 @@ def realize_cell(
     exact_degrees: bool = False,
     entry_after_rest: bool = True,
     leap_scale: float = 1.0,
+    groups: Optional[Sequence[float]] = None,
 ) -> Tuple[List[Note], float]:
     """Realize ``cell`` starting at section beat ``start``.
 
@@ -78,6 +88,8 @@ def realize_cell(
             as the register pull, used for arcs toward a climax).
         cadence_pcs: Pitch classes the final note must land on.
         exact_degrees: Honor ``CellNote.degree`` strictly (authored themes).
+        groups: The bar's beat grouping (theory.meter_groups), so strong
+            beats follow the meter: 6/8 pulses on 1 and 4, 7/8 on 2+2+3.
         leap_scale: Weight on leap costs (the lead's ``contour_style``):
             above 1 favors stepwise lines, below 1 frees wider leaps.
         entry_after_rest: The cell starts out of silence, so its first note
@@ -88,6 +100,10 @@ def realize_cell(
     """
     if not cell.notes:
         return [], 0.0
+    # In odd and compound meters the group starts are how the ear finds the
+    # meter (the "+2" of 5/4, the "4" of 6/8), so a dissonance there costs
+    # more than on a 4/4 half bar, where the meter is never in doubt.
+    grouped = bool(groups) and tuple(groups) != (2.0, 2.0)
     scale = scale_pcs(key, mode)
     # Ladder index 0 is the tonic pitch class in MIDI octave -1, matching
     # diatonic_index(), so diatonic_pitch() is its exact inverse.
@@ -101,7 +117,7 @@ def realize_cell(
         beat = start + cn.onset
         span = chords.at(beat)
         chord_pcs = span.pcs if span else scale
-        mw = metric_weight(beat % beats_per_bar, beats_per_bar)
+        mw = metric_weight(beat % beats_per_bar, beats_per_bar, groups)
         is_last = i == n_notes - 1
         reg_target = (target_curve[i] if target_curve is not None and i < len(target_curve)
                       else anchor)
@@ -163,6 +179,9 @@ def realize_cell(
                     c += 3.2 * mw + 0.25
                     if i == 0 and entry_after_rest:
                         c += 2.2  # a dissonance out of silence has no preparation
+                    if grouped and 0.5 <= mw < 1.0 and _on_group_start(beat % beats_per_bar,
+                                                                      groups):
+                        c += 1.6
                     if cn.dur >= 1.0:
                         c += 1.6
                     if prev is not None and abs(p - prev) > 2:

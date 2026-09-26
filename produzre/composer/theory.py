@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 from ..harmony.spelling import _KEY_PCS, _MODE_OFFSETS, _normalize_key
 from ..melody import chord_pitch_classes
@@ -53,15 +53,88 @@ def nearest_in(pcs: Sequence[int], target: float, lo: int, hi: int) -> int:
     return min(cands, key=lambda p: (abs(p - target), p))
 
 
-def metric_weight(beat_in_bar: float, beats_per_bar: float) -> float:
-    """Metric accent of a position: 1.0 downbeat down to 0.1 for 16ths."""
+def _split_twos_threes(n: int) -> List[int]:
+    """Split n pulses into 2s and 3s, threes last (7 -> 2+2+3, 5 -> 2+3)."""
+    if n <= 3:
+        return [n]
+    threes = 0
+    while (n - 3 * threes) % 2:
+        threes += 1
+    return [2] * ((n - 3 * threes) // 2) + [3] * threes
+
+
+def default_groups(beats_per_bar: float) -> Tuple[float, ...]:
+    """Beat grouping implied by a bar length alone (quarter-note beats).
+
+    Whole-beat bars group in quarters (4 -> 2+2, 5 -> 3+2, 3 -> 1+1+1); bars
+    with a half beat are eighth-note meters grouped in 2s and 3s
+    (3.5 -> 2+2+3 eighths). Meters the bar length cannot tell apart (6/8 vs
+    3/4) need ``meter_groups`` with the time signature.
+    """
+    bpb = float(beats_per_bar)
+    if bpb <= 0:
+        return (1.0,)
+    if abs(bpb - round(bpb)) < 1e-6:
+        n = int(round(bpb))
+        if n <= 3:
+            return tuple([1.0] * n)
+        if n == 4:
+            return (2.0, 2.0)
+        if n == 5:
+            return (3.0, 2.0)
+        return tuple(float(g) for g in _split_twos_threes(n))
+    eighths = int(round(bpb * 2))
+    return tuple(g / 2.0 for g in _split_twos_threes(eighths))
+
+
+def parse_grouping(text: Any, denominator: int) -> Optional[Tuple[float, ...]]:
+    """``"2+2+3"`` (in the meter's denominator units) -> quarter-beat groups."""
+    if text is None:
+        return None
+    parts = text if isinstance(text, (list, tuple)) else str(text).replace(",", "+").split("+")
+    try:
+        units = [float(p) for p in parts if str(p).strip()]
+    except (TypeError, ValueError):
+        return None
+    if not units or any(u <= 0 for u in units):
+        return None
+    scale = 4.0 / float(denominator or 4)
+    return tuple(u * scale for u in units)
+
+
+def meter_groups(numerator: int, denominator: int, override: Any = None) -> Tuple[float, ...]:
+    """Groups for a time signature: compound meters pulse in dotted quarters."""
+    bpb = float(numerator) * 4.0 / float(denominator or 4)
+    custom = parse_grouping(override, denominator)
+    if custom is not None and abs(sum(custom) - bpb) < 1e-6:
+        return custom
+    if int(denominator) == 8 and int(numerator) % 3 == 0:
+        return tuple([1.5] * (int(numerator) // 3))
+    return default_groups(bpb)
+
+
+def metric_weight(beat_in_bar: float, beats_per_bar: float,
+                  groups: Optional[Sequence[float]] = None) -> float:
+    """Metric accent of a position: 1.0 downbeat down to 0.12 for 16ths.
+
+    Group starts are strong (0.75 for groups of 1.5 beats or more). In
+    eighth-note meters the eighths inside a group are weak even when they
+    fall on a quarter-note beat, so 6/8 accents 1 and 4, not 1, 2 and 3.
+    4/4 (2+2), 3/4 and 2/4 weigh exactly as simple meters always have.
+    """
     b = round(beat_in_bar * 4) / 4
     if abs(b) < 1e-6:
         return 1.0
-    half = beats_per_bar / 2.0
-    if beats_per_bar >= 4 and abs(b - half) < 1e-6 and float(half).is_integer():
-        return 0.75
-    if abs(b - round(b)) < 1e-6:
+    gs = tuple(groups) if groups else default_groups(beats_per_bar)
+    t = 0.0
+    for i in range(1, len(gs)):
+        t += gs[i - 1]
+        if abs(b - t) < 1e-6:
+            # A group of a beat and a half or more is a real pulse (the "4"
+            # of 6/8, the "+2" of 5/4, the half bar of 4/4).
+            return 0.75 if gs[i] >= 1.5 else 0.55
+    eighth_meter = any(abs(g - round(g)) > 1e-6 for g in gs)
+    if not eighth_meter and abs(b - round(b)) < 1e-6:
         return 0.55
     if abs(b * 2 - round(b * 2)) < 1e-6:
         return 0.3

@@ -144,6 +144,58 @@ def fit_rhythm(figure: Sequence[float], beats_per_bar: float) -> Tuple[float, ..
     return tuple(out)
 
 
+# Rhythm cells per beat group (quarter-note beats; negative = rest). Odd
+# meters are phrased by their groups: 7/8 as 2+2+3 eighths, 5/4 as 3+2
+# quarters, 6/8 as two dotted quarters, so an idea is assembled group by
+# group instead of truncating a 4/4 figure.
+_GROUP_CELLS: Dict[float, Dict[str, List[Tuple[float, ...]]]] = {
+    1.0: {"driving": [(0.5, 0.5), (0.25, 0.25, 0.5), (0.5, 0.25, 0.25)],
+          "anthem": [(1.0,), (0.5, 0.5)],
+          "syncopated": [(0.75, 0.25), (-0.5, 0.5), (0.25, 0.75)],
+          "conversational": [(0.5, 0.5), (-0.5, 0.5)],
+          "sparse": [(1.0,)]},
+    1.5: {"driving": [(0.5, 0.5, 0.5), (0.5, 0.25, 0.25, 0.5)],
+          "anthem": [(1.0, 0.5), (1.5,)],
+          "syncopated": [(0.5, 1.0), (-0.5, 0.5, 0.5), (0.75, 0.75)],
+          "conversational": [(0.5, 0.5, 0.5), (-0.5, 1.0)],
+          "sparse": [(1.5,)]},
+    2.0: {"driving": [(0.5, 0.5, 0.5, 0.5), (1.0, 0.5, 0.5)],
+          "anthem": [(1.0, 1.0), (1.5, 0.5), (2.0,)],
+          "syncopated": [(0.75, 0.75, 0.5), (-0.5, 1.0, 0.5)],
+          "conversational": [(0.5, 0.5, 1.0), (-1.0, 0.5, 0.5)],
+          "sparse": [(2.0,)]},
+    3.0: {"driving": [(0.5,) * 6, (1.0, 0.5, 0.5, 1.0)],
+          "anthem": [(1.0, 1.0, 1.0), (2.0, 1.0), (1.5, 1.5)],
+          "syncopated": [(0.75, 0.75, 0.5, 1.0), (-0.5, 1.0, 1.5)],
+          "conversational": [(0.5, 0.5, 1.0, 1.0), (-1.0, 1.0, 1.0)],
+          "sparse": [(3.0,), (2.0, 1.0)]},
+}
+
+
+def uses_group_rhythm(beats_per_bar: float, groups: Optional[Sequence[float]]) -> bool:
+    """Everything but plain 4/4 builds its ideas from the meter's groups."""
+    if not groups:
+        return False
+    return not (abs(beats_per_bar - 4.0) < 1e-6 and tuple(groups) == (2.0, 2.0))
+
+
+def group_figure(rng: random.Random, groups: Sequence[float], family: str) -> Tuple[float, ...]:
+    """One bar's rhythm, a cell per group; the last group may hold."""
+    out: List[float] = []
+    for i, g in enumerate(groups):
+        table = _GROUP_CELLS.get(round(g * 2) / 2)
+        if i == len(groups) - 1 and rng.random() < 0.5:
+            out.append(g)  # a held arrival at the end of the bar
+            continue
+        if table is None:
+            n = int(round(g / 0.5))
+            out.extend([0.5] * n)
+            continue
+        cells = table.get(family) or table["anthem"]
+        out.extend(rng.choice(cells))
+    return tuple(out)
+
+
 def _rhythm_to_cell_parts(figure: Sequence[float]):
     durs = [abs(d) for d in figure]
     rests = [d < 0 for d in figure]
@@ -259,6 +311,7 @@ def compose_idea(
     min_notes: int = 3,
     name: str = "idea",
     fit=None,
+    groups: Optional[Sequence[float]] = None,
 ) -> Cell:
     """Generate ``pool`` candidates and pick among the ``top`` best.
 
@@ -279,7 +332,10 @@ def compose_idea(
             if draw <= 0:
                 fam = f
                 break
-        figure = fit_rhythm(rng.choice(_RHYTHMS[fam]), beats_per_bar)
+        if uses_group_rhythm(beats_per_bar, groups):
+            figure = group_figure(rng, groups, fam)
+        else:
+            figure = fit_rhythm(rng.choice(_RHYTHMS[fam]), beats_per_bar)
         durs, rests = _rhythm_to_cell_parts(figure)
         sounded = sum(1 for r in rests if not r)
         if sounded < min_notes:
@@ -356,6 +412,7 @@ def compose_dna(
     melody_theme=None,
     hook_fit=None,
     verse_fit=None,
+    groups: Optional[Sequence[float]] = None,
 ) -> SongDNA:
     """Compose the song's ideas from one dedicated RNG stream.
 
@@ -371,20 +428,20 @@ def compose_dna(
         hook_weights = dict(genre_weights(genre))
         for fam, boost in (("anthem", 0.25), ("syncopated", 0.15)):
             hook_weights[fam] = hook_weights.get(fam, 0.0) + boost
-        hook = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar, name="hook",
+        hook = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar, groups=groups, name="hook",
                             families=hook_weights, fit=hook_fit)
     if answer is None:
         answer = _answer(hook, rng, hook_fit)
     verse_weights = dict(genre_weights(genre))
     verse_weights["conversational"] = verse_weights.get("conversational", 0.0) + 0.4
-    verse = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar,
+    verse = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar, groups=groups,
                          families=verse_weights, min_notes=4, name="verse", fit=verse_fit)
     for _ in range(6):
         # Verse and chorus must not share a rhythm: contrast is what makes
         # the chorus arrive.
         if verse.durations != hook.durations:
             break
-        verse = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar,
+        verse = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar, groups=groups,
                              families=verse_weights, min_notes=4, name="verse", fit=verse_fit)
     # Bridge: contrast by inversion and a slower surface rhythm.
     bridge_seed = compose_idea(rng, genre=genre, beats_per_bar=beats_per_bar / 2.0,

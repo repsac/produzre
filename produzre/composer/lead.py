@@ -77,6 +77,9 @@ class LeadContext:
     # `contour_style`); None / "balanced" leave the composer's choices alone.
     rest_probability: Optional[float] = None
     contour: str = "balanced"
+    # Beat grouping of the section's meter (theory.meter_groups); None means
+    # the grouping implied by the bar length.
+    groups: Optional[Tuple[float, ...]] = None
 
 
 @dataclass(frozen=True)
@@ -108,19 +111,22 @@ class SongComposer:
                  hook_slots: Optional[Sequence] = None,
                  verse_slots: Optional[Sequence] = None,
                  register: Tuple[int, int] = (60, 76),
-                 verse_context: Optional[Tuple[str, str, float]] = None):
+                 verse_context: Optional[Tuple[str, str, float]] = None,
+                 groups: Optional[Tuple[float, ...]] = None):
         self.seed = int(seed)
         self.genre = str(genre or "")
         self.family = genre_family(self.genre)
         self.key = key
         self.mode = mode
         self.bpb = float(beats_per_bar)
+        self.groups = tuple(groups) if groups else None
         lo, hi = register
         self.dna: SongDNA = compose_dna(
             seed=self.seed, genre=self.genre, key=key, mode=mode, beats_per_bar=self.bpb,
             melody_theme=melody_theme,
             hook_fit=self._fitter(hook_slots, lo + 0.62 * (hi - lo), register),
             verse_fit=self._fitter(verse_slots, lo + 0.38 * (hi - lo), register, verse_context),
+            groups=self.groups,
         )
         self.listener = Listener()
         self._plans: Dict[tuple, List[PlanItem]] = {}
@@ -156,8 +162,10 @@ class SongComposer:
         def fit(cell: Cell):
             if abs(bpb - self.bpb) > 1e-6:
                 cell = C.fit_length(cell, bpb) if cell.length > bpb else C.Cell(cell.notes, bpb, cell.name)
+            groups = self.groups if abs(bpb - self.bpb) < 1e-6 else None
             got, cost = realize_cell(cell, 0.0, chords, key=key, mode=mode,
-                                     lo=lo, hi=hi, anchor=anchor, beats_per_bar=bpb)
+                                     lo=lo, hi=hi, anchor=anchor, beats_per_bar=bpb,
+                                     groups=groups)
             return [n.pitch for n in got], cost
 
         return fit
@@ -683,7 +691,8 @@ class SongComposer:
                                      cadence_pcs=cad_pcs, beats_per_bar=ctx.beats_per_bar,
                                      exact_degrees=exact,
                                      entry_after_rest=after_rest,
-                                     leap_scale=_LEAP_SCALE.get(ctx.contour, 1.0))
+                                     leap_scale=_LEAP_SCALE.get(ctx.contour, 1.0),
+                                     groups=ctx.groups)
             if not got:
                 continue
             score = cost
@@ -692,7 +701,7 @@ class SongComposer:
                                                     context)
                 score += IC_WEIGHT * abs(ic - IC_TARGET.get(it.role, 3.0))
                 score += CONTEXT_WEIGHT * self.listener.contextual_cost(
-                    got, chords, ctx.beats_per_bar)
+                    got, chords, ctx.beats_per_bar, ctx.groups)
                 score += 0.05 * k  # ties favor the plainer development
             if best is None or score < best[0]:
                 best = (score, got)

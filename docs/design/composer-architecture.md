@@ -224,6 +224,34 @@ Across the genre examples, section-main rhythm patterns went from 78 to 111
 distinct figures. The most common one dropped from 43 sections (plain
 quarters) to 27.
 
+## Meter grouping
+
+Odd meters used to be served by stretching 4/4 material: 7/8 cut a figure
+short, 5/4 left a gap, 6/8 was treated like 3/4, and a fixed 4-beat harmonic
+rhythm changed chords mid-bar. `theory.meter_groups` now describes each bar
+as beat groups (6/8 = 3+3 eighths, 7/8 = 2+2+3, 5/4 = 3+2, 12/8 = four dotted
+quarters; `meter_grouping` overrides). Group starts are strong metric
+positions, so the realizer, the listener, and the performers accent the
+meter's pulse; in grouped meters a dissonance on a group start costs extra,
+because that is where the ear finds the meter. Song DNA builds odd-meter
+ideas from per-group rhythm cells, comp riffs are sliced group by group, and
+the default harmonic rhythm is one chord per bar. Plain 4/4 output is
+byte-identical.
+
+Measured on the showcase song rebuilt in each meter (lead and rhythm guitar
+attacks on non-downbeat group starts, lead chord tones on strong positions):
+
+| Meter | Lead on group starts | Rhythm on group starts | Strong-beat chord tones |
+|---|---|---|---|
+| 6/8 | 0.43 to 0.69 | 0.85 to 0.96 | 0.95 to 0.99 |
+| 7/8 | 0.44 to 0.55 | 0.74 to 0.96 | 0.96 to 0.92 |
+| 5/4 | 0.14 to 0.61 | 0.85 to 0.96 | 0.94 to 0.90 |
+| 7/8 funk | 0.52 to 0.78 | (style pinned before) | 0.96 to 0.97 |
+
+The 7/8 and 5/4 chord-tone dips come from the lead now landing on group
+starts it used to skip, sometimes with a color tone (a ninth on the "+2" of
+5/4). They are the next thing to tune.
+
 ## Groove memory
 
 `apply_groove_memory` runs right after each accompaniment engine renders

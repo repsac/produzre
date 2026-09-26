@@ -138,7 +138,7 @@ class Listener:
         ics = self.information(pitches, durations, context)
         return sum(ics) / len(ics) if ics else 0.0
 
-    def contextual_cost(self, notes, chords, beats_per_bar: float) -> float:
+    def contextual_cost(self, notes, chords, beats_per_bar: float, groups=None) -> float:
         """Metric-weighted dissonance exposure, separate from calibrated IC.
 
         Evaluate held notes across chord boundaries as well as at attacks.
@@ -165,7 +165,7 @@ class Listener:
                 total += duration
                 if note.pitch % 12 in span.pcs:
                     continue
-                weight = metric_weight(start % beats_per_bar, beats_per_bar)
+                weight = metric_weight(start % beats_per_bar, beats_per_bar, groups)
                 cost += duration * (0.25 + 0.75 * weight) * (0.35 if passing else 1.0)
         return cost / total if total else 0.0
 

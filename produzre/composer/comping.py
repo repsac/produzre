@@ -325,10 +325,35 @@ _KIND = {"X": "strum", "x": "strum", "u": "up", "m": "chuck", "p": "chug", "P": 
          "Q": "dyad6", "y": "dyad7", "h": "sus", "a": "arp", "/": "slide"}
 
 
-def _fit_steps(steps: str, bpb: float) -> str:
-    """Stretch a 4/4 riff to another bar length on its own grid."""
+def _fit_steps(steps: str, bpb: float, groups: Optional[Sequence[float]] = None) -> str:
+    """Fit a 4/4 riff to another bar, phrased by the meter's beat groups.
+
+    Each group is a slice of the riff that opens with an attack, so 7/8 is
+    heard as 2+2+3 rather than a figure cut short. A group that would run
+    past the riff's bar restarts the riff head (5/4 = 3 + a 2-beat restart);
+    compound meters give each dotted-quarter pulse one half of the riff.
+    Plain 4/4, and grids a group does not divide evenly, keep the riff as
+    written (trimmed or repeated to length).
+    """
     sub = len(steps) // 4
     n = max(1, int(round(bpb * sub)))
+    plain = not groups or (abs(bpb - 4.0) < 1e-6 and tuple(groups) == (2.0, 2.0))
+    if not plain and all(abs(g * sub - round(g * sub)) < 1e-6 for g in groups):
+        compound = all(abs(g - 1.5) < 1e-6 for g in groups)
+        out: List[str] = []
+        pos = 0.0
+        for k, g in enumerate(groups):
+            length = int(round(g * sub))
+            start = float((2 * k) % 4) if compound else (pos if pos + g <= 4.0 + 1e-6 else 0.0)
+            first = int(round(start * sub))
+            chunk = [steps[(first + i) % len(steps)] for i in range(length)]
+            if chunk[0] in "-.":
+                chunk[0] = "X" if k == 0 else "x"
+            elif chunk[0] == "x":
+                chunk[0] = "X"  # the group's downbeat carries the accent
+            out.extend(chunk)
+            pos = start + g
+        return "".join(out)[:n]
     if n <= len(steps):
         return steps[:n]
     out = steps
@@ -338,9 +363,9 @@ def _fit_steps(steps: str, bpb: float) -> str:
 
 
 def riff_events(riff: CompRiff, bar_start: float, bpb: float, chords: ChordMap,
-                *, tag: str = "comp") -> List[CompEvent]:
+                *, tag: str = "comp", groups: Optional[Sequence[float]] = None) -> List[CompEvent]:
     """Expand one bar of a riff into events."""
-    steps = _fit_steps(riff.steps, bpb)
+    steps = _fit_steps(riff.steps, bpb, groups)
     sub = riff.subdivision
     step = 1.0 / sub
     events: List[CompEvent] = []
@@ -414,6 +439,7 @@ def plan_comp_section(
     mode: str,
     next_section_type: Optional[str] = None,
     hook_onsets: Sequence[float] = (),
+    groups: Optional[Sequence[float]] = None,
 ) -> Tuple[List[CompEvent], str, float]:
     """Arrange a section. Returns (events, riff name, ring beats)."""
     st = str(section_type or "verse").strip().lower()
@@ -444,7 +470,7 @@ def plan_comp_section(
             events.append(CompEvent(round(start, 4), bpb, "slide" if sub == 4 else "strum",
                                     accent=True, tag="comp_stop"))
             continue
-        bar = riff_events(riff, start, bpb, chords)
+        bar = riff_events(riff, start, bpb, chords, groups=groups)
         if phrase_end and st in ("verse", "chorus", "outro", "solo", "intro") and bpb >= 3:
             # Keep the head of the bar, answer the phrase with a walk-up.
             bar = [e for e in bar if e.beat < start + bpb - 1.0 - 1e-6]

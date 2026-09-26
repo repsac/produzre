@@ -136,6 +136,13 @@ def _group_slots_by_phrase(chord_slots, phrase_len_beats):
 _ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88}
 
 
+def _section_groups(cfg, section, harmony_plan):
+    """The section meter's beat grouping, for metric velocity shaping."""
+    from ...composer.song import section_groups
+
+    return section_groups(cfg, section, getattr(harmony_plan, "meter", None))
+
+
 def _perform_composed(
     notes: List[Dict[str, Any]],
     *,
@@ -151,6 +158,7 @@ def _perform_composed(
     dive_rate: float,
     swell_rate: float,
     bend_rate: float = 0.15,
+    groups=None,
 ) -> None:
     """Perform composer notes: velocity shape, technique, pitch expression.
 
@@ -178,7 +186,7 @@ def _perform_composed(
             tech = tech if keep else None
         next_local = float(ordered[i + 1]["beat"]) if i + 1 < len(ordered) else None
 
-        mw = metric_weight(local % beats_per_bar, beats_per_bar) if beats_per_bar > 0 else 0.5
+        mw = metric_weight(local % beats_per_bar, beats_per_bar, groups) if beats_per_bar > 0 else 0.5
         vel = base_vel * (0.9 + 0.14 * mw) * _ROLE_VELOCITY.get(role, 1.0)
         if n.get("accent"):
             vel *= 1.05
@@ -671,6 +679,7 @@ def render_into_timeline(
             dive_rate=dive_rate,
             swell_rate=swell_rate,
             bend_rate=bend_rate,
+            groups=_section_groups(cfg, section, harmony_plan),
         )
         logger.debug(
             "Section '%s': performed %d composed lead notes",

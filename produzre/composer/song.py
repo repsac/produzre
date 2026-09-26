@@ -20,7 +20,31 @@ from typing import Any, List, Optional, Sequence, Tuple
 from ..engine.lead_gtr.register import get_register_bounds
 from .lead import SongComposer, _normalize_type
 from .realize import realize_cell
-from .theory import ChordMap, diatonic_index, mode_offsets, tonic_pc
+from .theory import ChordMap, diatonic_index, meter_groups, mode_offsets, tonic_pc
+
+
+def section_groups(cfg: Any, sec: Any, meter: Any) -> Optional[Tuple[float, ...]]:
+    """A section's beat grouping: its own ``meter_grouping``, the song's, or
+    the time signature's default (6/8 -> 3+3 eighths, 7/8 -> 2+2+3, 5/4 -> 3+2).
+
+    An override that does not add up to the section's bar is ignored, so a
+    song-level ``"2+2+3"`` only shapes its 7/8 sections.
+    """
+    if meter is None:
+        return None
+    override = None
+    extras = getattr(sec, "extras", None) if sec is not None else None
+    if isinstance(extras, dict):
+        override = extras.get("meter_grouping")
+    if override is None:
+        raw = getattr(cfg, "raw", None)
+        song = raw.get("song", {}) if isinstance(raw, dict) else {}
+        if isinstance(song, dict):
+            override = song.get("meter_grouping")
+    try:
+        return meter_groups(int(meter.numerator), int(meter.denominator), override)
+    except (AttributeError, TypeError, ValueError):
+        return None
 
 
 def composer_enabled(cfg: Any) -> bool:
@@ -97,10 +121,11 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
                     or getattr(song, "beats_per_bar", 4) or 4)
         slots = [s for s in hp.chord_slots if s.start_beat < bpb * 2 - 1e-6] if hp else None
         return (slots, getattr(sec, "key", None) or song.key,
-                getattr(sec, "mode", None) or song.mode, bpb)
+                getattr(sec, "mode", None) or song.mode, bpb,
+                section_groups(cfg, sec if source is not None else None, getattr(hp, "meter", None)))
 
-    hook_slots, key, mode, bpb = source_context(hook_source)
-    verse_slots, verse_key, verse_mode, verse_bpb = source_context(verse_source)
+    hook_slots, key, mode, bpb, groups = source_context(hook_source)
+    verse_slots, verse_key, verse_mode, verse_bpb, _ = source_context(verse_source)
     composer = SongComposer(
         seed=int(getattr(song, "seed", 0) or 0),
         genre=str(getattr(song, "genre", "") or ""),
@@ -112,6 +137,7 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
         verse_slots=verse_slots,
         verse_context=(verse_key, verse_mode, verse_bpb),
         register=lead_register(cfg),
+        groups=groups,
     )
     composer.hook_slots = hook_slots
     log.info("Composer DNA: %s", composer.dna.signature)
