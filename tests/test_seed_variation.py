@@ -106,9 +106,16 @@ def test_section_seed_preserves_structure(base_result, section_seed_result):
 
 
 def test_instrument_seed_changes_events(base_result, inst_seed_result):
-    """Instrument seed override should change event counts."""
-    assert base_result.events_per_instrument != inst_seed_result.events_per_instrument, (
-        "Instrument seed override should produce different event counts"
+    """Instrument seed override should change the re-rolled part's events.
+
+    Compares the chorus drum onsets (the override's target) rather than event
+    counts, which can coincide between two different drum parts.
+    """
+    base = base_result.performance_plan.get("performance.drums.chorus")
+    rolled = inst_seed_result.performance_plan.get("performance.drums.chorus")
+    assert base and rolled
+    assert base["onsets"] != rolled["onsets"], (
+        "Instrument seed override should produce different drum events"
     )
 
 

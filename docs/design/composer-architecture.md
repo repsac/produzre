@@ -288,10 +288,14 @@ Ten hard rock songs, the committed composer against this work:
 | Part | Before | After |
 |---|---|---|
 | Drums, verse / chorus / bridge | 0.91 / 0.70 / 0.94 | 0.31 / 0.24 / 0.22 |
-| Bass, verse / chorus / bridge | 0.11 / 0.29 / 0.18 | 0.07 / 0.15 / 0.11 |
+| Bass, verse / chorus / bridge | 0.11 / 0.29 / 0.18 | 0.08 / 0.11 / 0.21 |
 | Rhythm guitar, verse / chorus / bridge | 0.10 / 0.14 / 0.24 | 0.08 / 0.08 / 0.13 |
 | Lead under the chorus | 0.49 | 0.19 |
 | Overall | 0.41 | 0.16 |
+
+The bridge bass stays above its baseline: the benchmark's bridges draw from
+three progressions, and held or kick-locked roots over the same chords share
+shapes more than the engine's busier lines did.
 | Songs with stop-time before the chorus | 10/10 | habit, most common choice 4/10 |
 | Songs whose solo ends in a dive | 10/10 | 4/10 |
 
@@ -326,6 +330,17 @@ What does it:
   one-beat technique cells (tens of thousands of figures per tier) and
   scored for a few techniques that restate themselves, instead of drawn
   from a fixed list.
+- **Bass roles** (`composer/bass.py`). In band sections (drums plus a
+  guitar) each song picks a bass role per section: the engine's
+  kick-and-chord line, locking to the song's own kick pattern, root
+  eighths, pumping octaves, a gallop, or held roots, approaching chord
+  changes from below. Each role carries per-song variation (silent
+  eighths, an octave pop, the octave mask, gallop beats, held-note
+  figures, anticipations): a first version without it made bass lines
+  more alike across songs (bridge similarity 0.11 to 0.44), because a
+  generic role is identical in every song that picks it. Bass `seed`
+  overrides re-roll the roles; explicit `rhythm_pattern`, `walking`,
+  `lock_to_kick`, riff or motif locks keep the engine line.
 - **Generated licks.** Most of a song's lick bank is synthesized from lick
   shapes (cry, run down, run up into a bend, motif, pedal point, pre-bend)
   with per-song rhythm unit, box position, and length.

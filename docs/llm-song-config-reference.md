@@ -668,6 +668,12 @@ song:
     ending: big              # ring | cold | big
 ```
 
+In band sections (drums and a guitar) the bass plays a per-song role for
+each section: the engine's line, the song's kick pattern, root eighths,
+octaves, a gallop, or held roots, each with the song's own variations.
+`rhythm_pattern`, `walking`, `lock_to_kick`, `lock_to_riff`, or a motif
+quote keep the engine's line.
+
 The drums are composed unless their params set `voices`, `recipe`,
 `pattern`, or `riff_accent_rate`, the section sets `intent`, or a
 `drum_groove` theme exists; `composer: false` on the drums also keeps the

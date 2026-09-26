@@ -816,6 +816,12 @@ def render_section_instruments(
             cfg, sec, hplan, rgrid, effective_cfgs.get("drums"),
             performance_plan, transition_context, logger,
         )
+        # Decide bass ownership before the bass engine merges its recipe
+        # into the config (recipe defaults are not the user's choice).
+        bass_cfg = effective_cfgs.get("bass")
+        if bass_cfg is not None:
+            performance_plan.set(f"composer.bass_owned.{sec.id}", bool(
+                _explicit_settings(bass_cfg, _flat_extra(bass_cfg), _BASS_USER_MODES)))
 
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
@@ -1225,6 +1231,28 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
     logger.info("Composer: %s rhythm guitar plays '%s'", sec.id, riff)
 
 
+# Bass settings that choose the line itself keep the bass engine.
+_BASS_USER_MODES = ("rhythm_pattern", "walking", "lock_to_kick", "lock_to_riff",
+                    "motif_quote_rate", "style", "pattern", "recipe")
+
+
+def _is_band_section(sec) -> bool:
+    """Bass roles lock with a band: drums and at least one guitar. A bass
+    alone keeps the engine's own line."""
+    names = set(getattr(sec, "instruments", {}) or {})
+    return "drums" in names and bool(names & {"rhythm_gtr", "lead_gtr", "acoustic_gtr"})
+
+
+def _flat_extra(inst_cfg) -> dict:
+    raw = getattr(inst_cfg, "extra", None)
+    out: dict = {}
+    if isinstance(raw, dict):
+        out = {k: v for k, v in raw.items() if k != "extra"}
+        if isinstance(raw.get("extra"), dict):
+            out.update(raw["extra"])
+    return out
+
+
 def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timeline,
                                  events_before, section_start_beat, performance_plan,
                                  transition_context, logger) -> None:
@@ -1279,6 +1307,47 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
         if doubled:
             events = sorted(doubled, key=lambda e: (e.start_beat, e.pitch))
             logger.info("Section '%s': bass doubles the signature riff", sec.id)
+    elif not performance_plan.get(f"composer.bass_owned.{sec.id}", True) and \
+            _is_band_section(sec):
+        # The song's bass role for this section (composer/bass.py).
+        st = str(getattr(sec, "type", "") or "").strip().lower()
+        st = {"pre-chorus": "prechorus", "hook": "chorus", "solo": "chorus",
+              "outro": "chorus", "intro": "verse"}.get(st, st)
+        bass_dna = composer.bass_dna()
+        reseed = _seed_override(cfg, sec, inst_cfg)
+        if reseed is not None:
+            from ..composer.bass import compose_bass_dna
+
+            bass_dna = compose_bass_dna(seed=reseed, genre=composer.genre)
+        role = bass_dna.roles.get(st, "engine")
+        drums = composer.drum_dna()
+        kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
+        if role != "engine":
+            from dataclasses import replace as _replace
+
+            from ..composer.bass import bass_bar
+            from ..composer.theory import ChordMap
+
+            key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+            mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+            chords = ChordMap(hplan.chord_slots, key, mode)
+            velocities = sorted(e.velocity for e in new_events)
+            velocity = velocities[len(velocities) // 2]
+            template = new_events[0]
+            near = sorted(e.pitch for e in new_events)[len(new_events) // 2]
+            written = []
+            for b in range(enter, bars):
+                for t, d, p, acc in bass_bar(role, b * bpb, bpb, chords,
+                                             approach=bass_dna.approach, near=near,
+                                             last_bar=b == bars - 1 and not tc.get("next_section_type"),
+                                             dna=bass_dna, kick=kick):
+                    written.append(_replace(template, start_beat=start0 + t,
+                                            duration_beats=max(0.1, d), pitch=p,
+                                            velocity=min(127, int(velocity * (1.06 if acc else 0.94))),
+                                            kind=f"bass_{role}", expression=None))
+            if written:
+                events = written
+                logger.info("Section '%s': bass plays %s", sec.id, role)
     timeline.events[events_before:] = events
 
 

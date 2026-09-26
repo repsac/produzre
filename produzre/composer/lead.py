@@ -166,6 +166,14 @@ class SongComposer:
                                                           beats_per_bar=self.bpb)
         return self._signature_riff
 
+    def bass_dna(self):
+        """The song's bass roles per section (composer/bass.py), built once."""
+        if getattr(self, "_bass_dna", None) is None:
+            from .bass import compose_bass_dna
+
+            self._bass_dna = compose_bass_dna(seed=self.seed, genre=self.genre)
+        return self._bass_dna
+
     def drum_dna(self):
         """The song's drummer (composer/drums.py), built once."""
         if getattr(self, "_drum_dna", None) is None:
