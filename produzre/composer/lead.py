@@ -112,7 +112,8 @@ class SongComposer:
                  verse_slots: Optional[Sequence] = None,
                  register: Tuple[int, int] = (60, 76),
                  verse_context: Optional[Tuple[str, str, float, Tuple[float, ...]]] = None,
-                 groups: Optional[Tuple[float, ...]] = None):
+                 groups: Optional[Tuple[float, ...]] = None, arrangement_overrides=None):
+        self.arrangement_overrides = arrangement_overrides if isinstance(arrangement_overrides, dict) else None
         self.seed = int(seed)
         self.genre = str(genre or "")
         self.family = genre_family(self.genre)
@@ -123,7 +124,7 @@ class SongComposer:
         lo, hi = register
         self.dna: SongDNA = compose_dna(
             seed=self.seed, genre=self.genre, key=key, mode=mode, beats_per_bar=self.bpb,
-            melody_theme=melody_theme,
+            melody_theme=melody_theme, country_style=self.arrangement_dna().country_style,
             hook_fit=self._fitter(hook_slots, lo + 0.62 * (hi - lo), register),
             verse_fit=self._fitter(verse_slots, lo + 0.38 * (hi - lo), register, verse_context),
             groups=self.groups,
@@ -142,7 +143,8 @@ class SongComposer:
 
             shuffle = comp_family(self.genre) in ("blues", "jazz")
             self._comp_dna = compose_comp_dna(seed=self.seed, genre=self.genre, key=self.key,
-                                              mode=self.mode, shuffle=shuffle)
+                                              mode=self.mode, shuffle=shuffle,
+                                              country_style=self.arrangement_dna().country_style)
         return self._comp_dna
 
     def arrangement_dna(self):
@@ -153,7 +155,8 @@ class SongComposer:
             from .arrangement import apply_overrides
 
             self._arrangement_dna = apply_overrides(
-                compose_arrangement_dna(seed=self.seed, genre=self.genre),
+                compose_arrangement_dna(seed=self.seed, genre=self.genre,
+                    country_style_override=(getattr(self, "arrangement_overrides", None) or {}).get("country_style")),
                 getattr(self, "arrangement_overrides", None))
         return self._arrangement_dna
 
@@ -181,7 +184,8 @@ class SongComposer:
         if getattr(self, "_bass_dna", None) is None:
             from .bass import compose_bass_dna
 
-            self._bass_dna = compose_bass_dna(seed=self.seed, genre=self.genre)
+            self._bass_dna = compose_bass_dna(seed=self.seed, genre=self.genre,
+                                               country_style=self.arrangement_dna().country_style)
         return self._bass_dna
 
     def drum_dna(self):
@@ -190,7 +194,8 @@ class SongComposer:
             from .drums import compose_drum_dna
 
             self._drum_dna = compose_drum_dna(seed=self.seed, genre=self.genre,
-                                              beats_per_bar=self.bpb)
+                                              beats_per_bar=self.bpb,
+                                              country_style=self.arrangement_dna().country_style)
         return self._drum_dna
 
     def hook_onsets(self, bpb=None, groups=None) -> List[float]:
@@ -1011,13 +1016,15 @@ def _sub_context(ctx: LeadContext, bars: int) -> LeadContext:
 
 
 def _tidy(notes: List[Note], total: float) -> List[Note]:
-    """Monophonic cleanup: sort, clip overlaps, drop notes past the end."""
+    """Clip monophonic lines, preserving explicitly unbent country double stops."""
     notes = sorted((n for n in notes if 0 <= n.beat < total - 1e-6), key=lambda n: (n.beat, -n.pitch))
     out: List[Note] = []
     for n in notes:
-        if out and abs(out[-1].beat - n.beat) < 1e-6:
+        together = out and abs(out[-1].beat - n.beat) < 1e-6
+        double = together and out[-1].role == n.role == "country_double"
+        if together and not double:
             continue
-        if out and out[-1].beat + out[-1].dur > n.beat - 0.02:
+        if out and not double and out[-1].beat + out[-1].dur > n.beat - 0.02:
             prev = out[-1]
             out[-1] = Note(prev.beat, max(0.1, n.beat - prev.beat - 0.02), prev.pitch,
                            prev.accent, prev.tech, prev.role)

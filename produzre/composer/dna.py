@@ -412,6 +412,7 @@ def compose_dna(
     melody_theme=None,
     hook_fit=None,
     verse_fit=None,
+    country_style=None,
     groups: Optional[Sequence[float]] = None,
 ) -> SongDNA:
     """Compose the song's ideas from one dedicated RNG stream.
@@ -451,7 +452,7 @@ def compose_dna(
     if len(bridge.notes) < 2:
         bridge = fit_length(invert(hook), beats_per_bar).with_name("bridge")
     licks = choose_lick_bank(rng, genre=genre, count=3, own_rng=random.Random(
-        stable_seed_int("composer.licks", seed, genre, key, mode)))
+        stable_seed_int("composer.licks", seed, genre, key, mode)), country_style=country_style)
     sig = "|".join(
         f"{c.name}:" + ",".join(f"{n.onset:g}/{n.dur:g}/{n.step}" for n in c.notes)
         for c in (hook, answer, verse, bridge)

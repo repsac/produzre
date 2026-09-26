@@ -349,11 +349,13 @@ def build_song(
             )
 
     # Transition ramps can lengthen notes after section-level cleanup.
-    # The completed lead timeline must remain monophonic, including graces.
+    # Keep the lead monophonic except explicitly unbent country double stops.
     lead_timeline = timelines.get("lead_gtr")
     if lead_timeline is not None:
         notes = sorted(lead_timeline.events, key=lambda e: (e.start_beat, e.pitch))
         for current, following in zip(notes, notes[1:]):
+            if current.kind == following.kind == "country_double_stac" and abs(current.start_beat-following.start_beat) < .06:
+                continue
             current.duration_beats = min(current.duration_beats,
                                          max(0.0, following.start_beat - current.start_beat))
         lead_timeline.events[:] = [e for e in notes if e.duration_beats > 1e-6]

@@ -118,7 +118,7 @@ def genre_family(genre: str) -> str:
 
 def choose_lick_bank(rng: random.Random, *, genre: str, count: int = 3,
                      max_energy: float = 0.7,
-                     own_rng: Optional[random.Random] = None) -> List[Lick]:
+                     own_rng: Optional[random.Random] = None, country_style=None) -> List[Lick]:
     """The song's signature fills: idiomatic for the genre and laid back
     enough to answer a phrase (shred licks are saved for the solo)."""
     fam = genre_family(genre)
@@ -138,7 +138,7 @@ def choose_lick_bank(rng: random.Random, *, genre: str, count: int = 3,
         for i in range(len(bank)):
             if i != keep:
                 bank[i] = generate_lick(own_rng, family=fam,
-                                        energy=own_rng.uniform(0.3, max_energy))
+                                        energy=own_rng.uniform(0.3, max_energy), country_style=country_style)
     return bank
 
 
@@ -149,7 +149,7 @@ _UNITS = {"8": 0.5, "16": 0.25, "trip": 1.0 / 3.0}
 
 
 def generate_lick(rng: random.Random, *, family: str, energy: float,
-                  max_len: float = 3.0) -> Lick:
+                  max_len: float = 3.0, country_style=None) -> Lick:
     """Synthesize an idiomatic lick from a shape grammar.
 
     Shapes are the moves players build licks from: a bend that cries and
@@ -158,6 +158,8 @@ def generate_lick(rng: random.Random, *, family: str, energy: float,
     length and ending are drawn per song, so each song phrases its own way.
     Every lick lands on a held note so it closes a phrase.
     """
+    if family == "country":
+        return _country_lick(rng, energy, max_len, country_style)
     shape = rng.choice(["cry", "run_down", "run_up", "motif", "pedal", "prebend"])
     unit_name = rng.choice(["8", "16", "16", "trip"] if energy >= 0.5 else ["8", "8", "trip"])
     unit = _UNITS[unit_name]
@@ -212,6 +214,38 @@ def generate_lick(rng: random.Random, *, family: str, energy: float,
     name = f"gen_{shape}_{unit_name}_{top}"
     return Lick(name, (family, "rock"), tuple(notes), round(t, 4), "penta",
                 min(1.0, 0.2 + 0.2 * density))
+
+
+def _country_lick(rng, energy, max_len, style):
+    from .country import LICK_FAMILIES, STYLES
+
+    shape = rng.choice(LICK_FAMILIES[style] if style in STYLES else
+                       ("chicken", "thirds", "sixths", "steel", "banjo", "hybrid", "travis", "chromatic"))
+    unit = rng.choice((.25, .5, .5))
+    box = rng.choice((0, 0, 5))
+    end = rng.choice((2, 4)) + box
+    paths = {"chicken": (4, 3, 2, 1), "thirds": (0, 1, 2), "sixths": (2, 1, 0),
+             "steel": (1, 2), "banjo": (0, 3, 2, 4), "hybrid": (0, 2, 3, 4),
+             "travis": (0, 3, 1, 3), "chromatic": (4, 3, 2)}
+    path = list(paths[shape])
+    if shape not in ("steel", "chromatic") and rng.random() < .5:
+        path = path[::-1]
+    start = rng.choice((0., .25, .5))
+    notes = []
+    for i, degree in enumerate(path):
+        t = start+i*unit
+        if t+unit >= max_len-.4:
+            break
+        tech = (shape if shape in ("thirds", "sixths") else "bend2" if shape == "steel" and i == 0 else "stac")
+        notes.append((t, unit*.72, degree+box, tech))
+    t = notes[-1][0]+unit if notes else 0
+    if shape == "chromatic" and t+.25 < max_len-.3:
+        # b3 to 3 is a short passing approach, never a held blue third.
+        notes += [(t, .12, 2+box, "approach"), (t+.25, .2, 2+box, "stac")]
+        t += .5
+    notes.append((t, min(.8, max_len-t), end, "vib" if shape == "steel" else "stac"))
+    return Lick(f"country_{shape}_{unit:g}_{box}_{end}_{start:g}", ("country",), tuple(notes),
+                max(o+d for o,d,_,_ in notes), "penta", energy)
 
 
 def _ladder(lick: Lick, key: str, mode: str, lo: int, hi: int) -> List[int]:
@@ -274,7 +308,7 @@ def realize_lick(
         beat = start + onset * time_scale
         d = dur * time_scale
         span = chords.at(beat)
-        if span is not None and d >= 0.75 and (pitch % 12) not in span.pcs:
+        if span is not None and d >= (0.5 if lick.name.startswith("country_") else 0.75) and (pitch % 12) not in span.pcs:
             near = [p for p in range(pitch - 2, pitch + 3) if p % 12 in span.pcs]
             if near:
                 pitch = min(near, key=lambda p: (abs(p - pitch), p))
@@ -282,5 +316,17 @@ def realize_lick(
             pitch -= 12
         while pitch < lo - 2:
             pitch += 12
-        out.append(Note(round(beat, 4), d, pitch, accent=onset == 0, tech=tech, role="lick"))
+        role = "country_lick" if lick.name.startswith("country_") else "lick"
+        if tech == "approach":
+            pitch -= 1
+            d = min(d, .12)
+            tech = "stac"
+        if tech in ("thirds", "sixths") and span is not None:
+            offsets = (3, 4) if tech == "thirds" else (8, 9)
+            partners = [pitch+v for v in offsets if pitch+v <= hi and (pitch+v)%12 in span.pcs]
+            if partners:
+                role = "country_double"
+                out.append(Note(round(beat, 4), min(d, .4), partners[0], tech="stac", role=role))
+            tech = "stac"
+        out.append(Note(round(beat, 4), d, pitch, accent=onset == 0, tech=tech, role=role))
     return out

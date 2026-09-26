@@ -126,7 +126,10 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
 
     hook_slots, key, mode, bpb, groups = source_context(hook_source)
     verse_slots, verse_key, verse_mode, verse_bpb, verse_groups = source_context(verse_source)
+    raw = getattr(cfg, "raw", None)
+    song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
     composer = SongComposer(
+        arrangement_overrides=song_raw.get("arrangement_style"),
         seed=int(getattr(song, "seed", 0) or 0),
         genre=str(getattr(song, "genre", "") or ""),
         key=str(key or "C"),
@@ -140,11 +143,9 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
         groups=groups,
     )
     composer.hook_slots = hook_slots
-    raw = getattr(cfg, "raw", None)
-    song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
-    composer.arrangement_overrides = song_raw.get("arrangement_style") \
-        if isinstance(song_raw, dict) else None
     log.info("Composer arrangement: %s", composer.arrangement_dna().signature)
+    if composer.arrangement_dna().country_style:
+        log.info("Composer country style: %s", composer.arrangement_dna().country_style)
     log.info("Composer drums: %s", composer.drum_dna().signature)
     log.info("Composer DNA: %s", composer.dna.signature)
     return composer

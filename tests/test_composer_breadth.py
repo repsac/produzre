@@ -99,7 +99,8 @@ def test_country_bass_alternates_root_fifth():
     chords = ChordMap(_slots(['I']*4), 'C', 'major')
     for seed in range(12):
         dna = compose_bass_dna(seed=seed, genre='country')
-        notes = bass_bar('boom_chick', 0, 4, chords, dna=dna)
+        notes = bass_bar('boom_chick', 0, 4, chords,
+                         dna=replace(dna, country_rhythms={}, country_pedal=False))
         assert [(n[0], n[2]%12) for n in notes] == [(0,0),(2,7)]
 
 

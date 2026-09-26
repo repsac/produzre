@@ -262,9 +262,6 @@ def synthesize_riff(rng: random.Random, family: str, tier: str, heavy: bool = Fa
     scored = []
     for k in range(tries):
         bar = [rng.choice(cells) for _ in range(4)]
-        if family == "country" and tier in ("low", "drive", "build"):
-            bar = [rng.choice(("r---", "r-a-")), rng.choice(("x-u-", "d-u-", "x-ux")),
-                   "f---", rng.choice(("x-u-", "d-ux", "x-w-"))]
         if bar[0][0] not in _EVENT_CHARS:
             continue
         steps = "".join(bar)
@@ -291,8 +288,25 @@ def synthesize_riff(rng: random.Random, family: str, tier: str, heavy: bool = Fa
     return CompRiff(f"gen_{tier}:{pick.steps}", pick.families, tier, pick.steps, pick.ring)
 
 
-def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: bool) -> CompDNA:
+def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: bool, country_style=None) -> CompDNA:
     """Choose one riff per tier: characterful, and different from each other."""
+    if comp_family(genre) == "country":
+        from .country import country_style as resolve_style
+
+        style = resolve_style(seed, genre, country_style)
+        player = random.Random(stable_seed_int("composer.country.comp.player", seed, key, mode))
+        dna = CompDNA("country")
+        used = set()
+        for tier in ("low", "drive", "build", "contrast", "stab"):
+            riff = country_riff(player, style, tier)
+            for _ in range(8):
+                if riff.steps not in used:
+                    break
+                riff = country_riff(player, style, tier)
+            used.add(riff.steps)
+            dna.riffs[tier] = riff
+            dna.alternates[tier] = country_riff(player, style, tier)
+        return dna
     fam = comp_family(genre)
     rng = random.Random(stable_seed_int("composer.comp", seed, genre, key, mode))
     # A separate stream, so vocabulary picks stay as they were.
@@ -338,6 +352,38 @@ def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: boo
             if alt is not None and tier == "drive":
                 dna.alternates[tier] = alt
     return dna
+
+
+_COUNTRY_CELLS = {
+    "carter": (("r---", "r-a-", "r..a"), ("x-u-", "m-u-", "d---"),
+               ("f---", "r-w-", "f-a-"), ("x-u-", "m-u-", "x-w-")),
+    "chucks": (("r---", "r-m-"), ("m...", "m-u-", "x..."),
+               ("f---", "f-m-"), ("m-u-", "x...", "m...")),
+    "train": (("x-m-", "r-m-", "x.mm"), ("m-x-", "x-m-", "m.mu"),
+              ("f-m-", "x-m-", "x.mm"), ("x-m-", "m-x-", "m.mu")),
+    "low_strings": (("r-r-", "r---", "q---"), ("f-r-", "m-d-", "d---"),
+                    ("r-a-", "f---", "q-q-"), ("d-u-", "m-d-", "w-r-")),
+    "offbeats": (("r-u-", "r-d-", "r..."), ("..x.", "..d.", "..u."),
+                 ("f-u-", "f-d-", "r..."), ("..x.", "..d.", "..u.")),
+    "arp": (("r---", "r-a-"), ("a---", "..a.", "a-a-"),
+            ("f---", "a---", "r-a-"), ("a---", "..a.", "a-a-")),
+    "hybrid": (("r-d-", "d---", "r---"), ("..d.", "d-u-", "a-d-"),
+               ("f-d-", "d---", "f---"), ("..d.", "d-u-", "a-d-")),
+    "strum": (("x---", "r-x-", "x-m-"), ("x-u-", "x-ux", "m-u-"),
+              ("X---", "f-x-", "x-m-"), ("x-u-", "d-u-", "m-u-")),
+}
+
+
+def country_riff(rng, style, tier):
+    from .country import COMP_FAMILIES
+
+    pool = COMP_FAMILIES[style]
+    if tier == "contrast":
+        pool = pool + ("arp", "hybrid")
+    family = rng.choice(pool)
+    steps = "".join(rng.choice(cell) for cell in _COUNTRY_CELLS[family])
+    return CompRiff(f"country_{family}:{steps}", ("country",), tier, steps,
+                    1.5 if family == "arp" else .5)
 
 
 # Families where a sus hammer or a slid chord belongs in the vocabulary.
@@ -590,7 +636,7 @@ _CLASH = (1, 6, 11)   # minor second, tritone, major seventh
 
 
 def yield_to_lead(events: Sequence[CompEvent], lead: Sequence[dict],
-                  chord_slots, key: str, mode: str) -> List[CompEvent]:
+                  chord_slots, key: str, mode: str, country: bool = False) -> List[CompEvent]:
     """Choke riff power moves that would ring against a held lead note.
 
     A power chord moved to the b7 or 4 is riff language, but held under a
@@ -605,6 +651,12 @@ def yield_to_lead(events: Sequence[CompEvent], lead: Sequence[dict],
             for n in lead if float(n.get("duration_beats") or 0) >= 0.5]
     out = []
     for e in events:
+        if country and e.kind not in ("chuck", "root", "fifth", "walk") and e.dur > .35:
+            span = chords.at(e.beat)
+            if span and any(min(e.beat+e.dur, end)-max(e.beat, start) >= .25 and
+                            pc_l not in span.pcs and any((pc-pc_l)%12 in _CLASH for pc in span.pcs)
+                            for start, end, pc_l in held):
+                e = replace(e, dur=.35)
         if e.kind == "rpower" and e.interval != 0 and e.dur > 0.3:
             span = chords.at(e.beat)
             pcs = set() if span is None else {(span.root_pc + e.interval) % 12,

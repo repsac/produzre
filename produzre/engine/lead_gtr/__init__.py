@@ -185,6 +185,9 @@ def _perform_composed(
             keep = random.Random(int(round(local * 1000)) * 131 + pitch).random() < bend_rate / 0.15
             tech = tech if keep else None
         next_local = float(ordered[i + 1]["beat"]) if i + 1 < len(ordered) else None
+        if role == "country_double":
+            next_local = next((float(other["beat"]) for other in ordered[i+1:]
+                               if float(other["beat"]) > local + 1e-6), None)
 
         mw = metric_weight(local % beats_per_bar, beats_per_bar, groups) if beats_per_bar > 0 else 0.5
         vel = base_vel * (0.9 + 0.14 * mw) * _ROLE_VELOCITY.get(role, 1.0)
@@ -258,6 +261,8 @@ def _perform_composed(
     # attacks, not the unperformed plan, including grace-note overlaps.
     performed = sorted(timeline.events[events_before:], key=lambda e: e.start_beat)
     for a, b in zip(performed, performed[1:]):
+        if a.kind == b.kind == "country_double_stac" and abs(a.start_beat-b.start_beat) < .06:
+            continue
         a.duration_beats = min(a.duration_beats, max(0.0, b.start_beat - a.start_beat))
     timeline.events[events_before:] = [e for e in performed if e.duration_beats > 1e-6]
 

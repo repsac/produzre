@@ -109,6 +109,8 @@ class DrumDNA:
     snare_pattern: str = ""
     train_patterns: Dict[str, str] = field(default_factory=dict)
     kick_styles: Dict[str, str] = field(default_factory=dict)
+    country_style: str = ""
+    snare_gain: float = 1.0
     rim_pickups: Dict[str, Tuple[int, ...]] = field(default_factory=dict)
     crash_policy: str = "regular"
     accent_voice: str = "crash"
@@ -157,7 +159,7 @@ def _make_fill(rng: random.Random, beats: float, name: str) -> Fill:
     return Fill(f"{name}:{rhythm}/{path_name}", float(n_beats), tuple(hits))
 
 
-def compose_drum_dna(*, seed: int, genre: str, beats_per_bar: float = 4.0) -> DrumDNA:
+def compose_drum_dna(*, seed: int, genre: str, beats_per_bar: float = 4.0, country_style=None) -> DrumDNA:
     rng = random.Random(stable_seed_int("composer.drums", seed, genre))
     beats = max(1, int(round(beats_per_bar)))
     snare_beats = [b for b in range(beats) if b % 2 == 1] or [beats - 1]
@@ -258,6 +260,37 @@ def compose_drum_dna(*, seed: int, genre: str, beats_per_bar: float = 4.0) -> Dr
                 dna.fills = {name: replace(fill, beats=min(fill.beats, 2),
                     hits=tuple((t, v, vel*.8) for t, v, vel in fill.hits if t < 2))
                     for name, fill in dna.fills.items()}
+    if dna.idiom == "country":
+        from .country import country_style as resolve_style
+
+        dna.country_style = resolve_style(seed, genre, country_style)
+        player = random.Random(stable_seed_int("composer.country.drums.player", seed))
+        style = dna.country_style
+        dna.feel = "shuffle" if style == "honky_tonk" else "straight"
+        dna.snare_gain = player.choice((.55, .65, .8)) if style in ("outlaw", "ballad") else player.choice((.85, 1., 1.))
+        dna.kick_styles = {}  # Preserve these personal patterns through planning.
+        def feet(chorus):
+            hits = {0, 8} if beats >= 4 else {0}
+            if style == "country_rock" and chorus or style == "two_step" and player.random() < .5:
+                hits.update(range(0, beats*4, 4))
+            choices = (2, 6, 10, 14) if style != "ballad" else (6, 14)
+            hits.update(player.sample(choices, player.choice((0, 1, 1, 2))))
+            return "".join("x" if i in hits else "." for i in range(beats*4))
+        dna.kick_verse, dna.kick_chorus = feet(False), feet(True)
+        if dna.kick_chorus == dna.kick_verse:
+            i = min(beats*4-2, 14)
+            dna.kick_chorus = dna.kick_chorus[:i] + ("." if dna.kick_chorus[i] == "x" else "x") + dna.kick_chorus[i+1:]
+        for sec in dna.grooves:
+            chorus = sec in ("chorus", "solo", "outro")
+            bb = player.choice(("train", "train", "backbeat") if style == "outlaw" else
+                               ("backbeat", "backbeat", "train"))
+            tk = player.choice(("hat4", "hat8", "ride8") if not chorus else
+                               ("ride8", "hat8_open", "hat8", "ride_bell"))
+            if sec == "chorus" and tk == dna.grooves["verse"][0]:
+                tk = "ride8" if tk != "ride8" else "hat8_open"
+            dna.grooves[sec] = (tk, bb)
+            cells = ("x...", "x.x.", "..x.") if style != "ballad" else ("x...", "....", "..x.")
+            dna.hand_patterns[sec] = "".join(player.choice(cells) for _ in range(beats))
     dna.signature = (f"kick {dna.kick_verse}/{dna.kick_chorus}, "
                      + ", ".join(f"{s}={t}/{b}" for s, (t, b) in sorted(dna.grooves.items()))
                      + f", ghosts={dna.ghosts}, fills every {dna.fill_every}"
@@ -301,6 +334,8 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
     beats = max(1, int(round(bpb)))
     steps = max(1, int(round(bpb * 4)))
     kick = (kick * 4)[:steps]
+    if dna.idiom == "country" and groups and bpb != 4:
+        kick = _idiom_kick("two_beat", bpb, groups)
     if st in dna.kick_styles:
         kick = _idiom_kick(dna.kick_styles[st], bpb, groups)
     train = dna.train_patterns.get(st, dna.snare_pattern)
@@ -429,6 +464,8 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                      DrumHit(end - 0.5, "kick", 1.15, "kick")]
         else:
             hits += [DrumHit(last, "crash", 1.15, "crash", bpb), DrumHit(last, "kick", 1.1, "kick")]
+    if dna.idiom == "country":
+        hits = [replace(h, vel=h.vel*dna.snare_gain) if h.voice == "snare" else h for h in hits]
     if dna.idiom:
         hits = [replace(h, voice=dna.accent_voice, vel=h.vel*.8) if h.voice == "crash" else h
                 for h in hits if h.voice != "crash" or dna.crash_policy != "none"]

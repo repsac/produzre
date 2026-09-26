@@ -13,6 +13,7 @@ import random
 from dataclasses import dataclass
 
 from ..rng import stable_seed_int
+from .country import STYLES, country_style
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class ArrangementDNA:
     lead_fills: str = "normal"  # sparse (every 8 bars) | normal (4) | chatty (2)
     ending: str = "ring"        # ring | cold | big
     signature: str = ""
+    country_style: str = ""
     comp_activity: str = "busy"  # sparse | normal | busy (existing full figures)
 
 
@@ -53,6 +55,7 @@ def _pick(rng: random.Random, weights: dict) -> str:
 
 
 _CHOICES = {
+    "country_style": STYLES,
     "into_chorus": ("stop", "build", "fill", "push", "drop"),
     "phrase_fill": ("walkup", "slide", "rake", "none"),
     "intro": ("full", "riff_alone"),
@@ -94,7 +97,7 @@ def apply_overrides(dna: ArrangementDNA, overrides) -> ArrangementDNA:
     return replace(dna, signature=_signature(dna))
 
 
-def compose_arrangement_dna(*, seed: int, genre: str) -> ArrangementDNA:
+def compose_arrangement_dna(*, seed: int, genre: str, country_style_override=None) -> ArrangementDNA:
     g = str(genre or "").lower()
     heavy = any(t in g for t in ("metal", "hard", "punk", "grunge"))
     bluesy = any(t in g for t in ("blues", "soul", "country"))
@@ -138,4 +141,11 @@ def compose_arrangement_dna(*, seed: int, genre: str) -> ArrangementDNA:
         choices = {name: _pick(random.Random(stable_seed_int("composer.idiom.arrangement", seed, genre, name)), table)
                    for name, table in tables.items()}
         dna = replace(dna, **choices)
+    style = country_style(seed, genre, country_style_override)
+    dna = replace(dna, country_style=style)
+    if style:
+        player = random.Random(stable_seed_int("composer.country.arrangement", seed))
+        dna = replace(dna, counter=_pick(player, {"guide": 5 if style == "ballad" else 2,
+                                                "fills": 5, "stabs": 2}),
+                      solo_story=_pick(player, {"melodic": 5, "trade": 3, "climb": 2}))
     return replace(dna, signature=_signature(dna))

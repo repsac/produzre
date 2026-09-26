@@ -48,6 +48,11 @@ class BassDNA:
     gallop_beats: Tuple[int, ...] = (0, 1, 2, 3)
     anticipate: bool = False               # whole notes push the next chord an eighth early
     hold_figure: str = "whole"             # whole | dotted (dotted half + quarter) | halves
+    country_style: str = ""
+    country_rhythms: Dict[str, Tuple[float, ...]] = field(default_factory=dict)
+    country_lengths: Dict[str, float] = field(default_factory=dict)
+    country_grace: bool = False
+    country_pedal: bool = False
     country_fifths: Dict[str, int] = field(default_factory=dict)
     country_figures: Dict[str, Tuple[int, ...]] = field(default_factory=dict)
     train_pickups: Dict[str, float] = field(default_factory=dict)
@@ -66,7 +71,7 @@ def _pick(rng: random.Random, weights: Dict[str, int]) -> str:
     return items[-1][0]
 
 
-def compose_bass_dna(*, seed: int, genre: str) -> BassDNA:
+def compose_bass_dna(*, seed: int, genre: str, country_style=None) -> BassDNA:
     g = str(genre or "").lower()
     heavy = any(t in g for t in ("hard", "metal", "punk", "grunge"))
     table = _WEIGHTS["heavy" if heavy else "default"]
@@ -104,6 +109,24 @@ def compose_bass_dna(*, seed: int, genre: str) -> BassDNA:
             dna.train_pickups[sec] = figures.choice((1.5, 2.5, 3.5))
         dna.walk_style = player.choice(("diatonic", "diatonic", "chromatic", "none"))
         dna.walk_every = player.choice((1, 2, 4, 4))
+    if "country" in g:
+        from .country import country_style as resolve_style
+
+        dna.country_style = resolve_style(seed, genre, country_style)
+        player = random.Random(stable_seed_int("composer.country.bass.player", seed))
+        two = ((0., 2.), (0., 1.5, 2.), (0., 1.5, 3.), (0., 2., 3.5))
+        drive = ((0., .5, 2., 2.5), (0., 1., 2., 3.), (0., 1.5, 2.5), (0., .75, 2., 3.5))
+        sparse = ((0.,), (0., 2.), (0., 2.5), (0., 3.))
+        pool = (sparse if dna.country_style == "ballad" else
+                drive if dna.country_style in ("bakersfield", "country_rock") else two+drive[:2])
+        for sec in dna.roles:
+            choices = [r for r in pool if sec != "chorus" or r != dna.country_rhythms["verse"]]
+            dna.country_rhythms[sec] = player.choice(choices)
+            dna.country_lengths[sec] = player.choice((.65, .85, 1.4)) if dna.country_style != "ballad" else 3.5
+        dna.country_grace = player.random() < .3
+        dna.country_pedal = dna.country_style == "outlaw" and player.random() < .5
+        dna.walk_every = player.choice((1, 1, 2, 4))
+        dna.walk_style = player.choice(("diatonic", "diatonic", "chromatic", "none"))
     dna.signature = ", ".join(f"{s}={r}" for s, r in sorted(dna.roles.items())) + \
         f", approach={dna.approach}"
     return dna
@@ -135,6 +158,8 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         pulses = [0.0] if waltz else [sum(gs[:i]) for i in range(len(gs))]
         if ordinary and role == "country_walk":
             pulses = [0.0, 1.0, 2.0, 3.0]
+        if ordinary and section_type in dna.country_rhythms:
+            pulses = dna.country_rhythms[section_type]
         bar = int(round(bar_start / bpb))
         fifth = dna.country_fifths.get(section_type, 7)
         figure = dna.country_figures.get(section_type, (0, 0, 0, 0))
@@ -145,16 +170,19 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             root = _root_pitch(span.root_pc, near)
             phase = bar % 2 if waltz else i % 2
             interval = fifth if phase else 0
-            if role == "country_octave" and not waltz and i % 2 and (bar+figure[0]) % 3:
-                interval = 12
+            if role == "country_octave" and ordinary:
+                interval = (0, fifth, 12, fifth)[i % 4]
             if ordinary and role == "country_walk":
                 third = 4 if (span.root_pc+4)%12 in span.pcs else 3
                 paths = ((0, third, fifth, 12), (0, fifth, third, fifth), (0, 12, fifth, third),
                          (0, third, 12, fifth), (0, fifth, 12, third))
                 interval = paths[figure[bar % 4]][i]
-            pitch = nearest_in(((span.root_pc+interval)%12,), root+interval, 28, 52)
+            pc = (span.root_pc+interval)%12
+            if ordinary and dna.country_pedal and chords.spans[0].root_pc in span.pcs:
+                pc = chords.spans[0].root_pc
+            pitch = nearest_in((pc,), root+interval, 28, 52)
             end = min(span.end, bar_start + (pulses[i+1] if i+1 < len(pulses) else bpb))
-            out.append((t, min(1.4, end-t-.05), pitch, True))
+            out.append((t, min(dna.country_lengths.get(section_type, 1.4), end-t-.05), pitch, off % 1 == 0))
         nxt = chords.at(bar_start + bpb) if bar_start + bpb < chords.total else None
         walk = (ordinary and nxt and not last_bar and dna.walk_style != "none"
                 and nxt.root_pc != span.root_pc and (bar+1) % dna.walk_every == 0)
@@ -168,12 +196,18 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             t = bar_start + bpb - .5
             out = [(a, min(d, t-a-.03), p, acc) for a, d, p, acc in out if a < t]
             out.append((t, .22 if dna.walk_style == "chromatic" else .4, lead, False))
-        elif ordinary and role == "country_train" and not last_bar:
+        elif ordinary and not dna.country_rhythms and role == "country_train" and not last_bar:
             t = bar_start + dna.train_pickups.get(section_type, 1.5)
             out = [(a, min(d, t-a-.03) if a < t else d, p, acc) for a, d, p, acc in out]
             sp = chords.at(t)
             out.append((t, .35, _root_pitch(sp.root_pc, near), False))
-        return sorted(out)
+        if ordinary and dna.country_grace and bar % 4 == 2:
+            t = bar_start + pulses[-1]
+            if t >= bar_start+.5:
+                root = _root_pitch(chords.at(t).root_pc, near)
+                out = [(a, min(d, t-.25-a-.02) if a < t-.25 else d, p, acc) for a,d,p,acc in out]
+                out.append((t-.25, .12, root-1, False))
+        return sorted(n for n in out if n[1] > .02)
     if role == "whole":
         t = bar_start
         while t < bar_start + bpb - 1e-6:

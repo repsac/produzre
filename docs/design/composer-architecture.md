@@ -582,3 +582,20 @@ selection. Shared swing resets per bar, matching drums in odd meters.
 Triplet fills use thirds of a beat. Sparse bass approaches must occur
 within a quarter note of a chord change, preserving walking approaches
 without sustaining passing tones as long pedals.
+
+## Country players
+
+`composer/country.py` draws a shared sub-style on its own seed stream:
+`honky_tonk`, `bakersfield`, `outlaw`, `two_step`, `ballad`, or `country_rock`.
+`song.arrangement_style.country_style` pins it. The choice reaches lead DNA
+before its lick bank is composed, as well as bass, comp and drum DNA.
+Each player then draws a personal figure on a separate stream. Part seed
+changes retain the band's selected style. Existing part selectors and
+performance settings keep their precedence.
+
+Country lead cleanup permits explicitly marked, unbent double stops.
+Single-note bends remain channel-wide; independent string bends are not
+supported. Already-staccato country picks retain their gate length when
+swung, then undergo the normal phrase and section boundary clipping.
+See [the country review](country-review.md) for measurements, listening
+pairs, configuration examples and limitations.

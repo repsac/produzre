@@ -920,6 +920,8 @@ def render_section_instruments(
                     )
                     from ..composer.song import section_groups
 
+                    country_gates = [(ev, ev.duration_beats) for ev in new_events
+                                     if str(ev.kind).startswith(("country_lick", "country_double"))]
                     apply_feel(
                         new_events,
                         groove_feel,
@@ -932,12 +934,17 @@ def render_section_instruments(
                         velocity_humanize=vel_humanize,
                         groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
                     )
+                    # These picks are already staccato. Swing moves the
+                    # whole attack; shortening again can erase the note.
+                    for ev, duration in country_gates:
+                        ev.duration_beats = duration
 
-        # A lead guitar is monophonic: after feel and humanization, no note
-        # may still be sounding when the next one starts (grace notes aside).
+        # Clip the lead line after feel, keeping marked unbent double stops.
         if inst_name == "lead_gtr":
             mono = sorted(timeline.events[events_before:], key=lambda e: (e.start_beat, e.pitch))
             for cur, nxt in zip(mono, mono[1:]):
+                if cur.kind == nxt.kind == "country_double_stac" and abs(cur.start_beat-nxt.start_beat) < .06:
+                    continue
                 gap = float(nxt.start_beat) - float(cur.start_beat)
                 if gap > 0.02 and float(cur.duration_beats) > gap - 0.01:
                     cur.duration_beats = max(0.05, gap - 0.01)
@@ -1207,7 +1214,8 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
 
         comp_dna = compose_comp_dna(seed=reseed, genre=composer.genre, key=composer.key,
                                     mode=composer.mode,
-                                    shuffle=comp_family(composer.genre) in ("blues", "jazz"))
+                                    shuffle=comp_family(composer.genre) in ("blues", "jazz"),
+                                    country_style=composer.arrangement_dna().country_style)
     groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
     arrangement = composer.arrangement_dna()
     kicks, snares = _riff_pocket(composer, performance_plan, sec, bpb, groups)
@@ -1233,7 +1241,8 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
     events = yield_to_lead(events, performance_plan.get(f"composer.lead.{sec.id}") or [],
                            hplan.chord_slots,
                            getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
-                           getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"))
+                           getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+                           country="country" in composer.genre.lower())
     # Tails the guitar left open: a doubling bass answers the riff there.
     answers = []
     riff_bars = sorted({int(e.beat // bpb) for e in events if e.tag == "comp_riff"})
@@ -1374,7 +1383,8 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
         if reseed is not None:
             from ..composer.bass import compose_bass_dna
 
-            bass_dna = compose_bass_dna(seed=reseed, genre=composer.genre)
+            bass_dna = compose_bass_dna(seed=reseed, genre=composer.genre,
+                                        country_style=composer.arrangement_dna().country_style)
         role = bass_dna.roles.get(st, "engine")
         drums = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
         kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
@@ -1534,7 +1544,8 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     if reseed is not None:
         from ..composer.drums import compose_drum_dna
 
-        dna = compose_drum_dna(seed=reseed, genre=composer.genre, beats_per_bar=composer.bpb)
+        dna = compose_drum_dna(seed=reseed, genre=composer.genre, beats_per_bar=composer.bpb,
+                               country_style=composer.arrangement_dna().country_style)
     try:
         if feel.get("ghost_rate") is not None:
             g = float(feel["ghost_rate"])
@@ -1556,7 +1567,7 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
                 grooves = dict(dna.grooves)
                 for k in ("verse", "prechorus"):
                     grooves[k] = (tk, grooves.get(k, ("hat8", "backbeat"))[1])
-                dna = _replace(dna, grooves=grooves)
+                dna = _replace(dna, grooves=grooves, hand_patterns={} if dna.idiom == "country" else dna.hand_patterns)
     except (TypeError, ValueError):
         pass
     bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
