@@ -1254,13 +1254,28 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
                      "accent": n.accent, "interval": n.interval}
                     for n in signature.notes_for_bar(b) if n.kind == "rsingle"]
     genre = str(getattr(cfg.song, "genre", "") or "").lower()
+    from ..composer.country import is_waltz
+    from ..composer.theory import ChordMap
+
+    chords = ChordMap(hplan.chord_slots, getattr(sec, "key", None) or cfg.song.key,
+                      getattr(sec, "mode", None) or cfg.song.mode)
+    release_at_change = "country" in genre and is_waltz(bpb, groups)
+
+    def release(e):
+        if not release_at_change:
+            return {}
+        span = chords.at(e.beat)
+        change = next((s.start for s in chords.spans
+                       if s.start > e.beat and s.pcs != span.pcs), chords.total)
+        return {"release_beat": change}
+
     performance_plan.set(f"composer.comp.{sec.id}", {
         "answers": answers,
         "riff": riff, "ring": ring, "heavy": any(t in genre for t in _HEAVY_COMP),
         "user": feel,
         "events": [{"beat": e.beat, "dur": e.dur, "kind": e.kind, "accent": e.accent,
                     "direction": e.direction, "arp_index": e.arp_index,
-                    "target_pc": e.target_pc, "tag": e.tag, "interval": e.interval}
+                    "target_pc": e.target_pc, "tag": e.tag, "interval": e.interval, **release(e)}
                    for e in events],
     })
     logger.info("Composer: %s rhythm guitar plays '%s'", sec.id, riff)
@@ -1568,6 +1583,13 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
                 for k in ("verse", "prechorus"):
                     grooves[k] = (tk, grooves.get(k, ("hat8", "backbeat"))[1])
                 dna = _replace(dna, grooves=grooves, hand_patterns={} if dna.idiom == "country" else dna.hand_patterns)
+                if dna.waltz is not None:
+                    hands = dict(dna.waltz.hands)
+                    timekeeper = dict(dna.waltz.timekeeper)
+                    for k in ("verse", "prechorus"):
+                        hands[k] = "xxxxxxxxxxxx" if tk == "hat16" else "x...x...x..."
+                        timekeeper[k] = tk
+                    dna = _replace(dna, waltz=_replace(dna.waltz, hands=hands, timekeeper=timekeeper))
     except (TypeError, ValueError):
         pass
     bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)

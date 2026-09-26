@@ -9,6 +9,9 @@ STYLES = ("honky_tonk", "bakersfield", "outlaw", "two_step", "ballad", "country_
 
 
 def country_style(seed, genre, pinned=None):
+    from ..genres import normalize_genre
+
+    genre = normalize_genre(genre)
     if "country" not in str(genre).lower():
         return ""
     if pinned in STYLES:
@@ -48,7 +51,13 @@ _HINTS = (("honky", "honky_tonk"), ("bakersfield", "bakersfield"), ("outlaw", "o
 
 def style_hint(genre):
     g = str(genre or "").lower().replace("-", "_").replace(" ", "_")
-    return next((style for word, style in _HINTS if word in g), None)
+    from ..genres import normalize_genre
+
+    g = str(normalize_genre(g) or "")
+    if "country" not in g.split("_"):
+        return None
+    words = "_" + g + "_"
+    return next((style for word, style in _HINTS if "_" + word + "_" in words), None)
 
 
 def is_waltz(bpb, groups=None):
@@ -74,6 +83,9 @@ class WaltzPlayer:
     hands: Dict[str, str]          # section -> 12-step timekeeper
     snare_voice: Dict[str, str]    # section -> snare | cross_stick
     foot: Dict[str, bool]          # section -> foot hi-hat on 2 and 3
+    timekeeper: Dict[str, str]      # section -> hat, ride, pedal or soft floor pulse
+    touch: Dict[str, float]        # section -> hand velocity scale
+    fill: str                     # short eighth-note phrase ending
 
     def part(self, table, section_type):
         st = str(section_type or "verse").lower()
@@ -117,32 +129,40 @@ def _pick(rng, weights):
 
 
 def waltz_player(seed, style):
-    """Seeded on its own stream, so 4/4 country and other meters are unchanged."""
-    rng = random.Random(stable_seed_int("composer.country.waltz", seed, style))
+    """Independent part streams: changing the drummer cannot re-roll the strings."""
+    bass_rng = random.Random(stable_seed_int("composer.country.waltz.bass", seed, style))
+    comp_rng = random.Random(stable_seed_int("composer.country.waltz.comp", seed, style))
+    drum_rng = random.Random(stable_seed_int("composer.country.waltz.drums", seed, style))
     lengths = (2.9, 1.9, 1.9) if style == "ballad" else (.9, 1.9, 2.9)
-    bass, comp, kick, snare, hands, voice, foot = {}, {}, {}, {}, {}, {}, {}
+    bass, comp, kick, snare, hands, voice, foot, timekeeper, touch = {}, {}, {}, {}, {}, {}, {}, {}, {}
     odds = _WALTZ_COMP_ODDS.get(style, _WALTZ_COMP_ODDS["honky_tonk"])
     for sec in _SECTIONS:
-        pick = (rng.choice(lengths), rng.random() < .6)
-        fig = _pick(rng, odds)
+        pick = (bass_rng.choice(lengths), bass_rng.random() < .6)
+        fig = _pick(comp_rng, odds)
         if sec == "chorus":
             while pick == bass["verse"]:
-                pick = (rng.choice(lengths + (.9, 2.9)), rng.random() < .6)
-            fig = _pick(rng, {k: v for k, v in odds.items() if k != comp["verse"]})
+                pick = (bass_rng.choice(lengths + (.9, 2.9)), bass_rng.random() < .6)
+            fig = _pick(comp_rng, {k: v for k, v in odds.items() if k != comp["verse"]})
         bass[sec], comp[sec] = pick, fig
-        # Kick on 1, sometimes a pickup on the "and" of 3; snare "pah-pah"
-        # on 2 and 3, or a lighter touch on one of them.
-        kick[sec] = rng.choice(("x...........",) * 3 + ("x.........x.",))
-        snare[sec] = rng.choice(((4, 8), (4, 8), (8,), (4,)) if style != "ballad" else ((8,), (4, 8)))
-        hands[sec] = rng.choice(("x...x...x...", "x.x.x.x.x.x.", "x...x.x.x.x.", "x.x.x...x...",
-                                 "x...x...x.x.", "x.x.x.x.x..."))
-        voice[sec] = rng.choice(("snare", "snare", "cross_stick") if style != "ballad" else
-                                ("cross_stick", "cross_stick", "snare"))
-        foot[sec] = rng.random() < .35
+        kick[sec] = drum_rng.choice(("x...........",) * 3 + ("x.........x.",))
+        snare[sec] = drum_rng.choice(((4, 8), (4, 8), (8,), (4,)) if style != "ballad" else ((8,), (4, 8)))
+        hands[sec] = drum_rng.choice(("x...x...x...", "x.x.x.x.x.x.", "x...x.x.x.x.", "x.x.x...x...",
+                                      "x...x...x.x.", "x.x.x.x.x...", "....x...x..."))
+        voice[sec] = drum_rng.choice(("snare", "snare", "cross_stick") if style != "ballad" else
+                                     ("cross_stick", "cross_stick", "snare"))
+        timekeeper[sec] = drum_rng.choice(("hat4", "hat4", "ride8", "pedal4") if style != "ballad" else
+                                          ("hat4", "ride8", "floor8", "pedal4"))
+        if sec == "chorus":
+            timekeeper[sec] = drum_rng.choice(("ride8", "ride_bell", "hat8_open"))
+        if timekeeper[sec] in ("pedal4", "floor8"):
+            hands[sec] = "....x...x..." if timekeeper[sec] == "pedal4" else "x...x...x..."
+        touch[sec] = drum_rng.choice((.45, .55, .65)) if style == "ballad" else drum_rng.choice((.7, .85, 1.0))
+        foot[sec] = timekeeper[sec] in ("ride8", "ride_bell", "floor8") and drum_rng.random() < .5
     if hands["chorus"] == hands["verse"]:
         hands["chorus"] = "x.x.x.x.x.x." if hands["verse"] != "x.x.x.x.x.x." else "x...x...x..."
     return WaltzPlayer(
-        bass_alternation=rng.choice(("bar", "change", "change", "root")),
-        walk_every=rng.choice((1, 2, 4)),
-        walk_style=rng.choice(("diatonic", "diatonic", "chromatic")),
-        bass=bass, comp=comp, kick=kick, snare=snare, hands=hands, snare_voice=voice, foot=foot)
+        bass_alternation=bass_rng.choice(("bar", "change", "change", "root")),
+        walk_every=bass_rng.choice((1, 2, 4)),
+        walk_style=bass_rng.choice(("diatonic", "diatonic", "chromatic")),
+        bass=bass, comp=comp, kick=kick, snare=snare, hands=hands, snare_voice=voice, foot=foot,
+        timekeeper=timekeeper, touch=touch, fill=drum_rng.choice(("snare", "toms", "mixed")))

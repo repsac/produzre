@@ -279,3 +279,255 @@ jazz) are byte-identical to 0ce5367; the ten-song 4/4 country albums
 remain .160 and .166. 722 tests pass; all 171 examples build; a waltz and
 an `outlaw_country` waltz pass strict determinism and identical MIDI
 across two PYTHONHASHSEED values.
+
+
+## Follow-up: reviewing the waltz band (e4573a7)
+
+Baseline `e4573a7` was checked out in the clean, reusable
+`idiom-baseline/produzre` worktree. The final changes remain uncommitted on
+`dev`. All render destinations for this review are outside the repository,
+under `/tmp/produzre-country-meter-review`. The same configurations were
+used at both revisions, apart from their external output destinations.
+Albums ran sequentially at each revision, with ten songs for each of
+album seeds 1, 2 and 3. This includes both 3/4 and unchanged 6/8 controls.
+
+### 1. Waltz drums: more player choices, mixed similarity results
+
+The drummer now chooses its waltz hand voice independently of the 4/4
+country groove: closed hat, ride, pedal-hat chicks, or a restrained
+floor-tom pulse for ballads. Chorus choices open the hat on beat 3 or
+move to ride, with an optional bell accent on beat 1. Bell replaces a
+hand hit; it does not add another layer. Soft ballad hand velocities
+supply a lighter touch. These are normal GM kit voices, not real brush
+sweeps. Extending a snare note would not honestly synthesize a brush.
+
+Kick still owns beat 1, with at most an eighth-note pickup after beat 3.
+Snare or cross-stick answers on 2 and/or 3; optional foot hats sit with
+those accents. Ordinary phrase fills now last one or two beats and use
+simple eighths on snare, toms or a mixed path. The inherited extra-kick
+and rim/ghost paths are disabled for waltzes. Authored arrangement endings
+and explicit patterns retain their existing behavior.
+
+Album 1, song 06, verse bar 1, has A2 held for 1.9 beats, guitar A2/F#3
+sixths on beats 2 and 3, and cross-stick plus ride on those two beats.
+Album 2, song 03, verse bar 1, uses E2 held for 1.9 beats, full guitar
+answers on 2 and 3, pedal-hat chicks on both, and a soft snare only on 3.
+Those are different allocations of the same three-beat pulse, not added
+sixteenth-note activity. Across the three albums, drum hits fall from
+17,765 to 14,602. Bass notes rise from 2,850 to 3,134 as the independent
+stream chooses more existing walks; guitar gestures rise modestly from
+7,635 to 7,844. The six-song sampler makes the comparison
+available at matched clip levels.
+
+The original verse-drum score improves for two album seeds and worsens
+for one. The voice-aware verse score improves on all three. Chorus
+drums still get more alike on two seeds, even with exact kit voices.
+This remains a limitation, not a metric success to hide. I kept the
+limited, idiomatic chorus lifts rather than adding arbitrary attacks to
+force lower numbers.
+
+### 2. The metric: retain history and add audible dimensions
+
+`album_diversity.py` retains its original modal-onset score unchanged.
+It now also reports `performance_similarity`: a normalized distribution
+of all non-fill note tokens, using quarter-beat gate buckets for pitched
+parts and exact GM pitches for drums. Cross-stick, snare, closed hat,
+pedal hat and bell are therefore distinct. Two-bar pitch anchors retain
+alternating fifths and occasional walks. Transposition, velocity changes
+and tiny timing differences do not create artificial novelty.
+
+This is a supplement, not a replacement score. Relative two-bar pitches
+also reflect chord movement, so it is not a pure player-style measure.
+A short note and a held note differ substantially under token overlap;
+this does not quantify how much a listener prefers either. The matched
+configs and separate historical score keep those limitations visible.
+The old bass scores of 1.0 were largely a blind spot: the duration-aware
+baseline already shows substantial bass variation. The new verse bass
+is actually more alike on all three seeds under the supplemental metric.
+
+Original modal score, before -> after:
+
+| Part | Album seed 1 | Album seed 2 | Album seed 3 |
+|---|---:|---:|---:|
+| drums.verse | 0.502 -> 0.342 | 0.392 -> 0.361 | 0.404 -> 0.424 |
+| drums.chorus | 0.389 -> 0.383 | 0.401 -> 0.481 | 0.393 -> 0.514 |
+| drums.bridge | 0.430 -> 0.439 | 0.417 -> 0.366 | 0.416 -> 0.505 |
+| bass.verse | 0.800 -> 0.800 | 0.533 -> 0.593 | 0.800 -> 0.422 |
+| bass.chorus | 1.000 -> 1.000 | 1.000 -> 0.681 | 0.681 -> 0.500 |
+| bass.bridge | 1.000 -> 1.000 | 1.000 -> 0.800 | 0.867 -> 0.593 |
+| rhythm_gtr.verse | 0.226 -> 0.323 | 0.495 -> 0.537 | 0.299 -> 0.368 |
+| rhythm_gtr.chorus | 0.381 -> 0.398 | 0.400 -> 0.594 | 0.412 -> 0.392 |
+| rhythm_gtr.bridge | 0.425 -> 0.313 | 0.336 -> 0.402 | 0.494 -> 0.339 |
+| lead_gtr.chorus | 0.069 -> 0.069 | 0.095 -> 0.095 | 0.059 -> 0.059 |
+| **Overall** | **.522 -> .507** | **.507 -> .491** | **.483 -> .412** |
+
+Supplemental performance score, recomputed from both revisions with the
+same final analysis code:
+
+| Part | Album seed 1 | Album seed 2 | Album seed 3 |
+|---|---:|---:|---:|
+| drums.verse | 0.427 -> 0.247 | 0.263 -> 0.228 | 0.307 -> 0.242 |
+| drums.chorus | 0.275 -> 0.274 | 0.266 -> 0.307 | 0.280 -> 0.411 |
+| drums.bridge | 0.339 -> 0.283 | 0.257 -> 0.257 | 0.280 -> 0.244 |
+| bass.verse | 0.133 -> 0.235 | 0.153 -> 0.161 | 0.098 -> 0.168 |
+| bass.chorus | 0.097 -> 0.120 | 0.113 -> 0.103 | 0.103 -> 0.107 |
+| bass.bridge | 0.142 -> 0.118 | 0.149 -> 0.109 | 0.114 -> 0.094 |
+| rhythm_gtr.verse | 0.235 -> 0.282 | 0.358 -> 0.345 | 0.130 -> 0.235 |
+| rhythm_gtr.chorus | 0.134 -> 0.210 | 0.167 -> 0.218 | 0.282 -> 0.288 |
+| rhythm_gtr.bridge | 0.136 -> 0.162 | 0.281 -> 0.176 | 0.200 -> 0.144 |
+| lead_gtr.chorus | 0.069 -> 0.069 | 0.085 -> 0.085 | 0.082 -> 0.082 |
+
+### 3. Noise and independent streams
+
+`waltz_player` now has separate `composer.country.waltz.bass`, `.comp`
+and `.drums` streams. A property test injects another drum draw and
+checks that bass lengths, alternation, walks and guitar figures remain
+identical. Splitting the old shared stream necessarily changes existing
+3/4 choices once; those changes are included in the measurements.
+The lead is not re-rolled.
+
+The original overall score has a three-seed mean of .504 before and
+.470 after, with ranges .483-.522 and .412-.507 respectively. Each album
+improves, but the after range is wider. Three albums expose this noise;
+they do not establish a population-level improvement. The per-part
+counterexamples above matter as much as the overall mean.
+
+### 4. Walk harmony, guitar releases and pocket
+
+Non-chord bass passing notes now last .20 beats rather than .85. Chord
+tones retain their .85-beat walk gates. Beat-1 ownership, walk placement
+on beats 2 and 3, and the approach to the next root remain intact.
+For example, album 1 song 03 verse bar 1 plays Eb2 (.9 beats), F2 (.2),
+and G2 (.85) over Eb. The F passes quickly instead of hanging beneath
+the held chord. The following bar arrives on Ab.
+
+The audit also revealed arpeggios ringing across chord changes. The
+performer normally lengthens an arpeggio beyond its planned note gate;
+country waltz plans now supply a harmony-release boundary that the
+performer respects. In album 1 song 03 bridge bars 1-2, the old Eb-chord
+G4 rang for about half a beat against the incoming Ab bass. It now
+releases at the change. This fix is restricted to composed country 3/4.
+
+The guitar now observes the bass player's `change` alternation habit
+on a held chord, as well as `bar` alternation. A root against a fifth was
+consonant, not one of the audit's sustained clash intervals. Matching
+the habit makes the low-string intent clearer. The bass can still choose
+an octave instead of a fifth; that root/fifth combination remains a
+legitimate part of the voicing. Explicit part seeds can intentionally
+choose different players.
+
+The audit's bar size and grouping already support 3/4. Its old overlap
+loop missed notes carried in from the previous bar. I fixed that blind
+spot and ran the same expanded audit against both revisions. A pair is
+assigned to the bar where its overlap starts, so carry-ins are not
+counted twice. These are semitone/tritone exposure candidates held for
+at least half a beat, not a complete psychoacoustic dissonance model.
+
+| Album | Sustained candidates before -> after | Pocket before -> after | Near misses before -> after |
+|---|---:|---:|---:|
+| Seed 1 | 22 -> 0 | .9090 -> .8846 | 8 -> 1 |
+| Seed 2 | 66 -> 0 | .8848 -> .8117 | 0 -> 2 |
+| Seed 3 | 87 -> 0 | .8909 -> .8641 | 1 -> 0 |
+
+All 2,160 waltz bars have zero final sustained candidates. Pocket does
+not pass an unconditional numeric non-regression test. It measures
+accent coincidence with kick/snare, excluding the hand timekeeper.
+Album 2 song 06 verse bar 1 goes from 2/2 to 1/2 accents matched: the
+new guitar answers on 2 and 3, while the snare answers only on 3 and
+the ride keeps eighths across both. The beat-2 guitar is on the ride
+pulse, not late. Song 08 in that album stays 2/3 matched, with
+cross-stick on 2 and hat on 3. These are deliberate lighter waltz
+allocations. They still need listening judgment; the lower total near
+misses (9 to 3) is not proof of a better pocket.
+
+### 5. 6/8: reviewed, deliberately unchanged
+
+A country 6/8 band should feel two dotted-quarter pulses, with bass on
+1 and 4 of the eighth-note count, chordal or picked answers around those
+pulses, and a restrained backbeat on the second pulse. It should not
+borrow the waltz's three equal quarter-note answers. The existing grouped
+path already supplies the two bass pulses and per-song 4/4 country DNA
+for its other choices. I left generation unchanged in this follow-up.
+
+Across three ten-song 6/8 albums, all 30 MIDI files are byte-identical.
+Overall scores remain .295, .308 and .312, a mean of .305 and range
+.295-.312. Full per-part values are in the linked measurements. The
+seed-1 audit remains at .7719 pocket, 18 near misses and 18 sustained
+candidates. Thus 6/8 is not being presented as a solved ballad player.
+A future compound-meter pass should address those exposures and build
+coordinated slow-ballad figures on their own streams. Extending the
+3/4 fix blindly would hide that separate musical problem.
+
+### 6. Genre aliases and hint boundaries
+
+`produzre/genres.py` owns the alias mapping. Song and instrument genres
+are normalized when configuration is parsed, so the same canonical name
+reaches arrangement, engines, recipe selection and composer parts.
+`honky`, `honky_tonk`, `bakersfield`, `outlaw`, `two_step`, `texas`,
+`dance_hall` and `western` resolve to explicit country names; spaces,
+hyphens and case are accepted. `western` uses the honky-tonk direction,
+not a claim of a new western-swing harmony engine.
+
+Hints now match whole underscore-delimited words rather than arbitrary
+substrings. Bare `rock`, `ballad`, `modern` and `southern` remain outside
+country. `country_rockabilly`, `country_modernism` and `country_texasville`
+do not accidentally pin a style. An explicit `country_style` still wins.
+A rendered property test confirms that bare `outlaw` and
+`outlaw_country` produce the same band with a ballad pin.
+
+### Tempo, lead and user ownership
+
+Section contrast now includes a chorus hand-voice lift as well as the
+existing bass and guitar contrast. I did not add tempo thresholds:
+shorter real-time notes already follow from a faster tempo, and a global
+BPM threshold would not know whether a user intended a broad or brisk
+three-beat feel. The 72-BPM ballad and 184-BPM honky-tonk previews expose
+that choice for listening. Slow/fast adaptation remains a future musical
+decision, not a new hidden override.
+
+The lead's meter-aware phrasing, sixths and existing country lick bank
+are unchanged; lead-chorus fingerprints match at all three seeds. This
+pass concentrates on the rhythm players and harmony releases.
+Patterns, recipes and composed-part opt-outs retain their ownership.
+An explicit low or high `hat_density` now also reaches the waltz hand
+figure, instead of being overwritten by the waltz default. Its test
+checks the rendered voice and grid. No new brush articulation or
+independent string-bend capability is claimed.
+
+### Listening and validation
+
+The previews use the deterministic sketch synth. They are not realistic
+brush or acoustic-instrument recordings, and no listening preference is
+claimed from the numerical scores alone. The sketch synth now distinguishes
+cross-stick from snare, pedal-hat chick from closed hat, and bell from
+ride. Both revisions use that same renderer; synth changes do not alter
+MIDI. Properties check distinct voices, decay and repeatability. The sampler uses the first
+eight verse bars of album-1 songs 01, 03, 04, 06, 08 and 10, with a
+one-second gap. Before/after source clips are level matched, then joined
+with ffmpeg and re-encoded to MP3 rather than stream-copied.
+
+| Preview | Before | After |
+|---|---|---|
+| Six-song waltz sampler | [MP3](/tmp/produzre-country-meter-review/previews/waltz-sampler-before.mp3) | [MP3](/tmp/produzre-country-meter-review/previews/waltz-sampler-after.mp3) |
+| Slow ballad, 72 BPM | [MP3](/tmp/produzre-country-meter-review/previews/slow-ballad-before.mp3) | [MP3](/tmp/produzre-country-meter-review/previews/slow-ballad-after.mp3) |
+| Fast waltz, 184 BPM | [MP3](/tmp/produzre-country-meter-review/previews/fast-waltz-before.mp3) | [MP3](/tmp/produzre-country-meter-review/previews/fast-waltz-after.mp3) |
+
+- Full suite: 745 tests pass, including 23 new property cases.
+- All 171 examples build with section and pattern exports enabled.
+- Strict determinism and identical MIDI under `PYTHONHASHSEED=1` and `77`
+  pass for 22 probes: ten seed-1 waltzes, one waltz each from seeds 2/3,
+  three 6/8 songs, five 4/4 genres, and both tempo previews.
+- Ten 4/4 songs each in country, hard rock, pop, reggae and jazz are
+  byte-identical to baseline. The 30 compound-meter controls are also
+  byte-identical. No 4/4 generation change is intended.
+- Tests cover isolated player streams, alias equivalence and false
+  positives, short passing notes, register, held-chord alternation,
+  drum voices and fill placement, metric sensitivity, harmony releases,
+  and explicit hat control. Existing waltz ownership tests still pass.
+
+[Detailed measurements and selected bars](country-meter-review-metrics.json)
+include both metrics, all six albums, audit totals and the 80 unchanged
+MIDI hashes. Exact configs, logs, all audit rows, preview sources and
+validation scripts are retained under
+`/tmp/produzre-country-meter-review`. Audio and render files are external
+review artifacts; they are not tracked in the repository.

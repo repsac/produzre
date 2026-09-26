@@ -92,11 +92,16 @@ def inspect(cfg):
             near_misses = [t for t in off if not any(abs(t-d) < .1 for d in drum)
                            and any(.1 <= abs(t-d) <= .3 for d in drum)]
             clashes = []
+            sounding_notes = {inst: [e for e in tl.events if e.start_beat < z and
+                              e.start_beat + e.duration_beats > a]
+                              for inst, tl in captured.items()}
             for inst in ('bass', 'lead_gtr'):
-                for g in guitar:
-                    for n in ns.get(inst, []):
+                for g in sounding_notes.get('rhythm_gtr', []):
+                    for n in sounding_notes.get(inst, []):
                         overlap = min(g.start_beat+g.duration_beats,n.start_beat+n.duration_beats)-max(g.start_beat,n.start_beat)
-                        if overlap >= .5 and (g.pitch-n.pitch)%12 in (1,6,11):
+                        # Assign cross-bar exposure to the bar where the overlap starts.
+                        onset = max(g.start_beat, n.start_beat)
+                        if a - .06 <= onset < z - .06 and overlap >= .5 and (g.pitch-n.pitch)%12 in (1,6,11):
                             clashes.append([inst, round(max(g.start_beat,n.start_beat)-a,3),g.pitch,n.pitch,round(overlap,3)])
             figure = [(round((g[0].start_beat-a)*4)/4,g[0].kind) for g in gestures]
             intervals = sorted((max(a,e.start_beat),min(z,e.start_beat+e.duration_beats))

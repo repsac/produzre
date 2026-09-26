@@ -353,15 +353,26 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
     snare_steps = _snare_steps(backbeat, beats, steps, groups)
     from .country import is_waltz
 
-    snare_voice, foot = "snare", False
-    if dna.waltz is not None and is_waltz(bpb, groups):
+    snare_voice, foot, hand_touch = "snare", False, 1.0
+    waltz = dna.waltz is not None and is_waltz(bpb, groups)
+    if waltz:
         # The drummer's own waltz: kick on 1 (maybe a pickup on the "and"
         # of 3), snare "pah-pah" on 2 and 3 or a lighter touch, and a
         # timekeeper figure of their own. No ghost notes: the space between
         # the "pah"s is the waltz.
         kick = dna.waltz.part(dna.waltz.kick, st)
         snare_steps = set(dna.waltz.part(dna.waltz.snare, st))
-        dna = replace(dna, ghosts="none",
+        tk = dna.waltz.part(dna.waltz.timekeeper, st)
+        voice, offsets = TIMEKEEPERS[tk]
+        hand_touch = dna.waltz.part(dna.waltz.touch, st)
+        path = {"snare": ("snare", "snare", "snare", "snare"),
+                "toms": ("tom_high", "tom_mid", "tom_low", "tom_low"),
+                "mixed": ("snare", "tom_high", "snare", "tom_low")}[dna.waltz.fill]
+        fills = {name: Fill("waltz_" + name, beats,
+                 tuple((i*.5, path[i], .65 + .08*i) for i in range(int(beats*2))))
+                 for name, beats in (("small", 1), ("medium", 1), ("big", 2))}
+        dna = replace(dna, ghosts="none", two_bar=False, rim_pickups={}, fills=fills,
+                      open_hat_steps=(8,),
                       hand_patterns=dict(dna.hand_patterns, **{st: dna.waltz.part(dna.waltz.hands, st)}))
         train = ""
         snare_voice = dna.waltz.part(dna.waltz.snare_voice, st)
@@ -427,8 +438,10 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                 name = voice
                 if tk == "hat8_open" and s in dna.open_hat_steps:
                     name = "hat_open"
-                hits.append(DrumHit(t, name, v, "hat" if "hat" in name else name))
-            if tk == "ride_bell" and sub == 2:
+                if waltz and tk == "ride_bell" and s == 0:
+                    name = "ride_bell"
+                hits.append(DrumHit(t, name, v*hand_touch, "hat" if "hat" in name else name))
+            if tk == "ride_bell" and sub == 2 and not waltz:
                 hits.append(DrumHit(t, "ride_bell", 0.8, "ride"))
             if foot and s in snare_steps:
                 hits.append(DrumHit(t, "hat_pedal", 0.6, "hat"))

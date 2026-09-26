@@ -158,6 +158,49 @@ def modal_bars(events: List[dict], bpb: float = 4.0, voice=None,
     return {s: collections.Counter(v).most_common(1)[0][0] for s, v in per.items()}
 
 
+def performance_bars(events: List[dict], bpb: float, drums=False) -> Dict[str, dict]:
+    """All-bar token distribution, with quarter-beat gates and exact kit voices.
+
+    Supplement the modal-onset score, never replace its historical series.
+    Pitched intervals are relative to the first note in each two-bar window:
+    this retains alternating fifths, but also responds to harmony changes.
+    Velocity and tiny timing differences are deliberately excluded.
+    """
+    counts = collections.defaultdict(collections.Counter)
+    anchors = {}
+    for e in sorted(events, key=lambda e: (float(e["start_beat_abs"]), int(e["pitch"]))):
+        if any(word in e["kind"] for word in ("fill", "pickup", "transition")):
+            continue
+        t = float(e["start_beat_abs"])
+        bar = int((t + .06) // bpb)
+        sec = e["section_id"]
+        anchor = anchors.setdefault((sec, bar // 2), int(e["pitch"]))
+        pitch = int(e["pitch"]) if drums else (int(e["pitch"]) - anchor) % 12
+        step = round((t - bar*bpb) * 4) % max(1, round(bpb*4))
+        gate = 0 if drums else max(1, round(float(e["duration_beats"]) * 4))
+        counts[sec][(step, pitch, gate)] += 1
+    return {sec: {token: n / sum(c.values()) for token, n in c.items()} for sec, c in counts.items()}
+
+
+def performance_similarity(a, b):
+    keys = a.keys() | b.keys()
+    return sum(min(a.get(k, 0), b.get(k, 0)) for k in keys) / max(
+        1e-9, sum(max(a.get(k, 0), b.get(k, 0)) for k in keys))
+
+
+def performance_report(roots, bpb):
+    """Comparable at either revision using the same exported events."""
+    scores = {}
+    for inst in ("drums", "bass", "rhythm_gtr", "lead_gtr"):
+        parts = [performance_bars(_events(root, inst), bpb, drums=inst == "drums") for root in roots]
+        for sec in ("verse", "chorus", "bridge"):
+            pairs = [p[sec] for p in parts if sec in p]
+            if len(pairs) > 1:
+                scores[f"{inst}.{sec}"] = round(statistics.fmean(
+                    performance_similarity(a, b) for a, b in itertools.combinations(pairs, 2)), 3)
+    return scores
+
+
 def jaccard(a, b) -> float:
     a, b = set(a), set(b)
     return len(a & b) / len(a | b) if a | b else 1.0
@@ -240,7 +283,7 @@ def main(argv=None) -> int:
     if args.songs < 2:
         ap.error("--songs must be at least 2")
     os.makedirs(args.out, exist_ok=True)
-    fps = []
+    fps, roots = [], []
     renders = tempfile.mkdtemp(prefix="renders-", dir=os.path.abspath(args.out))
     for cfg in album_configs(args.genre, args.songs, args.album_seed, args.instruments, args.meter):
         cfg["song"]["exports_root"] = renders
@@ -253,8 +296,10 @@ def main(argv=None) -> int:
             print("build failed:", path, r.stderr[-500:])
             return 1
         num, den = map(int, args.meter.split("/"))
+        roots.append(m.group(1))
         fps.append(fingerprint(m.group(1), r.stderr, num * 4 / den))
     rep = report(fps)
+    rep["performance_similarity"] = performance_report(roots, num * 4 / den)
     print(json.dumps(rep, indent=1))
     json.dump(rep, open(os.path.join(args.out, "album_report.json"), "w"), indent=1)
     return 0

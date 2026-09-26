@@ -679,14 +679,16 @@ def _waltz(bpb, groups) -> bool:
     return is_waltz(bpb, groups)
 
 
-def _waltz_comp_bar(dna: CompDNA, section_type: str, start: float, bar: int) -> List[CompEvent]:
+def _waltz_comp_bar(dna: CompDNA, section_type: str, start: float, bar: int, chords=None) -> List[CompEvent]:
     """The guitar's waltz bar: a bass note on 1 (alternating with the bass
     player's habit) and the song's own answer on 2 and 3."""
     from .country import WALTZ_FIGURES
 
     w = dna.waltz
     figure = WALTZ_FIGURES[w.part(w.comp, section_type) if w is not None else "pah_pah"]
-    alternate = w is None or w.bass_alternation == "bar"
+    held = (chords is not None and start > 0 and
+            chords.at(start - 1e-3).root_pc == chords.at(start).root_pc)
+    alternate = w is None or w.bass_alternation == "bar" or (w.bass_alternation == "change" and held)
     out = []
     for off, dur, kind, arp in figure:
         if kind == "B":
@@ -784,7 +786,7 @@ def plan_comp_section(
                        (b if activity != "sparse" else b + 1) % tail_every == 0]
             continue
         if dna.family == "country" and _waltz(bpb, groups):
-            bar = _waltz_comp_bar(dna, st, start, b)
+            bar = _waltz_comp_bar(dna, st, start, b, chords)
         else:
             bar = riff_events(riff, start, bpb, chords, groups=groups)
         if activity == "sparse" and st != "bridge":

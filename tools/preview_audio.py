@@ -152,20 +152,34 @@ def _drum(pitch: int, vel: int, rng: np.random.Generator) -> np.ndarray:
         t = np.arange(n) / SR
         f = 45 + 110 * np.exp(-t * 30)
         return np.sin(2 * math.pi * np.cumsum(f) / SR) * np.exp(-t * 9) * g * 0.9
-    if pitch in (38, 40, 37):
+    if pitch == 37:
+        t = np.arange(int(.10 * SR)) / SR
+        click = np.sin(2 * math.pi * 1250 * t) + .4 * np.sin(2 * math.pi * 1830 * t)
+        return click * np.exp(-t * 65) * g * .35
+    if pitch in (38, 40):
         n = int(0.22 * SR)
         t = np.arange(n) / SR
         noise = rng.uniform(-1, 1, n)
         noise = noise - np.concatenate(([0], noise[:-1])) * 0.6
         body = np.sin(2 * math.pi * 185 * t)
         return (0.55 * noise + 0.45 * body) * np.exp(-t * 18) * g * 0.6
-    if pitch in (42, 44, 46):
+    if pitch == 44:
+        t = np.arange(int(.09 * SR)) / SR
+        noise = rng.uniform(-1, 1, len(t))
+        chick = noise + np.concatenate(([0], noise[:-1])) * .4
+        return chick * np.exp(-t * 45) * g * .22
+    if pitch in (42, 46):
         n = int((0.35 if pitch == 46 else 0.06) * SR)
         t = np.arange(n) / SR
         noise = rng.uniform(-1, 1, n)
         hp = noise - np.concatenate(([0], noise[:-1]))
         return hp * np.exp(-t * (8 if pitch == 46 else 60)) * g * 0.22
-    if pitch in (49, 57, 51, 59, 52, 55, 53):
+    if pitch == 53:
+        t = np.arange(int(.7 * SR)) / SR
+        bell = sum(np.sin(2 * math.pi * f * t) * a for f, a in
+                   ((780, .55), (1193, .3), (1711, .15)))
+        return bell * np.exp(-t * 8) * g * .22
+    if pitch in (49, 57, 51, 59, 52, 55):
         long = pitch in (49, 57, 52, 55)
         n = int((1.6 if long else 0.5) * SR)
         t = np.arange(n) / SR

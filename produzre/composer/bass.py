@@ -176,8 +176,12 @@ def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near):
     first = second + step
     while first % 12 not in scale:
         first += step
-    return [(bar_start, .9, pitch, True), (bar_start + 1, .85, first, False),
-            (bar_start + 2, .85, second, False)]
+    # Passing tones release before the band's held chord becomes a clash.
+    def gate(note):
+        return .85 if note % 12 in span.pcs else .2
+
+    return [(bar_start, .9, pitch, True), (bar_start + 1, gate(first), first, False),
+            (bar_start + 2, gate(second), second, False)]
 
 
 def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,

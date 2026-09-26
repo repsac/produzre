@@ -596,11 +596,14 @@ performance settings keep their precedence.
 A genre name that already says which country it is chooses the style:
 `outlaw_country` is outlaw, `country_rock` or `southern country` is country
 rock, `honky_tonk`, `bakersfield`, `texas`/`two_step` and `ballad` likewise.
-A pinned `country_style` still wins; plain `country` draws one.
+A pinned `country_style` still wins; plain `country` draws one. Bare
+country aliases are normalized in `genres.py` at configuration loading,
+including instrument overrides. Bare `rock` and `ballad` stay unchanged;
+style hints match complete words only within country names.
 
 Country waltzes (3/4 with three one-beat groups, not 6/8) get a
-`WaltzPlayer`, drawn per song on `composer.country.waltz`, which the
-bass, comp and drum DNA share. The bass always owns beat 1; the player
+`WaltzPlayer`, with independent `composer.country.waltz.bass`, `.comp`
+and `.drums` streams. Bass, comp and drum DNA share the resolved player. The bass always owns beat 1; the player
 chooses how long it rings, whether a held chord moves to its fifth (every
 other bar, only on a held chord, or never), and whether it walks across
 2 and 3 into a chord change (every change, every other, or phrase ends;
@@ -610,7 +613,11 @@ ringing ballad strum), and the chorus figure differs from the verse.
 The drummer keeps the kick on 1 (sometimes a pickup on the "and" of 3),
 plays snare or cross-stick on 2 and 3 or a lighter touch on one of them,
 adds an optional foot hi-hat, and draws a timekeeper figure; ghost notes
-stay out of the waltz. Other meters produce identical output.
+stay out of the waltz. The hand can use hat, ride, pedal-hat chicks or a
+soft ballad floor pulse, with chorus opening or bell accents. Short
+one/two-beat eighth-note fills keep the three-beat phrase. Non-chord
+bass walk notes release quickly, and composed guitar notes release at
+harmony changes. Other meters produce identical output.
 
 Country lead cleanup permits explicitly marked, unbent double stops.
 Single-note bends remain channel-wide; independent string bends are not

@@ -238,8 +238,15 @@ def perform_comp(
                             key=lambda p: (abs(p - pitch), p), default=max(low, min(high, pitch)))
             v = int(vel * (1.0 - 0.03 * n_i if direction == "down" else 1.0)) + \
                 rng.randint(-4, 4) * vel_spread // 4
+            note_start = start + offset + (n_i * step if offset == 0 else 0.0)
+            # A picked chord can ring, but the country waltz releases it
+            # before the harmony changes underneath the bass.
+            if ev.get("release_beat") is not None:
+                d = min(d, section_start_beat + float(ev["release_beat"]) - note_start)
+                if d <= 0:
+                    continue
             timeline.add_note(
-                start_beat=start + offset + (n_i * step if offset == 0 else 0.0),
+                start_beat=note_start,
                 duration_beats=max(0.04, d),
                 pitch=int(max(0, min(127, pitch))),
                 velocity=max(1, min(127, v)),
