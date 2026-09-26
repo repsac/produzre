@@ -31,7 +31,7 @@ KNOWN_SECTION_KEYS = {
 KNOWN_TIMING_PARAMS = {"pocket_ms", "push_pull", "timing_jitter_ms", "velocity_humanize"}
 KNOWN_COMMON_PARAMS = {"persona", "transitions"} | KNOWN_TIMING_PARAMS
 KNOWN_DRUM_PARAMS = {
-    "groove_memory", "groove_cycle_bars",
+    "groove_memory", "groove_cycle_bars", "composer",
     "kick_density", "snare_density", "hat_density", "fill_rate", "fill_chatter", "accent_strength",
     "swing", "swing_16th", "phrase_len_bars", "pickup_rate", "downbeat_rate", "fill_length",
     "phrase_end_emphasis", "choke_rate", "flam_rate", "drag_rate", "ghost_rate", "ghost_steps",

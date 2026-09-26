@@ -133,7 +133,7 @@ def _group_slots_by_phrase(chord_slots, phrase_len_beats):
     return phrases
 
 
-_ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88}
+_ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88, "stab": 1.06}
 
 
 def _section_groups(cfg, section, harmony_plan):
@@ -218,6 +218,10 @@ def _perform_composed(
                 "period_beats": 60.0 / (bpm * rng.uniform(4.8, 6.2)),
                 "delay_beats": min(dur * 0.4, rng.uniform(0.25, 0.4)),
             }}
+        elif tech == "fall":
+            # A fall-off: the held note slides away at the end.
+            expression = {"dive": {"semitones": 5, "drop_beats": max(0.25, dur * 0.9)}}
+            kind = f"{role}_fall"
         elif tech == "dive":
             if dive_rate > 0:
                 expression = {"dive": {"semitones": rng.choice([7, 12]),

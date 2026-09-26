@@ -145,6 +145,36 @@ class SongComposer:
                                               mode=self.mode, shuffle=shuffle)
         return self._comp_dna
 
+    def arrangement_dna(self):
+        """Per-song arrangement habits shared by every part (composer/arrangement.py)."""
+        if getattr(self, "_arrangement_dna", None) is None:
+            from .arrangement import compose_arrangement_dna
+
+            from .arrangement import apply_overrides
+
+            self._arrangement_dna = apply_overrides(
+                compose_arrangement_dna(seed=self.seed, genre=self.genre),
+                getattr(self, "arrangement_overrides", None))
+        return self._arrangement_dna
+
+    def signature_riff(self):
+        """The song's signature riff (composer/riff.py), built once."""
+        if getattr(self, "_signature_riff", "unset") == "unset":
+            from .riff import compose_signature_riff
+
+            self._signature_riff = compose_signature_riff(seed=self.seed, genre=self.genre,
+                                                          beats_per_bar=self.bpb)
+        return self._signature_riff
+
+    def drum_dna(self):
+        """The song's drummer (composer/drums.py), built once."""
+        if getattr(self, "_drum_dna", None) is None:
+            from .drums import compose_drum_dna
+
+            self._drum_dna = compose_drum_dna(seed=self.seed, genre=self.genre,
+                                              beats_per_bar=self.bpb)
+        return self._drum_dna
+
     def hook_onsets(self, bpb=None, groups=None) -> List[float]:
         """Attack times of the hook line (hook bar, then answer bar)."""
         dna = self._dna_for(bpb, groups) if bpb is not None else self.dna
@@ -342,7 +372,21 @@ class SongComposer:
             phrase_end = (u % 2 == 1)
             cad = self._cadence_degree(True, rng) if last else (
                 self._cadence_degree(False, rng) if phrase_end else None)
-            if units >= 4 and u == units - 2 and line == 2 and not self.dna.authored:
+            form = self.arrangement_dna().chorus_form
+            if form == "call" and u % 2 == 1 and line == 2 and not last and \
+                    not self.dna.authored:
+                # Call and answer between lines: the hook's shape sequenced
+                # down a step, closing on the half cadence.
+                items.append(PlanItem("cell", 2 * u * bpb, cell=C.transpose(self.dna.hook, -2),
+                                      anchor=anchors["chorus"] - 2, role="develop",
+                                      variants=True, tag="hook_call"))
+                answer = C.cadence(C.fit_length(self.dna.hook_answer, bpb), 4)
+                items.append(PlanItem("cell", (2 * u + 1) * bpb, cell=answer,
+                                      anchor=anchors["chorus"] - 2, cadence=4, role="cadence",
+                                      tag="answer"))
+                continue
+            if form == "lift" and units >= 4 and u == units - 2 and line == 2 and \
+                    not self.dna.authored:
                 lift = rng.choice((1, 2))
                 peak_anchor = min(hi - 2, anchors["chorus"] + 3)
                 items.append(PlanItem("cell", 2 * u * bpb, cell=C.transpose(self.dna.hook, lift),
@@ -373,8 +417,16 @@ class SongComposer:
         bpb = ctx.beats_per_bar
         items: List[PlanItem] = []
         tag_bars = 2 if ctx.bars >= 6 else 0
-        items.append(PlanItem("guide", 0.0, anchor=anchors["chorus"] + 2,
-                              end=(ctx.bars - tag_bars) * bpb, role="establish", tag="counter"))
+        style = self.arrangement_dna().counter
+        if style == "fills":
+            # Stay out of the singer's way: answer phrase ends only.
+            sub = _sub_context(ctx, ctx.bars - tag_bars)
+            items += [i for i in self._plan_fills(sub, rng)]
+        else:
+            kind = {"octaves": "octaves", "stabs": "stabs"}.get(style, "guide")
+            items.append(PlanItem(kind, 0.0, anchor=anchors["chorus"] + 2,
+                                  end=(ctx.bars - tag_bars) * bpb, role="establish",
+                                  tag="counter"))
         if tag_bars:
             items += self._hook_line(ctx.bars - 2, ctx, anchors["chorus"], cadence=0,
                                      role="establish", answer_variants=False)
@@ -407,7 +459,8 @@ class SongComposer:
         """Vocal-song verse: answer licks at the end of every phrase."""
         lo, hi, anchors = self._registers(ctx, "verse")
         bpb = ctx.beats_per_bar
-        phrase = 4 if ctx.bars >= 4 else max(1, ctx.bars)
+        every = {"sparse": 8, "normal": 4, "chatty": 2}.get(self.arrangement_dna().lead_fills, 4)
+        phrase = every if ctx.bars >= every else max(1, ctx.bars)
         items: List[PlanItem] = []
         for p_end in range(phrase - 1, ctx.bars, phrase):
             lick = self._next_fill_lick(max_len=bpb * 0.75 + 0.5, ctx=ctx)
@@ -480,8 +533,14 @@ class SongComposer:
         lo, hi, anchors = self._registers(ctx, "intro")
         items: List[PlanItem] = []
         line = self._line_bars(ctx.beats_per_bar)
+        first = 0
+        if self.arrangement_dna().riff_driven:
+            # A riff-driven intro lets the riff speak; the lead waits for the band.
+            first = ctx.bars // 2
+            if ctx.bars - first < line:
+                return items
         if ctx.bars >= line:
-            for bar in range(0, ctx.bars - line + 1, line):
+            for bar in range(first, ctx.bars - line + 1, line):
                 items += self._hook_line(bar, ctx, anchors["intro"],
                                          cadence=0 if bar + 2 * line > ctx.bars else 4,
                                          role="establish", answer_variants=False)
@@ -535,6 +594,10 @@ class SongComposer:
         energetic = sorted((l for l in LICKS if fam in l.families or "rock" in l.families),
                            key=lambda l: (-l.energy, l.name))
         bank = self.dna.licks or energetic[:3]
+        story = self.arrangement_dna().solo_story
+        if story != "climb" and unit == 2 and units >= 2:
+            return self._plan_solo_story(story, ctx, units, climax_u, base, top, bank,
+                                         energetic, rng)
         items: List[PlanItem] = []
         for u in range(units):
             bar = u * unit
@@ -559,10 +622,9 @@ class SongComposer:
                 items.append(PlanItem("lick", start, lick=lick, anchor=anchor, time_scale=scale,
                                       tag="solo_resolve"))
                 if unit == 2:
-                    ring = C.Cell((C.CellNote(0.0, bpb, 0, tech="dive" if fam in ("rock", "metal")
-                                              else "vib", degree=0),), bpb, "final")
-                    items.append(PlanItem("cell", start + bpb, cell=ring, anchor=base, cadence=0,
-                                          role="cadence", tag="solo_final"))
+                    items.append(PlanItem("cell", start + bpb, cell=self._solo_ending(bpb),
+                                          anchor=base, cadence=0, role="cadence",
+                                          tag="solo_final"))
             elif u == climax_u:
                 used = {i.lick.name for i in items if i.lick is not None}
                 hot = next((l for l in energetic if l.energy >= 0.85 and l.name not in used),
@@ -587,6 +649,79 @@ class SongComposer:
                     scale = min(1.0, (bpb - 0.25) / lick.length)
                     items.append(PlanItem("lick", start + 2 * bpb - lick.length * scale, lick=lick,
                                           anchor=anchor + 2, time_scale=scale, tag="solo_lick"))
+        return items
+
+    def _solo_ending(self, bpb: float) -> Cell:
+        """The solo's last gesture, the song's own (composer/arrangement.py)."""
+        ending = self.arrangement_dna().solo_ending
+        if ending == "dive" and self.family not in ("rock", "metal", "punk"):
+            ending = "hold"
+        if ending == "trill" and bpb >= 2:
+            trill = tuple(C.CellNote(k * 0.125, 0.125, 0, degree=(1 if k % 2 else 0))
+                          for k in range(8))
+            return C.Cell(trill + (C.CellNote(1.0, bpb - 1.0, 0, tech="vib", degree=0),),
+                          bpb, "final")
+        tech = {"dive": "dive", "hold": "vib", "slide_off": "fall"}.get(ending, "vib")
+        return C.Cell((C.CellNote(0.0, bpb, 0, tech=tech, degree=0),), bpb, "final")
+
+    def _plan_solo_story(self, story: str, ctx, units: int, climax_u: int, base: float,
+                         top: float, bank, energetic, rng) -> List[PlanItem]:
+        """Solos that are not a climb: they sing the hook, trade with the band,
+        or take their time like a slow blues."""
+        bpb = ctx.beats_per_bar
+        items: List[PlanItem] = []
+
+        def lick_at(start, lick, anchor, tag, room=None):
+            room = room if room is not None else bpb
+            scale = min(1.0, room / lick.length)
+            items.append(PlanItem("lick", start, lick=lick, anchor=anchor, time_scale=scale,
+                                  tag=tag))
+
+        slow = sorted((l for l in LICKS if l.energy <= 0.45 and
+                       (self.family in l.families or "blues" in l.families)),
+                      key=lambda l: l.name) or bank
+        for u in range(units):
+            start = u * 2 * bpb
+            progress = u / max(1, units - 1)
+            anchor = base + (top - base) * min(1.0, progress * 1.2)
+            if u == units - 1:
+                lick_at(start, slow[u % len(slow)] if story == "blues" else bank[0], base,
+                        "solo_resolve")
+                items.append(PlanItem("cell", start + bpb, cell=self._solo_ending(bpb),
+                                      anchor=base, cadence=0, role="cadence", tag="solo_final"))
+                continue
+            if story == "melodic":
+                # The solo sings: hook, answer, the hook lifted, a held summit.
+                if u == climax_u:
+                    peak = C.Cell((C.CellNote(0.0, 0.5, 0), C.CellNote(0.5, 2 * bpb - 0.5, 2,
+                                                                         tech="bend2")),
+                                  2 * bpb, "peak")
+                    items.append(PlanItem("cell", start, cell=peak, anchor=top, role="climax",
+                                          tag="solo_peak"))
+                    continue
+                hook = self.dna.hook if u % 2 == 0 else C.transpose(self.dna.hook, 2)
+                if u >= 2:
+                    hook = C.ornament(hook, rng)
+                items.append(PlanItem("cell", start, cell=hook, anchor=anchor,
+                                      role="establish" if u == 0 else "develop",
+                                      tag="solo_statement" if u == 0 else "solo_develop"))
+                answer = C.fit_length(self.dna.hook_answer, bpb)
+                items.append(PlanItem("cell", start + bpb, cell=answer, anchor=anchor,
+                                      role="develop", variants=u > 0, tag="solo_answer"))
+            elif story == "trade":
+                # Trading: a lick, then a bar the band answers into.
+                hot = energetic[min(len(energetic) - 1, max(0, units - 1 - u))]
+                lick = hot if u == climax_u else bank[u % len(bank)]
+                lick_at(start, lick, top if u == climax_u else anchor,
+                        "solo_climax" if u == climax_u else "solo_lick")
+            else:  # blues: bends with room to breathe
+                lick = slow[u % len(slow)]
+                lick_at(start, lick, top if u == climax_u else anchor,
+                        "solo_climax" if u == climax_u else "solo_lick", room=bpb * 1.5)
+                if u == climax_u:
+                    items.append(PlanItem("cell", start + bpb * 1.5, cell=C.Cell(
+                        (C.CellNote(0.0, bpb * 0.5, 2, tech="bend2"),), bpb * 0.5, "cry"),
+                        anchor=top, role="climax", tag="solo_peak"))
         return items
 
     # ------------------------------------------------------------------
@@ -664,6 +799,8 @@ class SongComposer:
                                    beats_per_bar=ctx.beats_per_bar, time_scale=it.time_scale)
             elif it.kind == "guide":
                 got = self._guide_line(it, ctx, chords, lo, hi, prev)
+            elif it.kind in ("octaves", "stabs"):
+                got = self._rhythmic_counter(it, ctx, chords, lo, hi)
             elif it.cell is not None:
                 got = self._realize_cell_item(it, ctx, chords, lo, hi, prev, rng, notes)
             else:
@@ -723,6 +860,43 @@ class SongComposer:
             if best is None or score < best[0]:
                 best = (score, got)
         return best[1] if best else []
+
+    def _rhythmic_counter(self, it: PlanItem, ctx, chords: ChordMap, lo, hi) -> List[Note]:
+        """Punctuating counter-parts: octave root stabs on the changes, or
+        short chord-tone stabs on the hook's own attacks."""
+        bpb = ctx.beats_per_bar
+        out: List[Note] = []
+        hook_offsets = sorted({round(n.onset % bpb, 3) for n in self.dna.hook.notes})
+        for span in chords.spans:
+            if span.start < it.start - 1e-6 or span.start >= it.end - 1e-6:
+                continue
+            end = min(span.end, it.end)
+            if it.kind == "octaves":
+                root = min((p for p in range(lo, hi - 11) if p % 12 == span.root_pc),
+                           key=lambda p: (abs(p - it.anchor), p), default=None)
+                if root is None:
+                    continue
+                t = span.start
+                while t < end - 0.25:
+                    for p in (root, root + 12):
+                        out.append(Note(round(t, 4), 0.45, p, accent=True, tech="stac",
+                                        role="stab"))
+                    t += max(1.0, (end - span.start) / 2.0)
+            else:
+                third = span.pcs[1] if len(span.pcs) > 1 else span.root_pc
+                pitch = min((p for p in range(lo, hi + 1) if p % 12 == third),
+                            key=lambda p: (abs(p - it.anchor), p), default=None)
+                if pitch is None:
+                    continue
+                bar0 = math.floor(span.start / bpb) * bpb
+                for off in hook_offsets:
+                    t = bar0 + off
+                    while t < span.start - 1e-6:
+                        t += bpb
+                    if t < end - 0.2:
+                        out.append(Note(round(t, 4), 0.25, pitch, accent=True, tech="stac",
+                                        role="stab"))
+        return sorted(out, key=lambda n: (n.beat, n.pitch))
 
     def _guide_line(self, it: PlanItem, ctx, chords: ChordMap, lo, hi, prev) -> List[Note]:
         """A sustained descant: one chord tone per chord, moving by step in a

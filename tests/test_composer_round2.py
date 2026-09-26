@@ -98,8 +98,12 @@ def test_composed_gestures_keep_explicit_rhythm_register():
 def test_octave_voicing_is_not_a_power_chord(tmp_path):
     from tests.test_composer_review import _comp_notes
     notes = _comp_notes(tmp_path, {'voicing': 'octaves'})
-    first = [n.pitch % 12 for n in notes if 0 <= n.start_beat < 3.9 and n.kind in ('comp_strum', 'comp_slide')]
-    assert first and set(first) == {4}
+    chords = {}
+    for n in notes:
+        if n.kind in ('comp_strum', 'comp_slide', 'comp_riff_rpower', 'comp_riff_rchug'):
+            chords.setdefault(round(n.start_beat, 1), set()).add(n.pitch % 12)
+    # Octave voicing: every chord gesture sounds one pitch class, never a fifth.
+    assert chords and all(len(pcs) == 1 for pcs in chords.values())
 
 
 def test_meter_view_rephrases_the_hook_in_new_groups():

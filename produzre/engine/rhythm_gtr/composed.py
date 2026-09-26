@@ -152,6 +152,27 @@ def perform_comp(
             notes = [(p, 0.0, min(dur, ring, 0.5)) for p in full[-3:]]
             vel *= 0.72
             direction = "up"
+        elif kind in ("rpower", "rchug", "rsingle"):
+            # Signature-riff gestures: shapes moved along the low strings.
+            iv = int(ev.get("interval") or 0)
+            base = root + iv
+            while base < 38:
+                base += 12
+            while base > 52:
+                base -= 12
+            if kind == "rsingle":
+                notes = [(base, 0.0, max(0.1, dur))]
+                spread = False
+            elif kind == "rchug":
+                shape = (base, base + 12) if str(feel.get("voicing") or "").lower() == "octaves" \
+                    else (base, base + 7)
+                notes = [(p, 0.0, min(dur, 0.18)) for p in shape]
+                vel *= 0.84
+            else:
+                shape = (base, base + 12) if str(feel.get("voicing") or "").lower() == "octaves" \
+                    else (base, base + 7, base + 12)
+                notes = [(p, 0.0, max(0.12, dur)) for p in shape]
+                vel *= 1.06
         elif kind == "chuck":
             notes = [(p, 0.0, 0.06) for p in full[-4:]]
             vel = 34 + rng.randint(0, 12)

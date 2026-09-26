@@ -273,6 +273,70 @@ An answer on every hole (tried first) made 26% of bass notes answers and cut
 groove lock to 0.55, so the phrase-end rule is deliberate. It stays opt-in
 until a listening comparison settles the balance per genre.
 
+## Album diversity: every song its own band
+
+An album of one genre used to sound like one song played ten times.
+`tools/album_diversity.py` writes an album the way a user would (one genre,
+varied keys, tempos, modes, progressions, and seeds), builds it, and measures
+how alike the songs are: the mean pairwise Jaccard index of each part's most
+common bar per section, where tokens are the drum voice, the guitar
+technique, and the interval above the bar's lowest note. It also reports
+the share of songs making the most common arrangement choice.
+
+Ten hard rock songs, the committed composer against this work:
+
+| Part | Before | After |
+|---|---|---|
+| Drums, verse / chorus / bridge | 0.91 / 0.70 / 0.94 | 0.31 / 0.24 / 0.22 |
+| Bass, verse / chorus / bridge | 0.11 / 0.29 / 0.18 | 0.07 / 0.15 / 0.11 |
+| Rhythm guitar, verse / chorus / bridge | 0.10 / 0.14 / 0.24 | 0.08 / 0.08 / 0.13 |
+| Lead under the chorus | 0.49 | 0.19 |
+| Overall | 0.41 | 0.16 |
+| Songs with stop-time before the chorus | 10/10 | habit, most common choice 4/10 |
+| Songs whose solo ends in a dive | 10/10 | 4/10 |
+
+What does it:
+
+- **Drum DNA** (`composer/drums.py`). Each song's drummer: kick patterns
+  from per-beat cells (verse and chorus), a timekeeper per section from ten
+  archetypes (closed 8ths, 16ths, quarters, open-hat accents, washy
+  half-open hats, ride, ride bell, crash-ride, floor-tom pulse, pedal),
+  backbeat, half-time, or stomp, a ghost-note style, a synthesized fill
+  vocabulary (descending toms, snare crescendos, around the kit, unison
+  hits, triplets, flams), fill and crash policies, and a feel (straight,
+  laid back, pushing, shuffle) that reaches the whole band through the
+  groove clock. The drum engine performs the hits with its kit and
+  humanization and still exports the kick features the bass locks to.
+- **Arrangement DNA** (`composer/arrangement.py`). Habits every part agrees
+  on: how the band goes into a chorus (stop, build, fill, push, drop), how
+  phrases end (walk-up, chord slide, dead-note rake, nothing), whether the
+  intro starts with the riff alone, the solo's story (climb, melodic,
+  trade, slow blues) and ending (dive, held vibrato, trill, fall-off), the
+  lead's role under a singer's chorus (guide tones, octave stabs, rhythmic
+  stabs on the hook's attacks, fills), whether the song is riff-driven and
+  the bass doubles the riff, the chorus form (lift, anthem, call), how
+  often the lead fills, and the ending (ring, cold, big finish).
+  `song.arrangement_style` pins any of them.
+- **Signature riffs** (`composer/riff.py`). Riff-driven songs play a
+  generated figure on the low strings: a root power chord, syncopated
+  power-chord moves among pentatonic degrees, palm-muted chugs, and a
+  single-note tail, with bar two answering bar one. It moves with the chord
+  root; the bass can double it in unison.
+- **Synthesized comp riffs.** Most songs' comp figures are built from
+  one-beat technique cells (tens of thousands of figures per tier) and
+  scored for a few techniques that restate themselves, instead of drawn
+  from a fixed list.
+- **Generated licks.** Most of a song's lick bank is synthesized from lick
+  shapes (cry, run down, run up into a bend, motif, pedal point, pre-bend)
+  with per-song rhythm unit, box position, and length.
+
+Explicit settings still win. Drum `voices`, `recipe`, `pattern`, a riff
+lock, a section `intent`, or an authored `drum_groove` theme keep the drum
+engine; `ghost_rate`, `fill_rate`, `kick_density`, and `hat_density` shape
+the composed drummer; an explicit `swing`, `push_pull`, `timing_jitter_ms`,
+or song `humanize_timing` keeps the song's feel out; instrument and section
+`seed` overrides re-roll that part's DNA.
+
 ## Groove memory
 
 `apply_groove_memory` runs right after each accompaniment engine renders

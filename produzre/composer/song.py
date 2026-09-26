@@ -140,6 +140,12 @@ def build_song_composer(cfg: Any, plan: Any, theme_bank: Any,
         groups=groups,
     )
     composer.hook_slots = hook_slots
+    raw = getattr(cfg, "raw", None)
+    song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
+    composer.arrangement_overrides = song_raw.get("arrangement_style") \
+        if isinstance(song_raw, dict) else None
+    log.info("Composer arrangement: %s", composer.arrangement_dna().signature)
+    log.info("Composer drums: %s", composer.drum_dna().signature)
     log.info("Composer DNA: %s", composer.dna.signature)
     return composer
 

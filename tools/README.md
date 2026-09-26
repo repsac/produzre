@@ -61,6 +61,14 @@ Two standalone tools judge what the composer writes:
   python tools/musicality.py exports/<song>/instruments/lead_gtr/<song>_lead_gtr.mid
   ```
 
+- `album_diversity.py` writes and builds an album of one genre (varied
+  keys, tempos, modes, progressions, seeds) and reports how alike its songs
+  are, per part and section, plus how often each arrangement habit repeats.
+
+  ```bash
+  python tools/album_diversity.py --genre hard_rock --songs 10 --out /tmp/album
+  ```
+
 - `preview_audio.py` renders a quick listening preview (Karplus-Strong
   guitars and bass, a pitch-bend-following overdriven lead, synthesized
   drums). It needs `numpy`; MP3 output also needs `ffmpeg`.

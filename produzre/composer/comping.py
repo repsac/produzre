@@ -191,10 +191,101 @@ class CompDNA:
         return ",".join(f"{t}:{r.name}" for t, r in sorted(self.riffs.items()))
 
 
+# One-beat technique cells (four sixteenths) for synthesizing riffs. A cell
+# starting with "-" ties over from the previous beat. Four cells make a bar:
+# tens of thousands of figures per tier instead of a handful of templates,
+# so songs of one genre start from the same technique vocabulary but do not
+# share riffs.
+_CELLS: Dict[str, Dict[str, List[str]]] = {
+    "rock": {
+        "drive": ["X-mx", "X-x-", "X-ux", "/---", "X---", "X-mX", "x-u-", "h-x-", ".xX-",
+                  "X..x", "-xX-", "X-.x", "xmxm", "P-mP", "P---", "P-pp", "-.X-"],
+        "low": ["p-p-", "p-pp", "r-m-", "X---", "r-f-", "d-d-", "p.p.", "pp-p", "r-mx",
+                ".-d-", "p-m-", "r---", "-.d.", "P-p-", "p-.w"],
+        "build": ["x-x-", "xxxx", "x-xx", "h-x-", "x-ux", "xmxm", "P-P-", "pppp", "x-xu"],
+        "contrast": ["X---", "/---", "----", "X-.-", "..X-", "---.", "h---"],
+        "stab": ["S---", "..S-", "S-.S", "...S", "m-S-", "S-m-", "----", "P..."],
+    },
+    "metal": {
+        "drive": ["P-pp", "pppp", "P.pp", "/-pp", "P---", "pp.p", "P.P.", "p-pP", "Pppp",
+                  "P-.p"],
+        "low": ["p-pp", "pppp", "p.pp", "pp.p", "p-p-", "ppp.", "p..p"],
+        "build": ["pppp", "P-P-", "p-pp", "P.P."],
+        "contrast": ["P---", "/---", "----", "P-.-"],
+        "stab": ["P...", "..P.", "P..P", "...P", "P.P."],
+    },
+    "pop": {
+        "drive": ["x-u-", "X-ux", "x--u", "-uxu", "X-xu", "h-x-", "/---", "x-uu"],
+        "low": ["a-a-", "r-a-", "X---", "..x-", "x-u-", "a.a.", "r---"],
+        "build": ["x-x-", "xxxx", "x-ux", "h-x-"],
+        "contrast": ["X---", "/---", "----"],
+        "stab": ["S---", "..S-", "...S", "S-.-"],
+    },
+    "funk": {
+        "drive": ["xmxm", "Xmxm", "xmXm", "..Xm", "xmxu", "d.dm", "mxmx", "X.mx"],
+        "low": ["..X.", "mmX.", "r.rm", "w.m.", "..d.", "m.X.", "r..m"],
+        "build": ["xmxm", "xxxx", "xmxx"],
+        "contrast": ["X---", "----", "X-.-"],
+        "stab": ["....", "X...", "..X.", "...m", "..Xm"],
+    },
+}
+_CELL_FAMILY = {"rock": "rock", "punk": "rock", "emo": "rock", "metal": "metal",
+                "pop": "pop", "folk": "pop", "cinematic": "pop", "new_wave": "pop",
+                "electronic": "pop", "funk": "funk", "disco": "funk", "rnb": "funk",
+                "soul": "funk"}
+
+
+def synthesize_riff(rng: random.Random, family: str, tier: str, heavy: bool = False,
+                    tries: int = 48) -> Optional[CompRiff]:
+    """Build a one-bar riff from technique cells, chosen for character.
+
+    Candidates must open on an attack and not go silent for most of a
+    driving bar; they are ranked by character (distinct techniques and
+    off-beat accents) plus internal repetition (a figure that restates a
+    cell grooves), and the seed picks among the best few.
+    """
+    table = _CELLS.get(_CELL_FAMILY.get(family, ""), {})
+    if heavy and family in ("rock", "punk") and tier in ("drive", "low", "stab"):
+        table = {tier: table.get(tier, []) + _CELLS["metal"][tier]}
+    cells = table.get(tier)
+    if not cells:
+        return None
+    scored = []
+    for k in range(tries):
+        bar = [rng.choice(cells) for _ in range(4)]
+        if bar[0][0] not in _EVENT_CHARS:
+            continue
+        steps = "".join(bar)
+        if tier in ("drive", "low", "build") and steps.count("-") + steps.count(".") > 11:
+            continue
+        riff = CompRiff(f"gen_{tier}", (family,), tier, steps,
+                        {"contrast": 2.0, "stab": 0.3, "low": 0.6, "build": 0.4}.get(tier, 0.75))
+        # Signature riffs mix a few techniques and restate themselves: more
+        # than four techniques in one bar reads as a sampler, not a riff.
+        classes = {_TECHNIQUE_CLASS[c] for c in steps if c in _TECHNIQUE_CLASS}
+        variety = min(len(classes), 4) - 0.9 * max(0, len(classes) - 4)
+        offbeat = sum(1 for i, c in enumerate(steps) if c in "XPS/h" and i % 4 != 0)
+        if bar[0] == bar[2] or bar[1] == bar[3]:
+            repeat = 1.0        # an AB/AB shape grooves
+        elif len(set(bar)) < len(bar):
+            repeat = 0.5
+        else:
+            repeat = 0.0
+        scored.append((variety + 0.5 * min(offbeat, 3) + repeat, k, riff))
+    if not scored:
+        return None
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    pick = rng.choice(scored[:5])[2]
+    return CompRiff(f"gen_{tier}:{pick.steps}", pick.families, tier, pick.steps, pick.ring)
+
+
 def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: bool) -> CompDNA:
     """Choose one riff per tier: characterful, and different from each other."""
     fam = comp_family(genre)
     rng = random.Random(stable_seed_int("composer.comp", seed, genre, key, mode))
+    # A separate stream, so vocabulary picks stay as they were.
+    synth_rng = random.Random(stable_seed_int("composer.comp.synth", seed, genre, key, mode))
+    heavy = any(t in str(genre).lower() for t in ("hard", "metal", "punk", "grunge"))
     wanted_len = 12 if shuffle else 16
     dna = CompDNA(fam)
     used: set = set()
@@ -220,6 +311,15 @@ def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: boo
         rest = [r for r in fresh if r is not pick]
         if rest:
             dna.alternates[tier] = mutate_riff(rng.choice(rest), rng, fam)
+        # Most songs play a riff of their own, synthesized from technique
+        # cells; the rest keep a personalized vocabulary riff.
+        if not shuffle and synth_rng.random() < 0.7:
+            own = synthesize_riff(synth_rng, fam, tier, heavy)
+            if own is not None:
+                dna.riffs[tier] = own
+            alt = synthesize_riff(synth_rng, fam, tier, heavy)
+            if alt is not None and tier == "drive":
+                dna.alternates[tier] = alt
     return dna
 
 
@@ -318,6 +418,7 @@ class CompEvent:
     arp_index: int = 0
     target_pc: Optional[int] = None   # walk notes: the pitch class to land on
     tag: str = "comp"                 # "comp" or "comp_fill" / "comp_stop"
+    interval: int = 0                 # riff gestures: semitones above the chord root
 
 
 _KIND = {"X": "strum", "x": "strum", "u": "up", "m": "chuck", "p": "chug", "P": "power",
@@ -436,6 +537,30 @@ def _walk_up(bar_start: float, bpb: float, sub: int, chords: ChordMap) -> List[C
     return out
 
 
+def _into_chorus(device: str, riff: CompRiff, start: float, bpb: float, chords: ChordMap,
+                 groups: Optional[Sequence[float]]) -> List[CompEvent]:
+    """The bar before a chorus, played the song's way."""
+    if device == "build":
+        n = int(round(bpb * 2))
+        return [CompEvent(round(start + k * 0.5, 4), 0.45, "strum", accent=k >= n - 2,
+                          direction="down", tag="comp_stop") for k in range(n)]
+    if device == "push":
+        bar = [e for e in riff_events(riff, start, bpb, chords, groups=groups)
+               if e.beat < start + bpb - 0.5 - 1e-6]
+        return bar + [CompEvent(round(start + bpb - 0.5, 4), 1.5, "strum", accent=True,
+                                tag="comp_stop")]
+    if device == "drop":
+        return [CompEvent(round(start, 4), bpb, "strum", accent=True, tag="comp_stop")]
+    if device == "fill":
+        bar = [e for e in riff_events(riff, start, bpb, chords, groups=groups)
+               if e.beat < start + bpb - 1.0 - 1e-6]
+        return bar + [CompEvent(round(start + bpb - 1.0 + k * 0.25, 4), 0.06, "chuck",
+                                tag="comp_fill") for k in range(3)] + [
+            CompEvent(round(start + bpb - 0.25, 4), 0.25, "strum", accent=True,
+                      direction="up", tag="comp_fill")]
+    return _stop_bar(start, bpb)
+
+
 def _stop_bar(bar_start: float, bpb: float) -> List[CompEvent]:
     """Stop-time before a big arrival: one hit, silence, a pickup strum."""
     return [CompEvent(round(bar_start, 4), bpb - 0.75, "strum", accent=True, tag="comp_stop"),
@@ -458,8 +583,18 @@ def plan_comp_section(
     next_section_type: Optional[str] = None,
     hook_onsets: Sequence[float] = (),
     groups: Optional[Sequence[float]] = None,
+    arrangement=None,
+    prev_section_type: Optional[str] = None,
+    signature_riff=None,
 ) -> Tuple[List[CompEvent], str, float]:
-    """Arrange a section. Returns (events, riff name, ring beats)."""
+    """Arrange a section. Returns (events, riff name, ring beats).
+
+    ``arrangement`` (composer/arrangement.py) chooses the song's devices:
+    how the band goes into a chorus (stop, build, fill, push, drop) and how
+    phrases end (walk-up, chord slide, dead-note rake, or nothing). Without
+    one, every chorus is approached with stop-time and every phrase ends
+    with a walk-up.
+    """
     st = str(section_type or "verse").strip().lower()
     st = _ALIASES.get(st, st)
     chords = ChordMap(chord_slots, key, mode)
@@ -477,22 +612,69 @@ def plan_comp_section(
     sub = riff.subdivision
     events: List[CompEvent] = []
     phrase = 4 if bars >= 4 else bars
+    riff_section = signature_riff is not None and getattr(arrangement, "riff_driven", False) \
+        and st in ("verse", "intro", "outro") and bpb >= 3
+    into = getattr(arrangement, "into_chorus", "stop")
+    phrase_fill = getattr(arrangement, "phrase_fill", "walkup")
+    prev = _ALIASES.get(str(prev_section_type or "").lower(), str(prev_section_type or "").lower())
+    pushed_in = arrangement is not None and st == "chorus" and prev not in ("", "chorus") \
+        and into == "push"
+    slide_next = False
     for b in range(bars):
         start = b * bpb
         last_bar = b == bars - 1
         phrase_end = (b % phrase == phrase - 1) and not last_bar
         if last_bar and nxt == "chorus" and st in ("prechorus", "verse", "bridge") and bars >= 2:
-            events += _stop_bar(start, bpb)
+            events += _into_chorus(into, riff, start, bpb, chords, groups)
             continue
         if last_bar and next_section_type is None and st != "breakdown":
-            events.append(CompEvent(round(start, 4), bpb, "slide" if sub == 4 else "strum",
-                                    accent=True, tag="comp_stop"))
+            ending = getattr(arrangement, "ending", "ring")
+            if ending == "cold":
+                events.append(CompEvent(round(start, 4), 0.25, "strum", accent=True,
+                                        tag="comp_stop"))
+            elif ending == "big":
+                # Tremolo-strummed chord under the drum roll, a last hit.
+                n = int(round((bpb - 0.5) * 4))
+                events += [CompEvent(round(start + k * 0.25, 4), 0.24, "strum",
+                                     accent=k == 0, direction="down" if k % 2 == 0 else "up",
+                                     tag="comp_stop") for k in range(n)]
+                events.append(CompEvent(round(start + bpb - 0.5, 4), 0.5, "strum", accent=True,
+                                        tag="comp_stop"))
+            else:
+                events.append(CompEvent(round(start, 4), bpb, "slide" if sub == 4 else "strum",
+                                        accent=True, tag="comp_stop"))
+            continue
+        if riff_section:
+            # Riff-driven: the song's signature riff, moving with the chord
+            # root; its own single-note tail answers every phrase.
+            events += [CompEvent(round(start + n.onset, 4), n.dur, n.kind, n.accent,
+                                 tag="comp_riff", interval=n.interval)
+                       for n in signature_riff.notes_for_bar(b)]
             continue
         bar = riff_events(riff, start, bpb, chords, groups=groups)
+        if slide_next and bar:
+            # The previous phrase ended by sliding into this chord.
+            first = next((i for i, e in enumerate(bar) if e.kind in ("strum", "power")), None)
+            if first is not None:
+                e = bar[first]
+                bar[first] = CompEvent(e.beat, e.dur, "slide", True, e.direction, e.arp_index,
+                                       e.target_pc, "comp_fill")
+            slide_next = False
+        if b == 0 and pushed_in:
+            # The chord already arrived on the push; the downbeat rests.
+            bar = [e for e in bar if e.beat > start + 1e-6 or e.kind not in ("strum", "power",
+                                                                             "slide", "stab")]
         if phrase_end and st in ("verse", "chorus", "outro", "solo", "intro") and bpb >= 3:
-            # Keep the head of the bar, answer the phrase with a walk-up.
-            bar = [e for e in bar if e.beat < start + bpb - 1.0 - 1e-6]
-            bar += _walk_up(start, bpb, sub, chords)
+            if phrase_fill == "walkup":
+                # Keep the head of the bar, answer the phrase with a walk-up.
+                bar = [e for e in bar if e.beat < start + bpb - 1.0 - 1e-6]
+                bar += _walk_up(start, bpb, sub, chords)
+            elif phrase_fill == "rake":
+                bar = [e for e in bar if e.beat < start + bpb - 1.0 - 1e-6]
+                bar += [CompEvent(round(start + bpb - 1.0 + k * 0.25, 4), 0.06, "chuck",
+                                  tag="comp_fill") for k in range(4)]
+            elif phrase_fill == "slide":
+                slide_next = True
         events += bar
     if hook_onsets and st == "chorus":
         # Band hits: strums that coincide with the hook's attacks get the accent.
@@ -500,4 +682,4 @@ def plan_comp_section(
         events = [CompEvent(e.beat, e.dur, e.kind, True, e.direction, e.arp_index, e.target_pc, e.tag)
                   if e.kind in ("strum", "power", "slide", "stab") and round(e.beat % (bpb * 2), 2) in hook
                   else e for e in events]
-    return events, riff.name, riff.ring
+    return events, (signature_riff.name if riff_section else riff.name), riff.ring

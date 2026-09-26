@@ -435,7 +435,7 @@ def adjust_durations(events: List[Any], factor: float) -> None:
             ev.duration_beats *= factor
 
 
-_COMPOSED_KINDS = ("melody", "lick", "counter")
+_COMPOSED_KINDS = ("melody", "lick", "counter", "stab")
 
 
 def thin_events(

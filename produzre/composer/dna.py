@@ -450,7 +450,8 @@ def compose_dna(
     bridge = fit_length(augment(invert(bridge_seed), 2.0), beats_per_bar).with_name("bridge")
     if len(bridge.notes) < 2:
         bridge = fit_length(invert(hook), beats_per_bar).with_name("bridge")
-    licks = choose_lick_bank(rng, genre=genre, count=3)
+    licks = choose_lick_bank(rng, genre=genre, count=3, own_rng=random.Random(
+        stable_seed_int("composer.licks", seed, genre, key, mode)))
     sig = "|".join(
         f"{c.name}:" + ",".join(f"{n.onset:g}/{n.dur:g}/{n.step}" for n in c.notes)
         for c in (hook, answer, verse, bridge)

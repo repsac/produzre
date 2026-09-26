@@ -193,6 +193,15 @@ gallops. Verse, chorus, and bridge play contrasting figures, phrases walk up
 into the next, and the bar before a chorus stops dead. Set a rhythm `style`
 yourself and the engine plays that instead.
 
+Every song gets its own band. The drummer's kick patterns, what the hands
+play in each section, ghost notes, fills, crash habits, and feel (straight,
+laid back, pushing, or shuffle) are drawn per song, and so are arrangement
+habits every part agrees on: how the band goes into a chorus, how phrases
+end, whether the riff opens the song alone, the solo's story and ending,
+the chorus form, and the ending. Riff-driven songs get a signature riff the
+bass can double. Pin any habit with `song.arrangement_style`; see the
+[configuration reference](docs/llm-song-config-reference.md#every-song-its-own-band).
+
 The rhythm section gets groove memory. Drums, bass, and rhythm guitar settle
 into one pattern per section and vary it at phrase ends. The pattern moves
 with the chords, and a returning chorus brings its groove back. Two optional

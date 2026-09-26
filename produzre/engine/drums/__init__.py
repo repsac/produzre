@@ -1419,10 +1419,35 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
                     section_id, added_voices,
                 )
 
+    # Composed drums (produzre/composer/drums.py): the song's own drummer
+    # replaces the template events; kit, humanization, groove clock and the
+    # exported kick features below are unchanged.
+    _composed_plan = kwargs.get("plan")
+    _composed = (_composed_plan.get(f"composer.drums.{section_id}")
+                 if _composed_plan is not None and hasattr(_composed_plan, "get") else None)
+    if isinstance(_composed, list) and _composed:
+        events = [
+            DrumEvent(
+                beat=float(h["beat"]),
+                duration_beats=float(h.get("dur", 0.25)),
+                pitch=int(pitches.get(str(h["voice"]), 38)),
+                velocity=max(1, min(127, int(round(base_velocity * float(h.get("vel", 1.0)))))),
+                kind=str(h.get("kind", "hit")),
+            )
+            for h in _composed
+            if 0.0 <= float(h["beat"]) < total_beats
+        ]
+
     # Humanization params (defaults are persona/tight-friendly).
     timing_jitter_ms = float(params_m.get("timing_jitter_ms", 0.0))
     swing = float(params_m.get("swing", 0.0))
     push_pull = float(params_m.get("push_pull", 0.0))
+    _feel = (_composed_plan.get(f"composer.drums_feel.{section_id}")
+             if _composed_plan is not None and hasattr(_composed_plan, "get") else None)
+    if isinstance(_feel, dict) and isinstance(_composed, list) and _composed:
+        # The composed drummer's feel (only published when the user set none).
+        swing = float(_feel.get("swing", swing))
+        push_pull = float(_feel.get("push_pull", push_pull))
     velocity_humanize = float(params_m.get("velocity_humanize", 0.05))
 
     # Publish the resolved humanize params (persona < recipe < user merged)

@@ -643,6 +643,40 @@ before its next picked note. Body taps use short low MIDI notes.
 
 The phrase pattern follows the shared melody guide. See [file structure](#file-structure) to enable it in a section.
 
+### Every song its own band
+
+Each song draws its own drummer (kick patterns, what the hands play per
+section, backbeat or half-time, ghost notes, fills, crash habits, and a
+feel: straight, laid back, pushing, or shuffle), its own rhythm-guitar
+figures, a signature riff for riff-driven songs, and its own licks. It also
+draws arrangement habits every part agrees on. Pin any of them with
+`song.arrangement_style`:
+
+```yaml
+song:
+  arrangement_style:
+    into_chorus: build       # stop | build | fill | push | drop
+    phrase_fill: walkup      # walkup | slide | rake | none
+    intro: riff_alone        # full | riff_alone
+    riff_driven: true        # verses, intro and outro ride a signature riff
+    bass_doubles: true       # the bass doubles the riff an octave down
+    solo_story: melodic      # climb | melodic | trade | blues
+    solo_ending: hold        # dive | hold | trill | slide_off
+    counter: stabs           # guide | octaves | stabs | fills (lead under a singer)
+    chorus_form: anthem      # lift | anthem | call
+    lead_fills: sparse       # sparse | normal | chatty
+    ending: big              # ring | cold | big
+```
+
+The drums are composed unless their params set `voices`, `recipe`,
+`pattern`, or `riff_accent_rate`, the section sets `intent`, or a
+`drum_groove` theme exists; `composer: false` on the drums also keeps the
+drum engine. `ghost_rate`, `fill_rate`, `kick_density`, and `hat_density`
+shape the composed drummer. The song's feel applies only when you set no
+`swing`, `push_pull`, `timing_jitter_ms`, groove block swing, or song
+`humanize_timing`. A `seed` on an instrument or section re-rolls that
+part's drummer or comp figures.
+
 ### Bass hook responses
 
 `hook_response: true` in the bass params (off by default) lets the bass answer

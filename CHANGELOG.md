@@ -67,6 +67,16 @@ the rhythm section settles into grooves.
   drifted against 7/8 and 6/8 bars). 4/4 output is unchanged.
 - Bass `hook_response: true` (opt-in): the bass answers the composed lead at
   phrase ends with the hook's rhythm and contour, starting on a kick.
+- **Every song its own band.** Composed drums (per-song kick patterns,
+  timekeepers per section, backbeat styles, ghost notes, synthesized fills,
+  fill and crash habits, and a band feel), arrangement habits shared by all
+  parts (chorus approach, phrase endings, riff-alone intros, solo stories
+  and endings, lead counter-parts, chorus forms, fill density, endings),
+  signature riffs for riff-driven songs with optional bass doubling,
+  synthesized comp figures, and generated licks. Across a ten-song hard
+  rock album, part similarity fell from 0.41 to 0.16
+  (`tools/album_diversity.py`). `song.arrangement_style` pins any habit;
+  drum `composer: false` keeps the drum engine.
 - **Turnarounds**: preset and recipe progressions now lead into sections
   that start on the tonic (the last half bar moves to V, V7, or bVII).
   Explicit progressions are unchanged unless you opt in.

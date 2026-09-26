@@ -303,10 +303,11 @@ def test_song_lead_hook_recurs_across_choruses(tmp_path):
 def test_final_chorus_modulation_moves_every_pitched_part(tmp_path):
     timelines, _ = _render_timelines(_song(tmp_path, final_chorus="modulate"))
     bass = timelines["bass"]
-    last = [e.pitch % 12 for e in bass.events if 128.0 <= e.start_beat < 132.0]
-    first = [e.pitch % 12 for e in bass.events if 32.0 <= e.start_beat < 36.0]
-    assert last and first
-    assert (last[0] - first[0]) % 12 == 2          # up a whole step
+    first = {e.pitch % 12 for e in bass.events if 32.0 <= e.start_beat < 64.0}
+    last = {e.pitch % 12 for e in bass.events if 128.0 <= e.start_beat < 160.0}
+    assert first and last
+    # E minor moved up a whole step: F# minor's C# and G# appear only after.
+    assert last & {1, 8} and not first & {1, 8}
 
 
 def test_composer_opt_out_restores_legacy_lead(tmp_path):

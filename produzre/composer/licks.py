@@ -117,7 +117,8 @@ def genre_family(genre: str) -> str:
 
 
 def choose_lick_bank(rng: random.Random, *, genre: str, count: int = 3,
-                     max_energy: float = 0.7) -> List[Lick]:
+                     max_energy: float = 0.7,
+                     own_rng: Optional[random.Random] = None) -> List[Lick]:
     """The song's signature fills: idiomatic for the genre and laid back
     enough to answer a phrase (shred licks are saved for the solo)."""
     fam = genre_family(genre)
@@ -130,7 +131,87 @@ def choose_lick_bank(rng: random.Random, *, genre: str, count: int = 3,
         bank.append(pick)
     while others and len(bank) < count:
         bank.append(others.pop(rng.randrange(len(others))))
+    if own_rng is not None and fam not in ("jazz", "latin"):
+        # Most of a song's bank is its own: generated licks replace all but
+        # one vocabulary lick, so no two songs answer phrases alike.
+        keep = own_rng.randrange(len(bank)) if bank else 0
+        for i in range(len(bank)):
+            if i != keep:
+                bank[i] = generate_lick(own_rng, family=fam,
+                                        energy=own_rng.uniform(0.3, max_energy))
     return bank
+
+
+# ---------------------------------------------------------------------------
+# Generated licks: the song's own vocabulary
+# ---------------------------------------------------------------------------
+_UNITS = {"8": 0.5, "16": 0.25, "trip": 1.0 / 3.0}
+
+
+def generate_lick(rng: random.Random, *, family: str, energy: float,
+                  max_len: float = 3.0) -> Lick:
+    """Synthesize an idiomatic lick from a shape grammar.
+
+    Shapes are the moves players build licks from: a bend that cries and
+    releases, a run down (or up into a bend), a repeated motif, a pedal-point
+    figure, a pre-bend release. The rhythm unit, starting box position,
+    length and ending are drawn per song, so each song phrases its own way.
+    Every lick lands on a held note so it closes a phrase.
+    """
+    shape = rng.choice(["cry", "run_down", "run_up", "motif", "pedal", "prebend"])
+    unit_name = rng.choice(["8", "16", "16", "trip"] if energy >= 0.5 else ["8", "8", "trip"])
+    unit = _UNITS[unit_name]
+    top = rng.randint(3, 6)
+    notes: List[tuple] = []
+    t = 0.0
+
+    def add(idx, dur, tech=None):
+        nonlocal t
+        notes.append((round(t, 4), dur, idx, tech))
+        t += dur
+
+    if shape == "cry":
+        add(top - 2, unit)
+        add(top - 1, unit)
+        add(top, max(1.0, unit * 3), "bend2")
+        add(top - 1, unit, "rel")
+        add(top - 2, 1.0, "vib")
+    elif shape == "run_down":
+        n = rng.randint(4, 7)
+        for k in range(n):
+            add(top - k, unit)
+        add(top - n, 1.5, "vib")
+    elif shape == "run_up":
+        start = top - rng.randint(3, 5)
+        for k in range(rng.randint(3, 5)):
+            add(start + k, unit)
+        add(start + 4, 1.5, "bend2")
+    elif shape == "motif":
+        cell = rng.choice([(0, -1, 0), (0, 1, -1), (0, -1, -2), (0, 0, -1)])
+        for _ in range(rng.choice([2, 3])):
+            for step in cell:
+                add(top + step, unit)
+        add(top - 2, 1.0, "vib")
+    elif shape == "pedal":
+        for k in range(rng.randint(2, 3)):
+            add(top, unit)
+            add(top - 1 - k, unit)
+        add(top - 3, 1.5, "vib")
+    else:  # prebend: strike bent, release, fall to the box root
+        add(top, max(0.75, unit * 2), "bend2")
+        add(top - 1, unit, "rel")
+        add(top - 2, unit)
+        add(top - 3, 1.5, "vib")
+    # Fit the room a phrase-end fill has: drop notes from the front so the
+    # landing note (the phrase's resolution) survives.
+    while t > max_len + 1e-6 and len(notes) > 2:
+        first_dur = notes[1][0] - notes[0][0]
+        notes = [(round(o - first_dur, 4), d, i, tech) for o, d, i, tech in notes[1:]]
+        t -= first_dur
+    density = len(notes) / max(1.0, t)
+    name = f"gen_{shape}_{unit_name}_{top}"
+    return Lick(name, (family, "rock"), tuple(notes), round(t, 4), "penta",
+                min(1.0, 0.2 + 0.2 * density))
 
 
 def _ladder(lick: Lick, key: str, mode: str, lo: int, hi: int) -> List[int]:
