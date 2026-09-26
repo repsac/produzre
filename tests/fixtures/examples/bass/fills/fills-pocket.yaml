@@ -1,0 +1,56 @@
+version: 1
+song:
+  title: "Bass_Fills_Pocket"
+  bpm: 110
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 900  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: pocket
+    intensity: 0.75
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      density: 0.65
+      rest_rate: 0.10
+      fill_rate: 0.4         # Moderate fills at phrase boundaries
+      fill_complexity: 0.5   # Medium complexity
+      fill_avoid_drums: 0.6  # Moderate drum avoidance
+
+sections:
+  verse1:
+    type: verse
+    bars: 8  # Two 4-bar phrases to demonstrate fills
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+  chorus1:
+    type: chorus
+    bars: 8
+    harmony:
+      progression: "I vi IV V I vi IV V"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1
+  - chorus1

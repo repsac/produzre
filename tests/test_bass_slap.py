@@ -17,7 +17,7 @@ import statistics
 
 def test_slap_produces_thumb_pop_ghost():
     """Verify slap style produces thumb, pop, and ghost techniques."""
-    yaml_path = "examples/bass/slap/slap-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/slap/slap-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -73,7 +73,7 @@ def test_slap_produces_thumb_pop_ghost():
 
 def test_slap_velocity_separation():
     """Verify thumb and pop have distinct velocity ranges."""
-    yaml_path = "examples/bass/slap/slap-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/slap/slap-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -129,7 +129,7 @@ def test_slap_velocity_separation():
 
 def test_slap_staccato_durations():
     """Verify slap produces shorter (staccato) durations."""
-    yaml_path = "examples/bass/slap/slap-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/slap/slap-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -169,7 +169,7 @@ def test_slap_staccato_durations():
 
 def test_conservative_slap_vs_aggressive():
     """Verify conservative slap has fewer pops and ghosts."""
-    yaml_path = "examples/bass/slap/slap-conservative.yaml"
+    yaml_path = "tests/fixtures/examples/bass/slap/slap-conservative.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -218,7 +218,7 @@ def test_slap_vs_finger_difference():
     """Verify slap differs clearly from finger style."""
     # Build finger style
     result_finger = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/slap/slap-vs-finger.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/slap/slap-vs-finger.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -230,7 +230,7 @@ def test_slap_vs_finger_difference():
 
     # Build conservative slap for fair comparison
     result_slap = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/slap/slap-conservative.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/slap/slap-conservative.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -265,7 +265,7 @@ def test_slap_vs_finger_difference():
 
 def test_slap_determinism():
     """Verify slap is deterministic with same seed."""
-    yaml_path = "examples/bass/slap/slap-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/slap/slap-funk.yaml"
 
     def build_and_get_voice_labels():
         result = subprocess.run(

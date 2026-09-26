@@ -8,7 +8,7 @@ Verifies that:
 5. Repeated sections in the arrangement produce different output
 6. Non-targeted sections/instruments remain identical to the base song
 
-Uses the 5 YAML files in examples/seed-variation/ as test fixtures.
+Uses the 5 YAML files in tests/fixtures/examples/seed-variation/ as test fixtures.
 """
 
 import logging
@@ -22,7 +22,7 @@ from produzre.orchestrate.build import build_song
 from produzre.rng import make_section_rng, make_instrument_rng, stable_seed_int
 
 
-EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples" / "seed-variation"
+EXAMPLES_DIR = Path(__file__).resolve().parent / "fixtures" / "examples" / "seed-variation"
 
 BASE_YAML = EXAMPLES_DIR / "base-song.yaml"
 SECTION_SEED_YAML = EXAMPLES_DIR / "section-seed-override.yaml"

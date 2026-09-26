@@ -1,0 +1,42 @@
+version: 1
+song:
+  title: "BassRhythm_Anchor"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 300  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: tight  # Uses anchor pattern
+    intensity: 0.7
+    params:
+      rhythm_pattern: anchor
+      density: 1.0  # Full density to see the pattern clearly
+      rest_rate: 0.0
+
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

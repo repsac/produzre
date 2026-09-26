@@ -1,0 +1,43 @@
+version: 1
+song:
+  title: "BassStyle_Mute"
+  bpm: 110
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 402  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: tight  # Mute style creates percussive feel
+    intensity: 0.6
+    params:
+      articulation_style: mute  # Short durations, lower velocities
+      # rhythm_pattern will be set to "syncopated" by style bias
+      density: 0.7
+      rest_rate: 0.2  # More rests for percussive pocket
+
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

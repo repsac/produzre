@@ -221,7 +221,7 @@ def test_demo_build_expression_and_channels(tmp_path):
     from tests.conftest import REPO_ROOT
 
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/lead_metal_demo.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/lead_metal_demo.yaml"],
         capture_output=True,
         text=True,
         timeout=120,

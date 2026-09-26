@@ -13,7 +13,7 @@ from pathlib import Path
 
 def test_bass_determinism():
     """Two builds with same YAML/seed should produce identical TSV outputs."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     assert yaml_path.exists(), f"Baseline demo not found: {yaml_path}"
 
     # Build 1
@@ -63,7 +63,7 @@ def test_bass_determinism():
 
 def test_bass_voice_labels():
     """Voice labels should appear in TSV output."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     assert yaml_path.exists()
 
     result = subprocess.run(
@@ -99,7 +99,7 @@ def test_bass_voice_labels():
 
 def test_bass_structured_logging():
     """Structured logging should show effective parameters."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     assert yaml_path.exists()
 
     result = subprocess.run(
@@ -121,7 +121,7 @@ def test_bass_structured_logging():
 
 def test_bass_golden_comparison():
     """Compare against golden reference files."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     golden_tsv = Path("tests/golden/bass/baseline.events.tsv")
     golden_grid = Path("tests/golden/bass/baseline.grid.txt")
 

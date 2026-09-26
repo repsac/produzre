@@ -15,7 +15,7 @@ from pathlib import Path
 
 def test_octave_jumps_produce_variation():
     """Verify high octave_jump_rate produces octave variation in output."""
-    yaml_path = "examples/bass/grooves/groove-octave-jumps.yaml"
+    yaml_path = "tests/fixtures/examples/bass/grooves/groove-octave-jumps.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -80,7 +80,7 @@ def test_octave_jumps_produce_variation():
 
 def test_fifth_drops_on_chord_changes():
     """Verify fifth_jump_rate produces fifth drops on chord changes."""
-    yaml_path = "examples/bass/grooves/groove-fifth-drops.yaml"
+    yaml_path = "tests/fixtures/examples/bass/grooves/groove-fifth-drops.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -145,7 +145,7 @@ def test_fifth_drops_on_chord_changes():
 
 def test_pedal_tones_across_changes():
     """Verify pedal_rate produces pedal tones across chord changes."""
-    yaml_path = "examples/bass/grooves/groove-pedal-tones.yaml"
+    yaml_path = "tests/fixtures/examples/bass/grooves/groove-pedal-tones.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -188,7 +188,7 @@ def test_pedal_tones_across_changes():
 
 def test_combined_groove_features():
     """Verify combined groove features work together."""
-    yaml_path = "examples/bass/grooves/groove-combined.yaml"
+    yaml_path = "tests/fixtures/examples/bass/grooves/groove-combined.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -227,7 +227,7 @@ def test_combined_groove_features():
 
 def test_accent_strength_affects_velocity():
     """Verify accent_strength increases velocity on accented notes."""
-    yaml_path = "examples/bass/grooves/groove-octave-jumps.yaml"
+    yaml_path = "tests/fixtures/examples/bass/grooves/groove-octave-jumps.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -268,7 +268,7 @@ def test_accent_strength_affects_velocity():
 
 def test_groove_determinism():
     """Verify groove features are deterministic with same seed."""
-    yaml_path = "examples/bass/grooves/groove-combined.yaml"
+    yaml_path = "tests/fixtures/examples/bass/grooves/groove-combined.yaml"
 
     def build_and_get_pitches():
         result = subprocess.run(

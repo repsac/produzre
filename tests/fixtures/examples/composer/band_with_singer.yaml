@@ -1,0 +1,81 @@
+# Band with a singer: the lead guitar plays hooks, fills, and a solo.
+#
+# The lead guitar is the "singer" (foreground: full). Every lead phrase
+# derives from one song DNA: a hook chosen by a memorability search over
+# the chorus chords, a verse idea, a contrasting bridge idea, and a bank of
+# three signature licks.
+#
+# Listen for:
+#   - intro states the hook; every chorus plays it again (note-identical
+#     while the harmony matches), the final chorus lifts it and embellishes it
+#   - verse 2 keeps verse 1's melody with small "new lyric" rhythm changes
+#   - the prechorus climbs by sequence and holds the dominant
+#   - the solo tells a story: hook quote, development, climax, dive
+#   - bass, drums, and rhythm guitar lock a groove per section (groove
+#     memory) and vary it at phrase ends; choruses recall their groove
+#   - turnarounds lead each section into the next
+version: 1
+song:
+  title: "Composer Band"
+  bpm: 128
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 2026
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 79]
+  bass:
+    params: {articulation_style: pick, lock_to_kick: 0.6}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "iv bVI bVII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "bVI bVII iv v"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

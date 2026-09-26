@@ -33,9 +33,9 @@ from typing import Optional
 
 # Test configuration: (yaml_file, instrument)
 GOLDEN_TESTS = [
-    ("examples/drums/hats-demo.yaml", "drums"),
-    ("examples/drums/kick-demo.yaml", "drums"),
-    ("examples/drums/fills-demo.yaml", "drums"),
+    ("tests/fixtures/examples/drums/hats-demo.yaml", "drums"),
+    ("tests/fixtures/examples/drums/kick-demo.yaml", "drums"),
+    ("tests/fixtures/examples/drums/fills-demo.yaml", "drums"),
 ]
 
 

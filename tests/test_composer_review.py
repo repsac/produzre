@@ -258,7 +258,7 @@ def test_realizer_uses_section_metric_position(monkeypatch):
 
 def test_transition_pass_keeps_composed_lead_monophonic():
     from produzre.config.load import load_root_config
-    timelines, _ = _render_timelines(load_root_config('examples/composer/band_with_singer.yaml'))
+    timelines, _ = _render_timelines(load_root_config('tests/fixtures/examples/composer/band_with_singer.yaml'))
     notes = sorted(timelines['lead_gtr'].events, key=lambda e: e.start_beat)
     assert all(a.start_beat + a.duration_beats <= b.start_beat + 1e-8
                for a, b in zip(notes, notes[1:]))

@@ -17,7 +17,7 @@ import statistics
 
 def test_fills_at_boundaries():
     """Verify fills occur at boundaries, not throughout the section."""
-    yaml_path = "examples/bass/fills/fills-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/fills/fills-pocket.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -73,7 +73,7 @@ def test_fill_rate_affects_frequency():
     """Verify fill_rate affects fill frequency."""
     # Build high fill rate (funk)
     result_high = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/fills/fills-funk.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/fills/fills-funk.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -85,7 +85,7 @@ def test_fill_rate_affects_frequency():
 
     # Build low fill rate (minimal)
     result_low = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/fills/fills-minimal.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/fills/fills-minimal.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -124,7 +124,7 @@ def test_fill_rate_affects_frequency():
 
 def test_fill_complexity_affects_density():
     """Verify fill_complexity affects fill note density."""
-    yaml_path = "examples/bass/fills/fills-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/fills/fills-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -165,7 +165,7 @@ def test_fill_complexity_affects_density():
 
 def test_fills_show_in_log():
     """Verify fills are logged in build output."""
-    yaml_path = "examples/bass/fills/fills-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/fills/fills-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -185,7 +185,7 @@ def test_fills_show_in_log():
 
 def test_fills_tsv_shows_fill_kinds():
     """Verify TSV includes fill-specific voice labels."""
-    yaml_path = "examples/bass/fills/fills-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/fills/fills-pocket.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -232,7 +232,7 @@ def test_fills_tsv_shows_fill_kinds():
 
 def test_fills_determinism():
     """Verify fills are deterministic with same seed."""
-    yaml_path = "examples/bass/fills/fills-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/fills/fills-pocket.yaml"
 
     def build_and_get_fill_notes():
         result = subprocess.run(

@@ -18,7 +18,7 @@ import statistics
 
 def test_walking_quarter_note_density():
     """Verify walking bass produces mostly quarter notes."""
-    yaml_path = "examples/bass/techniques/walking-jazz.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -62,7 +62,7 @@ def test_walking_quarter_note_density():
 
 def test_walking_strong_chord_tone_on_beat_1():
     """Verify walking bass uses strong chord tones (root/fifth) on beat 1."""
-    yaml_path = "examples/bass/techniques/walking-jazz.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -109,7 +109,7 @@ def test_walking_strong_chord_tone_on_beat_1():
 
 def test_walking_approach_tones():
     """Verify walking bass uses approach tones to connect chords."""
-    yaml_path = "examples/bass/techniques/walking-jazz.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -159,7 +159,7 @@ def test_walking_approach_tones():
 
 def test_walking_smooth_movement():
     """Verify walking bass has smooth, stepwise movement (not overly jumpy)."""
-    yaml_path = "examples/bass/techniques/walking-jazz.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -211,7 +211,7 @@ def test_walking_smooth_movement():
 
 def test_walking_register_bounds():
     """Verify walking bass respects register bounds."""
-    yaml_path = "examples/bass/techniques/walking-jazz.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -256,7 +256,7 @@ def test_walking_vs_pocket_difference():
     """Verify walking bass differs from pocket style (more notes, more approaches)."""
     # Build walking style
     result_walking = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/techniques/walking-jazz.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -268,7 +268,7 @@ def test_walking_vs_pocket_difference():
 
     # Build pocket style
     result_pocket = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/techniques/walking-vs-pocket.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/techniques/walking-vs-pocket.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -302,7 +302,7 @@ def test_walking_vs_pocket_difference():
 
 def test_walking_determinism():
     """Verify walking bass is deterministic with same seed."""
-    yaml_path = "examples/bass/techniques/walking-jazz.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/walking-jazz.yaml"
 
     def build_and_get_pitches():
         result = subprocess.run(

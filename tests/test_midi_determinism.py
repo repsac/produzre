@@ -59,7 +59,7 @@ def collect_all_midi_files(export_root: Path) -> List[Path]:
 
 def test_full_song_determinism():
     """Two builds with same YAML/seed should produce byte-identical full song MIDI."""
-    yaml_path = Path("examples/rhythm_gtr/sustained-chords-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/rhythm_gtr/sustained-chords-demo.yaml")
     assert yaml_path.exists(), f"Demo not found: {yaml_path}"
 
     # Build 1
@@ -83,7 +83,7 @@ def test_full_song_determinism():
 
 def test_stems_determinism():
     """Per-instrument stem MIDI files should be byte-identical across builds."""
-    yaml_path = Path("examples/bass/advanced/motion-style-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/advanced/motion-style-demo.yaml")
     assert yaml_path.exists(), f"Demo not found: {yaml_path}"
 
     # Build 1
@@ -116,7 +116,7 @@ def test_stems_determinism():
 
 def test_all_midi_files_determinism():
     """All MIDI files (full song, stems, sections, patterns) should be deterministic."""
-    yaml_path = Path("examples/rhythm_gtr/sustained-chords-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/rhythm_gtr/sustained-chords-demo.yaml")
     assert yaml_path.exists(), f"Demo not found: {yaml_path}"
 
     # Build 1
@@ -181,7 +181,7 @@ def test_different_seeds_produce_different_outputs():
     import tempfile
     import yaml
 
-    base_yaml = Path("examples/rhythm_gtr/sustained-chords-demo.yaml")
+    base_yaml = Path("tests/fixtures/examples/rhythm_gtr/sustained-chords-demo.yaml")
     assert base_yaml.exists()
 
     # Read base config
@@ -218,8 +218,8 @@ def test_different_seeds_produce_different_outputs():
 def test_multiple_demo_determinism():
     """Test determinism across multiple demo files."""
     demo_files = [
-        "examples/rhythm_gtr/sustained-chords-demo.yaml",
-        "examples/bass/advanced/motion-style-demo.yaml",
+        "tests/fixtures/examples/rhythm_gtr/sustained-chords-demo.yaml",
+        "tests/fixtures/examples/bass/advanced/motion-style-demo.yaml",
     ]
 
     for yaml_path_str in demo_files:

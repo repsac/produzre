@@ -1,0 +1,38 @@
+version: 1
+song:
+  title: "BassChordChanges_Minor"
+  bpm: 100
+  key: A
+  mode: minor
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 201  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: tight  # Default persona for predictable behavior
+    intensity: 0.7
+
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "i VI iv V"  # Classic minor progression (Am F Dm E)
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

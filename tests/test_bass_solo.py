@@ -18,7 +18,7 @@ import statistics
 
 def test_solo_mode_detection():
     """Verify solo mode is detected from solo=True flag."""
-    yaml_path = "examples/bass/advanced/solo-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-pocket.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -36,7 +36,7 @@ def test_solo_mode_detection():
 
 def test_role_lead_detection():
     """Verify solo mode is detected from role=lead."""
-    yaml_path = "examples/bass/advanced/solo-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -54,7 +54,7 @@ def test_role_lead_detection():
 
 def test_solo_higher_density():
     """Verify solo sections have higher note density than normal."""
-    yaml_path = "examples/bass/advanced/solo-comparison.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-comparison.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -98,7 +98,7 @@ def test_solo_higher_density():
 
 def test_solo_expanded_register():
     """Verify solo sections use higher register (higher notes)."""
-    yaml_path = "examples/bass/advanced/solo-comparison.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-comparison.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -151,7 +151,7 @@ def test_solo_less_locked_to_kick():
     """Verify solo sections are more melodically independent (less kick-locked)."""
     # This is harder to test directly without drum events
     # We can verify by checking that solo mode is applied in the logs
-    yaml_path = "examples/bass/advanced/solo-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-pocket.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -169,7 +169,7 @@ def test_solo_less_locked_to_kick():
 
 def test_solo_differs_from_normal():
     """Verify solo sections noticeably differ from normal bass."""
-    yaml_path = "examples/bass/advanced/solo-comparison.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-comparison.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -225,7 +225,7 @@ def test_solo_differs_from_normal():
 
 def test_solo_determinism():
     """Verify solo bass is deterministic with same seed."""
-    yaml_path = "examples/bass/advanced/solo-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-pocket.yaml"
 
     def build_and_get_solo_pitches():
         result = subprocess.run(
