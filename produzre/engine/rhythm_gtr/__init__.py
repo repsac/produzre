@@ -658,6 +658,15 @@ def render_into_timeline(
             if logger:
                 logger.debug(f"[COORDINATION] Rhythm coordination failed: {e}")
 
+    # Composed comping (produzre/composer/comping.py): the song composer
+    # arranged this section's rhythm part; perform it on playable shapes.
+    comp = plan.get(f"composer.comp.{section.id}") if plan is not None and hasattr(plan, "get") else None
+    if isinstance(comp, dict) and comp.get("events") and harmony_plan is not None \
+            and harmony_plan.chord_slots and rng is not None:
+        _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_start_beat,
+                              timeline, comp, rng, logger)
+        return
+
     if use_patterns and plan is not None and rng is not None:
         _render_pattern_based_guitar(
             cfg=cfg,
@@ -706,6 +715,68 @@ def render_into_timeline(
         coordinated_accent_beats=coordinated_accent_beats,  # Rule 4
         logger=logger,
     )
+
+
+def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_start_beat,
+                          timeline, comp, rng, logger) -> None:
+    """Perform a composed comp part with voice-led, playable chord shapes."""
+    from .composed import perform_comp
+    from .voicings import choose_voicing
+
+    heavy = bool(comp.get("heavy"))
+    shapes = []
+    prev_full = prev_power = None
+    for slot in harmony_plan.chord_slots:
+        root = _rhythm_root_for_numeral(cfg, section, slot.numeral, instrument_cfg)
+        power = choose_voicing(root_midi=root, numeral=slot.numeral, voicing_style="power",
+                               prev_chord_shape=prev_power, rng=rng)
+        full = power if heavy else choose_voicing(root_midi=root, numeral=slot.numeral,
+                                                  voicing_style="triad",
+                                                  prev_chord_shape=prev_full, rng=rng)
+        prev_full, prev_power = full, power
+        full_pitches = list(full.pitches)
+        if heavy and len(full_pitches) < 3:
+            full_pitches = sorted(set(full_pitches + [full_pitches[0] + 12]))
+        shapes.append((float(slot.start_beat), float(slot.end_beat), full_pitches,
+                       list(power.pitches), slot.numeral))
+
+    def shape_at(beat: float):
+        for start, end, f, p, numeral in shapes:
+            if start - 1e-6 <= beat < end - 1e-6:
+                return f, p, numeral
+        return (shapes[-1][2], shapes[-1][3], shapes[-1][4]) if shapes else None
+
+    intensity = getattr(instrument_cfg, "intensity", None) if instrument_cfg is not None else None
+    if intensity is None:
+        intensity = getattr(section, "intensity", None)
+    from ...groove import effective_params_dict
+
+    params = effective_params_dict(instrument_cfg)
+
+    def _num(name, default):
+        try:
+            return float(params[name]) if params.get(name) is not None else default
+        except (TypeError, ValueError):
+            return default
+
+    written = perform_comp(
+        comp["events"],
+        timeline=timeline,
+        section_start_beat=section_start_beat,
+        shape_at=shape_at,
+        key=(section.key or cfg.song.key or "C").strip(),
+        mode=getattr(section, "mode", None) or cfg.song.mode or "major",
+        intensity=float(intensity if intensity is not None else 0.75),
+        bpm=_song_bpm(cfg),
+        ring=float(comp.get("ring", 1.0)),
+        rng=rng,
+        strum_ms=_num("strum_ms", 14.0),
+        # humanize_timing is 0-1 in the pattern engine; 1.0 ~ 12 ms here.
+        timing_jitter_ms=_num("humanize_timing", 0.5) * 12.0,
+    )
+    if logger:
+        logger.debug("Section '%s': performed composed comp '%s' (%d notes)",
+                     section.id, comp.get("riff"), written)
 
 
 def _render_pattern_based_guitar(

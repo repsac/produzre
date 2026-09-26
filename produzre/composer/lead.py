@@ -122,6 +122,21 @@ class SongComposer:
         self._fill_counter = 0
         self.log: List[str] = []
 
+    def comp_dna(self):
+        """The rhythm guitar's signature riffs (composer/comping.py), built once."""
+        if getattr(self, "_comp_dna", None) is None:
+            from .comping import comp_family, compose_comp_dna
+
+            shuffle = comp_family(self.genre) in ("blues", "jazz")
+            self._comp_dna = compose_comp_dna(seed=self.seed, genre=self.genre, key=self.key,
+                                              mode=self.mode, shuffle=shuffle)
+        return self._comp_dna
+
+    def hook_onsets(self) -> List[float]:
+        """Attack times of the hook line (hook bar, then answer bar)."""
+        return ([n.onset for n in self.dna.hook.notes]
+                + [self.dna.hook.length + n.onset for n in self.dna.hook_answer.notes])
+
     def _fitter(self, slots: Optional[Sequence], anchor: float, register: Tuple[int, int]):
         """Realize a candidate idea over a section's opening bar (DNA ranking)."""
         if not slots:

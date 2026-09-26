@@ -406,3 +406,106 @@ def test_one_bar_chorus_is_a_single_line():
     notes = comp.compose_lead(_ctx("c", "chorus", 0, ["i"], bars=1))
     starts = [n.beat for n in notes]
     assert notes and starts == sorted(set(starts)) and max(starts) < 4.0
+
+
+# --- rhythm-guitar comping ---------------------------------------------------
+
+from produzre.composer.comping import (RIFFS, compose_comp_dna, mutate_riff, plan_comp_section,
+                                       riff_events)
+from produzre.engine.rhythm_gtr.composed import _walk_pitch, perform_comp
+from produzre.timeline import InstrumentTimeline
+
+
+def test_every_riff_expands_to_a_full_bar():
+    chords = ChordMap(_slots(["i", "bVII"]), "E", "minor")
+    for riff in RIFFS:
+        events = riff_events(riff, 0.0, 4.0, chords)
+        assert events, riff.name
+        assert all(0 <= e.beat < 4.0 and e.dur > 0 for e in events), riff.name
+
+
+def test_comp_dna_is_seeded_characterful_and_contrasting():
+    a = compose_comp_dna(seed=1, genre="rock", key="E", mode="minor", shuffle=False)
+    b = compose_comp_dna(seed=1, genre="rock", key="E", mode="minor", shuffle=False)
+    c = compose_comp_dna(seed=2, genre="rock", key="E", mode="minor", shuffle=False)
+    assert a.signature() == b.signature() and a.signature() != c.signature()
+    assert a.riffs["low"].steps != a.riffs["drive"].steps       # verse != chorus
+    # Two songs in one genre never share the same figure.
+    songs = {compose_comp_dna(seed=s, genre="rock", key="E", mode="minor",
+                              shuffle=False).riffs["drive"].steps for s in range(12)}
+    assert len(songs) >= 8
+
+
+def test_mutation_keeps_the_downbeat():
+    import random
+    for riff in RIFFS:
+        m = mutate_riff(riff, random.Random(4), "rock")
+        assert m.steps[0] == riff.steps[0] and len(m.steps) == len(riff.steps)
+
+
+def test_arrangement_contrasts_sections_and_marks_arrivals():
+    dna = compose_comp_dna(seed=3, genre="rock", key="E", mode="minor", shuffle=False)
+    common = dict(occurrence=0, is_final_of_type=False, bars=8, beats_per_bar=4.0,
+                  chord_slots=_slots(["i", "bVI", "bIII", "bVII"] * 2), key="E", mode="minor")
+    verse, v_riff, _ = plan_comp_section(dna, section_type="verse", next_section_type="chorus",
+                                         **common)
+    chorus, c_riff, _ = plan_comp_section(dna, section_type="chorus", next_section_type="verse",
+                                          **common)
+    assert v_riff != c_riff
+    assert any(e.tag == "comp_fill" and 12.0 <= e.beat < 16.0 for e in verse)   # walk-up
+    assert all(e.tag == "comp_stop" for e in verse if e.beat >= 28.0)           # stop-time
+    ending, _, _ = plan_comp_section(dna, section_type="outro", next_section_type=None, **common)
+    assert [e.tag for e in ending if e.beat >= 28.0] == ["comp_stop"]           # final ring
+
+
+def test_walk_up_approaches_the_target_from_below():
+    # Into A (pc 9) from an E2 root in E minor: F#, then G# (the leading tone).
+    assert _walk_pitch(9, 1, 40, "E", "minor") == 42
+    assert _walk_pitch(9, 0, 40, "E", "minor") == 44
+
+
+def test_performer_plays_techniques_on_the_shape():
+    tl = InstrumentTimeline("rhythm_gtr")
+    full, power = [40, 47, 52, 55, 59, 64], [40, 47, 52]
+    events = [{"beat": 0.0, "dur": 1.0, "kind": "sus"},
+              {"beat": 1.0, "dur": 0.25, "kind": "chuck"},
+              {"beat": 2.0, "dur": 1.0, "kind": "slide"}]
+    import random
+    perform_comp(events, timeline=tl, section_start_beat=0.0,
+                 shape_at=lambda b: (full, power, "i"), key="E", mode="minor",
+                 intensity=0.8, bpm=120, ring=1.0, rng=random.Random(1),
+                 strum_ms=0.0, timing_jitter_ms=0.0)
+    sus = [e for e in tl.events if e.kind == "comp_sus"]
+    assert 57 in {e.pitch for e in sus} and any(e.pitch == 55 and e.start_beat > 0 for e in sus)
+    chucks = [e for e in tl.events if e.kind == "comp_chuck"]
+    assert chucks and all(e.duration_beats <= 0.07 and e.velocity < 60 for e in chucks)
+    assert any(e.expression and "bend_in" in e.expression for e in tl.events)
+
+
+def _rhythm_song(tmp_path, rhythm_params=None):
+    data = {
+        "song": {"title": "CompTest", "seed": 8, "genre": "rock", "key": "E", "mode": "minor"},
+        "instruments": {"rhythm_gtr": {"params": rhythm_params or {}}},
+        "sections": {
+            "verse": {"type": "verse", "bars": 8, "harmony": {"progression": "i bVI bIII bVII"},
+                      "instruments": {"harmony": {}, "drums": {}, "rhythm_gtr": {}}},
+            "chorus": {"type": "chorus", "bars": 8, "harmony": {"progression": "i bVII bVI bVII"},
+                       "instruments": {"harmony": {}, "drums": {}, "rhythm_gtr": {}}},
+        },
+        "arrangement": ["verse", "chorus"],
+    }
+    return _load_cfg(tmp_path, yaml.safe_dump(data, sort_keys=False))
+
+
+def test_song_rhythm_guitar_is_composed(tmp_path):
+    timelines, result = _render_timelines(_rhythm_song(tmp_path))
+    kinds = {e.kind for e in timelines["rhythm_gtr"].events}
+    assert all(str(k).startswith("comp") for k in kinds)
+    assert len(kinds) >= 3                                          # several techniques
+    assert result.performance_plan.get("composer.comp.verse")["riff"] != \
+        result.performance_plan.get("composer.comp.chorus")["riff"]
+
+
+def test_pinned_rhythm_style_is_respected(tmp_path):
+    _, result = _render_timelines(_rhythm_song(tmp_path, {"style": "funk_chanks"}))
+    assert result.performance_plan.get("composer.comp.verse") is None

@@ -496,6 +496,18 @@ For `follow_hats`, `octave` defaults to 3, `density` to 1, and
 `accent_syncopation` to true. Use `voicing: power_chord` or `triad` in its params.
 These controls are specific to that renderer.
 
+### Composed comping
+
+Unless you pin a rhythm style, the composer writes the rhythm guitar. Each
+song draws its own signature figures from an idiomatic vocabulary: dead-note
+chucks, bass-string walks, sus4 hammer-ons, slid chords, boogie dyads, stabs,
+and gallops. It arranges them so the verse, chorus, and bridge contrast.
+Phrases walk up into the next phrase, and the bar before a chorus is
+stop-time. Setting any of `style`, `strum_style`, `sustain_mode`,
+`playstyle`, `pattern`, `play_pattern`, `follow_hats`, `use_patterns`, or
+`lock_to_riff` keeps your choice, and so does `composer: false`. `strum_ms`
+and `humanize_timing` still shape the performance.
+
 ## Lead guitar controls
 
 | Key | Range or values | Default | What it does |

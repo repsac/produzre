@@ -179,6 +179,13 @@ songs. With the default `auto`, it plays the band's guitar part around a
 singer: the hook in the intro, licks at the end of verse phrases, a sustained
 counter-line in the chorus, and the solo.
 
+The rhythm guitar is composed too. Each song gets its own signature comp
+figures, drawn from real technique: dead-note chucks, bass-string walks into
+the next chord, sus4 hammer-ons, slid chords, boogie shuffles, stabs, and
+gallops. Verse, chorus, and bridge play contrasting figures, phrases walk up
+into the next, and the bar before a chorus stops dead. Set a rhythm `style`
+yourself and the engine plays that instead.
+
 The rhythm section gets groove memory. Drums, bass, and rhythm guitar settle
 into one pattern per section and vary it at phrase ends. The pattern moves
 with the chords, and a returning chorus brings its groove back. Two optional

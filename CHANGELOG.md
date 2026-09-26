@@ -20,6 +20,11 @@ the rhythm section settles into grooves.
   keeps the engine's own last bar. Choruses recall their groove.
   `song.groove_memory: false`, or `groove_memory: false` per instrument,
   restores bar-by-bar output. The bass golden baseline was regenerated.
+- **Rhythm guitar** is composed unless a part pins its own style or mode.
+  Each song gets signature comp riffs (chucks, walks, sus hammer-ons,
+  slides, boogies, gallops), with verse, chorus, and bridge contrast,
+  walk-ups, and stop-time before choruses. `composer: false` on the rhythm
+  part restores the recipe or legacy behavior.
 - **Turnarounds**: preset and recipe progressions now lead into sections
   that start on the tonic (the last half bar moves to V, V7, or bVII).
   Explicit progressions are unchanged unless you opt in.
@@ -38,6 +43,10 @@ the rhythm section settles into grooves.
   narrative solo (hook quote, development, climax, resolution, dive), and an
   outro. `foreground: auto` gives a band part around a singer: the intro
   hook, verse fills from the lick bank, a chorus counter-line, and the solo.
+- Composed comping (`composer/comping.py`, `engine/rhythm_gtr/composed.py`):
+  57 idiomatic rhythm-guitar riffs across 20 genre families, chosen per song for
+  character, personalized by seeded idiom-preserving mutations, and performed
+  on playable chord shapes with strum spread, chucks, pull-offs, and slides.
 - A listener model: a self-updating expectation model over intervals and
   durations, primed with statistics from human melodies. It picks each
   phrase's development so its surprise suits the phrase's role. Targets were

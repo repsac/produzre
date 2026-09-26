@@ -53,7 +53,7 @@ KNOWN_BASS_PARAMS = {
     "motif_quote_rate", "slide_rate", "vibrato_rate",
 } | KNOWN_COMMON_PARAMS
 KNOWN_RHYTHM_GTR_PARAMS = {
-    "groove_memory", "groove_cycle_bars",
+    "groove_memory", "groove_cycle_bars", "composer",
     "style", "density", "mute", "contrast", "phrase_development", "phrase_len_bars", "sustain_mode",
     "sustain_duration", "strum", "strum_beats", "strum_dir", "strum_style", "retrigger", "hit_strategy",
     "voice_leading", "voice_range_low", "voice_range_high", "use_patterns", "palm_mute", "voicing",

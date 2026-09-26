@@ -170,6 +170,54 @@ planned degree, instead of fighting the harmony. Licks are placed on the
 pentatonic (or diatonic) ladder with their center of pitch at the register
 target, and they move by octaves as a whole to fit.
 
+## Rhythm guitar: composed comping
+
+Measured over 94 songs, rhythm guitar played plain quarter notes or a
+whole-note sustain in a quarter of all sections. Many full arrangements used
+one or two patterns for every section. A genre recipe pinned one style (one
+hard-coded cell) for the whole song, and genres without a recipe fell back to
+quarter-note strums.
+
+`composer/comping.py` writes the part the way a player with a voice would. A
+rhythm part with character mixes techniques inside one figure: dead-note
+chucks between chords, single-note bass-string walks into the next chord,
+sus4 hammer-ons inside a held chord, chords slid in from a fret below, boogie
+dyads, partial-chord stabs, and palm-muted gallops.
+
+- **Vocabulary.** 57 idiomatic riffs across rock, metal, pop, funk,
+  reggae and ska, soul and gospel, country and folk, latin, electronic, and
+  shuffle/swing (12-step). They are written as readable step strings (`X-mxX-mx`,
+  `r-m-X---f-m-X---`, `q-Qq-Qq-yq-Q`) and tagged by energy tier (verse-low,
+  build, chorus-drive, contrast, stab).
+- **Comp DNA.** Each song draws one riff per tier, weighted by character
+  (distinct techniques plus off-beat accents). It then gives each riff a seeded,
+  idiom-preserving personal variation: a strum ghosted into a chuck, a hit
+  pushed an eighth early, a sus or slide injected, a bass walk into a
+  change, or accents and gaps moved in a chug riff. The downbeat never
+  changes. Two songs in one genre start from shared vocabulary but play
+  different figures.
+- **Arrangement.** Verse, prechorus, chorus, bridge, solo, breakdown, and outro
+  take contrasting tiers. Phrase ends walk up into the next phrase, the bar
+  before a chorus is stop-time (one hit, silence, a chuck-and-upstroke
+  pickup), the song ends on a slid or ringing chord, the final chorus kicks
+  into the alternate driving figure, and chorus strums that coincide with the
+  hook's attacks get the accent.
+- **Performance.** `engine/rhythm_gtr/composed.py` plays each gesture on the
+  engine's playable chord shapes: strum spread by direction, partial
+  upstrokes, 60 ms dead-note chucks, chugs and boogies on the low strings,
+  a sus4 that pulls off to the third while the other strings ring, and slides
+  written as pitch bend.
+
+Explicit user choices win. When a rhythm part sets `style`, `strum_style`,
+`sustain_mode`, `playstyle`, `pattern` or `play_pattern`, `follow_hats`,
+`use_patterns`, or a riff lock, the engine plays it as before. Set
+`composer: false` on the part to opt out. Composed comping carries its own
+bar form, so groove memory skips it.
+
+Across the genre examples, section-main rhythm patterns went from 78 to 111
+distinct figures. The most common one dropped from 43 sections (plain
+quarters) to 27.
+
 ## Groove memory
 
 `apply_groove_memory` runs right after each accompaniment engine renders
@@ -220,6 +268,7 @@ engine follows through `section.key`, and both memory caches transpose.
 | `song.final_chorus` | unset | `modulate` (+2) or a semitone count for a final-chorus key change. |
 | `harmony.turnaround` | unset | Per-section turnaround override. |
 | `lead_gtr` `composer` | true | Per-section opt-out of the composer. |
+| `rhythm_gtr` `composer` | true | Opt out of composed comping (explicit style keys also opt out). |
 | `lead_gtr` `foreground` | `auto` | `full`: the lead is the melody (instrumental). `auto`: hooks, fills, counter-lines, and solos around a singer. |
 | instrument `groove_memory` | true | Per-instrument opt-out. |
 | instrument `groove_cycle_bars` | genre | 1 or 2-bar groove cycle. |
@@ -230,6 +279,7 @@ engine follows through `section.key`, and both memory caches transpose.
 |---|---|
 | `composer.song` | The `SongComposer` (DNA, listener, memory). |
 | `composer.lead.<section>` | Composed notes: beat, duration, pitch, accent, technique, role. |
+| `composer.comp.<section>` | Composed rhythm-guitar gestures (riff name, ring, events). |
 | `composer.groove_memory` | Established grooves by instrument and section type. |
 
 ## Measuring
@@ -263,9 +313,9 @@ from 1.11 to 0.29 standard deviations.
 
 - The memorability score is a heuristic. The next step is fitting its
   weights against a labeled set of hooks.
-- The composer writes the lead. Bass and rhythm guitar gain form through
-  groove memory but do not yet derive lines from the DNA. A bass counter-line
-  from the hook's rhythm is the natural next piece.
+- The composer writes the lead and the rhythm guitar. The bass gains form
+  through groove memory but does not yet derive lines from the DNA. A bass
+  counter-line from the hook's rhythm is the natural next piece.
 - Harmony changes are limited to turnarounds and the final lift. Reharmonizing
   repeats (substitutions, secondary dominants) needs numeral spelling for
   applied chords.

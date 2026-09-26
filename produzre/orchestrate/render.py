@@ -785,6 +785,10 @@ def render_section_instruments(
             cfg, sec, hplan, rgrid, effective_cfgs.get("lead_gtr"),
             performance_plan, transition_context, logger,
         )
+        _compose_rhythm_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("rhythm_gtr"),
+            performance_plan, transition_context, logger,
+        )
 
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
@@ -958,6 +962,8 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
 
     if inst_name not in GROOVE_INSTRUMENTS or performance_plan is None:
         return
+    if inst_name == "rhythm_gtr" and performance_plan.get(f"composer.comp.{sec.id}"):
+        return  # composed comping already has its bar form
     raw = getattr(cfg, "raw", None)
     song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
     if not _flag(song_raw.get("groove_memory") if isinstance(song_raw, dict) else None):
@@ -1022,6 +1028,78 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
             sec.id, inst_name, report["form"], report["cycle"], report["restated"],
             " (recalled)" if report["recalled"] else "",
         )
+
+
+# Rhythm-guitar keys that ask for a specific legacy or authored behavior; when
+# the user sets one, the composer leaves that part alone.
+_RHYTHM_USER_MODES = ("style", "strum_style", "sustain_mode", "playstyle", "play_pattern",
+                      "pattern", "follow_hats", "use_patterns")
+_HEAVY_COMP = ("metal", "punk", "grunge", "hard_rock", "thrash")
+
+
+def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_plan,
+                                transition_context, logger) -> None:
+    """Publish ``composer.comp.<section>`` for the rhythm engine to perform."""
+    if performance_plan is None or rhythm_cfg is None or hplan is None:
+        return
+    performance_plan.data.pop(f"composer.comp.{sec.id}", None)
+    composer = performance_plan.get("composer.song")
+    if composer is None or not getattr(hplan, "chord_slots", None):
+        return
+    raw_extra = getattr(rhythm_cfg, "extra", None)
+    extra: dict = {}
+    if isinstance(raw_extra, dict):
+        extra = {k: v for k, v in raw_extra.items() if k != "extra"}
+        if isinstance(raw_extra.get("extra"), dict):
+            extra.update(raw_extra["extra"])
+    if not _flag(extra.get("composer")) or getattr(rhythm_cfg, "enabled", True) is False:
+        return
+    persona_keys = set(extra.get("_persona_keys") or [])
+    if any(k in extra and k not in persona_keys for k in _RHYTHM_USER_MODES):
+        return
+    try:
+        if float(extra.get("lock_to_riff", 0) or 0) > 0:
+            return
+    except (TypeError, ValueError):
+        pass
+
+    from ..composer.comping import plan_comp_section
+
+    arrangement_index = 0
+    if isinstance(transition_context, dict):
+        arrangement_index = int(transition_context.get("arrangement_index", 0) or 0)
+    sections = list(getattr(performance_plan, "sections", []) or [])
+    sec_type = str(getattr(sec, "type", "") or "").strip().lower()
+    occurrence = sum(1 for m in sections[:arrangement_index]
+                     if str(getattr(m, "type", "") or "").strip().lower() == sec_type)
+    is_final = not any(str(getattr(m, "type", "") or "").strip().lower() == sec_type
+                       for m in sections[arrangement_index + 1:])
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    nxt = (transition_context or {}).get("next_section_type")
+    if isinstance(transition_context, dict) and transition_context.get("is_last_section"):
+        nxt = None
+    events, riff, ring = plan_comp_section(
+        composer.comp_dna(),
+        section_type=sec_type, occurrence=occurrence, is_final_of_type=is_final,
+        bars=bars, beats_per_bar=bpb, chord_slots=hplan.chord_slots,
+        key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+        mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+        next_section_type=nxt if nxt else (None if (transition_context or {}).get(
+            "is_last_section") else "verse"),
+        hook_onsets=composer.hook_onsets(),
+    )
+    if not events:
+        return
+    genre = str(getattr(cfg.song, "genre", "") or "").lower()
+    performance_plan.set(f"composer.comp.{sec.id}", {
+        "riff": riff, "ring": ring, "heavy": any(t in genre for t in _HEAVY_COMP),
+        "events": [{"beat": e.beat, "dur": e.dur, "kind": e.kind, "accent": e.accent,
+                    "direction": e.direction, "arp_index": e.arp_index,
+                    "target_pc": e.target_pc, "tag": e.tag} for e in events],
+    })
+    logger.info("Composer: %s rhythm guitar plays '%s'", sec.id, riff)
 
 
 def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan,
