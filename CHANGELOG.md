@@ -2,6 +2,19 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Country waltzes and style hints
+
+- Country waltzes get a per-song waltz band: bass on 1 with its own
+  ring length, root/fifth habit and walks on 2 and 3 into chord changes;
+  guitar answers on 2 and 3 with the song's figure; drums keep the kick on
+  1 with their own snare or cross-stick, foot hat and timekeeper. The ten-song
+  waltz album moves from 0.69 to about 0.51 similarity. Other meters are
+  byte-identical.
+- Genre names choose the country style (`outlaw_country`, `country_rock`,
+  `honky_tonk`, `bakersfield`, `texas_country`, `country_ballad`); a pinned
+  `country_style` still wins.
+- Composed drums can play `cross_stick` (GM 37).
+
 ### Rhythm-guitar groove review
 
 - Keep riff pitch calculations from changing subsequent note velocities.

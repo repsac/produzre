@@ -667,7 +667,16 @@ song:
     chorus_form: anthem      # lift | anthem | call
     lead_fills: sparse       # sparse | normal | chatty
     ending: big              # ring | cold | big
+    country_style: outlaw    # honky_tonk | bakersfield | outlaw | two_step | ballad | country_rock
 ```
+
+`country_style` applies to country songs. Without a pin, a genre name
+that names the style chooses it (`outlaw_country`, `country_rock`,
+`honky_tonk`, `bakersfield`, `texas_country`, `country_ballad`); plain
+`country` draws one per song. In 3/4, each country song also draws its
+own waltz band: bass on 1 with its own ring length, fifths and walks,
+guitar answering on 2 and 3 with its own figure, and a drummer with its
+own snare or cross-stick touch and timekeeper.
 
 `comp_activity` is how busy the rhythm guitarist is, drawn per song
 (roughly 3 busy, 5 normal, 2 sparse in rock; funk leans busy) and pinned

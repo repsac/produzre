@@ -987,6 +987,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         "hat_closed": 42,
         "hat_open": 46,
         "hat_pedal": 44,
+        "cross_stick": 37,
         "ride": 51,
         "ride_bell": 53,
         "crash": 49,

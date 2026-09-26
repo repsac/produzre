@@ -53,6 +53,7 @@ class BassDNA:
     country_lengths: Dict[str, float] = field(default_factory=dict)
     country_grace: bool = False
     country_pedal: bool = False
+    waltz: Optional[object] = None         # country.WaltzPlayer, for 3/4 bars
     country_fifths: Dict[str, int] = field(default_factory=dict)
     country_figures: Dict[str, Tuple[int, ...]] = field(default_factory=dict)
     train_pickups: Dict[str, float] = field(default_factory=dict)
@@ -113,6 +114,9 @@ def compose_bass_dna(*, seed: int, genre: str, country_style=None) -> BassDNA:
         from .country import country_style as resolve_style
 
         dna.country_style = resolve_style(seed, genre, country_style)
+        from .country import waltz_player
+
+        dna.waltz = waltz_player(seed, dna.country_style)
         player = random.Random(stable_seed_int("composer.country.bass.player", seed))
         two = ((0., 2.), (0., 1.5, 2.), (0., 1.5, 3.), (0., 2., 3.5))
         drive = ((0., .5, 2., 2.5), (0., 1., 2., 3.), (0., 1.5, 2.5), (0., .75, 2., 3.5))
@@ -137,6 +141,45 @@ def _root_pitch(pc: int, near: int, lo: int = 28, hi: int = 47) -> int:
                key=lambda p: (abs(p - near), p))
 
 
+def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near):
+    """A country waltz bar: the bass owns beat 1 and the band answers on 2
+    and 3. The player chooses how long the note rings, whether a held
+    chord moves to its fifth, and whether (and how often) it walks up or
+    down into the next chord across beats 2 and 3."""
+    w = dna.waltz
+    length, walks = w.part(w.bass, section_type)
+    bar = int(round(bar_start / 3))
+    span = chords.at(bar_start)
+    prev = chords.at(bar_start - 1e-3) if bar_start > 0 else None
+    held = prev is not None and prev.root_pc == span.root_pc
+    fifth = dna.country_fifths.get(section_type, 7)
+    use_fifth = (w.bass_alternation == "bar" and bar % 2 == 1) or \
+        (w.bass_alternation == "change" and held and bar % 2 == 1)
+    root = _root_pitch(span.root_pc, near)
+    interval = fifth if use_fifth else 0
+    pitch = nearest_in(((span.root_pc + interval) % 12,), root + interval, 28, 52)
+    nxt = chords.at(bar_start + 3) if bar_start + 3 < chords.total - 1e-6 else None
+    due = {1: True, 2: bar % 2 == 1, 4: bar % 4 == 3}[w.walk_every]
+    walk = (walks and due and nxt is not None and not last_bar and span.end >= bar_start + 3 - 1e-6
+            and nxt.root_pc != span.root_pc)
+    if not walk:
+        end = min(span.end, bar_start + 3)
+        return [(bar_start, min(length, end - bar_start - .05), pitch, True)]
+    # Walk across 2 and 3 toward the next root, from the side the bass is on.
+    target = nearest_in((nxt.root_pc,), pitch, 28, 52)
+    step = -1 if target > pitch else 1
+    scale = scale_pcs(chords.key, chords.mode)
+    second = target + step
+    if w.walk_style == "diatonic":
+        while second % 12 not in scale:
+            second += step
+    first = second + step
+    while first % 12 not in scale:
+        first += step
+    return [(bar_start, .9, pitch, True), (bar_start + 1, .85, first, False),
+            (bar_start + 2, .85, second, False)]
+
+
 def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
              approach: str = "below", near: int = 36,
              last_bar: bool = False, dna: Optional[BassDNA] = None,
@@ -151,6 +194,11 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
     span = chords.at(bar_start)
     if span is None:
         return out
+    if (role == "boom_chick" or role.startswith("country_")) and dna.waltz is not None:
+        from .country import is_waltz
+
+        if is_waltz(bpb, groups):
+            return _waltz_bar(bar_start, chords, dna, section_type, last_bar, near)
     if role == "boom_chick" or role.startswith("country_"):
         gs = tuple(groups) if groups else default_groups(bpb)
         waltz = bpb == 3 and gs == (1.0, 1.0, 1.0)

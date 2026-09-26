@@ -85,8 +85,9 @@ def test_country_bass_obeys_meter_before_vocabulary(bpb, groups, expected):
             notes = bass_bar(role, 0, bpb, chords, dna=d, groups=groups)
             assert [n[0] for n in notes] == expected
             if groups == (1,1,1):
+                # Each player alternates root and fifth their own way.
                 nxt = bass_bar(role, bpb, bpb, chords, dna=d, groups=groups)
-                assert notes[0][2]%12 == 0 and nxt[0][2]%12 == 7
+                assert notes[0][2]%12 == 0 and nxt[0][2]%12 in (0, 7)
 
 
 def test_country_guitar_waltz_answers_bass_on_two_and_three():
@@ -121,9 +122,15 @@ def test_waltz_transition_cannot_add_an_extra_bass_pickup(tmp_path):
 
     raw = album_configs('country', 1, meter='3/4')[0]
     timelines, _ = _render_timelines(_load_cfg(tmp_path, yaml.safe_dump(raw), name='waltz.yaml'))
-    assert timelines['bass'].events
-    assert all(min(e.start_beat % 3, 3-e.start_beat % 3) < .08
-               for e in timelines['bass'].events)
+    events = timelines['bass'].events
+    assert events
+    # Only the composed part plays: beat 1, plus the player's walks on 2
+    # and 3 into a chord change. No transition pickup lands between beats.
+    assert all(e.kind.startswith('bass_') for e in events)
+    assert all(min(e.start_beat % 1, 1-e.start_beat % 1) < .08 for e in events)
+    walks = [e for e in events if min(e.start_beat % 3, 3-e.start_beat % 3) >= .08]
+    beats = Counter(round(e.start_beat) % 3 for e in walks)
+    assert beats[1] == beats[2]
 
 
 def test_turnaround_respects_register_and_chord_changes_inside_edit_window():
@@ -138,3 +145,83 @@ def test_turnaround_respects_register_and_chord_changes_inside_edit_window():
         assert 48 <= n.pitch <= 60
         assert n.start_beat+n.duration_beats <= 100+span.end
         assert n.duration_beats < .25 or n.pitch%12 in span.pcs
+
+
+# --- country waltz players and genre hints -------------------------------------
+
+def test_waltz_players_vary_and_verse_and_chorus_contrast():
+    from produzre.composer.country import STYLES, waltz_player
+
+    players = [waltz_player(s, STYLES[s % len(STYLES)]) for s in range(120)]
+    for table in ('bass', 'comp', 'kick', 'snare', 'hands'):
+        assert len({getattr(p, table)['verse'] for p in players}) >= 2, table
+    assert {p.bass_alternation for p in players} == {'bar', 'change', 'root'}
+    assert all(p.bass['verse'] != p.bass['chorus'] for p in players)
+    assert all(p.comp['verse'] != p.comp['chorus'] for p in players)
+    assert all(p.hands['verse'] != p.hands['chorus'] for p in players)
+    # Kick stays on 1 (with at most a pickup on the "and" of 3).
+    assert all(p.kick['verse'][0] == 'x' and set(p.kick['verse'][1:10]) == {'.'} for p in players)
+
+
+def test_waltz_bass_walks_land_on_the_next_root():
+    chords = ChordMap([SimpleNamespace(numeral=n, start_beat=3*i, end_beat=3*i+3)
+                       for i, n in enumerate(['I', 'IV', 'V', 'I', 'vi', 'ii', 'V', 'I'])],
+                      'G', 'major')
+    walked = 0
+    for seed in range(60):
+        d = compose_bass_dna(seed=seed, genre='country')
+        for bar in range(7):
+            notes = bass_bar(d.roles['verse'], bar*3, 3, chords, dna=d, groups=(1, 1, 1))
+            assert notes[0][0] == bar*3 and notes[0][3]           # beat 1, accented
+            assert notes[0][2] % 12 in {chords.at(bar*3).root_pc, (chords.at(bar*3).root_pc+7) % 12}
+            if len(notes) > 1:
+                walked += 1
+                assert [n[0]-bar*3 for n in notes] == [0, 1, 2]
+                target = chords.at(bar*3+3).root_pc
+                assert min(abs(notes[2][2]-p) for p in range(28, 53) if p % 12 == target) <= 2
+    assert walked > 20
+
+
+def test_waltz_guitar_answers_on_two_and_three_in_its_own_way():
+    figures = set()
+    for seed in range(40):
+        dna = compose_comp_dna(seed=seed, genre='country', key='C', mode='major', shuffle=False)
+        events, _, _ = plan_comp_section(dna, section_type='verse', occurrence=0,
+            is_final_of_type=False, bars=4, beats_per_bar=3, chord_slots=_slots(['I']*4),
+            key='C', mode='major', groups=(1,1,1), arrangement=_arr(), next_section_type='verse')
+        bar = [e for e in events if e.beat < 3]
+        assert bar[0].beat == 0
+        assert {1, 2} <= {round(e.beat) for e in bar[1:]} or bar[0].dur > 2
+        figures.add(tuple((e.beat, e.kind) for e in bar))
+    assert len(figures) >= 4
+
+
+def test_waltz_drums_follow_the_drummer():
+    from produzre.composer.country import STYLES
+
+    grooves = set()
+    for seed in range(30):
+        d = compose_drum_dna(seed=seed, genre='country', beats_per_bar=3)
+        hits = plan_drum_section(d, _arr(), section_type='verse', bars=4, beats_per_bar=3,
+                                 groups=(1, 1, 1), next_section_type='verse')
+        bar = [h for h in hits if h.beat < 3 and h.kind != 'fill' and h.voice != 'crash']
+        kicks = {round(h.beat, 2) for h in bar if h.voice == 'kick'}
+        snares = {round(h.beat, 2) for h in bar if h.voice in ('snare', 'cross_stick')}
+        assert 0 in kicks and kicks <= {0, 2.5}
+        assert snares and snares <= {1, 2}
+        grooves.add((tuple(sorted(kicks)), tuple(sorted(snares)),
+                     tuple(sorted(round(h.beat, 2) for h in bar if h.voice not in ('kick', 'snare', 'cross_stick'))),
+                     tuple(sorted({h.voice for h in bar}))))
+    assert len(grooves) >= 6
+
+
+@pytest.mark.parametrize('genre,style', [('outlaw_country', 'outlaw'), ('Country Rock', 'country_rock'),
+                                         ('honky-tonk country', 'honky_tonk'),
+                                         ('texas_country', 'two_step'), ('country_ballad', 'ballad'),
+                                         ('bakersfield country', 'bakersfield')])
+def test_genre_names_choose_the_country_style(genre, style):
+    from produzre.composer.country import country_style
+
+    assert all(country_style(s, genre) == style for s in range(10))
+    assert country_style(1, genre, 'ballad' if style != 'ballad' else 'outlaw') != style
+    assert len({country_style(s, 'country') for s in range(40)}) == 6

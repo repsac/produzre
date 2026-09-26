@@ -234,3 +234,48 @@ The non-country lead stays monophonic, and the country exception permits
 only marked unbent double stops. The solo hook generator and its form
 were left alone; this work changes the country lick vocabulary and band
 choices rather than replacing the melody composer.
+
+## Follow-up: waltzes and genre hints
+
+**Waltz band per song.** `country.WaltzPlayer` is drawn per song on its
+own stream and shared by bass, comp and drum DNA, only in 3/4 with
+one-beat groups. Bass: beat 1 always; ring length (.9, 1.9 or 2.9 beats);
+root/fifth habit (by bar, only on a held chord, or root only); walks
+across 2 and 3 into a chord change (every change, every other, or phrase
+ends; diatonic or chromatic), with verse and chorus contrasting. Guitar:
+the song's figure on 2 and 3 (pah-pah, choked, pah with upstrokes,
+sixths, arpeggio, ringing ballad strum), chorus differing from verse,
+weighted by country style. Drums: kick on 1 with an occasional "and of 3"
+pickup, snare or cross-stick on 2 and 3 (or one of them), optional foot
+hi-hat, a timekeeper figure, and no ghost notes.
+
+| Waltz album | Before (0ce5367) | After |
+|---|---:|---:|
+| Album seed 1 overall | .694 | .522 |
+| Album seed 2 overall | .693 | .507 |
+| Rhythm guitar verse (seed 1 / 2) | 1.00 / 1.00 | .226 / .495 |
+| Drums verse (seed 1 / 2) | .304 / .294 | .502 / .392 |
+| Bass chorus and bridge | 1.00 | 1.00 |
+
+The drums are more alike than before on this metric. The old variety
+came from sixteenth-note kick pickups, train snares and ghost notes that
+do not belong in a waltz; the new drummer is idiomatic, with fewer
+dimensions for the metric to see (the cross-stick and snare share a
+class, and ring lengths are invisible). Waltz bass bars read 1.0 because
+every waltz bass bar starts with a root on 1; walks, ring length and
+fifths are the audible differences. Ten-song albums are noisy at this
+level: an earlier draft with fewer drum options scored .435 and .481,
+with the same design.
+
+**Genre hints.** `style_hint` maps genre names to a style (`outlaw`,
+`country_rock`/`rock`/`southern`/`modern`, `honky`, `bakersfield`,
+`texas`/`two_step`/`dance_hall`, `ballad`). Plain `country` still draws
+all six; a pinned `country_style` still wins. Hints apply only when the
+genre contains "country": a bare `honky_tonk` or `bakersfield` genre is
+not yet treated as country by the other parts.
+
+**Unchanged output.** Fifteen 4/4 songs (country, hard rock, pop, reggae,
+jazz) are byte-identical to 0ce5367; the ten-song 4/4 country albums
+remain .160 and .166. 722 tests pass; all 171 examples build; a waltz and
+an `outlaw_country` waltz pass strict determinism and identical MIDI
+across two PYTHONHASHSEED values.

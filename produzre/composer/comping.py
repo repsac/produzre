@@ -187,6 +187,7 @@ class CompDNA:
     riffs: Dict[str, CompRiff] = field(default_factory=dict)  # tier -> riff
     alternates: Dict[str, CompRiff] = field(default_factory=dict)
     plain_gesture: str = "strum"  # the player's undecorated chord attack
+    waltz: Optional[object] = None  # country.WaltzPlayer, for 3/4 bars
 
     def signature(self) -> str:
         return ",".join(f"{t}:{r.name}" for t, r in sorted(self.riffs.items()))
@@ -306,6 +307,9 @@ def compose_comp_dna(*, seed: int, genre: str, key: str, mode: str, shuffle: boo
             used.add(riff.steps)
             dna.riffs[tier] = riff
             dna.alternates[tier] = country_riff(player, style, tier)
+        from .country import waltz_player
+
+        dna.waltz = waltz_player(seed, style)
         return dna
     fam = comp_family(genre)
     rng = random.Random(stable_seed_int("composer.comp", seed, genre, key, mode))
@@ -669,6 +673,29 @@ def yield_to_lead(events: Sequence[CompEvent], lead: Sequence[dict],
     return out
 
 
+def _waltz(bpb, groups) -> bool:
+    from .country import is_waltz
+
+    return is_waltz(bpb, groups)
+
+
+def _waltz_comp_bar(dna: CompDNA, section_type: str, start: float, bar: int) -> List[CompEvent]:
+    """The guitar's waltz bar: a bass note on 1 (alternating with the bass
+    player's habit) and the song's own answer on 2 and 3."""
+    from .country import WALTZ_FIGURES
+
+    w = dna.waltz
+    figure = WALTZ_FIGURES[w.part(w.comp, section_type) if w is not None else "pah_pah"]
+    alternate = w is None or w.bass_alternation == "bar"
+    out = []
+    for off, dur, kind, arp in figure:
+        if kind == "B":
+            kind = "fifth" if alternate and bar % 2 else "root"
+        out.append(CompEvent(round(start + off, 4), dur, kind, accent=off == 0,
+                             direction="up" if kind == "up" else "down", arp_index=arp))
+    return out
+
+
 def plan_comp_section(
     dna: CompDNA,
     *,
@@ -756,9 +783,8 @@ def plan_comp_section(
                        if n.kind != "rsingle" or
                        (b if activity != "sparse" else b + 1) % tail_every == 0]
             continue
-        if dna.family == "country" and bpb == 3 and tuple(groups or (1, 1, 1)) == (1, 1, 1):
-            bar = [CompEvent(start, .65, "root" if b % 2 == 0 else "fifth", accent=True),
-                   CompEvent(start+1, .65, "strum"), CompEvent(start+2, .65, "strum")]
+        if dna.family == "country" and _waltz(bpb, groups):
+            bar = _waltz_comp_bar(dna, st, start, b)
         else:
             bar = riff_events(riff, start, bpb, chords, groups=groups)
         if activity == "sparse" and st != "bridge":

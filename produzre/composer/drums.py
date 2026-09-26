@@ -111,6 +111,7 @@ class DrumDNA:
     kick_styles: Dict[str, str] = field(default_factory=dict)
     country_style: str = ""
     snare_gain: float = 1.0
+    waltz: Optional[object] = None  # country.WaltzPlayer, for 3/4 bars
     rim_pickups: Dict[str, Tuple[int, ...]] = field(default_factory=dict)
     crash_policy: str = "regular"
     accent_voice: str = "crash"
@@ -264,6 +265,9 @@ def compose_drum_dna(*, seed: int, genre: str, beats_per_bar: float = 4.0, count
         from .country import country_style as resolve_style
 
         dna.country_style = resolve_style(seed, genre, country_style)
+        from .country import waltz_player
+
+        dna.waltz = waltz_player(seed, dna.country_style)
         player = random.Random(stable_seed_int("composer.country.drums.player", seed))
         style = dna.country_style
         dna.feel = "shuffle" if style == "honky_tonk" else "straight"
@@ -347,6 +351,21 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
     hits: List[DrumHit] = []
     voice, offsets = TIMEKEEPERS.get(tk, TIMEKEEPERS["hat8"])
     snare_steps = _snare_steps(backbeat, beats, steps, groups)
+    from .country import is_waltz
+
+    snare_voice, foot = "snare", False
+    if dna.waltz is not None and is_waltz(bpb, groups):
+        # The drummer's own waltz: kick on 1 (maybe a pickup on the "and"
+        # of 3), snare "pah-pah" on 2 and 3 or a lighter touch, and a
+        # timekeeper figure of their own. No ghost notes: the space between
+        # the "pah"s is the waltz.
+        kick = dna.waltz.part(dna.waltz.kick, st)
+        snare_steps = set(dna.waltz.part(dna.waltz.snare, st))
+        dna = replace(dna, ghosts="none",
+                      hand_patterns=dict(dna.hand_patterns, **{st: dna.waltz.part(dna.waltz.hands, st)}))
+        train = ""
+        snare_voice = dna.waltz.part(dna.waltz.snare_voice, st)
+        foot = dna.waltz.part(dna.waltz.foot, st)
     enter = intro_entry_bar(arrangement, st, bars, is_first_section)
     for b in range(bars):
         start = b * bpb
@@ -411,6 +430,8 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                 hits.append(DrumHit(t, name, v, "hat" if "hat" in name else name))
             if tk == "ride_bell" and sub == 2:
                 hits.append(DrumHit(t, "ride_bell", 0.8, "ride"))
+            if foot and s in snare_steps:
+                hits.append(DrumHit(t, "hat_pedal", 0.6, "hat"))
             # Kick.
             if backbeat == "one_drop" and s in snare_steps:
                 hits.append(DrumHit(t, "kick", 1.0, "kick"))
@@ -420,7 +441,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                 hits.append(DrumHit(t, "kick", 1.0, "kick"))
             # Snare and ghosts.
             if s in snare_steps:
-                hits.append(DrumHit(t, "snare", 1.05, "snare"))
+                hits.append(DrumHit(t, snare_voice, 1.05, "snare"))
             elif backbeat == "train" and train and train[s % len(train)] == "x":
                 hits.append(DrumHit(t, "snare", .4 if sub == 0 else .3, "snare_train"))
             elif (s in dna.rim_pickups.get(st, ()) and b % 2 == 1) or _ghost(dna.ghosts, s, b, snare_steps):
@@ -465,7 +486,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         else:
             hits += [DrumHit(last, "crash", 1.15, "crash", bpb), DrumHit(last, "kick", 1.1, "kick")]
     if dna.idiom == "country":
-        hits = [replace(h, vel=h.vel*dna.snare_gain) if h.voice == "snare" else h for h in hits]
+        hits = [replace(h, vel=h.vel*dna.snare_gain) if h.voice in ("snare", "cross_stick") else h for h in hits]
     if dna.idiom:
         hits = [replace(h, voice=dna.accent_voice, vel=h.vel*.8) if h.voice == "crash" else h
                 for h in hits if h.voice != "crash" or dna.crash_policy != "none"]

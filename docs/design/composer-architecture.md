@@ -593,6 +593,25 @@ Each player then draws a personal figure on a separate stream. Part seed
 changes retain the band's selected style. Existing part selectors and
 performance settings keep their precedence.
 
+A genre name that already says which country it is chooses the style:
+`outlaw_country` is outlaw, `country_rock` or `southern country` is country
+rock, `honky_tonk`, `bakersfield`, `texas`/`two_step` and `ballad` likewise.
+A pinned `country_style` still wins; plain `country` draws one.
+
+Country waltzes (3/4 with three one-beat groups, not 6/8) get a
+`WaltzPlayer`, drawn per song on `composer.country.waltz`, which the
+bass, comp and drum DNA share. The bass always owns beat 1; the player
+chooses how long it rings, whether a held chord moves to its fifth (every
+other bar, only on a held chord, or never), and whether it walks across
+2 and 3 into a chord change (every change, every other, or phrase ends;
+diatonic or chromatic). The guitar answers on 2 and 3 with the song's
+figure (pah-pah, choked, pah with upstrokes, sixths, arpeggios, or a
+ringing ballad strum), and the chorus figure differs from the verse.
+The drummer keeps the kick on 1 (sometimes a pickup on the "and" of 3),
+plays snare or cross-stick on 2 and 3 or a lighter touch on one of them,
+adds an optional foot hi-hat, and draws a timekeeper figure; ghost notes
+stay out of the waltz. Other meters produce identical output.
+
 Country lead cleanup permits explicitly marked, unbent double stops.
 Single-note bends remain channel-wide; independent string bends are not
 supported. Already-staccato country picks retain their gate length when
