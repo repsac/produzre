@@ -31,6 +31,7 @@ KNOWN_SECTION_KEYS = {
 KNOWN_TIMING_PARAMS = {"pocket_ms", "push_pull", "timing_jitter_ms", "velocity_humanize"}
 KNOWN_COMMON_PARAMS = {"persona", "transitions"} | KNOWN_TIMING_PARAMS
 KNOWN_DRUM_PARAMS = {
+    "groove_memory", "groove_cycle_bars",
     "kick_density", "snare_density", "hat_density", "fill_rate", "fill_chatter", "accent_strength",
     "swing", "swing_16th", "phrase_len_bars", "pickup_rate", "downbeat_rate", "fill_length",
     "phrase_end_emphasis", "choke_rate", "flam_rate", "drag_rate", "ghost_rate", "ghost_steps",
@@ -41,6 +42,7 @@ KNOWN_DRUM_CONSTRAINT_KEYS = {
     "kick_density_hihat_pedal_limit",
 }
 KNOWN_BASS_PARAMS = {
+    "groove_memory", "groove_cycle_bars",
     "density", "rest_rate", "rhythm_pattern", "lock_to_kick", "lock_to_snare", "lock_to_hat",
     "lock_to_kicks", "avoid_fills", "octave", "lock_to_riff", "articulation_style", "chromatic_rate",
     "approach_rate", "octave_jump_rate", "fifth_jump_rate", "pedal_rate", "accent_strength",
@@ -51,6 +53,7 @@ KNOWN_BASS_PARAMS = {
     "motif_quote_rate", "slide_rate", "vibrato_rate",
 } | KNOWN_COMMON_PARAMS
 KNOWN_RHYTHM_GTR_PARAMS = {
+    "groove_memory", "groove_cycle_bars",
     "style", "density", "mute", "contrast", "phrase_development", "phrase_len_bars", "sustain_mode",
     "sustain_duration", "strum", "strum_beats", "strum_dir", "strum_style", "retrigger", "hit_strategy",
     "voice_leading", "voice_range_low", "voice_range_high", "use_patterns", "palm_mute", "voicing",
@@ -60,10 +63,12 @@ KNOWN_RHYTHM_GTR_PARAMS = {
     "reattack_dur", "reattack_strum", "stab_beats", "vibrato_rate",
 } | KNOWN_COMMON_PARAMS
 KNOWN_LEAD_GTR_PARAMS = {
+    "composer",
     "contour_style", "rest_probability", "phrase_len_bars", "resolution_strength", "theme_quote_rate",
     "foreground", "vibrato_rate", "bend_rate", "dive_rate", "swell_rate", "ring_out", "ring_max_beats",
 } | KNOWN_COMMON_PARAMS
 KNOWN_ACOUSTIC_GTR_PARAMS = {
+    "groove_memory", "groove_cycle_bars",
     "technique", "picking_pattern", "melody_amount", "phrase_variation", "voicing_style", "capo",
     "strum_density", "mute_ratio", "body_tap_ratio", "vel_variation", "timing_variation",
 } | KNOWN_COMMON_PARAMS

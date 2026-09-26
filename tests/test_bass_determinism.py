@@ -82,7 +82,10 @@ def test_bass_voice_labels():
 
     # Check that expected voice label families appear (deterministic with seed)
     assert "root" in tsv_content, "Missing 'root' voice label"
-    assert "fifth" in tsv_content, "Missing 'fifth' voice label"
+    # Groove memory restates each section's most typical bar, so which
+    # non-root chord tone survives depends on that bar; some must.
+    assert "fifth" in tsv_content or "third" in tsv_content, \
+        "Missing non-root chord-tone voice label"
     assert "root_cadence" in tsv_content, "Missing 'root_cadence' voice label"
 
     import csv

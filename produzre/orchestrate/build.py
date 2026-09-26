@@ -136,6 +136,16 @@ def _create_performance_plan(
     # song-level themes so the render phase can build themed melody guides and
     # engines can quote realized material.
     theme_bank = getattr(plan, "theme_bank", None)
+
+    # Composer (design: docs/design/composer-architecture.md): song DNA is
+    # chosen once, against the song's real harmony, before any rendering.
+    from ..composer.song import adopt_hook_into_bank, build_song_composer
+
+    composer = build_song_composer(cfg, plan, theme_bank, logger)
+    if composer is not None:
+        performance_plan.set("composer.song", composer)
+        theme_bank = adopt_hook_into_bank(composer, theme_bank, logger)
+
     if theme_bank is not None and getattr(theme_bank, "themes", None):
         performance_plan.set("themes.bank", theme_bank)
 

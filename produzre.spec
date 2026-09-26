@@ -21,7 +21,7 @@ resource_datas = []
 resources_root = Path("produzre") / "resources"
 for root, dirs, files in os.walk(resources_root):
     for f in files:
-        if f.endswith((".yaml", ".yml")) and not f.startswith("."):
+        if f.endswith((".yaml", ".yml", ".json")) and not f.startswith("."):
             src = os.path.join(root, f)
             # Destination preserves the produzre/resources/... structure
             dst = root

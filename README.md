@@ -157,6 +157,51 @@ groove:
 You can change meter per section; see [meter and beat units](docs/llm-song-config-reference.md#meter-and-beat-units)
 for timing units and how exports carry those changes.
 
+## The composer
+
+The lead guitar is written, not generated bar by bar. Once per song, the
+composer chooses a hook, its answer, a verse idea, a bridge idea, and three
+signature licks: its song DNA. It tries a few hundred candidates and keeps
+the most memorable one over your chorus chords. Every lead phrase then
+derives from that DNA through real phrase forms. The chorus states the hook,
+lifts to one summit, and closes on a cadence. The prechorus climbs to the
+dominant. The solo builds to one climax and resolves.
+
+Returning sections remember what they played. The second chorus repeats the
+first note for note, the last chorus lifts it, and the second verse keeps the
+melody with small rhythm changes. A model of the listener's expectations,
+trained on the song as it plays, picks each development so its surprise suits
+the phrase: settled when the hook returns, fresher in a development, highest
+at a climax.
+
+With `foreground: full` the lead carries the melody, for instrumental
+songs. With the default `auto`, it plays the band's guitar part around a
+singer: the hook in the intro, licks at the end of verse phrases, a sustained
+counter-line in the chorus, and the solo.
+
+The rhythm section gets groove memory. Drums, bass, and rhythm guitar settle
+into one pattern per section and vary it at phrase ends. The pattern moves
+with the chords, and a returning chorus brings its groove back. Two optional
+harmony touches mark arrivals: turnarounds that lead each section home, and a
+final-chorus key change.
+
+```yaml
+song:
+  turnarounds: true        # lead into sections that start on the tonic
+  final_chorus: modulate   # last chorus up a whole step (or a semitone count)
+instruments:
+  lead_gtr:
+    params: {foreground: full}
+```
+
+Set `song.composer: false` or `song.groove_memory: false` to hear the
+previous behavior. [instrumental_anthem.yaml](examples/composer/instrumental_anthem.yaml)
+and [band_with_singer.yaml](examples/composer/band_with_singer.yaml) show the
+whole system. The [composer design](docs/design/composer-architecture.md)
+explains it, with measurements against human melodies. Use
+`tools/musicality.py` to measure a build, and `tools/preview_audio.py` to
+render a quick MP3 without a DAW.
+
 ## CLI reference
 
 | Command | Purpose |

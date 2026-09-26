@@ -348,7 +348,12 @@ def apply_feel(
 
         shift = pocket_beats
 
-        shift += swing_offset(rel, feel.swing, feel.swing_16th, _GRID_SNAP_WINDOW)
+        swing_shift = swing_offset(rel, feel.swing, feel.swing_16th, _GRID_SNAP_WINDOW)
+        shift += swing_shift
+        if swing_shift > 0.0:
+            # A swung off-beat is late *and short*: its end stays on the
+            # grid, so it never smears into the following downbeat.
+            ev.duration_beats = max(_MIN_DURATION, float(ev.duration_beats) - swing_shift)
 
         if jitter_beats > 0.0:
             rt = random.Random(stable_seed_int("groove.jitter", rng_seed, key))

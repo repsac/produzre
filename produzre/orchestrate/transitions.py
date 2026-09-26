@@ -435,6 +435,9 @@ def adjust_durations(events: List[Any], factor: float) -> None:
             ev.duration_beats *= factor
 
 
+_COMPOSED_KINDS = ("melody", "lick", "counter")
+
+
 def thin_events(
     events: List[Any],
     keep_downbeats: bool = True,
@@ -459,6 +462,12 @@ def thin_events(
 
     for ev in events:
         start_beat = getattr(ev, 'start_beat', 0.0)
+
+        # Composed lead phrases (produzre/composer) are authored as whole
+        # lines: dropping every other note would cut cadences in half.
+        if str(getattr(ev, "kind", "") or "").startswith(_COMPOSED_KINDS):
+            result.append(ev)
+            continue
 
         # Check if downbeat
         if keep_downbeats:
@@ -887,6 +896,14 @@ def apply_transition_plan(
 
         # Use modest velocity for pickup (64-80 range)
         pickup_velocity = 72
+
+        # One pickup per boundary, and none where a composed lead line owns
+        # the phrase boundary (produzre/composer writes its own lead-ins).
+        near = timeline.get_events_in_range(pickup_beat - 1.0, head_end)
+        if any(getattr(e, "kind", None) == "pickup_transition"
+               and abs(e.start_beat - pickup_beat) < 1e-6 for e in near) or any(
+                str(getattr(e, "kind", "") or "").startswith(_COMPOSED_KINDS) for e in near):
+            return
 
         # Add pickup note to timeline. add_note() resolves the instrument's
         # own channel (engine spec / name map) — a bare NoteEvent(channel=0)

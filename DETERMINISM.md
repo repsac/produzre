@@ -12,6 +12,8 @@ Those changes belong in the changelog and reviewed golden files.
 |---|---|
 | Project | A persistent local seed, selected by `song.project` or the default project. |
 | Song material | Effective song seed, genre, key, and mode. Automatic theme composition uses this stream before take variation. |
+| Composer | Song DNA (`composer.dna`: seed, genre, key, mode, bar length) and per-section development choices (`composer.section`: seed, section id and type, occurrence). Takes never change the DNA. |
+| Groove memory | Micro-timing of restated bars: section seed material, section id, arrangement position, instrument, and bar. |
 | Section performance | Song/project seed, take, section id/type, and arrangement position. |
 | Instrument | Section stream plus instrument name, unless explicitly overridden. |
 | Voice/bar/event | Stable child streams where an engine needs independent local decisions. |

@@ -133,6 +133,109 @@ def _group_slots_by_phrase(chord_slots, phrase_len_beats):
     return phrases
 
 
+_ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88}
+
+
+def _perform_composed(
+    notes: List[Dict[str, Any]],
+    *,
+    timeline: InstrumentTimeline,
+    section_start_beat: float,
+    base_vel: int,
+    intensity: float,
+    solo: bool,
+    rng: random.Random,
+    bpm: float,
+    beats_per_bar: float,
+    vibrato_rate: float,
+    dive_rate: float,
+    swell_rate: float,
+) -> None:
+    """Perform composer notes: velocity shape, technique, pitch expression.
+
+    Technique hints from the composer become playing: ``bend1``/``bend2``
+    bend up into the note, ``slide`` adds a grace from below, ``vib`` a wide
+    delayed vibrato, ``dive`` a whammy dive, ``stac`` a short pick,
+    ``hammer`` a light hammered grace. Untagged long notes get vibrato at
+    ``vibrato_rate``. Timing humanization is tighter than the legacy path:
+    composed rhythm is the identity of the line.
+    """
+    from ...composer.theory import metric_weight
+
+    ordered = sorted(notes, key=lambda n: float(n["beat"]))
+    for i, n in enumerate(ordered):
+        local = float(n["beat"])
+        dur = float(n["duration_beats"])
+        pitch = int(n["pitch"])
+        tech = n.get("tech")
+        role = str(n.get("role") or "melody")
+        next_local = float(ordered[i + 1]["beat"]) if i + 1 < len(ordered) else None
+
+        mw = metric_weight(local % beats_per_bar, beats_per_bar) if beats_per_bar > 0 else 0.5
+        vel = base_vel * (0.9 + 0.14 * mw) * _ROLE_VELOCITY.get(role, 1.0)
+        if n.get("accent"):
+            vel *= 1.05
+        if solo:
+            vel *= 1.04
+        if tech == "hammer":
+            vel *= 0.8
+        vel = max(20, min(127, int(vel)))
+
+        kind = role
+        expression: Optional[dict] = None
+        if tech == "stac":
+            dur *= 0.55
+            kind = f"{role}_stac"
+        elif tech in ("bend1", "bend2"):
+            semis = 1 if tech == "bend1" else 2
+            ramp = max(0.1, min(0.3, dur * 0.35))
+            expression = {"bend_in": {"semitones": semis, "ramp_beats": ramp}}
+            if dur >= 1.0:
+                expression["vibrato"] = {
+                    "depth_cents": rng.uniform(25.0, 40.0),
+                    "period_beats": 60.0 / (bpm * rng.uniform(5.0, 6.2)),
+                    "delay_beats": ramp + rng.uniform(0.15, 0.3),
+                }
+            kind = f"{role}_bend"
+        elif tech == "vib" or (tech is None and dur >= 1.5 and rng.random() < vibrato_rate):
+            expression = {"vibrato": {
+                "depth_cents": rng.uniform(28.0, 45.0) if tech == "vib" else rng.uniform(15.0, 30.0),
+                "period_beats": 60.0 / (bpm * rng.uniform(4.8, 6.2)),
+                "delay_beats": min(dur * 0.4, rng.uniform(0.25, 0.4)),
+            }}
+        elif tech == "dive":
+            if dive_rate > 0:
+                expression = {"dive": {"semitones": rng.choice([7, 12]),
+                                       "drop_beats": dur * rng.uniform(0.55, 0.7)}}
+                kind = f"{role}_dive"
+            else:
+                expression = {"vibrato": {"depth_cents": 40.0,
+                                          "period_beats": 60.0 / (bpm * 5.5),
+                                          "delay_beats": 0.3}}
+        # Documented `swell_rate`: any note held 1.5 beats or longer.
+        if dur >= 1.5 and swell_rate > 0 and tech != "stac" and rng.random() < swell_rate:
+            expression = dict(expression or {})
+            expression["swell"] = {"from": rng.randint(40, 70),
+                                   "ramp_beats": dur * rng.uniform(0.3, 0.5), "to": 127}
+
+        song_beat = section_start_beat + local
+        song_beat, h_dur, vel = humanize_note(song_beat, dur, vel, rng, intensity * 0.5)
+        if next_local is not None:
+            # Never smear into the next composed note.
+            h_dur = min(h_dur, section_start_beat + next_local - song_beat - 0.02)
+        h_dur = max(0.05, h_dur)
+
+        if tech == "slide":
+            grace = pitch - 2
+            g_start = song_beat - 0.12
+            if g_start > section_start_beat:
+                timeline.add_note(start_beat=g_start, duration_beats=0.12, pitch=grace,
+                                  velocity=max(20, int(vel * 0.7)), channel=None,
+                                  kind="slide_grace")
+        timeline.add_note(start_beat=song_beat, duration_beats=h_dur, pitch=pitch,
+                          velocity=vel, channel=None, kind=kind, expression=expression)
+
+
 def contribute_plan(
     cfg: Optional[RootConfig] = None,
     section: Optional[SectionConfig] = None,
@@ -534,6 +637,31 @@ def render_into_timeline(
         )
 
     events_before = len(timeline.events)
+
+    # Composed lead (produzre/composer): the song composer already wrote this
+    # section's line from the song DNA; perform it and skip the legacy motif
+    # generator. `composer: false` on the lead (or the song) restores legacy.
+    composed = plan.get(f"composer.lead.{section.id}") if plan is not None and hasattr(plan, "get") else None
+    if isinstance(composed, list):
+        _perform_composed(
+            composed,
+            timeline=timeline,
+            section_start_beat=section_start_beat + offset_beats,
+            base_vel=base_vel,
+            intensity=intensity,
+            solo=solo,
+            rng=section_rng,
+            bpm=song_bpm,
+            beats_per_bar=bpb,
+            vibrato_rate=vibrato_rate,
+            dive_rate=dive_rate,
+            swell_rate=swell_rate,
+        )
+        logger.debug(
+            "Section '%s': performed %d composed lead notes",
+            section.id, len(timeline.events) - events_before,
+        )
+        return
 
     # Phase LG2: group chord slots into phrase-length windows.
     phrases = _group_slots_by_phrase(harmony_plan.chord_slots, phrase_len_beats)

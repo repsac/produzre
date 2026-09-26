@@ -174,6 +174,9 @@ or adjust priorities. Advertising a key in `provides` does not create its value.
 | `themes.bank` | Song-level `ThemeBank`. |
 | `themes.realized.<section>` | Active realized notes by role. |
 | `themes.realized_by_name.<section>` | Every named theme realization. |
+| `composer.song` | The song composer: DNA, listener, and section memory. |
+| `composer.lead.<section>` | Composed lead notes (beat, duration, pitch, accent, technique, role) the lead engine performs. |
+| `composer.groove_memory` | Grooves established per instrument and section type. |
 | `bass.foundation`, `bass.line` | Bass planning intent. |
 | `rhythm.texture`, `rhythm.chords` | Rhythm-guitar intent for inspection or custom consumers. |
 | `arpeggiator.pattern` | Arpeggiator intent. |

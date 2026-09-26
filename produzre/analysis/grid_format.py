@@ -313,7 +313,6 @@ def grid_text_from_rows(
 
     for bar_idx in range(1, int(bars_total) + 1):
         bar_start = (bar_idx - 1) * float(beats_per_bar)
-        bar_end = bar_start + float(beats_per_bar)
 
         lines.append(f"{('BAR ' + str(bar_idx)):<{label_width}} |{header}|")
 
@@ -324,10 +323,10 @@ def grid_text_from_rows(
             for start, pitch, vel in events:
                 if pitch not in pitches:
                     continue
-                if start < bar_start or start >= bar_end:
-                    continue
-
-                step = int(math.floor((start - bar_start) / step_beats + 1e-9))
+                # Nearest step, not floor: a hit humanized a few ms early
+                # belongs to its grid step (and to the next bar when it
+                # anticipates a downbeat), not to the 16th before it.
+                step = int(round((start - bar_start) / step_beats))
                 if 0 <= step < steps_per_bar:
                     cells[step] = velocity_symbol_for_row(inst, lbl, vel)
 

@@ -16,6 +16,7 @@ and play it. The [root README](../README.md#output-files) describes the output f
 
 | Directory or file | What to try |
 |---|---|
+| [composer](composer/) | The composer's full song: a hook that returns, a narrative solo, grooves that lock, turnarounds, and a final-chorus key change. `instrumental_anthem.yaml` makes the lead the melody; `band_with_singer.yaml` plays around a singer; `funk_instrumental.yaml` shows two-bar grooves. |
 | [genres](genres/README.md) | Short songs, longer arrangements, and recipe comparisons across 30 genres, plus a mashup. |
 | [bass](bass/README.md) | Articulation, walking, drum locking, fills, slap, and solos. |
 | [drums](drums/README.md) | Kit voices, ghosts, fills, transitions, and timing. |

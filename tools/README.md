@@ -46,6 +46,33 @@ MIDI archive ──► build_drum_manifest.py ──► manifest.yaml
                                     recipes/drums/*.yaml
 ```
 
+### Composition quality
+
+Two standalone tools judge what the composer writes:
+
+- `musicality.py` measures a melodic line's structure: step ratio, leap
+  recovery, exact and varied phrase repeats, rhythm recurrence,
+  self-information, and climax placement. Run it on a Produzre stem, or with
+  `--corpus DIR` on reference MIDI for a human baseline. Melodies come from
+  the highest mostly-monophonic track.
+
+  ```bash
+  python tools/musicality.py --corpus ~/midi/reference
+  python tools/musicality.py exports/<song>/instruments/lead_gtr/<song>_lead_gtr.mid
+  ```
+
+- `preview_audio.py` renders a quick listening preview (Karplus-Strong
+  guitars and bass, a pitch-bend-following overdriven lead, synthesized
+  drums). It needs `numpy`; MP3 output also needs `ffmpeg`.
+
+  ```bash
+  python tools/preview_audio.py exports/<song>/<song>.mid -o preview.mp3
+  ```
+
+The composer's listener prior (`produzre/resources/composer/melodic_prior.json`)
+holds aggregate interval counts only (unigram and bigram), taken from a
+reference corpus. No melodies are stored.
+
 ## Prerequisites
 
 ```bash

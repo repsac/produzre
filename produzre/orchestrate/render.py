@@ -776,6 +776,16 @@ def render_section_instruments(
             performance_plan.set(f"melody.guide.{sec.id}", guide_dict)
             performance_plan.set("melody.guide", guide_dict)
 
+        # Composed lead (design: docs/design/composer-architecture.md). The
+        # song composer writes this section's lead from the song DNA and its
+        # memory of earlier sections; the lead engine performs it. The
+        # ensemble's lead windows are replaced with where the lead actually
+        # plays, so accompaniment makes room for real phrases.
+        _compose_lead_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("lead_gtr"),
+            performance_plan, transition_context, logger,
+        )
+
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
         timeline = timelines.get(inst_name)
@@ -810,6 +820,14 @@ def render_section_instruments(
             feedback_collector=feedback_collector,  # Phase N8: Negotiation feedback
             plan=performance_plan,  # Phase RG2: Pass plan for rhythm.accents access
             logger=logger,
+        )
+
+        # Groove memory (produzre/composer/groove_memory.py): give the rhythm
+        # section a bar form and recall established grooves. Runs before the
+        # groove clock so restated bars still get this section's swing.
+        _apply_groove_memory_pass(
+            cfg, sec, inst_name, effective_cfg, hplan, rgrid, timeline, events_before,
+            section_start_beat, performance_plan, transition_context, section_rng, logger,
         )
 
         # Shared groove clock: post-process the newly added events with the
@@ -864,6 +882,15 @@ def render_section_instruments(
                         velocity_humanize=vel_humanize,
                     )
 
+        # A lead guitar is monophonic: after feel and humanization, no note
+        # may still be sounding when the next one starts (grace notes aside).
+        if inst_name == "lead_gtr":
+            mono = sorted(timeline.events[events_before:], key=lambda e: (e.start_beat, e.pitch))
+            for cur, nxt in zip(mono, mono[1:]):
+                gap = float(nxt.start_beat) - float(cur.start_beat)
+                if gap > 0.02 and float(cur.duration_beats) > gap - 0.01:
+                    cur.duration_beats = max(0.05, gap - 0.01)
+
         # Timing feel cannot move notes beyond the section being rendered.
         section_end = section_start_beat + float(getattr(rgrid, "total_beats", float("inf")))
         bounded = []
@@ -904,6 +931,187 @@ def render_section_instruments(
 
     # Phase N8: Return collected feedback for negotiation between sections
     return feedback_collector.get_feedback()
+
+
+def _as_float(*values: Any) -> Optional[float]:
+    for v in values:
+        try:
+            if v is not None:
+                return float(v)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _flag(value: Any, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "off", "no", "0", "none")
+    return bool(value)
+
+
+def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timeline,
+                              events_before, section_start_beat, performance_plan,
+                              transition_context, section_rng, logger) -> None:
+    from ..composer.groove_memory import GROOVE_INSTRUMENTS, GrooveMemory, apply_groove_memory
+
+    if inst_name not in GROOVE_INSTRUMENTS or performance_plan is None:
+        return
+    raw = getattr(cfg, "raw", None)
+    song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
+    if not _flag(song_raw.get("groove_memory") if isinstance(song_raw, dict) else None):
+        return
+    params = effective_params_dict(inst_cfg)
+    if not _flag(params.get("groove_memory")):
+        return
+    # A soloing part is the foreground, not the groove.
+    if getattr(inst_cfg, "solo", False) or params.get("solo") or \
+            getattr(inst_cfg, "role", None) == "lead" or params.get("role") == "lead":
+        return
+    if inst_name == "bass" and (getattr(sec, "solo", None) is True
+                                or getattr(sec, "role", None) == "lead"):
+        return
+    new_events = timeline.events[events_before:]
+    if not new_events:
+        return
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+
+    memory = performance_plan.get("composer.groove_memory")
+    if memory is None:
+        memory = GrooveMemory()
+        performance_plan.set("composer.groove_memory", memory)
+    # A section type recalls its groove only when the part is configured the
+    # same way; intensity is excluded so escalating repeats still recall.
+    signature = tuple(sorted(
+        (str(k), repr(v)) for k, v in params.items()
+        if not str(k).startswith("_") and k not in ("intensity", "seed", "variation")
+    ))
+    persona = getattr(inst_cfg, "persona", None)
+    memory_key = (inst_name, str(getattr(sec, "type", "") or "").strip().lower(), bpb,
+                  stable_seed_int("groove_sig", persona, signature))
+    arrangement_index = 0
+    if isinstance(transition_context, dict):
+        arrangement_index = int(transition_context.get("arrangement_index", 0) or 0)
+    seed_material = getattr(section_rng, "_produzre_seed", None)
+    seed = stable_seed_int("groove_memory", seed_material if seed_material is not None
+                           else getattr(cfg.song, "seed", 0), sec.id, arrangement_index)
+    replaced, report = apply_groove_memory(
+        new_events,
+        instrument=inst_name,
+        section_start=float(section_start_beat),
+        beats_per_bar=bpb,
+        bars=bars,
+        chord_slots=getattr(hplan, "chord_slots", None) if hplan is not None else None,
+        key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+        mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+        genre=str(getattr(cfg.song, "genre", "") or ""),
+        bpm=float(getattr(cfg.song, "bpm", 120.0) or 120.0),
+        memory=memory,
+        memory_key=memory_key,
+        seed=seed,
+        cycle_override=params.get("groove_cycle_bars"),
+        intensity=_as_float(getattr(inst_cfg, "intensity", None), getattr(sec, "intensity", None)),
+    )
+    if report.get("applied"):
+        timeline.events[events_before:] = replaced
+        logger.debug(
+            "Section '%s': %s groove memory form=%s cycle=%d restated=%d%s",
+            sec.id, inst_name, report["form"], report["cycle"], report["restated"],
+            " (recalled)" if report["recalled"] else "",
+        )
+
+
+def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan,
+                              transition_context, logger) -> None:
+    """Publish ``composer.lead.<section>`` for the lead engine to perform."""
+    if performance_plan is None or lead_cfg is None or hplan is None:
+        return
+    if not getattr(hplan, "chord_slots", None):
+        return
+    composer = performance_plan.get("composer.song")
+    if composer is None:
+        return
+    raw_extra = getattr(lead_cfg, "extra", None)
+    extra: dict = {}
+    if isinstance(raw_extra, dict):
+        # Persona keys sit at the top level, user params may nest one level.
+        extra = {k: v for k, v in raw_extra.items() if k != "extra"}
+        if isinstance(raw_extra.get("extra"), dict):
+            extra.update(raw_extra["extra"])
+    opt = extra.get("composer", True)
+    if isinstance(opt, str):
+        opt = opt.strip().lower() not in ("false", "off", "no", "legacy", "0")
+    if not opt or getattr(lead_cfg, "enabled", True) is False:
+        performance_plan.data.pop(f"composer.lead.{sec.id}", None)
+        return
+
+    from ..composer.lead import LeadContext
+    from ..composer.song import lead_register
+    from .ensemble import _lead_foreground_mode
+
+    arrangement_index = 0
+    if isinstance(transition_context, dict):
+        arrangement_index = int(transition_context.get("arrangement_index", 0) or 0)
+    sections = list(getattr(performance_plan, "sections", []) or [])
+    sec_type = str(getattr(sec, "type", "") or "").strip().lower()
+    solo_flag = bool(getattr(lead_cfg, "solo", False) or extra.get("solo", False)
+                     or getattr(lead_cfg, "role", None) == "lead")
+    comp_type = "solo" if solo_flag else sec_type
+    occurrence = sum(1 for meta in sections[:arrangement_index]
+                     if str(getattr(meta, "type", "") or "").strip().lower() == sec_type)
+    is_final = not any(str(getattr(meta, "type", "") or "").strip().lower() == sec_type
+                       for meta in sections[arrangement_index + 1:])
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    intensity = getattr(lead_cfg, "intensity", None)
+    if intensity is None:
+        intensity = getattr(sec, "intensity", None)
+    ctx = LeadContext(
+        section_id=sec.id,
+        section_type=comp_type,
+        occurrence=occurrence,
+        is_final_of_type=is_final,
+        bars=bars,
+        beats_per_bar=bpb,
+        total_beats=total,
+        key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+        mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+        chord_slots=hplan.chord_slots,
+        intensity=float(intensity if intensity is not None else 0.7),
+        foreground=_lead_foreground_mode(cfg, sec),
+        next_section_type=(transition_context or {}).get("next_section_type"),
+        register=lead_register(cfg, lead_cfg),
+    )
+    notes = composer.compose_lead(ctx)
+    payload = [
+        {"beat": n.beat, "duration_beats": n.dur, "pitch": n.pitch, "accent": n.accent,
+         "tech": n.tech, "role": n.role}
+        for n in notes
+    ]
+    performance_plan.set(f"composer.lead.{sec.id}", payload)
+    if composer.log:
+        logger.info("Composer: %s", composer.log[-1])
+
+    # Advertise the lead's real phrases to the band.
+    windows: list[list[float]] = []
+    for n in notes:
+        start, end = n.beat, n.beat + n.dur
+        if windows and start - windows[-1][1] < 1.0:
+            windows[-1][1] = max(windows[-1][1], end)
+        else:
+            windows.append([start, end])
+    ens = performance_plan.get(f"ensemble.{sec.id}")
+    if isinstance(ens, dict):
+        ens = dict(ens)
+        ens["lead_activity_windows"] = [tuple(w) for w in windows]
+        active = sum(e - s for s, e in windows)
+        ens["lead_rest_ratio"] = round(1.0 - min(1.0, active / max(total, 1e-6)), 4)
+        performance_plan.set(f"ensemble.{sec.id}", ens)
+        performance_plan.set(f"lead_rest_ratio.{sec.id}", ens["lead_rest_ratio"])
 
 
 def sort_used_timelines(timelines: dict[str, InstrumentTimeline], instruments_used: list[str]) -> None:

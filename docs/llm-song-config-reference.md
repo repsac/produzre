@@ -65,6 +65,10 @@ engine controls. Avoid splitting the same control across both forms.
 | `take` | Integer | 0 | Performance version; preserves the theme bank, the song's stored recurring musical ideas. |
 | `variation` | Nonnegative; start at 0-1 | 0 | Bias toward different performance choices; its effect depends on the engine. |
 | `themes_auto` | Boolean | true | Compose a riff (a short repeated phrase) and hook (a returning melody) if you supply no themes. |
+| `composer` | Boolean | true | Write the lead from song DNA with phrase forms and section memory. See [The composer](#the-composer). `false` restores the 0.9 motif generator. |
+| `groove_memory` | Boolean | true | Drums, bass, rhythm and acoustic guitar settle into one groove per section, vary it at phrase ends, and recall it when the section returns. |
+| `turnarounds` | Boolean | Unset | Force turnarounds on (`true`) or off (`false`) for every section. Unset: only preset or recipe progressions get them. |
+| `final_chorus` | `modulate` or an integer | Unset | Move the last chorus and everything after it up a whole step (`modulate`) or by N semitones. |
 | `humanize_velocity` | Nonnegative number | 0 | Legacy song velocity variation used by engines that read it. |
 | `humanize_timing` | Nonnegative quarter-note beats | 0 | Legacy song timing variation in beats. Prefer the explicit instrument timing controls below. |
 | `exports_root` | Directory path | `exports` | Output parent directory. |
@@ -150,6 +154,14 @@ Guitar shapes can simplify a color when an exact playable shape is unavailable.
 one chord per bar, 2 means two per bar, and 8 means one every two bars. If omitted,
 a matching harmony recipe may supply it; otherwise it is 4. Progressions repeat
 to fill the section, and the last chord is clipped at the section boundary.
+
+A **turnaround** marks each arrival. When the next section starts on the
+tonic, the second half of the last bar moves to a dominant: `V`, `V7` for
+blues, soul, jazz, funk, and country, or `bVII` for modal rock. It is skipped
+when the last chord already leads home, such as `V` or `bVII`. Preset and
+recipe progressions get turnarounds automatically. Explicit progressions
+keep exactly what you wrote unless you set `turnaround: true` in the
+section's harmony block or `song.turnarounds: true`.
 
 | Style | Starting progression |
 |---|---|
@@ -493,7 +505,8 @@ These controls are specific to that renderer.
 | `resolution_strength` | 0-1 | persona | Favor chord tones and stronger phrase endings. Balanced: 0.45. |
 | `contour_style` | `stepwise`, `balanced`, `leaping` | persona | Choose the melodic contour. Balanced persona: `balanced`. |
 | `theme_quote_rate` | 0-1 | 0.65 | Quote nearby theme pitches on eligible interior notes. Quotes adopt the theme's duration as well as its pitch. |
-| `foreground` | `auto`, `full` | `auto` | `full` gives the lead the whole section, for instrumental music. `auto` uses call-and-answer windows. Set per section or as a song-level default. |
+| `foreground` | `auto`, `full` | `auto` | `full`: the lead carries the melody (instrumental music). `auto`: the lead plays around a singer, with hooks, fills, counter-lines, and solos. Set per section or as a song-level default. |
+| `composer` | Boolean | true | Per-section opt-out of the composer. The legacy motif controls below apply only when this is false. |
 | `ring_out` | 0-1 | 0.85 | How far a note rings into the silence after it. 0 cuts at the grid cell, 1 rings up to the next note. Staccato notes stay short. |
 | `ring_max_beats` | 0.5 or more | 4 | Longest note that ring-out may create. |
 | `vibrato_rate` | 0-1 | 0.65 | Chance a note held a beat or longer gets pitch-bend vibrato. |
@@ -510,6 +523,31 @@ Use direct `register: low`, `mid`, `high`, `very_high`, or `full`. Direct
 `solo: true` or `role: lead` increases activity and permits wider motion.
 Genre selects motif vocabulary; successive phrases develop that motif.
 Use contour, rest probability, resolution, and intensity to shape the part.
+
+### The composer
+
+With the composer on (the default), the lead is written from the song's DNA.
+Once per song it chooses a hook, an answer, a verse idea, a bridge idea, and
+three signature licks, picking the most memorable candidates as heard over
+your chorus and verse chords. Sections use phrase forms:
+
+| Section | `foreground: full` | `foreground: auto` |
+|---|---|---|
+| Intro | Hook line | The guitar hook |
+| Verse | An 8-bar period on the verse idea | Signature licks at phrase ends |
+| Prechorus | A sequence climbing to a held dominant | Same |
+| Chorus | Hook lines: state, answer, lift to a summit, close | A sustained counter-line, then the hook as a tag |
+| Bridge | A contrasting idea ending on the dominant | A statement, then fills |
+| Solo | Hook quote, development, climax, resolution, final dive | Same |
+| Outro | The hook, then a held tonic | Same |
+
+A section type remembers its material. A returning chorus repeats note for
+note while the chords match; the final chorus lifts and ornaments it; a
+second verse keeps the melody with small rhythm changes. An authored melody
+theme becomes the hook. `register` sets the melody range, and solos extend
+it up to E6. `vibrato_rate`, `dive_rate`, and `swell_rate` still shape
+expression; bends, slides, and staccato follow the composed techniques.
+`solo: true` or `role: lead` makes any section a solo.
 
 ## Acoustic guitar controls
 
@@ -542,6 +580,26 @@ before its next picked note. Body taps use short low MIDI notes.
 | `octave_range` | Integer 1-3 | 2 | Number of octaves, 1-3. |
 
 The phrase pattern follows the shared melody guide. See [file structure](#file-structure) to enable it in a section.
+
+## Groove memory
+
+Engines draw each bar fresh, so without help a bass line or drum beat never
+settles. With `song.groove_memory` on (the default), drums, bass, rhythm
+guitar, and acoustic guitar get a bar form. In each 4-bar phrase, the first
+three bars restate the section's most typical bar. The fourth keeps the
+engine's own fill, turnaround, or variation. Funk, reggae, Latin, soul, R&B,
+hip-hop, disco, and ska use a two-bar groove.
+
+Restated notes follow the chords and keep their role: a third stays a third,
+and approach notes aim at the next chord. Bars the engine left silent stay
+silent. A returning section type brings back its groove at the new dynamics.
+A clear intensity lift, such as a final chorus, plays its own groove instead.
+Parts that quote a riff or motif theme, and soloing parts, are left alone.
+
+| Key (instrument params) | Range or values | Default | What it does |
+|---|---|---|---|
+| `groove_memory` | Boolean | true | Per-instrument opt-out. |
+| `groove_cycle_bars` | 1 or 2 | Genre | Groove length in bars. |
 
 ## Transitions
 

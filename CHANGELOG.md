@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.10.0 (unreleased): the composer
+
+### What changes for existing songs
+
+Existing YAML produces different MIDI. The lead guitar is now composed, and
+the rhythm section settles into grooves.
+
+- **Lead guitar** comes from the song composer (`produzre/composer/`). A song
+  gets one set of ideas, its DNA: a hook, answer, verse idea, bridge idea,
+  and three signature licks. Returning sections remember their material.
+  `song.composer: false`, or `composer: false` on the lead, restores the 0.9
+  motif generator.
+- The auto-generated melody theme (`auto_hook`) is replaced by the
+  composer's hook, so the acoustic guitar, arpeggiator, and lead share one
+  melody. Authored melody themes are never replaced; they become the hook.
+- **Groove memory** gives drums, bass, rhythm guitar, and acoustic guitar a
+  bar form: each 4-bar phrase restates the section's most typical bar and
+  keeps the engine's own last bar. Choruses recall their groove.
+  `song.groove_memory: false`, or `groove_memory: false` per instrument,
+  restores bar-by-bar output. The bass golden baseline was regenerated.
+- **Turnarounds**: preset and recipe progressions now lead into sections
+  that start on the tonic (the last half bar moves to V, V7, or bVII).
+  Explicit progressions are unchanged unless you opt in.
+- The shared groove clock now shortens swung off-beat notes so they end on
+  the grid; previously they overlapped the next downbeat.
+- The lead's `foreground` setting is read from `params:` (the documented
+  block). Before, only `extra:` or a bare key worked.
+
+### New
+
+- Song DNA chosen by a memorability search. Hundreds of candidate ideas are
+  scored for rhythm, contour, gap-fill, and surprise, then re-scored as
+  realized over your real chorus and verse chords.
+- Phrase grammars per section: a verse period, a climbing prechorus, a chorus
+  of hook lines (A A' B A'', with one summit), a contrasting bridge, a
+  narrative solo (hook quote, development, climax, resolution, dive), and an
+  outro. `foreground: auto` gives a band part around a singer: the intro
+  hook, verse fills from the lick bank, a chorus counter-line, and the solo.
+- A listener model: a self-updating expectation model over intervals and
+  durations, primed with statistics from human melodies. It picks each
+  phrase's development so its surprise suits the phrase's role. Targets were
+  calibrated on 3,520 human phrases.
+- Beam-search realization: motifs keep their intervals over changing chords,
+  with chord tones on strong beats, prepared dissonance, and cadences that
+  re-aim when the harmony forbids their degree.
+- `song.final_chorus: modulate` (or a semitone count): a final-chorus key
+  change that every pitched part follows.
+- `song.turnarounds` and per-section `harmony: turnaround:` overrides.
+- `tools/musicality.py`: a structural benchmark for melodic lines against a
+  reference corpus. `tools/preview_audio.py`: a quick MP3 preview renderer.
+- The composer showcases in `examples/composer/`. Design and measurements are
+  in [docs/design/composer-architecture.md](docs/design/composer-architecture.md).
+
+### Fixed
+
+- The grid dump rounds each hit to the nearest step, instead of drawing
+  slightly-early hits a sixteenth early.
+- Transition pickups are written once per boundary. They no longer duplicate,
+  and they no longer land inside composed lead phrases.
+- The lead is monophonic after the groove clock and humanization.
+
 ## 0.9.0 (unreleased)
 
 ### What changes for existing songs

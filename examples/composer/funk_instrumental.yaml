@@ -1,0 +1,55 @@
+# Funk instrumental: two-bar grooves, a syncopated hook, and a lead that
+# answers itself. Groove memory uses two-bar cycles for funk, so the drums,
+# bass, and rhythm guitar lock a call-and-response bar pair per section.
+version: 1
+song:
+  title: "Composer Funk"
+  bpm: 104
+  key: D
+  mode: dorian
+  meter: "4/4"
+  genre: funk
+  seed: 77
+  turnarounds: true
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params: {foreground: full, register: [62, 79]}
+  rhythm_gtr:
+    params: {style: funk_chanks}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVII7 IV7 i7 i7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]
