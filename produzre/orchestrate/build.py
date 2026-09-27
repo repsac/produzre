@@ -357,6 +357,22 @@ def build_song(
                 logger
             )
 
+    # A slap's velocity floor holds after transition blends and ramps too.
+    bass_timeline = timelines.get("bass")
+    if bass_timeline is not None:
+        from .render import (_get_global_instrument_cfg, _hold_slap_floor,
+                             _merge_instrument_config, effective_params_dict)
+
+        for ps, timing in zip(plan.planned_sections, plan.section_timings):
+            bass_cfg = (getattr(ps.sec, "instruments", None) or {}).get("bass")
+            if bass_cfg is None:
+                continue
+            params = effective_params_dict(_merge_instrument_config(
+                _get_global_instrument_cfg(cfg, "bass", ps.sec.id), bass_cfg))
+            _hold_slap_floor([e for e in bass_timeline.events
+                              if timing.start_beat - 0.1 <= e.start_beat < timing.end_beat - 0.1],
+                             params)
+
     # Transition ramps can lengthen notes after section-level cleanup.
     # Keep the lead monophonic except double stops (composer.realize).
     lead_timeline = timelines.get("lead_gtr")
