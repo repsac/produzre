@@ -101,9 +101,9 @@ realizes the plan over that section's harmony.
 | Intro | Hook line stated, ending open | The guitar hook |
 | Verse | Period on the verse idea: open half cadence, closed full cadence | Signature-lick fills at phrase ends, space elsewhere |
 | Prechorus | Sequence climbing to a held dominant | Same |
-| Chorus | Hook lines A A' B A'': state, answer open, lift to the summit, close | A directed descant (guide tones moving by step), hook as a tag |
+| Chorus | Hook lines A A' B A'': state, answer open, lift to the summit, close | The song's chorus form around the singer (a climbing descant, answers in the singer's holds, or a harmony line), hook as a tag |
 | Bridge | Contrasting idea, sequenced, half cadence | Statement, then fills |
-| Solo | A story: hook quote, development up the neck, a climax lick and bend, a resolving phrase, a final dive | Same |
+| Solo | A story (climb, melodic, trade, blues): every two-bar unit a full phrase, a climax, a resolving phrase and the song's ending | Same |
 | Outro | Hook, then liquidation to a held tonic | Same |
 
 Returning sections use **memory**. The plan for a section type is stored at
@@ -111,7 +111,9 @@ its first occurrence. When the chords match, a later occurrence plays exactly
 the same notes, so the listener learns the hook. Recall makes three
 deliberate changes:
 
-- the **final chorus** lifts the register and ornaments its answers;
+- the **final chorus** lifts the register and ornaments its answers (an
+  authored line moves up an octave when it fits, or rises with a final key
+  change, and is otherwise embellished without new pitches);
 - a **second verse** keeps the melody with small rhythm changes, like a new
   lyric;
 - the **solo** is never recalled.
@@ -625,3 +627,49 @@ supported. Already-staccato country picks retain their gate length when
 swung, then undergo the normal phrase and section boundary clipping.
 See [the country review](country-review.md) for measurements, listening
 pairs, configuration examples and limitations.
+
+## Lead and arpeggiator review (2026-09-26)
+
+The examples rewrite found seven lead and arpeggiator problems. What changed:
+
+- **Register.** `register` may be a direct field or a param, a preset name
+  in any case or a `[low, high]` range in either order, on the composed and
+  legacy paths alike (a list at instrument level used to crash the legacy
+  lead). `engine/lead_gtr/register.py` owns the parsing.
+- **Chorus forms under a singer.** `chorus_form` used to shape only
+  `foreground: full`. Under `auto`: `lift` climbs a counter-line line by line
+  to a summit before the tag, `call` leaves each two-bar vocal line alone and
+  answers it with a signature lick in the singer's held note or breath
+  (`_singer_hole`), and `anthem` harmonizes the chorus melody in thirds and
+  sixths, moving with the singer. The singer's line is the section's realized
+  melody theme (`themes.realized.<section>`), passed as `LeadContext.melody`;
+  without one the composer harmonizes its own hook lines. A pinned `counter`
+  with a drawn form keeps the plain counter-line.
+- **Bends.** `bend_rate` above 0.15 adds bends to untagged composed notes of
+  half a beat or longer, on a per-note stream, reaching every such note at 1.
+- **Lead seeds.** An instrument or section `seed` on the lead now reaches the
+  composer (`LeadContext.seed`): `SongComposer.part_dna` keeps the song's
+  hook and answer, the song-level melody the band shares, and draws the
+  verse idea, bridge idea and lick bank from the seed; phrase choices use it
+  too. Before, the seed changed only humanization.
+- **Authored final chorus.** Authored degrees fixed the octave through the
+  previous note, so the anchor lift never moved them. `_lift_authored` moves
+  the whole line: an octave when it fits, the key change when the final
+  chorus modulates, otherwise embellishment only (logged).
+- **Solos.** The blues and trade stories played one lick per two bars, and
+  the blues story ignored the song's bank. Blues now calls and answers in
+  every unit (AAB across four-bar lines, the song's licks first), and trade
+  fills the lead's bar and plays a pickup from the band's bar. Later solos
+  rotate through the bank, a solo after a solo continues it, and a solo
+  before a solo hands over on the dominant. Fills and answers that must fit
+  a hole play at their own speed or in double time on the sixteenth grid,
+  trimmed from the front if needed (`_place_lick`).
+- **Country fills with the lead as melody.** A country song's full-foreground
+  verses and choruses answer their own phrases with the song's licks at the
+  `lead_fills` rate (the phrase's last bar keeps its first half); other
+  genres do so only when `lead_fills` is pinned.
+- **Arpeggiator.** The melody guide now shapes only `phrase` and
+  `cinematic`; the apex is the top of each cycle (it was the last note, the
+  wrong note for `up_down` and `down`); chords spell sevenths and extensions
+  (6, 9, 11, 13 and alterations); velocity spans about 30 to 100 with
+  intensity, plus bass and metric accents.

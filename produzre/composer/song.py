@@ -17,7 +17,7 @@ import math
 from dataclasses import replace
 from typing import Any, List, Optional, Sequence, Tuple
 
-from ..engine.lead_gtr.register import get_register_bounds
+from ..engine.lead_gtr.register import get_register_bounds, register_range
 from .lead import SongComposer, _normalize_type
 from .realize import realize_cell
 from .theory import ChordMap, diatonic_index, meter_groups, mode_offsets, tonic_pc
@@ -56,11 +56,12 @@ def composer_enabled(cfg: Any) -> bool:
     return bool(value)
 
 
-def lead_register(cfg: Any, lead_cfg: Any = None) -> Tuple[int, int]:
-    """Resolve the lead register (preset name or [lo, hi]).
+def lead_register_setting(cfg: Any, lead_cfg: Any = None) -> Any:
+    """The lead's raw ``register`` setting: a preset name, a [lo, hi] pair, or None.
 
-    ``lead_cfg`` is a section's merged lead config; without one the global
-    ``instruments.lead_gtr`` block is used.
+    ``lead_cfg`` is a section's merged lead config (direct field first, then
+    its params); without a value there, the global ``instruments.lead_gtr``
+    block is used the same way.
     """
     reg = None
     if lead_cfg is not None:
@@ -75,11 +76,25 @@ def lead_register(cfg: Any, lead_cfg: Any = None) -> Tuple[int, int]:
         if isinstance(data, dict):
             reg = data.get("register") or (data.get("params") or {}).get("register") \
                 or (data.get("extra") or {}).get("register")
-    if isinstance(reg, (list, tuple)) and len(reg) == 2:
-        lo, hi = int(reg[0]), int(reg[1])
-        return max(0, min(127, lo)), max(0, min(127, hi))
-    else:
-        lo, hi = get_register_bounds(str(reg) if reg else "mid")
+    return reg
+
+
+def lead_register_is_range(cfg: Any, lead_cfg: Any = None) -> bool:
+    """True when the lead's register is an explicit MIDI range (a hard bound)."""
+    return register_range(lead_register_setting(cfg, lead_cfg)) is not None
+
+
+def lead_register(cfg: Any, lead_cfg: Any = None) -> Tuple[int, int]:
+    """Resolve the lead register (preset name or [lo, hi]).
+
+    ``lead_cfg`` is a section's merged lead config; without one the global
+    ``instruments.lead_gtr`` block is used.
+    """
+    reg = lead_register_setting(cfg, lead_cfg)
+    explicit = register_range(reg)
+    if explicit is not None:
+        return explicit
+    lo, hi = get_register_bounds(reg)
     # Melodies need a little headroom above the preset's comfortable top.
     lo = max(0, min(int(lo), 110))
     hi = max(hi + 3, lo + 14)

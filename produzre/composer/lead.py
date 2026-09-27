@@ -80,6 +80,14 @@ class LeadContext:
     # Beat grouping of the section's meter (theory.meter_groups); None means
     # the grouping implied by the bar length.
     groups: Optional[Tuple[float, ...]] = None
+    # A lead `seed` (instrument or section): re-rolls the lead's own ideas
+    # and phrase choices. None plays the song's.
+    seed: Optional[int] = None
+    prev_section_type: Optional[str] = None
+    # The singer's line in this section, as (beat, duration, pitch): the
+    # realized melody theme the rest of the band follows. `foreground: auto`
+    # choruses answer or harmonize it.
+    melody: Optional[Tuple[Tuple[float, float, int], ...]] = None
 
 
 @dataclass(frozen=True)
@@ -122,19 +130,46 @@ class SongComposer:
         self.bpb = float(beats_per_bar)
         self.groups = tuple(groups) if groups else None
         lo, hi = register
+        self._verse_fit = self._fitter(verse_slots, lo + 0.38 * (hi - lo), register, verse_context)
         self.dna: SongDNA = compose_dna(
             seed=self.seed, genre=self.genre, key=key, mode=mode, beats_per_bar=self.bpb,
             melody_theme=melody_theme, country_style=self.arrangement_dna().country_style,
             hook_fit=self._fitter(hook_slots, lo + 0.62 * (hi - lo), register),
-            verse_fit=self._fitter(verse_slots, lo + 0.38 * (hi - lo), register, verse_context),
+            verse_fit=self._verse_fit,
             groups=self.groups,
         )
         self.listener = Listener()
         self._plans: Dict[tuple, List[PlanItem]] = {}
         self._realized: Dict[tuple, List[Note]] = {}
-        self._dna_views: Dict[Tuple[float, Optional[Tuple[float, ...]]], SongDNA] = {}
+        self._dna_views: Dict[tuple, SongDNA] = {}
+        self._part_dnas: Dict[int, SongDNA] = {}
+        # The last plain (unlifted) realization per section memory, with its
+        # key: the final chorus lifts an authored line relative to it.
+        self._last_plain: Dict[tuple, Tuple[List[Note], str]] = {}
         self._fill_counter = 0
         self.log: List[str] = []
+
+    def part_dna(self, seed: Optional[int]) -> SongDNA:
+        """The DNA a lead ``seed`` plays: the song's hook and answer (the
+        song-level melody every part shares), with the lead's own verse and
+        bridge ideas and lick bank drawn from that seed."""
+        if seed is None:
+            return self.dna
+        cached = self._part_dnas.get(int(seed))
+        if cached is None:
+            fresh = compose_dna(seed=int(seed), genre=self.genre, key=self.key, mode=self.mode,
+                                beats_per_bar=self.bpb,
+                                country_style=self.arrangement_dna().country_style,
+                                verse_fit=self._verse_fit, groups=self.groups)
+            base = self.dna
+            # Verse and chorus keep contrasting rhythms against the kept hook.
+            verse = fresh.verse if fresh.verse.durations != base.hook.durations else base.verse
+            sig = base.signature.split("|verse:")[0] + f"|reseed:{int(seed)}|" + ",".join(
+                l.name for l in fresh.licks)
+            cached = SongDNA(base.hook, base.hook_answer, verse, fresh.bridge, list(fresh.licks),
+                             sig, base.authored)
+            self._part_dnas[int(seed)] = cached
+        return cached
 
     def comp_dna(self):
         """The rhythm guitar's signature riffs (composer/comping.py), built once."""
@@ -232,25 +267,29 @@ class SongComposer:
         chords = ChordMap(ctx.chord_slots, ctx.key, ctx.mode)
         if chords.total <= 0 or ctx.bars <= 0:
             return []
-        rng = random.Random(stable_seed_int("composer.section", self.seed, ctx.section_id,
+        # A lead seed re-rolls the lead's phrase choices as well as its ideas.
+        seed = self.seed if ctx.seed is None else int(ctx.seed)
+        rng = random.Random(stable_seed_int("composer.section", seed, ctx.section_id,
                                             st, ctx.occurrence))
-        memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register, ctx.groups)
+        memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register,
+                      ctx.groups, ctx.seed)
         base_dna = self.dna
-        self.dna = self._dna_for(ctx.beats_per_bar, ctx.groups)
+        self.dna = self._dna_for(ctx.beats_per_bar, ctx.groups, part_seed=ctx.seed)
         try:
             return self._compose(st, ctx, chords, rng, memory_key)
         finally:
             self.dna = base_dna
 
-    def _dna_for(self, bpb: float, groups=None) -> SongDNA:
+    def _dna_for(self, bpb: float, groups=None, part_seed: Optional[int] = None) -> SongDNA:
         """The DNA fitted to a section's bar length (meter changes)."""
+        source = self.part_dna(part_seed)
         target_groups = tuple(groups) if groups else self.groups if abs(bpb - self.bpb) < 1e-6 else None
-        if (abs(bpb - self.bpb) < 1e-6 and target_groups == self.groups) or self.dna.authored:
-            return self.dna
-        view_key = (bpb, target_groups)
+        if (abs(bpb - self.bpb) < 1e-6 and target_groups == self.groups) or source.authored:
+            return source
+        view_key = (bpb, target_groups, part_seed)
         cached = self._dna_views.get(view_key)
         if cached is None:
-            d = self.dna
+            d = source
             fit = lambda c: C.fit_length(c, bpb) if c.length > bpb + 1e-6 else \
                 C.Cell(c.notes, bpb, c.name)
             if target_groups:
@@ -292,12 +331,18 @@ class SongComposer:
         # A returning section over the same chords plays exactly what the
         # listener already knows; only deliberate recall changes (final
         # chorus lift, second-verse rhythm) produce new notes.
+        # A harmony line follows the singer, so it is only note for note when
+        # the singer's line is too.
+        sung = ctx.melody if any(i.kind == "harmony" for i in plan) else None
         exact_key = (memory_key, chords.signature(), ctx.register, ctx.key, ctx.mode,
-                     ctx.rest_probability, ctx.contour)
+                     ctx.rest_probability, ctx.contour, sung)
+        detail = ""
         if recalled and not lifted and exact_key in self._realized:
             notes = list(self._realized[exact_key])
         else:
             notes = _tidy(self._realize_plan(plan, ctx, chords, rng), ctx.total_beats)
+            if lifted and st == "chorus" and self.dna.authored:
+                notes, detail = self._lift_authored(notes, ctx, self._last_plain.get(memory_key))
             if ctx.strict_register:
                 lo, hi = ctx.register
                 notes = [replace(n, pitch=min(
@@ -306,12 +351,65 @@ class SongComposer:
                          for n in notes]
             if st != "solo" and not lifted:
                 self._realized.setdefault(exact_key, notes)
+        if st != "solo" and not lifted:
+            self._last_plain[memory_key] = (notes, ctx.key)
         self.listener.observe([n.pitch for n in notes], [n.dur for n in notes])
         self.log.append(
             f"{ctx.section_id} ({st} #{ctx.occurrence + 1}, {ctx.foreground}): "
             f"{'recalled' if recalled else 'composed'} {len(plan)} phrase items, {len(notes)} notes"
+            + (f"; {detail}" if detail else "")
         )
         return notes
+
+    def _lift_authored(self, notes: List[Note], ctx: LeadContext,
+                       reference: Optional[Tuple[List[Note], str]]) -> Tuple[List[Note], str]:
+        """The final chorus lift for an authored melody.
+
+        Authored notes are never reshaped, so the lift moves the whole line:
+        up an octave when it fits (a named register may use the solo's
+        headroom, a numeric range is a hard bound). When the final chorus
+        changes key, the key change is the lift: the line keeps the octave
+        the last chorus sat in, moved by the key change. Either way the held
+        notes get vibrato and each line slides into its first note. Only the
+        final chorus changes; earlier choruses keep the authored notes.
+        """
+        lo, hi = ctx.register
+        ceiling = hi if ctx.strict_register else _solo_top(lo, hi)
+        line = [n for n in notes if n.role == "melody"]
+        detail = "final chorus: authored line embellished"
+        shift = 0
+        if line:
+            low, high = min(n.pitch for n in line), max(n.pitch for n in line)
+            fits = [k for k in (-12, 0, 12) if low + k >= lo and high + k <= ceiling]
+            ref_line = [n for n in (reference[0] if reference else []) if n.role == "melody"]
+            moved = (tonic_pc(ctx.key) - tonic_pc(reference[1])) % 12 if reference else 0
+            mean = sum(n.pitch for n in line) / len(line)
+            if moved and ref_line and fits:
+                # Up by the key change (a fourth or less), from where the line was.
+                step = moved if moved <= 5 else moved - 12
+                target = sum(n.pitch for n in ref_line) / len(ref_line) + step
+                shift = min(fits, key=lambda k: (abs(mean + k - target), k))
+                detail = "final chorus: the key change lifts the authored line"
+            elif 12 in fits:
+                shift = 12
+                detail = "final chorus: authored line lifted an octave"
+            elif line:
+                detail = ("final chorus: an octave lift does not fit the register; "
+                          "authored line embellished")
+        bpb = ctx.beats_per_bar
+        line_len = self._line_bars(bpb) * bpb
+        out: List[Note] = []
+        for n in notes:
+            if n.role != "melody":
+                out.append(n)
+                continue
+            tech = n.tech
+            if tech is None and n.dur >= 1.5:
+                tech = "vib"
+            elif tech is None and line_len > 0 and abs(n.beat / line_len - round(n.beat / line_len)) < 1e-6:
+                tech = "slide"
+            out.append(replace(n, pitch=n.pitch + shift, tech=tech))
+        return out, detail
 
     # ------------------------------------------------------------------
     # Planning
@@ -336,9 +434,13 @@ class SongComposer:
         if st == "solo":
             return self._plan_solo(ctx, rng)
         if st == "chorus":
-            return self._plan_chorus(ctx, rng) if full else self._plan_chorus_counter(ctx, rng)
+            if not full:
+                return self._plan_chorus_counter(ctx, rng)
+            return self._with_phrase_fills(ctx, self._plan_chorus(ctx, rng))
         if st == "verse":
-            return self._plan_verse(ctx, rng) if full else self._plan_fills(ctx, rng)
+            if not full:
+                return self._plan_fills(ctx, rng)
+            return self._with_phrase_fills(ctx, self._plan_verse(ctx, rng))
         if st == "prechorus":
             return self._plan_prechorus(ctx, rng)
         if st == "bridge":
@@ -433,15 +535,53 @@ class SongComposer:
                                   role="cadence", tag="chorus_close"))
         return items
 
+    def _auto_chorus_form(self) -> Optional[str]:
+        """The chorus form for a lead playing around a singer.
+
+        A pinned ``counter`` with a drawn ``chorus_form`` keeps the plain
+        counter-line the user asked for; otherwise the song's chorus form
+        (pinned or drawn) shapes the chorus.
+        """
+        pins = self.arrangement_overrides or {}
+
+        def pinned(name):
+            from .arrangement import _CHOICES
+
+            value = pins.get(name)
+            return isinstance(value, str) and value.strip().lower() in _CHOICES[name]
+
+        if pinned("counter") and not pinned("chorus_form"):
+            return None
+        return self.arrangement_dna().chorus_form
+
     def _plan_chorus_counter(self, ctx, rng) -> List[PlanItem]:
-        """Vocal-song chorus: a sustained guide-tone counter line, then the
-        guitar hook as a tag in the last two bars."""
+        """Vocal-song chorus: the song's chorus form played around the singer,
+        then the guitar hook as a tag in the last two bars.
+
+        ``lift``: the counter-line climbs line by line to a summit before the
+        tag. ``call``: the lead stays out of each vocal line and answers it
+        with a lick in the singer's hold or breath. ``anthem``: the lead
+        harmonizes the chorus melody in thirds and sixths, like a band
+        singing along. With no form (a pinned counter), a plain counter-line.
+        """
         lo, hi, anchors = self._registers(ctx, "chorus")
         bpb = ctx.beats_per_bar
         items: List[PlanItem] = []
         tag_bars = 2 if ctx.bars >= 6 else 0
+        body = ctx.bars - tag_bars
         style = self.arrangement_dna().counter
-        if style == "fills":
+        form = self._auto_chorus_form()
+        line = 2
+        if form == "anthem" and body >= 1:
+            for bar in range(0, body, line):
+                items.append(PlanItem("harmony", bar * bpb, anchor=anchors["chorus"] + 2,
+                                      end=min(body, bar + line) * bpb, role="establish",
+                                      tag="anthem_harmony"))
+        elif form == "call" and body >= line:
+            items += self._plan_call_answers(ctx, body, anchors)
+        elif form == "lift" and body >= 2 * line:
+            items += self._plan_counter_lift(ctx, body, style, anchors, hi)
+        elif style == "fills":
             # Stay out of the singer's way: answer phrase ends only.
             sub = _sub_context(ctx, ctx.bars - tag_bars)
             items += [i for i in self._plan_fills(sub, rng)]
@@ -453,6 +593,49 @@ class SongComposer:
         if tag_bars:
             items += self._hook_line(ctx.bars - 2, ctx, anchors["chorus"], cadence=0,
                                      role="establish", answer_variants=False)
+        return items
+
+    def _plan_call_answers(self, ctx, body: int, anchors) -> List[PlanItem]:
+        """``call`` under a singer: silence under each two-bar vocal line and
+        a signature lick in its hold or breath, landing as the singer
+        returns."""
+        bpb = ctx.beats_per_bar
+        items: List[PlanItem] = []
+        for bar in range(0, body - 1, 2):
+            start, end = bar * bpb, (bar + 2) * bpb
+            h_start, h_end = _singer_hole(ctx.melody, start, end, bpb)
+            lick = self._next_fill_lick(max_len=h_end - h_start, ctx=ctx)
+            if lick is None:
+                continue
+            placed = _place_lick(lick, h_start, h_end)
+            if placed is None:
+                continue
+            at, scale, lick = placed
+            items.append(PlanItem("lick", at, lick=lick, anchor=anchors["chorus"] + 2,
+                                  time_scale=scale, tag="call_answer"))
+        return items
+
+    def _plan_counter_lift(self, ctx, body: int, style: str, anchors, hi: int) -> List[PlanItem]:
+        """``lift`` under a singer: the counter-line climbs line by line to a
+        summit just before the hook tag.
+
+        Stabs climb in their own voice. Octave roots are tied to each chord's
+        root and fills to their licks' shapes, so neither can carry a climb:
+        with those voices the lift is played as the sustained descant.
+        """
+        bpb = ctx.beats_per_bar
+        lines = max(1, body // 2)
+        low_anchor = anchors["chorus"] - 1
+        peak = max(low_anchor, min(hi - 3, anchors["chorus"] + 5))
+        kind = "stabs" if style == "stabs" else "guide"
+        items: List[PlanItem] = []
+        for u in range(lines):
+            start = 2 * u * bpb
+            end = (body if u == lines - 1 else 2 * (u + 1)) * bpb
+            anchor = low_anchor + (peak - low_anchor) * (u / max(1, lines - 1))
+            items.append(PlanItem(kind, start, anchor=anchor, end=end,
+                                  role="climax" if u == lines - 1 else "develop",
+                                  tag="counter_lift"))
         return items
 
     def _plan_verse(self, ctx, rng) -> List[PlanItem]:
@@ -495,6 +678,46 @@ class SongComposer:
             items.append(PlanItem("lick", start, lick=lick, anchor=anchors["verse"] + 4,
                                   time_scale=scale, tag="fill"))
         return items
+
+    def _with_phrase_fills(self, ctx, items: List[PlanItem]) -> List[PlanItem]:
+        """Fills between the lead's own melody phrases (``foreground: full``).
+
+        A country lead player answers his own lines with the song's licks
+        (chicken picking, double stops), so a country song gets them at its
+        ``lead_fills`` rate. Other genres get them only when ``lead_fills``
+        is pinned. The phrase's last bar keeps its first half, landing on its
+        cadence, and the fill answers in the second half (see
+        ``_phrase_end_fill``, which gives way when there is no room).
+        """
+        pins = self.arrangement_overrides or {}
+        pinned = str(pins.get("lead_fills") or "").strip().lower() in ("sparse", "normal", "chatty")
+        if not (self.arrangement_dna().country_style or pinned):
+            return items
+        lo, hi, anchors = self._registers(ctx, "verse")
+        bpb = ctx.beats_per_bar
+        every = {"sparse": 8, "normal": 4, "chatty": 2}.get(self.arrangement_dna().lead_fills, 4)
+        fill_bars = set(range(every - 1, ctx.bars, every))
+        out: List[PlanItem] = []
+        for it in items:
+            bar = int(round(it.start / bpb, 6)) if bpb > 0 else -1
+            one_bar = it.cell is not None and it.cell.length <= bpb + 1e-6 and \
+                abs(it.start - bar * bpb) < 1e-6
+            # Authored cells (pinned degrees before the last note) are never cut.
+            authored = one_bar and any(n.degree is not None for n in it.cell.notes[:-1])
+            if bar in fill_bars and one_bar and not authored:
+                head = C.fragment(it.cell, bpb / 2.0)
+                if len(head.notes) >= 1:
+                    if it.cadence is not None:
+                        head = C.cadence(head, it.cadence)
+                    it = replace(it, cell=head)
+            out.append(it)
+        for p_end in sorted(fill_bars):
+            lick = self._next_fill_lick(max_len=bpb, ctx=ctx)
+            if lick is None:
+                continue
+            out.append(PlanItem("lick", p_end * bpb, lick=lick, anchor=anchors["verse"] + 4,
+                                end=(p_end + 1) * bpb, tag="phrase_fill"))
+        return out
 
     def _next_fill_lick(self, *, max_len: float, ctx: LeadContext) -> Optional[Lick]:
         bank = self.dna.licks or list(LICKS[:3])
@@ -605,7 +828,16 @@ class SongComposer:
         return items
 
     def _plan_solo(self, ctx, rng) -> List[PlanItem]:
-        """A solo as a story: statement, development, build, climax, resolution."""
+        """A solo as a story: statement, development, build, climax, resolution.
+
+        Solos develop across a song. ``chapter`` counts the solos before this
+        one: each takes its licks further along the song's bank and its
+        hotter vocabulary, so a second solo is not a replay of the first. A
+        solo straight after another continues it (no second hook statement,
+        starting from where the first climbed to), and a solo followed by
+        another hands over on the dominant instead of playing the song's
+        final solo ending.
+        """
         lo, hi, anchors = self._registers(ctx, "solo")
         bpb = ctx.beats_per_bar
         unit = 2 if ctx.bars >= 4 else 1
@@ -613,14 +845,20 @@ class SongComposer:
         climax_u = max(0, min(units - 1, int(round(units * 0.72)) - (1 if units > 2 else 0)))
         base = anchors["solo"]
         top = _solo_top(lo, hi) - 3
+        chapter = max(0, int(ctx.occurrence))
+        continues = _normalize_type(ctx.prev_section_type or "") == "solo"
+        hands_on = _normalize_type(ctx.next_section_type or "") == "solo"
+        if continues:
+            base += (top - base) * 0.35
         fam = self.family
         energetic = sorted((l for l in LICKS if fam in l.families or "rock" in l.families),
                            key=lambda l: (-l.energy, l.name))
-        bank = self.dna.licks or energetic[:3]
+        bank = _rotate(self.dna.licks or energetic[:3], chapter)
         story = self.arrangement_dna().solo_story
         if story != "climb" and unit == 2 and units >= 2:
             return self._plan_solo_story(story, ctx, units, climax_u, base, top, bank,
-                                         energetic, rng)
+                                         energetic, rng, chapter=chapter, continues=continues,
+                                         hands_on=hands_on)
         items: List[PlanItem] = []
         for u in range(units):
             bar = u * unit
@@ -631,8 +869,14 @@ class SongComposer:
                 progress = 1.0 - (u - climax_u) / max(1, units - climax_u)
             anchor = base + (top - base) * progress
             if u == 0:
-                items.append(PlanItem("cell", start, cell=self.dna.hook, anchor=anchor,
-                                      role="establish", tag="solo_statement"))
+                if continues:
+                    # Carry on from the last solo: its idea, already moving.
+                    dev = C.vary_rhythm(C.transpose(self.dna.hook, 1 + chapter), rng)
+                    items.append(PlanItem("cell", start, cell=dev, anchor=anchor, role="develop",
+                                          variants=True, tag="solo_develop"))
+                else:
+                    items.append(PlanItem("cell", start, cell=self.dna.hook, anchor=anchor,
+                                          role="establish", tag="solo_statement"))
                 if unit == 2:
                     lick = bank[0]
                     scale = min(1.0, (bpb - 0.5) / lick.length)
@@ -645,13 +889,12 @@ class SongComposer:
                 items.append(PlanItem("lick", start, lick=lick, anchor=anchor, time_scale=scale,
                                       tag="solo_resolve"))
                 if unit == 2:
-                    items.append(PlanItem("cell", start + bpb, cell=self._solo_ending(bpb),
-                                          anchor=base, cadence=0, role="cadence",
-                                          tag="solo_final"))
+                    items.append(self._solo_close(start + bpb, bpb, base, hands_on))
             elif u == climax_u:
                 used = {i.lick.name for i in items if i.lick is not None}
-                hot = next((l for l in energetic if l.energy >= 0.85 and l.name not in used),
-                           next((l for l in energetic if l.name not in used), energetic[0]))
+                hots = ([l for l in energetic if l.energy >= 0.85 and l.name not in used]
+                        or [l for l in energetic if l.name not in used] or energetic[:1])
+                hot = hots[chapter % len(hots)]
                 scale = min(1.0, bpb / hot.length)
                 items.append(PlanItem("lick", start, lick=hot, anchor=top, time_scale=scale,
                                       tag="solo_climax"))
@@ -662,7 +905,7 @@ class SongComposer:
                                           role="climax", tag="solo_peak"))
             else:
                 # Development: sequence the hook upward, diminish toward the climax.
-                dev = C.transpose(self.dna.hook, u)
+                dev = C.transpose(self.dna.hook, u + chapter)
                 if progress > 0.5:
                     dev = C.vary_rhythm(dev, rng)
                 items.append(PlanItem("cell", start, cell=dev, anchor=anchor, role="develop",
@@ -673,6 +916,17 @@ class SongComposer:
                     items.append(PlanItem("lick", start + 2 * bpb - lick.length * scale, lick=lick,
                                           anchor=anchor + 2, time_scale=scale, tag="solo_lick"))
         return items
+
+    def _solo_close(self, start: float, bpb: float, anchor: float, hands_on: bool) -> PlanItem:
+        """The solo's last bar: the song's solo ending, or, when another solo
+        follows, a held dominant that hands the next chorus over."""
+        if hands_on:
+            turn = C.Cell((C.CellNote(0.0, 0.5, 1), C.CellNote(0.5, bpb - 0.5, 1, tech="vib",
+                                                              degree=4)), bpb, "solo_turn")
+            return PlanItem("cell", start, cell=turn, anchor=anchor, cadence=4, role="cadence",
+                            tag="solo_turn")
+        return PlanItem("cell", start, cell=self._solo_ending(bpb), anchor=anchor, cadence=0,
+                        role="cadence", tag="solo_final")
 
     def _solo_ending(self, bpb: float) -> Cell:
         """The solo's last gesture, the song's own (composer/arrangement.py)."""
@@ -688,30 +942,49 @@ class SongComposer:
         return C.Cell((C.CellNote(0.0, bpb, 0, tech=tech, degree=0),), bpb, "final")
 
     def _plan_solo_story(self, story: str, ctx, units: int, climax_u: int, base: float,
-                         top: float, bank, energetic, rng) -> List[PlanItem]:
+                         top: float, bank, energetic, rng, *, chapter: int = 0,
+                         continues: bool = False, hands_on: bool = False) -> List[PlanItem]:
         """Solos that are not a climb: they sing the hook, trade with the band,
-        or take their time like a slow blues."""
+        or take their time like a slow blues.
+
+        Every two-bar unit carries a full phrase. ``trade`` fills the lead's
+        bar (a lick, answered by a second one when the first leaves room)
+        and leads back in from the band's bar with a pickup. ``blues`` calls
+        and answers inside each unit, AAB across its four-bar lines: the
+        first line's call returns over the next line's change, then a new
+        call answers them. Its vocabulary starts with the song's own licks.
+        """
         bpb = ctx.beats_per_bar
         items: List[PlanItem] = []
 
-        def lick_at(start, lick, anchor, tag, room=None):
+        def lick_at(start, lick, anchor, tag, room=None) -> float:
             room = room if room is not None else bpb
             scale = min(1.0, room / lick.length)
             items.append(PlanItem("lick", start, lick=lick, anchor=anchor, time_scale=scale,
                                   tag=tag))
+            return start + lick.length * scale
 
-        slow = sorted((l for l in LICKS if l.energy <= 0.45 and
+        def answer_before(end, lick, anchor, room, tag="solo_answer") -> None:
+            # An answering lick that ends at `end`, in `room` beats.
+            placed = _place_lick(lick, end - room, end) if room >= 1.0 - 1e-6 else None
+            if placed is not None:
+                items.append(PlanItem("lick", placed[0], lick=placed[2], anchor=anchor,
+                                      time_scale=placed[1], tag=tag))
+
+        slow = sorted((l for l in LICKS if l.energy <= 0.6 and
                        (self.family in l.families or "blues" in l.families)),
-                      key=lambda l: l.name) or bank
+                      key=lambda l: (l.energy, l.name)) or bank
+        # The song's own licks lead the blues vocabulary, so every song's slow
+        # blues speaks in its own voice; the shared vocabulary follows.
+        vocab = _rotate(list(bank) + [l for l in slow if l not in bank], chapter) or bank
         for u in range(units):
             start = u * 2 * bpb
             progress = u / max(1, units - 1)
             anchor = base + (top - base) * min(1.0, progress * 1.2)
             if u == units - 1:
-                lick_at(start, slow[u % len(slow)] if story == "blues" else bank[0], base,
+                lick_at(start, vocab[u % len(vocab)] if story == "blues" else bank[0], base,
                         "solo_resolve")
-                items.append(PlanItem("cell", start + bpb, cell=self._solo_ending(bpb),
-                                      anchor=base, cadence=0, role="cadence", tag="solo_final"))
+                items.append(self._solo_close(start + bpb, bpb, base, hands_on))
                 continue
             if story == "melodic":
                 # The solo sings: hook, answer, the hook lifted, a held summit.
@@ -722,29 +995,52 @@ class SongComposer:
                     items.append(PlanItem("cell", start, cell=peak, anchor=top, role="climax",
                                           tag="solo_peak"))
                     continue
-                hook = self.dna.hook if u % 2 == 0 else C.transpose(self.dna.hook, 2)
-                if u >= 2:
+                k = u + chapter
+                hook = self.dna.hook if k % 2 == 0 else C.transpose(self.dna.hook, 2)
+                if k >= 2:
                     hook = C.ornament(hook, rng)
+                statement = u == 0 and not continues
                 items.append(PlanItem("cell", start, cell=hook, anchor=anchor,
-                                      role="establish" if u == 0 else "develop",
-                                      tag="solo_statement" if u == 0 else "solo_develop"))
+                                      role="establish" if statement else "develop",
+                                      tag="solo_statement" if statement else "solo_develop"))
                 answer = C.fit_length(self.dna.hook_answer, bpb)
+                if chapter:
+                    # A later solo answers its hooks with new endings.
+                    answer = C.vary_tail(answer, rng, keep=0.5)
                 items.append(PlanItem("cell", start + bpb, cell=answer, anchor=anchor,
-                                      role="develop", variants=u > 0, tag="solo_answer"))
+                                      role="develop", variants=k > 0, tag="solo_answer"))
             elif story == "trade":
-                # Trading: a lick, then a bar the band answers into.
-                hot = energetic[min(len(energetic) - 1, max(0, units - 1 - u))]
-                lick = hot if u == climax_u else bank[u % len(bank)]
-                lick_at(start, lick, top if u == climax_u else anchor,
-                        "solo_climax" if u == climax_u else "solo_lick")
-            else:  # blues: bends with room to breathe
-                lick = slow[u % len(slow)]
-                lick_at(start, lick, top if u == climax_u else anchor,
-                        "solo_climax" if u == climax_u else "solo_lick", room=bpb * 1.5)
+                # Trading: the lead's bar, then the band's bar, with a pickup
+                # from the band's bar into the next trade.
+                idx = min(len(energetic) - 1, max(0, units - 1 - u))
+                hot = energetic[(idx + chapter) % len(energetic)]
+                # The song's own licks alternate with busier trading vocabulary.
+                trading = [l for l in energetic if 0.5 <= l.energy < 0.85] or list(bank)
+                lick = hot if u == climax_u else (
+                    bank[u % len(bank)] if u % 2 == 0 else trading[(u // 2 + chapter) % len(trading)])
+                at = top if u == climax_u else anchor
+                end = lick_at(start, lick, at, "solo_climax" if u == climax_u else "solo_lick")
+                second = bank[(u + 1) % len(bank)]
+                answer_before(start + bpb - 0.25, second, at,
+                              start + bpb - 0.25 - (end + 0.25))
+                nxt = base + (top - base) * min(1.0, (u + 1) / max(1, units - 1) * 1.2)
+                items.append(PlanItem("cell", start + 2 * bpb - 1.0, cell=_PICKUP, anchor=nxt - 2,
+                                      role="develop", tag="solo_pickup"))
+            else:  # blues: call and answer, with room to breathe
+                line, pos = divmod(u, 2)
                 if u == climax_u:
+                    lick_at(start, vocab[u % len(vocab)], top, "solo_climax", room=bpb * 1.5)
                     items.append(PlanItem("cell", start + bpb * 1.5, cell=C.Cell(
                         (C.CellNote(0.0, bpb * 0.5, 2, tech="bend2"),), bpb * 0.5, "cry"),
                         anchor=top, role="climax", tag="solo_peak"))
+                    continue
+                call = vocab[0] if pos == 0 and line < 2 else vocab[(u + 1) % len(vocab)]
+                end = lick_at(start, call, anchor, "solo_lick", room=bpb * 1.5)
+                reply = vocab[(u + 2) % len(vocab)]
+                if reply is call and len(vocab) > 1:
+                    reply = vocab[(u + 3) % len(vocab)]
+                resp_end = start + 2 * bpb - 0.5
+                answer_before(resp_end, reply, anchor + 2, resp_end - (end + 0.5))
         return items
 
     # ------------------------------------------------------------------
@@ -787,7 +1083,8 @@ class SongComposer:
         rate = ctx.rest_probability
         if rate is None or rate <= 0:
             return plan
-        rng = random.Random(stable_seed_int("composer.rests", self.seed, ctx.section_id,
+        seed = self.seed if ctx.seed is None else int(ctx.seed)
+        rng = random.Random(stable_seed_int("composer.rests", seed, ctx.section_id,
                                             ctx.occurrence))
         kept = []
         for it in plan:
@@ -813,13 +1110,20 @@ class SongComposer:
                 continue
             # A soloist saves the top of the neck for the climax.
             hi = peak_hi - 4 if climax_at is not None and it.start < climax_at - 1e-6 else peak_hi
-            if it.kind == "lick" and it.lick is not None:
+            if it.kind == "lick" and it.tag == "phrase_fill":
+                got = self._phrase_end_fill(it, ctx, chords, lo, hi, prev, notes)
+            elif it.kind == "lick" and it.lick is not None:
                 # Move the hand, not teleport it: a lick starts near where the
                 # line already is, pulled toward the plan's register.
                 anchor = it.anchor if prev is None else 0.6 * it.anchor + 0.4 * prev
+                if it.tag == "solo_resolve":
+                    # The resolution comes home to the solo's own register.
+                    anchor = it.anchor
                 got = realize_lick(it.lick, it.start, chords, key=ctx.key, mode=ctx.mode,
                                    lo=lo, hi=hi, anchor=int(round(anchor)),
                                    beats_per_bar=ctx.beats_per_bar, time_scale=it.time_scale)
+            elif it.kind == "harmony":
+                got = self._harmony_line(it, ctx, chords, lo, hi)
             elif it.kind == "guide":
                 got = self._guide_line(it, ctx, chords, lo, hi, prev)
             elif it.kind in ("octaves", "stabs"):
@@ -832,6 +1136,116 @@ class SongComposer:
                 notes.extend(got)
                 prev = got[-1].pitch
         return notes
+
+    def _phrase_end_fill(self, it: PlanItem, ctx, chords, lo, hi, prev,
+                         so_far: List[Note]) -> List[Note]:
+        """A fill between the lead's own melody phrases (``foreground: full``).
+
+        The phrase's landing note sounds for half a beat (or all of it, when
+        shorter) before the fill, which ends on the next phrase's downbeat. No room,
+        no fill: the melody always comes first.
+        """
+        before = [n for n in so_far if it.start - 1e-6 <= n.beat < it.end - 1e-6] or \
+            [n for n in so_far if n.beat < it.start]
+        last = max(before, key=lambda n: n.beat) if before else None
+        hole_start = it.start if last is None else max(it.start, last.beat + min(last.dur, 0.5))
+        placed = _place_lick(it.lick, hole_start, it.end) if it.lick is not None else None
+        if placed is None:
+            return []
+        at, scale, lick = placed
+        anchor = it.anchor if prev is None else 0.6 * it.anchor + 0.4 * prev
+        return realize_lick(lick, at, chords, key=ctx.key, mode=ctx.mode, lo=lo, hi=hi,
+                            anchor=int(round(anchor)), beats_per_bar=ctx.beats_per_bar,
+                            time_scale=scale)
+
+    def _harmony_line(self, it: PlanItem, ctx, chords: ChordMap, lo, hi) -> List[Note]:
+        """``anthem`` under a singer: the chorus melody harmonized a diatonic
+        third above, like a band singing along.
+
+        Each harmony note is a diatonic third or sixth above the singer (a
+        fourth or fifth only as a last resort), chosen like a second singer
+        would: a chord tone where the note is long or on a strong beat, and
+        moving with the singer (parallel thirds and sixths) where the chord
+        allows, so a repeated sung note keeps one harmony note. The whole line moves by octaves into the lead's
+        register (below the singer when above does not fit), so its shape
+        survives.
+        """
+        from .theory import metric_weight
+
+        # Voice the whole section's line, then play this item's part of it,
+        # so every line of the chorus sits in the same octave.
+        whole = PlanItem("harmony", 0.0, anchor=it.anchor, end=ctx.total_beats)
+        sung = [(float(b), float(d), int(p)) for b, d, p in (ctx.melody or ())
+                if 0.0 <= float(b) < ctx.total_beats - 1e-6]
+        if not sung and not ctx.melody:
+            sung = [(n.beat, n.dur, n.pitch)
+                    for n in self._own_hook_line(whole, ctx, chords, lo, hi)]
+        if not sung:
+            return []
+        scale = set(scale_pcs(ctx.key, ctx.mode))
+        bpb = ctx.beats_per_bar
+        voiced: List[Tuple[float, float, int]] = []
+        prev_h: Optional[int] = None
+        prev_p = 0
+        for i, (b, d, p) in enumerate(sung):
+            span = chords.at(min(b, chords.total - 0.01))
+            pcs = span.pcs if span is not None else tuple(scale)
+            mw = metric_weight(b % bpb, bpb, ctx.groups) if bpb > 0 else 1.0
+
+            def cost(iv: int) -> float:
+                h = p + iv
+                c = {3: 0.0, 4: 0.0, 8: 0.6, 9: 0.6}.get(iv, 1.5)  # thirds, sixths
+                if h % 12 not in pcs:
+                    # Over a sung passing note the harmony passes too.
+                    c += 3.0 * mw + (1.5 if d >= 1.0 else 0.0) if p % 12 in pcs else 0.4
+                if prev_h is not None:
+                    # Move with the singer (parallel thirds and sixths).
+                    c += 0.3 * abs((h - prev_h) - (p - prev_p))
+                return c
+
+            options = [iv for iv in (3, 4, 8, 9, 5, 7) if (p + iv) % 12 in scale]
+            h = p + min(options, key=lambda iv: (cost(iv), iv)) if options else p + 3
+            prev_h, prev_p = h, p
+            nxt = sung[i + 1][0] if i + 1 < len(sung) else ctx.total_beats
+            voiced.append((b, max(0.1, min(d, nxt - b - 0.02)), h))
+        mean = sum(h for _, _, h in voiced) / len(voiced)
+        shift = min((-24, -12, 0, 12),
+                    key=lambda k: (sum(1 for _, _, h in voiced if not lo <= h + k <= hi),
+                                   abs(mean + k - it.anchor), k))
+        out: List[Note] = []
+        for b, d, h in voiced:
+            if not it.start - 1e-6 <= b < it.end - 1e-6:
+                continue
+            pitch = h + shift
+            while pitch > hi:
+                pitch -= 12
+            while pitch < lo:
+                pitch += 12
+            out.append(Note(round(b, 4), min(d, it.end - b), pitch, accent=False,
+                            tech="vib" if d >= 1.5 else None, role="harmony"))
+        return out
+
+    def _own_hook_line(self, it: PlanItem, ctx, chords: ChordMap, lo, hi) -> List[Note]:
+        """The hook lines over [start, end), for a song with no melody theme
+        to harmonize (the composer's hook is the chorus melody then)."""
+        bpb = ctx.beats_per_bar
+        out: List[Note] = []
+        prev = None
+        line = self._line_bars(bpb) * bpb
+        t = it.start
+        while t < it.end - 1e-6:
+            for cell, at in ((self.dna.hook, t), (self.dna.hook_answer, t + self.dna.hook.length)):
+                if at >= it.end - 1e-6:
+                    continue
+                got, _ = realize_cell(cell, at, chords, key=ctx.key, mode=ctx.mode, lo=lo, hi=hi,
+                                      anchor=it.anchor - 2, prev_pitch=prev,
+                                      beats_per_bar=bpb, exact_degrees=self.dna.authored,
+                                      groups=ctx.groups)
+                got = [n for n in got if n.beat < it.end - 1e-6]
+                out += got
+                prev = got[-1].pitch if got else prev
+            t += line
+        return out
 
     def _realize_cell_item(self, it: PlanItem, ctx, chords, lo, hi, prev, rng,
                            so_far: List[Note]) -> List[Note]:
@@ -934,10 +1348,15 @@ class SongComposer:
         history: List[int] = []
         current = prev if prev is not None else int(round(anchor + 4))
         per_phrase = max(1, int(round(4 * ctx.beats_per_bar / max(0.5, spans[0].end - spans[0].start))))
+        climbing = it.tag == "counter_lift"
         for i, span in enumerate(spans):
             phrase_pos = i % per_phrase
             direction = -1 if (i // per_phrase) % 2 == 0 else 1
-            if phrase_pos == 0 and history:
+            if climbing:
+                # A lifting chorus: every line steps up from where the last
+                # one ended, toward (not past) its own higher register.
+                goal = min(current + 2, anchor + 4) if history or prev is not None else anchor
+            elif phrase_pos == 0 and history:
                 # Phrase reset: leap back toward the start of the arc.
                 goal = anchor + (4 if direction < 0 else -2)
             else:
@@ -990,7 +1409,18 @@ _LEAP_SCALE = {"stepwise": 2.0, "balanced": 1.0, "leaping": 0.4}
 # Phrase items a rest never removes: the hook statement, cadences, and the
 # solo's structural moments carry the form.
 _REST_PROOF_TAGS = ("hook", "solo_statement", "solo_climax", "solo_peak", "solo_final",
-                    "outro_final", "outro_ring", "pre_hold")
+                    "solo_turn", "outro_final", "outro_ring", "pre_hold")
+# The pickup a trading soloist plays at the end of the band's bar.
+_PICKUP = C.Cell((C.CellNote(0.0, 0.5, 0), C.CellNote(0.5, 0.5, 1)), 1.0, "pickup")
+
+
+def _rotate(seq, k: int) -> list:
+    """``seq`` started ``k`` places along (a later solo's turn through a bank)."""
+    seq = list(seq)
+    if not seq:
+        return seq
+    k %= len(seq)
+    return seq[k:] + seq[:k]
 
 
 def _solo_top(lo: int, hi: int) -> int:
@@ -1008,11 +1438,63 @@ def _degree_pc(index: int, key: str, mode: str) -> int:
     return (tonic_pc(key) + offs[index % 7]) % 12
 
 
+def _place_lick(lick: Lick, earliest: float,
+                end: float) -> Optional[Tuple[float, float, Lick]]:
+    """Where a fill goes to finish at ``end`` without starting before
+    ``earliest``: (start, time_scale, lick). None when it cannot fit.
+
+    The lick plays at its own speed, or in double time when that keeps
+    every note on a sixteenth; any other squeeze would put its notes between
+    the beat's subdivisions. A lick still too long loses notes from its
+    front (never its landing), the way a player cuts a fill to the room
+    left, keeping at least two notes.
+    """
+    notes = list(lick.notes)
+    while len(notes) >= 2:
+        shift = notes[0][0]
+        cut = Lick(lick.name, lick.families,
+                   tuple((round(o - shift, 4), d, i, t) for o, d, i, t in notes),
+                   round(lick.length - shift, 4), lick.ladder, lick.energy)
+        for scale in (1.0, 0.5):
+            if scale < 1.0 and any(abs(o * scale * 4 - round(o * scale * 4)) > 1e-6
+                                   for o, _, _, _ in cut.notes):
+                continue
+            start = math.ceil((end - cut.length * scale) * 4 - 1e-6) / 4.0
+            if start >= earliest - 1e-6 and end - start >= 0.75 - 1e-6:
+                return start, scale, cut
+        notes = notes[1:]
+    return None
+
+
+def _singer_hole(melody, start: float, end: float,
+                 bpb: float) -> Tuple[float, float]:
+    """Where a guitar answers one vocal line in [start, end).
+
+    The hole is the longest stretch after the line's opening with no new sung
+    note, from half a beat into a held note (the singer has landed) or from
+    the end of a short one, lasting at least a beat. Without a melody, or
+    when the singer never stops, the answer takes the end of the line over
+    the singer's last note, as a phrase-end fill does.
+    """
+    tail = (max(start + bpb * 0.5, end - max(1.5, bpb * 0.6)), end)
+    if not melody:
+        return tail
+    sung = sorted((float(b), float(d)) for b, d, _ in melody if start - 1e-6 <= float(b) < end - 1e-6)
+    if not sung:
+        return start + bpb, end
+    best = None
+    for i, (b, d) in enumerate(sung):
+        h_start = b + (0.5 if d >= 1.0 else d)
+        h_end = sung[i + 1][0] if i + 1 < len(sung) else end
+        if h_start < start + bpb * 0.5 or h_end - h_start < 1.0 - 1e-6:
+            continue
+        if best is None or (h_end - h_start, h_start) > (best[1] - best[0], best[0]):
+            best = (h_start, h_end)
+    return best or tail
+
+
 def _sub_context(ctx: LeadContext, bars: int) -> LeadContext:
-    return LeadContext(ctx.section_id, ctx.section_type, ctx.occurrence, ctx.is_final_of_type,
-                       bars, ctx.beats_per_bar, bars * ctx.beats_per_bar, ctx.key, ctx.mode,
-                       ctx.chord_slots, ctx.intensity, ctx.foreground, ctx.next_section_type,
-                       ctx.register, ctx.strict_register)
+    return replace(ctx, bars=bars, total_beats=bars * ctx.beats_per_bar)
 
 
 def _tidy(notes: List[Note], total: float) -> List[Note]:

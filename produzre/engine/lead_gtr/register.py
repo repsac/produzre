@@ -10,7 +10,7 @@ pick range dynamically based on song key / section context.
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Any, Optional, Tuple
 
 
 # Register presets: (min_note, max_note) in MIDI.
@@ -26,12 +26,33 @@ REGISTER_PRESETS = {
 DEFAULT_REGISTER = "mid"
 
 
-def get_register_bounds(register: str) -> Tuple[int, int]:
-    """Return (min_note, max_note) for a register preset name.
+def register_range(register: Any) -> Optional[Tuple[int, int]]:
+    """An explicit ``[low, high]`` MIDI range, or None for anything else.
 
-    Falls back to ``mid`` for unrecognised names.
+    Bounds are sorted and clamped to MIDI, so ``[81, 62]`` and ``[62, 81]``
+    mean the same range.
     """
-    return REGISTER_PRESETS.get((register or DEFAULT_REGISTER).lower(),
+    if isinstance(register, (list, tuple)) and len(register) == 2:
+        try:
+            lo, hi = sorted(int(round(float(v))) for v in register)
+        except (TypeError, ValueError):
+            return None
+        return max(0, min(127, lo)), max(0, min(127, hi))
+    return None
+
+
+def get_register_bounds(register: Any) -> Tuple[int, int]:
+    """Return (min_note, max_note) for a preset name or a ``[low, high]`` range.
+
+    Names ignore case and surrounding space. Falls back to ``mid`` for
+    unrecognised names and malformed ranges.
+    """
+    explicit = register_range(register)
+    if explicit is not None:
+        return explicit
+    if isinstance(register, (list, tuple)):
+        return REGISTER_PRESETS[DEFAULT_REGISTER]
+    return REGISTER_PRESETS.get(str(register or DEFAULT_REGISTER).strip().lower(),
                                 REGISTER_PRESETS[DEFAULT_REGISTER])
 
 

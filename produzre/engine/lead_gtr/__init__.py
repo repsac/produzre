@@ -133,7 +133,10 @@ def _group_slots_by_phrase(chord_slots, phrase_len_beats):
     return phrases
 
 
-_ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88, "stab": 1.06}
+_ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88, "stab": 1.06, "harmony": 0.92}
+# Roles a raised `bend_rate` may add bends to. Stabs and country double
+# stops stay unbent (a bend on one string of a double stop bends the pair).
+_BENDABLE_ROLES = ("melody", "lick", "counter", "harmony", "country_lick")
 
 
 def _section_groups(cfg, section, harmony_plan):
@@ -159,6 +162,7 @@ def _perform_composed(
     swell_rate: float,
     bend_rate: float = 0.15,
     groups=None,
+    scale_pcs=None,
 ) -> None:
     """Perform composer notes: velocity shape, technique, pitch expression.
 
@@ -166,14 +170,18 @@ def _perform_composed(
     bend up into the note, ``slide`` adds a grace from below, ``vib`` a wide
     delayed vibrato, ``dive`` a whammy dive, ``stac`` a short pick,
     ``hammer`` a light hammered grace. Untagged long notes get vibrato at
-    ``vibrato_rate``; a ``bend_rate`` below its 0.15 default keeps only that
-    share of the composed bends (0 removes them). Timing humanization is tighter than the legacy path:
-    composed rhythm is the identity of the line.
+    ``vibrato_rate``. ``bend_rate`` scales the bends across 0 to 1: at its
+    0.15 default the composed bends play as written, below it only that
+    share of them survives (0 removes them), and above it untagged notes of
+    half a beat or longer also bend in from below, reaching every such note
+    at 1. Timing humanization is tighter than the legacy path: composed
+    rhythm is the identity of the line.
     """
     from ...composer.theory import metric_weight
 
     events_before = len(timeline.events)
     ordered = sorted(notes, key=lambda n: float(n["beat"]))
+    added_share = max(0.0, (bend_rate - 0.15) / 0.85)
     for i, n in enumerate(ordered):
         local = float(n["beat"])
         dur = float(n["duration_beats"])
@@ -184,6 +192,15 @@ def _perform_composed(
             # Own stream: the default performance's draws are unchanged.
             keep = random.Random(int(round(local * 1000)) * 131 + pitch).random() < bend_rate / 0.15
             tech = tech if keep else None
+        elif tech is None and added_share > 0 and dur >= 0.5 and role in _BENDABLE_ROLES:
+            # Its own per-note stream too, so a note's choice does not
+            # depend on the notes around it.
+            draw = random.Random(_stable_u32(f"lead.bend_add:{local:.4f}:{pitch}")).random()
+            if draw < added_share:
+                # A whole step up into the note when the note below it is in
+                # the key, otherwise a half step.
+                whole = scale_pcs is None or (pitch - 2) % 12 in scale_pcs
+                tech = "bend2" if whole else "bend1"
         next_local = float(ordered[i + 1]["beat"]) if i + 1 < len(ordered) else None
         if role == "country_double":
             next_local = next((float(other["beat"]) for other in ordered[i+1:]
@@ -406,8 +423,11 @@ def render_into_timeline(
     if offset_beats is None:
         offset_beats = 0.0
 
+    # A preset name or a [low, high] range, as a direct field or in params.
     register = getattr(instrument_cfg, "register", None)
-    solo = bool(getattr(instrument_cfg, "solo", False))
+    if register is None:
+        register = lead_extra.get("register")
+    solo =bool(getattr(instrument_cfg, "solo", False))
     # Docs put lead params in `extra:` — honor a solo flag placed there too.
     if not solo:
         solo = bool(lead_extra.get("solo", False))
@@ -674,6 +694,8 @@ def render_into_timeline(
     # generator. `composer: false` on the lead (or the song) restores legacy.
     composed = plan.get(f"composer.lead.{section.id}") if plan is not None and hasattr(plan, "get") else None
     if isinstance(composed, list):
+        from ...composer.theory import scale_pcs as _scale_pcs
+
         _perform_composed(
             composed,
             timeline=timeline,
@@ -689,6 +711,7 @@ def render_into_timeline(
             swell_rate=swell_rate,
             bend_rate=bend_rate,
             groups=_section_groups(cfg, section, harmony_plan),
+            scale_pcs=set(_scale_pcs(song_key, song_mode)),
         )
         logger.debug(
             "Section '%s': performed %d composed lead notes",
