@@ -1529,6 +1529,7 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     if performance_plan is None or drums_cfg is None:
         return
     performance_plan.data.pop(f"composer.drums.{sec.id}", None)
+    performance_plan.data.pop(f"composer.drums_handoff.{sec.id}", None)
     composer = performance_plan.get("composer.song")
     if composer is None:
         return
@@ -1543,7 +1544,10 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     if _explicit_settings(drums_cfg, extra, _DRUM_USER_MODES):
         return
     if getattr(sec, "intent", None) or (getattr(sec, "extras", None) or {}).get("intent"):
-        return  # an explicit section feel (drop, half_time, build...) is the engine's
+        # An explicit section feel (drop, half_time, build...) is the
+        # engine's; it plays at the composed drummer's dynamics.
+        performance_plan.set(f"composer.drums_handoff.{sec.id}", True)
+        return
     if performance_plan.get(f"themes.groove.{sec.id}"):
         return  # an authored drum_groove theme is the beat
     feel = _explicit_settings(drums_cfg, extra, _DRUM_FEEL_KEYS)
@@ -1551,7 +1555,7 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
 
     from dataclasses import replace as _replace
 
-    from ..composer.drums import plan_drum_section
+    from ..composer.drums import apply_feel_knobs, feel_values, for_meter, plan_drum_section
     from ..composer.song import section_groups
 
     dna = composer.drum_dna()
@@ -1561,42 +1565,27 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
 
         dna = compose_drum_dna(seed=reseed, genre=composer.genre, beats_per_bar=composer.bpb,
                                country_style=composer.arrangement_dna().country_style)
-    try:
-        if feel.get("ghost_rate") is not None:
-            g = float(feel["ghost_rate"])
-            dna = _replace(dna, ghosts="none" if g <= 0.05 else ("light" if g < 0.3 else "busy"))
-        if feel.get("fill_rate") is not None:
-            f = float(feel["fill_rate"])
-            dna = _replace(dna, fill_every=4 if f >= 0.5 else 8,
-                           small_fill_every=2 if f >= 0.75 else (0 if f < 0.25 else dna.small_fill_every))
-        if feel.get("kick_density") is not None:
-            k = float(feel["kick_density"])
-            if k >= 0.7:
-                dna = _replace(dna, kick_verse=dna.kick_chorus)
-            elif k <= 0.3:
-                dna = _replace(dna, kick_verse=("x......." * 4)[:len(dna.kick_verse)])
-        if feel.get("hat_density") is not None:
-            h = float(feel["hat_density"])
-            tk = "hat16" if h >= 0.8 else ("hat4" if h <= 0.3 else None)
-            if tk:
-                grooves = dict(dna.grooves)
-                for k in ("verse", "prechorus"):
-                    grooves[k] = (tk, grooves.get(k, ("hat8", "backbeat"))[1])
-                dna = _replace(dna, grooves=grooves, hand_patterns={} if dna.idiom == "country" else dna.hand_patterns)
-                if dna.waltz is not None:
-                    hands = dict(dna.waltz.hands)
-                    timekeeper = dict(dna.waltz.timekeeper)
-                    for k in ("verse", "prechorus"):
-                        hands[k] = "xxxxxxxxxxxx" if tk == "hat16" else "x...x...x..."
-                        timekeeper[k] = tk
-                    dna = _replace(dna, waltz=_replace(dna.waltz, hands=hands, timekeeper=timekeeper))
-    except (TypeError, ValueError):
-        pass
+    for key in ("ghost_rate", "fill_rate", "kick_density", "hat_density"):
+        try:
+            dna = apply_feel_knobs(dna, **{key: feel.get(key)})
+        except (TypeError, ValueError):
+            pass
     bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
     total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
     bars = int(round(total / bpb)) if bpb > 0 else 0
     tc = transition_context if isinstance(transition_context, dict) else {}
+    # Drum-only sections have no harmony plan; the meter still groups them.
+    meter = getattr(hplan, "meter", None)
+    if meter is None:
+        from ..harmony.meter import parse_meter
+
+        meter = parse_meter(str(getattr(sec, "meter", None) or getattr(cfg.song, "meter", "4/4")))
+    groups = section_groups(cfg, sec, meter)
+    dna = for_meter(dna, bpb, groups)
     performance_plan.set(f"composer.drum_dna.{sec.id}", dna)
+    index = int(tc.get("arrangement_index", 0) or 0)
+    occurrence = sum(1 for meta in list(getattr(performance_plan, "sections", []) or [])[:index]
+                     if str(getattr(meta, "type", "") or "").lower() == str(getattr(sec, "type", "") or "").lower())
     active = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
               if name != "harmony" and getattr(part, "enabled", True) is not False}
     arrangement = composer.arrangement_dna()
@@ -1604,11 +1593,11 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
         arrangement = _replace(arrangement, intro="full")
     hits = plan_drum_section(
         dna, arrangement, section_type=str(getattr(sec, "type", "") or ""),
-        bars=bars, beats_per_bar=bpb,
+        bars=bars, beats_per_bar=bpb, occurrence=occurrence,
         next_section_type=None if tc.get("is_last_section") else (tc.get("next_section_type") or "verse"),
         prev_section_type=tc.get("prev_section_type"),
         is_first_section=bool(tc.get("is_first_section")),
-        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)) if hplan is not None else None,
+        groups=groups,
         solo=active == {"drums"},
         fills_enabled=_as_float(feel.get("fill_rate")) != 0.0,
     )
@@ -1621,10 +1610,11 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
     if isinstance(song_raw, dict) and song_raw.get("humanize_timing") is not None:
         own_feel["humanize_timing"] = song_raw["humanize_timing"]  # the user owns timing
-    feel_values = {"straight": {}, "laid_back": {"push_pull": -0.08}, "push": {"push_pull": 0.06},
-                   "shuffle": {"swing": 0.62}}.get(dna.feel, {})
-    if feel_values and not own_feel and not any(k in song_groove for k in ("swing", "swing_16th")):
-        performance_plan.set(f"composer.drums_feel.{sec.id}", feel_values)
+    # The drummer's feel outranks recipe and persona swing (a straight
+    # drummer keeps the band straight); explicit settings keep theirs.
+    values = feel_values(dna, groups)
+    if not own_feel and not any(k in song_groove for k in ("swing", "swing_16th")):
+        performance_plan.set(f"composer.drums_feel.{sec.id}", values)
     else:
         performance_plan.data.pop(f"composer.drums_feel.{sec.id}", None)
     if hits:

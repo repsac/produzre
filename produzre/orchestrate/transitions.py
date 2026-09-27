@@ -438,17 +438,29 @@ def adjust_durations(events: List[Any], factor: float) -> None:
 _COMPOSED_KINDS = ("melody", "lick", "counter", "stab")
 
 
+def _drum_structural(ev: Any) -> bool:
+    """Kick, crash and accented snare: the hits a bar's groove stands on."""
+    pitch = int(getattr(ev, "pitch", 0))
+    if pitch in (35, 36, 49, 52, 55, 57):
+        return True
+    return pitch in (37, 38, 39, 40) and int(getattr(ev, "velocity", 0)) >= 60
+
+
 def thin_events(
     events: List[Any],
     keep_downbeats: bool = True,
     beats_per_bar: float = 4.0,
+    origin: float = 0.0,
 ) -> List[Any]:
     """Remove every other non-downbeat event to reduce density.
 
     Args:
         events: List of events with start_beat attribute.
-        keep_downbeats: If True, always keep events on downbeats (beat % beats_per_bar == 0).
+        keep_downbeats: If True, always keep events on downbeats (bar starts
+            counted from ``origin``).
         beats_per_bar: Beats per bar for downbeat detection.
+        origin: A bar line (the section start), so downbeats are found in
+            the section's own meter.
 
     Returns:
         List[Any]: Filtered event list (subset of input).
@@ -471,7 +483,7 @@ def thin_events(
 
         # Check if downbeat
         if keep_downbeats:
-            beat_in_bar = start_beat % beats_per_bar
+            beat_in_bar = (start_beat - origin) % beats_per_bar
             if beat_in_bar < eps:
                 # It's a downbeat, always keep
                 result.append(ev)
@@ -1007,13 +1019,19 @@ def apply_transition_plan(
         # Use 0.5 (50%) as default blend - bar 1 is halfway between A and B energy
         blend_factor = 0.5
 
-        # Get events in first bridge_start_bars of section B
+        # Get events in first bridge_start_bars of section B (in B's meter)
         bridge_bars = recipe.bridge_start_bars
-        beats_per_bar = 4.0  # TODO: get from section config
+        beats_per_bar = float(metadata.get("beats_per_bar_b") or 4.0)
         bridge_beats = bridge_bars * beats_per_bar
         bridge_end = head_start + bridge_beats
 
         bridge_events = timeline.get_events_in_range(head_start, bridge_end)
+        if instrument_name == "drums" and metadata.get("composed_drums"):
+            # The composed drummer arranges its own bridge entry (crash,
+            # backbeat, the bridge groove); only the dynamics blend.
+            bridge_events_thin = None
+        else:
+            bridge_events_thin = bridge_events
 
         if not bridge_events:
             if logger:
@@ -1035,14 +1053,22 @@ def apply_transition_plan(
         density_ratio = profile_b.density / profile_a.density if profile_a.density > 0 else 1.0
 
         # If B is significantly denser (>1.5x), thin to reduce density
-        if density_ratio > 1.5:
+        if density_ratio > 1.5 and bridge_events_thin is not None:
             # Keep approximately (1 - blend_factor) of the events
             # blend_factor=0.5 means keep ~50% of events (thin 50%)
-            thinned_events = thin_events(
-                bridge_events,
-                keep_downbeats=True,
-                beats_per_bar=beats_per_bar
-            )
+            if instrument_name == "drums":
+                # A drummer thins the hands, not the kick, backbeat or crash.
+                structural = [ev for ev in bridge_events if _drum_structural(ev)]
+                thinned_events = structural + thin_events(
+                    [ev for ev in bridge_events if not _drum_structural(ev)],
+                    keep_downbeats=True, beats_per_bar=beats_per_bar, origin=head_start)
+            else:
+                thinned_events = thin_events(
+                    bridge_events,
+                    keep_downbeats=True,
+                    beats_per_bar=beats_per_bar,
+                    origin=head_start,
+                )
             removed_count = len(bridge_events) - len(thinned_events)
 
             if removed_count > 0:
@@ -1258,6 +1284,7 @@ def evaluate_transitions(
     plan: Any,  # SongPlan
     timelines: Dict[str, Any],  # Dict[str, InstrumentTimeline]
     logger: Optional[logging.Logger] = None,
+    performance_plan: Any = None,
 ) -> List[TransitionPlan]:
     """Evaluate transition opportunities between sections.
 
@@ -1365,13 +1392,15 @@ def evaluate_transitions(
             tail_start = max(timing_a.start_beat, timing_a.end_beat - tail_beats)
             tail_end = timing_a.end_beat
 
-            # Head of section B: first ramp_bars (or bridge_start_bars for bridge sections)
+            # Head of section B: first ramp_bars (or bridge_start_bars for
+            # bridge sections), in B's meter
+            beats_per_bar_b = float(getattr(timing_b, "beats_per_bar", beats_per_bar) or beats_per_bar)
             section_b_type = getattr(section_b_cfg, 'type', '').lower()
             if section_b_type == 'bridge':
                 bridge_bars = getattr(effective_settings, 'bridge_start_bars', 1)
-                head_beats = max(bridge_bars, ramp_bars) * beats_per_bar
+                head_beats = max(bridge_bars, ramp_bars) * beats_per_bar_b
             else:
-                head_beats = ramp_bars * beats_per_bar
+                head_beats = ramp_bars * beats_per_bar_b
 
             head_start = timing_b.start_beat
             head_end = min(timing_b.end_beat, timing_b.start_beat + head_beats)
@@ -1465,6 +1494,10 @@ def evaluate_transitions(
                     "harmony": harmony,
                     "profile_a": profile_a,
                     "profile_b": profile_b,
+                    "beats_per_bar_b": beats_per_bar_b,
+                    "composed_drums": bool(
+                        inst_name == "drums" and performance_plan is not None
+                        and performance_plan.get(f"composer.drums.{section_b_id}")),
                     "rng": transition_rng,  # For deterministic pickup pitch selection
                     "groove_cues": groove_cues,  # For bass-drum coordination (Phase 7)
                     "settings": {

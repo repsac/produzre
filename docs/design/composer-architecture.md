@@ -310,7 +310,11 @@ What does it:
   hits, triplets, flams), fill and crash policies, and a feel (straight,
   laid back, pushing, shuffle) that reaches the whole band through the
   groove clock. The drum engine performs the hits with its kit and
-  humanization and still exports the kick features the bass locks to.
+  humanization, scales them by the section's dynamics
+  (`section_level`: intensity, energy and the planner's repeat escalation),
+  and still exports the kick features the bass locks to. Jazz and dance
+  songs get their own players (`JazzKit`, `DanceKit`), and `for_meter` lays
+  any drummer out for 6/8 and 12/8.
 - **Arrangement DNA** (`composer/arrangement.py`). Habits every part agrees
   on: how the band goes into a chorus (stop, build, fill, push, drop), how
   phrases end (walk-up, chord slide, dead-note rake, nothing), whether the
@@ -456,6 +460,10 @@ engine follows through `section.key`, and both memory caches transpose.
 | `composer.lead.<section>` | Composed notes: beat, duration, pitch, accent, technique, role. |
 | `composer.comp.<section>` | Composed rhythm-guitar gestures (riff name, ring, events). |
 | `composer.groove_memory` | Established grooves by instrument and section type. |
+| `composer.drums.<section>` | Composed drum hits (beat, voice, velocity scale, kind). |
+| `composer.drum_dna.<section>` | The effective drummer for the section (after feel knobs, laid out for its meter). |
+| `composer.drums_feel.<section>` | The drummer's feel for the groove clock (swing, sixteenth swing, push/pull). |
+| `composer.drums_handoff.<section>` | Set when an `intent` hands a composed song's section to the drum engine. |
 
 ## Measuring
 
@@ -563,8 +571,9 @@ comparison, six genre albums, solo and meter probes, audio pairs, and
 remaining diversity tradeoffs.
 
 A lone enabled lead defaults to full foreground unless the user explicitly
-chooses another role. Solo drums keep their foot pulse while a four-bar
-hand-voice and dynamic pattern develops the groove. An unpinned solo
+chooses another role. Solo drums keep their foot pulse and backbeat while a
+four-bar dynamic pattern develops the groove; bars 2 and 4 of each phrase
+answer on the toms on their last beat (or with the song's fill there). An unpinned solo
 fingerpicking part uses `composer/acoustic.py`: seeded two-bar treble and
 thumb figures, chord-tone melody, root/fifth bass, chorus pinches, phrase
 answers and a final hold. Explicit picking patterns, other techniques,
@@ -572,8 +581,8 @@ authored melodies and composer opt-outs retain their engines.
 
 Country uses root/fifth bass and comping, train/backbeat drum choices and
 short fills. Reggae has one-drop kick/rim placement with varied hand
-figures. Jazz has swing hand figures, feathered kicks and seeded snare
-comping. These genres no longer randomly request rock signature riffs;
+figures. Jazz has a swing drummer (see the drum review below): a continuous
+ride with skip notes, the hi-hat foot, feathered kicks and quiet comping. These genres no longer randomly request rock signature riffs;
 explicit arrangement overrides still apply. Reggae and jazz retain their
 bass engines instead of receiving generic pumping roles.
 
@@ -625,3 +634,58 @@ supported. Already-staccato country picks retain their gate length when
 swung, then undergo the normal phrase and section boundary clipping.
 See [the country review](country-review.md) for measurements, listening
 pairs, configuration examples and limitations.
+
+## Drum review: dynamics, meters and idioms
+
+The examples pass (2026-09-26) found the composed drummer flat, wrong in
+compound meters, unidiomatic in jazz and missing for dance music.
+
+- **Dynamics.** Composed velocities were `base * hit scale`, so a verse at
+  intensity 0.4 and a chorus at 1.0 played alike and repeats never grew.
+  The engine now multiplies by `section_level(intensity, energy)`: 1.0 for
+  a default verse, about 1.24 for a default chorus, rising with the
+  planner's +0.05 per repeat. Instrument intensity outranks the section's.
+  A section handed to the engine by `intent` gets the same level; the
+  engine's templates sit about 15% above the composed touch at the same
+  base velocity (kick and snare means over genres and seeds), which the
+  handoff removes.
+- **Compound meters.** `_snare_steps` put the 12/8 backbeat on every pulse
+  after the first and the kick cells, hand offsets and accents were
+  quarter-based. `for_meter` lays the DNA out on the dotted-quarter pulse
+  (its own seed stream): backbeat on pulses 2 and 4 (half time on 3),
+  eighth-grid kick cells, pulse cells for idiom hands and trains, open hats
+  on the pulse's last eighth, fills of whole pulses. Recipe, persona and
+  drummer swing are zero in compound meters (the engine path too); explicit
+  swing still applies. Drum-only sections take their grouping from the
+  meter rather than the harmony plan.
+- **Feel precedence.** The drummer's feel is published for every feel, so a
+  straight drummer keeps recipe swing (punk_triplet's 0.35) out of the band.
+  Explicit drum swing, the groove block and song `humanize_timing` still win.
+- **Jazz.** `JazzKit` replaces random per-beat cells: ride on every beat plus
+  skip notes (per-section figures: spang, skips every beat, a late skip, an
+  alternating skip on 3), the hi-hat foot (2 and 4; in 3/4 on 2, 3 or both),
+  a feathered kick on every beat with per-song bombs, comping at 0.34 to
+  0.5 of base on per-song spots and density, softer triplet fills. Every
+  seed keeps time: each beat of every groove bar has a ride (or closed-hat
+  stick) stroke.
+- **Dance.** `DanceKit` (dance, electronic, techno, house, disco, EDM
+  genres, matched on words): kick on every beat, offbeat hat figures per
+  section, clap/snare/both on 2 and 4, a percussion layer, intro entries by
+  halves, kickless or half-time breakdowns, self-building prechoruses,
+  roll or kick-drop phrase ends, a pickup kick, and some songs with swung
+  sixteenths.
+- **Build.** The big fill spanned the bar, so the snare eighths never
+  sounded. A build is now its own device: one or two bars (per song) of
+  snare rising from eighths to sixteenths, the groove's backbeat giving way,
+  the kick on every beat under the sixteenths, no fill.
+- **Bridge start.** The transition thinned every other non-downbeat event
+  (crash on the half beat, the beat-2 snare) and assumed 4 beats. It now
+  uses the bridge's meter, leaves composed drums alone, and thins only hand
+  timekeeping of engine drums.
+- **Solo drums.** Half of each phrase's backbeats became tom answers. The
+  backbeat now stays; bars 2 and 4 answer on their last beat.
+- **Feel knobs.** `hat_density` and `kick_density` apply to every section
+  type, idiom hand patterns, jazz and dance players and the country waltz.
+- **Ride bell.** Groove memory restated groove bars from a source bar, so
+  occasional `ride_bell` accents vanished; bell kinds are now protected
+  decorations.

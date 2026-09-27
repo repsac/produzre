@@ -117,8 +117,13 @@ def test_reggae_one_drop_keeps_beat_one_open():
 
 def test_jazz_drum_comping_varies_across_songs():
     dna = [compose_drum_dna(seed=s, genre='jazz') for s in range(12)]
-    assert len({d.grooves['verse'] for d in dna}) >= 8
-    assert len({d.hand_patterns['verse'] for d in dna}) >= 8
+    # Every song swings its own way inside the idiom: ride figures per
+    # section, comping density and placement, the foot, feathering, bombs.
+    kits = {(d.jazz.ride['verse'], d.jazz.ride['solo'], d.jazz.comp['verse'], d.jazz.comp_spots,
+             d.jazz.foot, d.jazz.feather, d.jazz.bombs) for d in dna}
+    assert len(kits) >= 10
+    assert len({d.jazz.ride['verse'] for d in dna}) >= 3
+    assert len({d.jazz.comp_spots for d in dna}) >= 2
 
 
 def test_riff_pocket_uses_effective_drum_dna_and_excludes_suppressed_kicks():

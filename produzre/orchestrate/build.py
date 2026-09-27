@@ -336,7 +336,7 @@ def build_song(
 
     # Phase 3: Transition-aware arranging - evaluate and apply
     # Analyze energy profiles between sections and generate transition plans.
-    transition_plans = evaluate_transitions(cfg, plan, timelines, logger)
+    transition_plans = evaluate_transitions(cfg, plan, timelines, logger, performance_plan=performance_plan)
 
     # Apply transition plans to timelines (Phase 3: ramp_up, ramp_down)
     for transition_plan in transition_plans:

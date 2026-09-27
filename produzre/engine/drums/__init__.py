@@ -30,6 +30,11 @@ from .humanize import humanize_events
 from .ornaments import add_ornaments
 from .patterns import DrumEvent, events_for_section_from_template
 
+# The engine's template velocities against the composed drummer's touch at
+# the same base velocity (kick and snare means across genres and seeds),
+# for sections the composed drummer hands to the engine.
+_HANDOFF_TOUCH = 0.86
+
 
 
 def _get_mapping(obj: Any) -> Mapping[str, Any]:
@@ -996,6 +1001,11 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         "tom_high": 50,
         "tom_mid": 47,
         "tom_low": 45,
+        # Dance percussion (the composed four-on-the-floor drummer).
+        "clap": 39,
+        "tambourine": 54,
+        "cowbell": 56,
+        "shaker": 70,
     }
 
     # Base velocity
@@ -1426,28 +1436,61 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     _composed_plan = kwargs.get("plan")
     _composed = (_composed_plan.get(f"composer.drums.{section_id}")
                  if _composed_plan is not None and hasattr(_composed_plan, "get") else None)
+    # Section dynamics for the composed drummer: intensity (instrument, then
+    # the section's, including the planner's macro-dynamics escalation) and
+    # energy scale the whole kit, so a quiet verse sits under a loud chorus.
+    from ...composer.drums import section_level
+
+    _inst_intensity = _get_attr_or_key(inst, "intensity", None)
+    _level = section_level(intensity if _inst_intensity is None else float(_inst_intensity), energy)
     if isinstance(_composed, list) and _composed:
         events = [
             DrumEvent(
                 beat=float(h["beat"]),
                 duration_beats=float(h.get("dur", 0.25)),
                 pitch=int(pitches.get(str(h["voice"]), 38)),
-                velocity=max(1, min(127, int(round(base_velocity * float(h.get("vel", 1.0)))))),
+                velocity=max(1, min(127, int(round(base_velocity * _level * float(h.get("vel", 1.0)))))),
                 kind=str(h.get("kind", "hit")),
             )
             for h in _composed
             if 0.0 <= float(h["beat"]) < total_beats
         ]
+    elif _composed_plan is not None and hasattr(_composed_plan, "get") and \
+            _composed_plan.get(f"composer.drums_handoff.{section_id}"):
+        # A section the composed drummer hands to the engine (`intent`)
+        # plays at the drummer's dynamics. The engine's templates accent
+        # kick and snare about 15% above the composed touch at the same
+        # base velocity, so they are brought to it.
+        from dataclasses import replace as _replace_event
+
+        events = [
+            _replace_event(ev, velocity=max(1, min(127, int(round(ev.velocity * _level * _HANDOFF_TOUCH)))))
+            for ev in events
+        ]
 
     # Humanization params (defaults are persona/tight-friendly).
     timing_jitter_ms = float(params_m.get("timing_jitter_ms", 0.0))
     swing = float(params_m.get("swing", 0.0))
+    swing_16th = params_m.get("swing_16th")
     push_pull = float(params_m.get("push_pull", 0.0))
+    from ...composer.drums import is_compound
+    from ...composer.song import section_groups
+
+    _groups = section_groups(cfg, section, meter)
+    if is_compound(_groups):
+        # 6/8 and 12/8 are already in triplets: recipe and persona swing
+        # would make each group's eighths uneven. Explicit swing (drum
+        # params or the song's groove block) still applies.
+        if "swing" not in _user_set_keys and "swing" not in _groove_block:
+            swing = 0.0
+        if "swing_16th" not in _user_set_keys and "swing_16th" not in _groove_block:
+            swing_16th = 0.0
     _feel = (_composed_plan.get(f"composer.drums_feel.{section_id}")
              if _composed_plan is not None and hasattr(_composed_plan, "get") else None)
     if isinstance(_feel, dict) and isinstance(_composed, list) and _composed:
         # The composed drummer's feel (only published when the user set none).
         swing = float(_feel.get("swing", swing))
+        swing_16th = _feel.get("swing_16th", swing_16th)
         push_pull = float(_feel.get("push_pull", push_pull))
     velocity_humanize = float(params_m.get("velocity_humanize", 0.05))
 
@@ -1463,7 +1506,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             "velocity_humanize": velocity_humanize,
             "source": "drums.params",
         }
-        _swing_16th_raw = params_m.get("swing_16th")
+        _swing_16th_raw = swing_16th
         if _swing_16th_raw is not None:
             try:
                 _groove_payload["swing_16th"] = float(_swing_16th_raw)
@@ -1483,7 +1526,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         bpm=bpm,
         timing_jitter_ms=timing_jitter_ms,
         swing=swing,
-        swing_16th=params_m.get("swing_16th"),
+        swing_16th=None if swing_16th is None else float(swing_16th),
         push_pull=push_pull,
         velocity_humanize=velocity_humanize,
         rng=rng,

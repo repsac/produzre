@@ -100,7 +100,10 @@ every meter; a recipe's rate is scaled to the section's bar length.
 Every internal beat is a quarter note. A bar lasts 4 beats in 4/4, 3 in 3/4 or
 6/8, 3.5 in 7/8, and 5 in 5/4. The drum grid has four steps per quarter note.
 6/8 groups eighth notes into two dotted-quarter pulses; it does not use the
-3/4 backbeat. A section `meter` overrides the song meter. Full-song MIDI and
+3/4 backbeat. The composed drummer plays 6/8 and 12/8 on the dotted-quarter
+pulse and its eighths: the backbeat on pulses 2 and 4 in 12/8 (the second
+pulse in 6/8), kicks on the eighth grid, and fills of whole pulses. Drum-only
+sections get the grouping from their meter, with or without a progression. A section `meter` overrides the song meter. Full-song MIDI and
 stems (one MIDI file per instrument) carry time-signature changes; section clips
 (one section at a time) and patterns carry their own
 meter. Explicit `beats_per_bar` can disagree with the signature, so use `meter`
@@ -140,6 +143,12 @@ Implicit intensity rises by 0.05 per repeat of the same section type, up to
 0.10 extra. Explicit intensity stays fixed. Instrument intensity overrides
 section intensity. Use `enabled: false` to silence an instrument; intensity is
 an expression control, so notes can still play at zero.
+
+The composed drummer's velocity follows intensity and energy: a verse at the
+defaults (0.65, energy 0.3) plays at its base touch, a default chorus about a
+quarter louder, and each implicit repeat a little louder again. A section
+handed to the drum engine by `intent` plays at the same dynamics as the
+composed sections around it.
 
 The ensemble planner assigns lead activity windows, accompaniment density,
 and fill ownership. Short sections still get a lead window. Bass can avoid
@@ -241,10 +250,15 @@ groove:
 | Instrument `velocity_humanize` | 0-1 | persona | Seeded velocity variation. Drums have a 0.05 fallback. Without a preset: 0. |
 
 Drum `params.swing` and `params.swing_16th` override the global groove when
-explicitly set. The global groove overrides persona and recipe swing. Without
-a global groove, the resolved drum recipe supplies the band's swing, including
-sections where drums are silent. True triplet attacks are not swung again.
-Drum fills and pickups follow the same clock.
+explicitly set. The global groove overrides persona and recipe swing. A
+composed drummer's feel comes next: a straight, laid-back or pushing drummer
+plays even eighths and a shuffle drummer swings, and the band follows, so a
+recipe's swing never reaches a song whose drummer plays straight. Without a
+global groove or a composed drummer, the resolved drum recipe supplies the
+band's swing, including sections where drums are silent. Compound meters
+(6/8, 9/8, 12/8) are already in triplets, so recipe, persona and drummer swing
+do not apply there; an explicit swing still does. True triplet attacks are not
+swung again. Drum fills and pickups follow the same clock.
 
 Pitched instruments use one shared timing pass after rendering. Explicit
 `pocket_ms` wins over the groove mapping, then nonzero `push_pull`, then the
@@ -437,7 +451,7 @@ for inferred positions near the backbeat.
 | `hats.velocity.bias` | Signed velocity units | 0 | Velocity units added to all hand-played hats/ride, default 0. |
 | `toms.groove.rate`, `toms.fills.rate` | 0-1 each | 0, 0 | Additional groove toms and fill runs, default 0. |
 | `crash.rate`, `crash.placements` | 0-1; placement list | recipe | Crash chance and candidate positions. |
-| `ride.bell_rate` | 0-1 | 0 | Ride-bell chance, default 0. |
+| `ride.bell_rate` | 0-1 | 0 | Ride-bell chance per ride bar, default 0. Groove memory keeps the bell accents. |
 | `cymbals.splash_rate`, `cymbals.china_rate` | 0-1 each | 0, 0 | Extra cymbal probabilities, default 0. |
 
 Voice `params` also accepts the older flat fields: hats `density`, `open_rate`
@@ -705,10 +719,34 @@ The drums are composed unless their params set `voices`, `recipe`,
 `pattern`, or `riff_accent_rate`, the section sets `intent`, or a
 `drum_groove` theme exists; `composer: false` on the drums also keeps the
 drum engine. `ghost_rate`, `fill_rate`, `kick_density`, and `hat_density`
-shape the composed drummer. The song's feel applies only when you set no
+shape the composed drummer in every section: `hat_density` 0.3 or less puts
+the hands on quarter notes (dotted quarters in 6/8 and 12/8) and 0.8 or more
+on sixteenth-note hats; `kick_density` 0.3 or less keeps the kick on 1 and 3
+and 0.7 or more adds an offbeat kick to every beat without a backbeat.
+The song's feel applies only when you set no
 `swing`, `push_pull`, `timing_jitter_ms`, groove block swing, or song
 `humanize_timing`. A `seed` on an instrument or section re-rolls that
 part's drummer or comp figures.
+
+Jazz and swing songs get a swing drummer: the ride on every beat with skip
+notes on the swung "and" (spang-a-lang, or the jazz waltz's 1, 2&, 3), the
+hi-hat foot on 2 and 4 (on 2, on 3, or on 2 and 3 in 3/4), a feathered kick on
+every beat with the odd bomb, and the left hand comping quietly between the
+beats. Each song draws its own ride figures per section, comping density and
+placement, foot, feathering and bombs; `hat_density` moves the ride to plain
+quarters or skip notes on every beat. Dance, dance-pop, electronic, techno,
+house, disco and EDM songs get a four-on-the-floor drummer: the kick on every
+beat, the song's hat figure on the offbeats, clap or snare (or both) on 2 and
+4, a percussion layer (shaker, tambourine, cowbell or a chorus ride), intros
+that bring the kit in by halves, bridges and breakdowns without the kick (or
+at half time), and phrase ends that roll or drop the kick. A prechorus can
+build by itself from quarters to sixteenths, and the kick sits out the last
+beat before a chorus.
+
+The drums play the `into_chorus` device too: `build` is a snare roll that
+rises from eighths to sixteenths over the last bar or two (each song draws
+the length), distinct from `fill`. Drums alone keep the backbeat in every
+bar and answer on the toms on the last beat of bars 2 and 4 of each phrase.
 
 ### Bass hook responses
 
@@ -772,7 +810,7 @@ Include every setting you want to keep.
 | `ramp_bars` | 0-2 bars | 1 | Energy-ramp length, clamped to 0-2 bars. |
 | `pickup_rate` | 0-1 | 0.35 | Set the chance of a planned pickup. |
 | `turnaround_rate` | 0-1 | 0.25 | Set the chance of a planned turnaround. |
-| `bridge_start_bars` | 0-2 bars | 1 | Bridge introduction length, clamped to 0-2 bars. |
+| `bridge_start_bars` | 0-2 bars | 1 | Bridge introduction length in the bridge's meter, clamped to 0-2 bars. The composed drummer's bar keeps every hit; engine drums thin only hand timekeeping, never the kick, backbeat or crash. |
 | `debug` | Boolean | false | Detailed transition logging. |
 
 Drum `pickup_rate` and `downbeat_rate` are separate performance controls.

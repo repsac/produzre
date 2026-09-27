@@ -32,8 +32,10 @@ from .theory import ChordMap, scale_pcs
 GROOVE_INSTRUMENTS = ("drums", "bass", "rhythm_gtr", "acoustic_gtr")
 
 # Event kinds that belong to a bar's decoration, never restated or replaced.
+# Ride-bell accents ("ride_bell") are occasional by design: restating a
+# groove bar without one would erase them.
 _PROTECTED_TOKENS = ("fill", "pickup", "turnaround", "cadence", "crash", "transition",
-                     "tom", "cymbal", "splash", "china", "stop", "hit", "accent_hit")
+                     "tom", "cymbal", "splash", "china", "stop", "hit", "accent_hit", "bell")
 _APPROACH_TOKENS = ("approach", "passing", "chromatic", "walk")
 
 # Genres whose grooves are two-bar phrases (clave, one-drop, funk answers).
