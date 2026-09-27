@@ -2,6 +2,33 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Config, guitar and docs fixes from the examples findings
+
+- The top-level `engines:` block works as documented: each field overrides
+  the built-in registry (program, channel, priority, new engines). Registry
+  fields on a global `instruments:` entry still apply; `engines` wins when
+  both set a field, and the build logs the conflict.
+- A `persona` on a section's instrument applies its params for that
+  section, at the persona layer (persona < recipe < global params < section
+  params). `params.persona` works too.
+- The build warns about instrument params no built-in engine reads, naming
+  the key, where it was set and the closest known keys; `validate` reports
+  the same lines. Section-level registry fields and unknown `engines`
+  fields are flagged too.
+- Rhythm-guitar walks only lead into chord changes: a riff's walk over a
+  held chord becomes a hold, and a phrase-end walk-up into the same chord
+  becomes root and fifth. The approach note is chromatic unless it rubs a
+  semitone against the chord it is played over (C, not C#, into Dm over Am).
+- `sustain_mode` plays held chords on both classic renderers (struck on each
+  chord, restruck every `sustain_duration` beats, not palm-muted by the
+  section default); `sustain_duration` caps every strum on every renderer,
+  composed comping included. Composed comping logs the classic renderers'
+  controls (`mute`, `retrigger`, a `register` preset and so on) as unused.
+- Acoustic `capo` is consistent in the composed fingerstyle: thumb, inner
+  voice and melody all sound in the song's key over capo-relative shapes.
+  Barre shapes sit at their lowest position on the neck, and picked melodies
+  (including groove-memory restatements) stay at or below A5.
+
 ### Examples for the current app
 
 - New `examples/songs/`: twelve complete songs across genres and meters.

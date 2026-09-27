@@ -460,9 +460,11 @@ def mutate_riff(riff: CompRiff, rng: random.Random, family: str, count: int = 2)
                 steps[rng.choice(chugs)] = "."
                 applied.append(op)
         elif op == "walk":
-            # A bass-string pickup in the gap before a later beat.
+            # A bass-string pickup in the gap before a later beat, or before
+            # the next bar line, where chords usually change. The walk only
+            # sounds where it lands on a new chord (see riff_events).
             gaps = [i for i in range(sub, n) if steps[i] in ".-" and (i + 1) % sub == 0
-                    and i + 1 < n and steps[i + 1] in _EVENT_CHARS]
+                    and steps[(i + 1) % n] in _EVENT_CHARS]
             if gaps:
                 steps[rng.choice(gaps)] = "w"
                 applied.append(op)
@@ -549,11 +551,49 @@ def _performance_grid(riff: CompRiff, bpb: float, groups):
     return _fit_steps(riff.steps, bpb, groups), riff.subdivision
 
 
+def _walk_landing(steps: str, i: int, bar_start: float, bpb: float, step: float,
+                  chords: ChordMap):
+    """The chord a walk at step ``i`` lands on, if it lands on a change.
+
+    A walk lands on the next attack in the bar that is not itself a walk,
+    or on the next bar line when nothing follows it. Returns None when the
+    chord there is the one the walk is played over (or the section ends
+    first).
+    """
+    k = next((j for j in range(i + 1, len(steps))
+              if steps[j] in _EVENT_CHARS and steps[j] != "w"), None)
+    landing = bar_start + (k * step if k is not None else bpb)
+    current = chords.at(bar_start + i * step)
+    if current is None or landing >= chords.total - 1e-6:
+        return None
+    nxt = chords.at(landing)
+    if nxt is None or (nxt.pcs == current.pcs and nxt.root_pc == current.root_pc):
+        return None
+    return nxt
+
+
+def _land_walks(steps: str, bar_start: float, bpb: float, step: float, chords: ChordMap) -> str:
+    """Keep only the walks that lead into a chord change.
+
+    A walking note is an approach: over a held chord it is a stray chromatic
+    note every bar. Where the chord does not change, the step holds the
+    previous gesture instead (or stays silent after a rest).
+    """
+    if "w" not in steps:
+        return steps
+    out = list(steps)
+    for i, c in enumerate(steps):
+        if c == "w" and _walk_landing(steps, i, bar_start, bpb, step, chords) is None:
+            out[i] = "-"
+    return "".join(out)
+
+
 def riff_events(riff: CompRiff, bar_start: float, bpb: float, chords: ChordMap,
                 *, tag: str = "comp", groups: Optional[Sequence[float]] = None) -> List[CompEvent]:
     """Expand one bar of a riff into events."""
     steps, sub = _performance_grid(riff, bpb, groups)
     step = 1.0 / sub
+    steps = _land_walks(steps, bar_start, bpb, step, chords)
     events: List[CompEvent] = []
     arp_i = 0
     i = 0
@@ -575,10 +615,7 @@ def riff_events(riff: CompRiff, bar_start: float, bpb: float, chords: ChordMap,
             else "down"
         target = None
         if kind == "walk":
-            current = chords.at(beat)
-            nxt = next((sp for sp in chords.spans if sp.start > beat + 1e-6
-                        and (current is None or sp.pcs != current.pcs)), current)
-            target = nxt.root_pc if nxt is not None else None
+            target = _walk_landing(steps, i, bar_start, bpb, step, chords).root_pc
         events.append(CompEvent(round(beat, 4), dur, kind, accent=c in "XPS/", direction=direction,
                                 arp_index=arp_i if kind == "arp" else 0, target_pc=target, tag=tag))
         if kind == "arp":
@@ -588,11 +625,23 @@ def riff_events(riff: CompRiff, bar_start: float, bpb: float, chords: ChordMap,
 
 
 def _walk_up(bar_start: float, bpb: float, sub: int, chords: ChordMap) -> List[CompEvent]:
-    """The last beat of a phrase: root, then a stepwise walk into the next chord."""
+    """The last beat of a phrase: root, then a stepwise walk into the next chord.
+
+    When the next phrase starts on the same chord there is nothing to walk
+    into, so the phrase is answered with root and fifth instead.
+    """
     last = bar_start + bpb - 1.0
     nxt_beat = bar_start + bpb
-    nxt = chords.at(min(nxt_beat + 1e-3, chords.total - 1e-3))
-    target = nxt.root_pc if nxt is not None else None
+    here = chords.at(last)
+    nxt = chords.at(nxt_beat) if nxt_beat < chords.total - 1e-6 else None
+    if nxt is None or here is None or (nxt.pcs == here.pcs and nxt.root_pc == here.root_pc):
+        # No change to walk into: answer the phrase on the bass strings.
+        second = 2.0 / 3.0 if sub == 3 else 0.5
+        return [CompEvent(round(last, 4), round(second - 0.05, 4), "root", accent=True,
+                          tag="comp_fill"),
+                CompEvent(round(last + second, 4), round(1.0 - second - 0.05, 4), "fifth",
+                          tag="comp_fill")]
+    target = nxt.root_pc
     if sub == 3:
         offs = (0.0, 2.0 / 3.0)
     else:

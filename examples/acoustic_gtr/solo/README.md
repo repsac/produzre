@@ -33,10 +33,10 @@ An explicit `picking_pattern` or another technique keeps the acoustic
 engine, which is what `strum-and-slap-acoustic.yaml` uses to show all of
 its techniques in one song.
 
-## Known limits
+## Capo and shapes
 
-- `capo` does not transpose the composed fingerstyle correctly (the thumb,
-  inner voice and melody move by different amounts), so these pieces do
-  not use it.
-- `voicing_style: barre` with a picked melody can push the melody above the
-  guitar's range; the cinematic bridge uses open shapes instead.
+A `capo` changes the chord shapes, not the key: the thumb, inner voice and
+melody all sound in the song's key, over shapes fingered above the capo.
+Barre shapes sit at their lowest position on the neck, and picked melodies
+stay at or below A5, so `voicing_style: barre` works with any picking
+pattern. These pieces pin `voicing_style: open` for the open-string ring.

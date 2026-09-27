@@ -3,10 +3,11 @@ from __future__ import annotations
 """Engine registry construction and dynamic engine-module loading.
 
 This module is responsible for producing a runtime registry of `Engine` objects
-from two sources:
+from these sources, later ones winning field by field:
 
-1) Package defaults: `produzre/config/engines.yml`
-2) Project overrides: the top-level `instruments:` mapping in a song YAML
+1) Package defaults: `produzre/resources/engines.yml`
+2) Registry fields on a global `instruments:` entry (older configs)
+3) The song's top-level `engines:` block (the documented place)
 
 Each engine entry ultimately resolves to a Python module that provides a
 callable `render_into_timeline(...)` function plus optional module constants
@@ -26,6 +27,7 @@ Notes:
 """
 
 import importlib
+import logging
 import pathlib
 import sys
 from typing import Any, Dict
@@ -35,6 +37,12 @@ import yaml
 from .errors import ConfigError
 from .yaml_io import read_yaml_file
 from ..model import Engine
+
+logger = logging.getLogger(__name__)
+
+# Fields an engine entry may set (resources/engines.yml, engine/ENGINES.md).
+_REGISTRY_FIELDS = {"engine", "priority", "channel", "program", "enabled",
+                    "requires", "provides", "roles"}
 
 
 def _load_yaml_dict(path: pathlib.Path) -> Dict[str, Any]:
@@ -105,13 +113,15 @@ def build_engine_registry(raw_root: Dict[str, Any]) -> Dict[str, Engine]:
     """Build the runtime engine registry from defaults + project-level overrides.
 
     Sources:
-      - Defaults are loaded from `produzre/config/engines.yml`.
-      - Project overrides are read from the top-level `instruments:` mapping in
-        the song YAML (provided here as `raw_root`).
+      - Defaults are loaded from `produzre/resources/engines.yml`.
+      - Registry fields on the top-level `instruments:` entries (older configs).
+      - The top-level `engines:` mapping, the documented place for engine
+        registration and program, channel or priority overrides.
 
     Merge behavior:
-      - For each instrument name in the union of (defaults ∪ project overrides),
-        we merge mappings with project values overriding defaults.
+      - For each name in the union of all three, mappings merge field by
+        field: defaults < `instruments` < `engines`. A field given in both
+        song blocks takes the `engines` value (the build logs the conflict).
       - `engine` is required after merging; if missing, a ConfigError is raised.
 
     Module loading:
@@ -130,7 +140,7 @@ def build_engine_registry(raw_root: Dict[str, Any]) -> Dict[str, Engine]:
 
     Raises:
         ConfigError:
-            - If `instruments` is present but not a mapping.
+            - If `instruments` or `engines` is present but not a mapping.
             - If any default or override entry is not a mapping.
             - If the engine module cannot be imported.
             - If the module does not provide a callable `render_into_timeline`.
@@ -145,7 +155,12 @@ def build_engine_registry(raw_root: Dict[str, Any]) -> Dict[str, Engine]:
     if not isinstance(project_instruments, dict):
         raise ConfigError("Top-level 'instruments' must be a mapping if present.")
 
-    instrument_names = set(default_engines.keys()) | set(project_instruments.keys())
+    project_engines = raw_root.get("engines") or {}
+    if not isinstance(project_engines, dict):
+        raise ConfigError("Top-level 'engines' must be a mapping if present.")
+
+    instrument_names = (set(default_engines.keys()) | set(project_instruments.keys())
+                        | set(project_engines.keys()))
     registry: Dict[str, Engine] = {}
 
     # IMPORTANT: relative engine paths like `.engine.bass` must be resolved
@@ -155,13 +170,23 @@ def build_engine_registry(raw_root: Dict[str, Any]) -> Dict[str, Engine]:
     for name in sorted(instrument_names):
         default_cfg = default_engines.get(name, {}) or {}
         override_cfg = project_instruments.get(name, {}) or {}
+        engine_cfg = project_engines.get(name, {}) or {}
 
         if not isinstance(default_cfg, dict):
             raise ConfigError(f"Default engine config for '{name}' must be a mapping.")
         if not isinstance(override_cfg, dict):
             raise ConfigError(f"Project instrument config for '{name}' must be a mapping.")
+        if not isinstance(engine_cfg, dict):
+            raise ConfigError(f"Engine config 'engines.{name}' must be a mapping.")
 
-        merged = {**default_cfg, **override_cfg}
+        for field in sorted(set(override_cfg) & set(engine_cfg) & _REGISTRY_FIELDS):
+            if override_cfg[field] != engine_cfg[field]:
+                logger.warning(
+                    "Engine '%s': %s is set in both instruments.%s (%r) and engines.%s (%r); "
+                    "using engines.%s.", name, field, name, override_cfg[field], name,
+                    engine_cfg[field], name,
+                )
+        merged = {**default_cfg, **override_cfg, **engine_cfg}
 
         engine_path = merged.get("engine")
         if not engine_path:

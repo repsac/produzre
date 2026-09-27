@@ -7,7 +7,7 @@ small example.
 
 ## Registration
 
-Add an entry to the song's top-level `engines` block, or to a user engine registry:
+Add an entry to the song's top-level `engines` block:
 
 ```yaml
 engines:
@@ -25,7 +25,10 @@ engines:
 Install the module in the Python environment that runs Produzre so the loader can import it. A
 leading dot, as in `.engine.arpeggiator`, means relative to `produzre`.
 Built-in entries live in [resources/engines.yml](../resources/engines.yml).
-A song entry can override individual registry fields, such as a channel or program.
+A song entry can override individual registry fields, such as a channel or program;
+fields it leaves out keep the built-in values. Registry fields on a global
+`instruments:` entry (older configs) also apply, but `engines` wins when both
+set the same field, and the build logs the conflict.
 
 | Field | Meaning |
 |---|---|

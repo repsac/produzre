@@ -145,7 +145,6 @@ sections:
           solo: true
           theme_quote_rate: 0.5
           rest_probability: 0.15
-          leap_probability: 0.3
   breakdown:
     type: breakdown
     bars: 4

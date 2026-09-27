@@ -189,7 +189,9 @@ section's harmony block or `song.turnarounds: true`.
 ## Recipes and personas
 
 Merge order is persona, recipe, global instrument params, then section params.
-Later values win, including explicit zero. Recipes are selected by genre,
+Later values win, including explicit zero. A `persona` on a section's
+instrument replaces the global persona for that section only, at the same
+lowest layer. Recipes are selected by genre,
 section type, tempo, and section meter. An explicit instrument `recipe` wins
 over automatic selection. A section instrument `genre` overrides the global
 instrument genre, which overrides `song.genre`.
@@ -483,6 +485,8 @@ renderer that follows drum density when drum features are available.
 | `phrase_len_bars`, `phrase_development` | Integer >= 1; Boolean | 4, true | Phrase cycle and bar-to-bar variation. |
 | `lock_to_riff` | 0-1 | 0 | Probability of adopting riff accent positions. |
 | `vibrato_rate` | 0-1 | 0.4 | Chance a chord held 0.75 beats or longer gets a pitch-bend vibrato. Pitch bend is per channel, so the whole chord moves. |
+| `sustain_mode` | Boolean | false | Held chords on either renderer: each chord is strummed when it arrives and restruck every `sustain_duration` beats while it lasts, ringing open unless you set `mute`. It replaces the strum pattern and selects the pattern or grid renderer over composed comping. |
+| `sustain_duration` | 0.1-16 beats | 2 in `sustain_mode`, else unset | Longest any strum rings, on every renderer. Without it the pattern renderer rings a strum at most one beat. |
 | `push_pull`, `pocket_ms`, `timing_jitter_ms`, `velocity_humanize` | See [Shared timing](#shared-timing) | See Shared timing | One shared feel pass. |
 
 Styles: `auto`, `straight_8s`, `chugs`, `syncopated`, `half_time`, `rock_riff`,
@@ -496,7 +500,6 @@ nothing and were removed from presets; set the top-level groove instead.
 | `style` | `chug` or unset | Unset | `chug` selects muted gallops. |
 | `density`, `contrast` | 0.25-2; 0-1 | 1, 0.75 | Density multiplier (0.25-2) and section contrast (0-1). |
 | `mute` | 0-1 | Section-dependent | Mute amount, 0-1. Direct `playstyle: pmute` also works. |
-| `sustain_mode`, `sustain_duration` | Boolean; 0.1-16 beats | false, 2 | Held chords and maximum sustain in beats (0.1-16). |
 | `strum`, `strum_beats`, `strum_dir` | 0-1; nonnegative beats; `down`, `up`, `alt` | 0, derived, `down` | Strum amount, explicit spread in beats, and `down`/`up`/`alt`. |
 | `retrigger` | `all`, `beat`, `bar`, `chord`, `accent`, `none` | Derived | `all`, `beat`, `bar`, `chord`, `accent`, or `none`. |
 | `reattack_vel`, `reattack_dur`, `reattack_strum` | Nonnegative multipliers | 0.92, 0.75, 0.35 | Repeated-stroke velocity, duration, and spread multipliers. |
@@ -513,8 +516,13 @@ Unless you pin a rhythm style, the composer writes the rhythm guitar. Each
 song draws its own signature figures from an idiomatic vocabulary: dead-note
 chucks, bass-string walks, sus4 hammer-ons, slid chords, boogie dyads, stabs,
 and gallops. It arranges them so the verse, chorus, and bridge contrast.
-Phrases walk up into the next phrase, and the bar before a chorus is
-stop-time. Settings that choose a different part keep your choice: `style`,
+Phrases walk up into the next phrase's chord, and the bar before a chorus
+is stop-time. A walk only ever leads into a chord change: where the chord
+holds, a riff's walking note becomes part of the previous gesture and a
+phrase-end walk-up becomes root and fifth. The approach note is chromatic
+unless it would rub a semitone against the chord it is played over; then
+it is the scale tone below the target (B C into D over A minor, not C#).
+Settings that choose a different part keep your choice: `style`,
 `strum_style`, `sustain_mode`, `playstyle`, `pattern`, `play_pattern`,
 `follow_hats`, `use_patterns`, `recipe`, `lock_to_riff`, and
 `composer: false`. Feel settings shape the composed part instead:
@@ -527,11 +535,20 @@ stop-time. Settings that choose a different part keep your choice: `style`,
 | `sustain_cut_rate` | Chance a strum is cut to a stab. |
 | `voicing` | `power` or `octaves` plays power shapes throughout. |
 | `register_min`, `register_max` | Shapes shift by octaves to fit. |
+| `sustain_duration` | Longest any note rings, in beats. |
 | `accent_strength`, `downbeat_boost`, `humanize_velocity` | Dynamics. |
 | `strum_ms`, `humanize_timing`, `offset_beats`, `style_bias` | Timing and intensity. |
 
-`phrase_len_bars`, `phrase_development`, and `section_contrast` tune only the
-pattern engine; the build logs that they are unused.
+The shared timing controls (`push_pull`, `pocket_ms`, `timing_jitter_ms`,
+`velocity_humanize`) apply to every renderer. The pattern and grid
+renderers' own controls (`register` presets, `phrase_len_bars`,
+`phrase_development`, `section_contrast`, `contrast`, `mute`, `strum`,
+`strum_beats`, `strum_dir`,
+`retrigger`, `hit_strategy`, `stab_beats`, the `reattack_*` multipliers,
+`voice_leading`, `voice_range_low`, `voice_range_high`, `octave`,
+`accent_syncopation`, and `vibrato_rate`) are unused by composed comping;
+the build logs that they are unused and names `composer: false` as the way
+to use them.
 
 ## Lead guitar controls
 
@@ -574,13 +591,20 @@ you set in a section's own `extra:` block always do. A numeric `register: [low, 
 including solos; named presets retain their comfortable-range headroom.
 Extremely narrow ranges can constrain authored pitches and melodic contour.
 
-Rhythm `density`, `palm_mute`, `voicing`, `register_min`, `register_max`,
-`accent_strength`, `push_pull`, `chuck_rate`, `humanize_velocity`,
-`downbeat_boost`, `sustain_cut_rate`, `section_contrast`, `phrase_len_bars`,
-and `phrase_development` also select the legacy path when explicitly set.
-Direct instrument `recipe`, `voicing`, humanization, `style_bias`, or
-`offset_beats` overrides do likewise. Composed rhythm still supports
-`params.strum_ms` and `params.humanize_timing` directly.
+The rhythm guitar follows the same rule; see
+[Composed comping](#composed-comping). Its feel settings (`density`,
+`palm_mute`, `voicing`, `register_min`, `register_max`,
+`accent_strength`, `chuck_rate`, `humanize_velocity`, `humanize_timing`,
+`downbeat_boost`, `sustain_cut_rate`, `sustain_duration`, `strum_ms`,
+`style_bias`, and `offset_beats`, as params or direct instrument fields)
+shape the composed comping. Only the settings that choose a different part
+(`style`, `strum_style`, `sustain_mode`, `playstyle`, `pattern`,
+`play_pattern`, `follow_hats`, `use_patterns`, `recipe`, a nonzero
+`lock_to_riff`, or `composer: false`) select the pattern or grid renderer.
+A `register` preset (`low`, `mid`, `high`), `section_contrast`,
+`phrase_len_bars`, `phrase_development`, and the other renderer-only
+controls are logged as unused; use `register_min` and `register_max` to
+place composed comping.
 
 ### The composer
 
@@ -620,7 +644,7 @@ expression; bends, slides, and staccato follow the composed techniques.
 | `melody_amount` | 0-1 | 0.72 picked/hybrid, otherwise 0 | Control how strongly the treble melody follows the guide. |
 | `phrase_variation` | 0-1 | 0.35 | Omit or vary selected picked notes. |
 | `voicing_style` | `open`, `barre`, `auto` | persona | Choose the chord shape. Engine fallback: `auto`. |
-| `capo` | Integer 0-12 | 0 | Raise chord shapes by this many frets. |
+| `capo` | Integer 0-12 | 0 | Finger the chord shapes above a capo at this fret. The part still sounds in the song's key; the capo changes the shapes and their open-string ring. |
 | `strum_density` | 0.05-1 | By section | Control how many eligible strums play. |
 | `mute_ratio`, `body_tap_ratio` | 0-1 each | persona | Dampened strokes and body taps. Engine fallback: 0.08, 0. |
 | `vel_variation` | Nonnegative velocity units | persona | Velocity-unit variation per hit. Engine fallback: 8. |
@@ -629,7 +653,10 @@ expression; bends, slides, and staccato follow the composed techniques.
 Intros, verses, bridges, and outros usually fingerpick; choruses strum;
 prechoruses use hybrid playing; breakdowns use percussion. Personas can override these section defaults; the built-in `natural` persona
 sets touch and voicing controls. A custom persona can also set technique. Treble melody notes follow the shared
-guide while thumb notes and chord shapes remain playable. Each string stops
+guide while thumb notes and chord shapes remain playable. Barre shapes sit at
+their lowest position above the capo (B as an A-form at fret 2), and a
+picked melody reaches at most nine semitones above the shape and never
+above A5 unless a high capo puts the shape itself there. Each string stops
 before its next picked note. Body taps use short low MIDI notes.
 
 ## Arpeggiator controls
@@ -821,8 +848,25 @@ Instrument fields also include `enabled`, `intensity`, `seed`, `variation`,
 `style_bias`, `offset_beats`, `register`, `solo`, `role`, `persona`, `recipe`,
 `genre`, `voicing`, and `playstyle`. Support for the last two, offsets, and style
 bias is engine-specific. Configure MIDI `channel`, `program`, `priority`,
-`enabled`, `requires`, `provides`, and `roles` in the `engines` registry, not
-instrument params. See the [engine guide](../produzre/engine/ENGINES.md).
+`enabled`, `requires`, `provides`, and `roles` in the top-level `engines`
+block, not instrument params:
+
+```yaml
+engines:
+  lead_gtr: {program: 40}    # violin
+  bass: {program: 42}        # cello
+```
+
+Each field overrides the built-in registry; unset fields keep their
+defaults. Older configs that put these fields on a global `instruments:`
+entry still work. When both blocks set the same field, `engines` wins and
+the build logs a warning. On a section's instrument they have no effect,
+and the build says so. See the [engine guide](../produzre/engine/ENGINES.md).
+
+The build also logs a warning for any instrument param no built-in engine
+reads (a typo or a setting from another instrument), naming the key, where
+it was set, and the closest known keys. The part still builds; the
+setting is ignored. `produzre validate` reports the same lines.
 
 ## Working from a musical description
 

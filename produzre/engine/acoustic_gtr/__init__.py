@@ -86,6 +86,19 @@ def _resolve_root(cfg, section, numeral: str, instrument_cfg) -> int:
     return tonic_midi + semitone
 
 
+def _melody_window(top: int) -> tuple:
+    """Picked-melody range over a shape whose highest string sounds ``top``.
+
+    Up to nine semitones above the shape (a reach up the top strings), but
+    never above the acoustic's melodic ceiling unless the shape itself
+    sounds that high (a high capo).
+    """
+    from ...composer.acoustic import MELODY_CEILING
+
+    hi = min(top + 9, max(MELODY_CEILING, top))
+    return min(max(55, top - 5), hi), hi
+
+
 def _slot_for_beat(harmony_plan: HarmonySectionPlan, beat: float):
     """Return the ChordSlot covering the given section-local beat position."""
     for cs in harmony_plan.chord_slots:
@@ -410,7 +423,7 @@ def _render_fingerpicking(
             if is_melody:
                 top = max(rv.pitches) if rv.pitches else pitch
                 guided = guide_pitch_at(
-                    melody_guide, local_beat, max(55, top - 5), min(88, top + 9),
+                    melody_guide, local_beat, *_melody_window(top),
                     previous=previous_melody or pitch,
                 )
                 if guided is not None:
@@ -646,7 +659,7 @@ def _render_hybrid(
             if is_melody:
                 top = max(rv.pitches) if rv.pitches else pitch
                 guided = guide_pitch_at(
-                    melody_guide, local_beat, max(55, top - 5), min(88, top + 9),
+                    melody_guide, local_beat, *_melody_window(top),
                     previous=previous_melody or pitch,
                 )
                 if guided is not None:

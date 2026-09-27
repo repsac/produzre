@@ -13,14 +13,17 @@ from produzre.engine.lead_gtr import _perform_composed
 from produzre.timeline import InstrumentTimeline
 
 
-def test_walk_targets_next_harmony_not_next_attack():
-    riff = CompRiff('probe', ('rock',), 'low', 'w-x-x-x-x-x-x-x-', 1.0)
+def test_walk_targets_the_chord_it_lands_on():
+    riff = CompRiff('probe', ('rock',), 'low', 'x-x-x-x-x-x-x-xw', 1.0)
     cm = ChordMap(_slots(['I', 'IV']), 'C', 'major')
-    assert riff_events(riff, 0, 4, cm)[0].target_pc == 5
+    walk = [e for e in riff_events(riff, 0, 4, cm) if e.kind == 'walk']
+    assert [e.target_pc for e in walk] == [5]
+    # Over the held chord at the end of the section there is nothing to walk into.
+    assert not [e for e in riff_events(riff, 4, 4, cm) if e.kind == 'walk']
 
 
 def test_walk_does_not_inherit_arpeggio_index():
-    riff = CompRiff('probe', ('rock',), 'low', 'a-a-w---X-------', 1.0)
+    riff = CompRiff('probe', ('rock',), 'low', 'a-a-a-a-a-a-a-w-', 1.0)
     cm = ChordMap(_slots(['I', 'IV']), 'C', 'major')
     walk = next(e for e in riff_events(riff, 0, 4, cm) if e.kind == 'walk')
     assert walk.arp_index == 0

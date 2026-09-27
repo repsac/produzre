@@ -52,8 +52,11 @@ and `composer: false`.
 
 - [classic-engine-demo.yaml](classic-engine-demo.yaml): `composer: false` with pattern styles (`straight_8s`, `chugs`, `pop_push`, `half_time`, `syncopated`), `strum_style`, `phrase_len_bars` and `section_contrast`.
 
-`phrase_len_bars`, `phrase_development` and `section_contrast` tune only the
-classic engine; with composed comping the build log lists them as unused.
+`phrase_len_bars`, `phrase_development`, `section_contrast` and the other
+pattern and grid controls (`mute`, `strum`, `retrigger`, `hit_strategy` and
+so on) tune only the classic engine; with composed comping the build log
+lists them as unused. `sustain_duration` caps how long any strum rings on
+every renderer, and `sustain_mode` plays held chords on the classic engine.
 The classic engine's other controls, including its grid renderer
 (`use_patterns: false`) and `follow_hats`, are in the
 [rhythm guitar reference](../../docs/llm-song-config-reference.md#rhythm-guitar-controls).

@@ -347,12 +347,18 @@ def _resolve_movable(
     profile: InstrumentProfile,
     capo: int,
     allow_quality_fallback: bool = True,
+    lowest_position: bool = False,
 ) -> Optional[ResolvedVoicing]:
     """Find a movable barre form that fits this root and quality.
 
     With ``allow_quality_fallback=False`` only exact-quality forms are tried,
     so callers can prefer an exact movable match (e.g. min7 barre) over a
     quality-degraded open shape.
+
+    With ``lowest_position`` the root octave is ignored: every form is placed
+    at its lowest barre fret (1-12 above the capo) and the lowest-placed
+    form wins, the way a player reaches for B as an A-form at fret 2 rather
+    than an E-form at fret 7.
     """
     if not profile.barre_capable:
         return None
@@ -366,6 +372,7 @@ def _resolve_movable(
         if fallback_q:
             candidates = [f for f in _MOVABLE_FORMS if f.quality == fallback_q]
 
+    best: Optional[Tuple[int, ResolvedVoicing]] = None
     for form in candidates:
         if form.root_string >= profile.num_strings:
             continue
@@ -374,6 +381,8 @@ def _resolve_movable(
 
         # Root fret: how far up the neck to place the root
         root_fret = root_midi - capo - profile.open_tuning[form.root_string]
+        if lowest_position:
+            root_fret = (root_fret - 1) % 12 + 1
         if root_fret < 1:  # can't play open strings as a barre
             continue
         if root_fret > profile.num_frets - profile.max_fret_span:
@@ -399,14 +408,18 @@ def _resolve_movable(
         if len(played) < form.min_strings:
             continue
 
-        return ResolvedVoicing(
+        voicing = ResolvedVoicing(
             profile=profile,
             frets=abs_frets,
             capo=capo,
             shape_name=f"{form.name}@fret{root_fret}",
         )
+        if not lowest_position:
+            return voicing
+        if best is None or root_fret < best[0]:
+            best = (root_fret, voicing)
 
-    return None
+    return best[1] if best is not None else None
 
 
 # ===========================================================================
@@ -552,6 +565,7 @@ def select_voicing(
     capo: int = 0,
     prev_voicing: Optional[ResolvedVoicing] = None,
     prefer_open: bool = True,
+    lowest_position: bool = False,
 ) -> ResolvedVoicing:
     """Select a physically playable chord voicing for the given parameters.
 
@@ -571,6 +585,9 @@ def select_voicing(
         capo:         Capo fret position (0 = no capo).
         prev_voicing: Previous chord's ResolvedVoicing for voice-leading.
         prefer_open:  If True, try open shapes first (for "open" and "auto" styles).
+        lowest_position: If True, movable forms sit at their lowest barre
+                      position regardless of the root's octave (see
+                      ``_resolve_movable``).
 
     Returns:
         ResolvedVoicing with fret positions and all pitch/string helpers.
@@ -591,7 +608,8 @@ def select_voicing(
     #: exact quality always beats a quality-degraded simplification.
     if result is None:
         result = _resolve_movable(
-            root_midi, quality, profile, capo, allow_quality_fallback=False
+            root_midi, quality, profile, capo, allow_quality_fallback=False,
+            lowest_position=lowest_position,
         )
 
     # Step 3: Quality-degraded open shape, then quality-degraded movable form
@@ -600,7 +618,8 @@ def select_voicing(
         if prefer_open:
             result = _try_open_shape(root_pc, fallback_q, profile, capo)
         if result is None:
-            result = _resolve_movable(root_midi, quality, profile, capo)
+            result = _resolve_movable(root_midi, quality, profile, capo,
+                                      lowest_position=lowest_position)
 
     # Step 4: Greedy fallback (always succeeds)
     if result is None:
