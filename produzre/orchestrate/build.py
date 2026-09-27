@@ -266,8 +266,15 @@ def build_song(
             next_section_type = getattr(plan.planned_sections[idx + 1].sec, "type", None)
 
         next_energy = None
+        next_section = next_first_numeral = None
         if idx < total_sections - 1:
             next_sec = plan.planned_sections[idx + 1].sec
+            # A line that steps into the next section (a walking bass's last
+            # bar) aims at that section's first chord.
+            next_section = next_sec
+            next_slots = getattr(plan.planned_sections[idx + 1].harmony_plan, "chord_slots", None)
+            if next_slots:
+                next_first_numeral = str(next_slots[0].numeral)
             next_energy = resolve_section_energy(
                 getattr(next_sec, "energy", None),
                 str(getattr(next_sec, "type", "") or ""),
@@ -282,6 +289,8 @@ def build_song(
             "current_energy": current_energy,
             "prev_energy": prev_energy,  # For energy lift/drop detection
             "next_energy": next_energy,
+            "next_section": next_section,
+            "next_first_numeral": next_first_numeral,
             # Arrangement occurrence index: lets engines resolve the correct
             # per-occurrence transition directive for repeated sections
             # (see orchestrate.transitions.get_section_transition).

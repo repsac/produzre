@@ -929,6 +929,7 @@ def _render_legacy_bass(
 
     # Track previous pitch for voice leading
     prev_pitch = None
+    prev_kind: Optional[str] = None
 
     # Phase B5: Track passing tones per bar
     current_bar = -1
@@ -1331,6 +1332,7 @@ def _render_legacy_bass(
             if pitch is not None:
                 # Update previous pitch for voice leading
                 prev_pitch = pitch
+                prev_kind = note_kind
 
                 # Skip to duration/velocity application
                 song_beat = section_start_beat + local_beat + offset_beats
@@ -1512,6 +1514,19 @@ def _render_legacy_bass(
                 pitch = _clamp_to_register(quoted, register_low, register_high)
                 note_kind = "motif"
 
+        # An approach resolves: the chord change right after it lands on the
+        # root it stepped toward (a step away), not on a fifth drop, a pedal
+        # or an octave jump drawn for the new chord. Authored motif quotes
+        # keep their pitch.
+        if is_chord_change and prev_pitch is not None and str(prev_kind or "").startswith(
+                "approach") and note_kind != "motif":
+            target_pc = chord_tones["root"] % 12
+            steps = [prev_pitch + d for d in (1, -1, 2, -2)
+                     if (prev_pitch + d) % 12 == target_pc
+                     and register_low <= prev_pitch + d <= register_high]
+            if steps:
+                pitch, note_kind = steps[0], "root"
+
         # Phase B5: Track passing/approach tones
         if note_kind == "approach_diatonic":
             passing_count_in_bar += 1
@@ -1524,6 +1539,7 @@ def _render_legacy_bass(
 
         # Update previous pitch for next iteration
         prev_pitch = pitch
+        prev_kind = note_kind
 
         song_beat = section_start_beat + local_beat + offset_beats
         # Keep note durations constrained by remaining chord span
@@ -1712,13 +1728,20 @@ def _render_walking_bass(*, cfg, section, harmony_plan, bpb, section_start_beat,
     total_beats = float(harmony_plan.chord_slots[-1].end_beat)
     meter = str(getattr(section, "meter", None) or getattr(cfg.song, "meter", None) or "")
     tc = transition_context if isinstance(transition_context, dict) else {}
+    # The last bar walks into the next section's first chord (the key's
+    # tonic when there is none), so its chromatic approach resolves.
+    final_pc = tonic_pc
+    nxt_sec, nxt_numeral = tc.get("next_section"), tc.get("next_first_numeral")
+    if nxt_sec is not None and nxt_numeral:
+        nxt_bass = (getattr(nxt_sec, "instruments", None) or {}).get("bass")
+        final_pc = _bass_root_for_numeral(cfg, nxt_sec, nxt_numeral, nxt_bass) % 12
     walk_rng = random.Random(_stream_seed("bass.walk", cfg, section, rng))
     notes = walk_section(
         chords, beats_per_bar=bpb, total_beats=total_beats,
         scale_pcs=[(tonic_pc + o) % 12 for o in offsets],
         register_low=int(register_low), register_high=int(register_high),
         chromatic_rate=float(chromatic_rate or 0.0), rng=walk_rng,
-        pulses=walk_pulses(bpb, meter), final_target_pc=tonic_pc,
+        pulses=walk_pulses(bpb, meter), final_target_pc=final_pc,
         cadence=bool(tc.get("is_last_section")),
     )
     pop_rate, thumb_rate, ghost_rate, vel_floor, pop_boost = slap

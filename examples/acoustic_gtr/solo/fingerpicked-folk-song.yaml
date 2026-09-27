@@ -11,7 +11,9 @@
 # same player): an alternating Travis thumb on root and fifth, a forward
 # roll for the verses and a banjo-style roll for the choruses. The top
 # voice follows the chords on the treble strings while the thumb keeps
-# time; the last bar is held.
+# time; the last bar is held. The tab (analysis/acoustic_gtr/*.tab.txt)
+# says CAPO: fret 2 and writes every fret relative to the capo, so it shows
+# the G, C and D shapes as they are fingered.
 #
 # Listen for:
 #   - intro and verses: the thumb alternates root and fifth on every beat

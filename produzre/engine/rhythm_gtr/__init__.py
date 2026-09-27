@@ -360,6 +360,17 @@ _KEY_TO_MIDI_ROOT: Dict[str, int] = {
 
 
 # Compute a rhythm guitar root MIDI note for a given chord numeral (modal logic, guitar register)
+def _home_shape(cfg: RootConfig, section: SectionConfig, rhythm_cfg) -> ChordShape:
+    """The tonic at its lowest position: where a section's first chord
+    leads from (see voicings.home_voicing)."""
+    from ...composer.theory import is_minorish
+    from .voicings import home_voicing
+
+    mode = getattr(section, "mode", None) or cfg.song.mode or "major"
+    numeral = "i" if is_minorish(mode) else "I"
+    return home_voicing(_rhythm_root_for_numeral(cfg, section, numeral, rhythm_cfg), numeral)
+
+
 def _rhythm_root_for_numeral(
     cfg: RootConfig,
     section: SectionConfig,
@@ -758,7 +769,9 @@ def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_st
             pass
         return ps
     shapes = []
-    prev_full = prev_power = None
+    # The first chord leads from the home position, like every later chord
+    # leads from the one before it (voicings.home_voicing).
+    prev_full = prev_power = _home_shape(cfg, section, instrument_cfg)
     for slot in harmony_plan.chord_slots:
         root = _rhythm_root_for_numeral(cfg, section, slot.numeral, instrument_cfg)
         power = choose_voicing(root_midi=root, numeral=slot.numeral, voicing_style="power",
@@ -929,7 +942,7 @@ def _render_pattern_based_guitar(
     # Phase RG1: Pre-generate chord voicings for all harmony slots
     # Now delegates to shared instruments library for physically playable shapes
     chord_voicings: Dict[str, ChordShape] = {}
-    prev_shape: Optional[ChordShape] = None
+    prev_shape: Optional[ChordShape] = _home_shape(cfg, section, rhythm_cfg)
 
     for chord_slot in harmony_plan.chord_slots:
         # Compute root MIDI note from the numeral

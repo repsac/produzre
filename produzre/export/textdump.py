@@ -322,12 +322,20 @@ def write_tabs(
 
         bars_total = int(math.ceil(max_beat / bpb)) if max_beat > 0 else 1
 
+        # A capoed part is tabbed relative to the capo, as it is fingered.
+        capo_by_bar: dict[int, int] = {}
+        for w_start, w_end, fret in getattr(tl, "capo_windows", ()) or ():
+            for b in range(1, bars_total + 1):
+                if w_start - 1e-6 <= (b - 1) * bpb < w_end - 1e-6:
+                    capo_by_bar[b] = int(fret)
+
         txt = tab_text_from_rows(
             rows,
             beats_per_bar=bpb,
             subdiv=steps_per_bar,
             instrument=inst,
             bars_total=bars_total,
+            capo_by_bar=capo_by_bar,
         )
 
         with path.open("w", encoding="utf-8") as f:

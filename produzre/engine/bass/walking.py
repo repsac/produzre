@@ -168,7 +168,10 @@ def walk_section(
             target = None
         else:
             tpc = root_pc if final_target_pc is None else int(final_target_pc) % 12
-            target = _nearest((tpc,), d, lo, hi)
+            # The next section's walk opens on this pitch class nearest the
+            # register's center (its first downbeat has no previous note):
+            # aim there, so the approach is a half step from what sounds.
+            target = _nearest((tpc,), center, lo, hi)
         if n >= 2:
             if target is None:
                 # The song's last bar: arpeggiate down to the root.

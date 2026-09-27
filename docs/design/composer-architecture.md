@@ -208,7 +208,10 @@ dyads, partial-chord stabs, and palm-muted gallops.
   engine's playable chord shapes: strum spread by direction, partial
   upstrokes, 60 ms dead-note chucks, chugs and boogies on the low strings,
   a sus4 that pulls off to the third while the other strings ring, and slides
-  written as pitch bend.
+  written as pitch bend. Shapes are voice-led chord to chord; the section's
+  first chord leads from the home position (`voicings.home_voicing`: the
+  tonic at its lowest position), so it is not left at whatever octave its
+  root falls in (a minor key's bVI used to open a chorus around fret 13).
 
 Explicit user choices win, in three tiers. Settings that choose a different
 part (`style`, `strum_style`, `sustain_mode`, `playstyle`, `pattern`,
@@ -446,8 +449,14 @@ metrics for the musical findings and limits of the pocket measurements.
   drop the engine drew for the restated bar itself (`fifth_jump_rate`)
   keeps its fifth. Restated bass pitches stay inside the bass register.
 - **Chord-relative restatement.** A restated pitch follows the root and keeps
-  its chord role (a third stays a third). Approach notes aim at the next
-  bar's chord.
+  its chord role (a third stays a third). Approach notes aim at the chord
+  they resolve into (the next change inside the bar, else the next bar's).
+  A chromatic approach (tagged so, or outside the key) keeps its semitone
+  distance to the new root instead of snapping onto the scale, and then
+  sits in the octave beside the note that chord is played on; a bass line
+  whose next bar opens elsewhere (a kept fifth drop) resolves to that root.
+  Unpitched gestures (acoustic `body_tap`) keep their fixed pitch, key
+  shifts included.
 - **Space is kept.** A bar the engine left empty stays empty; decorations
   (crashes, fills, pickups) are never restated or replaced.
 - **Recall.** A section type recalls the groove it established when the part
@@ -811,3 +820,36 @@ The examples rewrite found seven lead and arpeggiator problems. What changed:
   wrong note for `up_down` and `down`); chords spell sevenths and extensions
   (6, 9, 11, 13 and alterations); velocity spans about 30 to 100 with
   intensity, plus bass and metric accents.
+
+## Guitar, export and groove-memory review (2026-09-26, second round)
+
+Found after the examples rewrite; each fix has property tests in
+`tests/test_guitar_export_fixes.py`.
+
+- **Body taps.** Groove memory mapped the acoustic's `body_tap` (a fixed
+  E2 dead note) chord-relatively, so restated taps changed pitch with the
+  chords. Unpitched gestures now keep their pitch.
+- **Chromatic approaches.** Restatement snapped out-of-key approach notes
+  onto the scale (C before D instead of C#). They are now transposed with
+  the root and placed a half step from the note they resolve into. The
+  bass engine resolves its own approaches the same way: the chord change
+  after an approach lands on the root it stepped toward, not on a fifth
+  drop, pedal or octave jump drawn for the new chord. A walking line's last
+  bar aimed at the key's tonic in a register the next section did not use;
+  it now aims at the next section's first chord (`next_first_numeral` in the
+  transition context) where that section's walk opens.
+- **Section-start voicing.** The rhythm guitar's first chord of a section had
+  no previous shape, so a movable shape sat at its root's octave: harbour
+  road's choruses opened on F an octave above the rest. The first chord now
+  leads from the home position.
+- **Section-start dynamics.** The transition planner measured pitched parts
+  per note, so a verse ending in four-note dead-note chucks looked denser
+  than a chorus of three-note stabs; the "energy jump" triggered a bridge
+  start that pulled the chorus's first bar toward the chucks' velocity.
+  Pitched parts are now measured per gesture (notes within a strum's spread
+  are one attack), with chucks, ghosts and body taps left out of the
+  loudness. Drums still count every hit.
+- **Capo in tabs.** Tabs ignored the capo. Parts record `capo_windows` on
+  their timeline; the tab view writes frets relative to the capo and a
+  `CAPO` line. A pitch struck twice within one tab step is one fretted note
+  (it was forced onto a second string).
