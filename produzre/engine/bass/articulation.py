@@ -153,3 +153,43 @@ def apply_style_duration(
 
     # Ensure minimum duration
     return max(0.1, duration)
+
+
+def articulate_written_note(
+    articulation_style: str,
+    *,
+    duration: float,
+    velocity: int,
+    strong: bool,
+    offbeat: bool,
+    octave_up: bool,
+    rng,
+    slap_pop_rate: float = 0.4,
+    slap_thumb_rate: float = 0.9,
+    ghost_perc_rate: float = 0.0,
+    slap_velocity_floor: int = 70,
+    pop_velocity_boost: int = 15,
+) -> tuple[float, int, str]:
+    """Play a composer-written bass note (a role, a riff double, a device hit)
+    with the bass's articulation. Returns (duration, velocity, kind suffix).
+
+    Written parts already have their own note lengths, so finger keeps them;
+    pick shortens and sharpens, mute dampens to a short thud, and slap turns
+    strong beats into thumb hits and octave or offbeat notes into pops.
+    """
+    from .slap import apply_slap_duration, apply_slap_velocity, determine_slap_technique
+
+    style = str(articulation_style or "finger").lower()
+    if style == "pick":
+        return max(0.1, duration * 0.8), max(1, min(127, int(max(velocity, 65) * 1.05))), ""
+    if style == "mute":
+        return max(0.1, min(duration * 0.45, 0.45)), max(1, int(velocity * 0.85)), "_mute"
+    if style == "slap":
+        technique = determine_slap_technique(
+            is_strong_beat=strong, is_offbeat=offbeat or octave_up,
+            slap_pop_rate=1.0 if octave_up else slap_pop_rate,
+            slap_thumb_rate=slap_thumb_rate, ghost_perc_rate=ghost_perc_rate, rng=rng)
+        dur = apply_slap_duration(min(duration, 1.0), technique)
+        vel = apply_slap_velocity(velocity, technique, slap_velocity_floor, pop_velocity_boost)
+        return max(0.08, dur), vel, "" if technique == "normal" else f"_slap_{technique}"
+    return duration, velocity, ""

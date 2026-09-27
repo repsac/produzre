@@ -19,7 +19,7 @@ import logging
 import random
 from collections.abc import Mapping
 from dataclasses import fields
-from typing import Any, Optional, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..model import RootConfig
 from ..rng import make_instrument_rng, stable_seed_int
@@ -1093,6 +1093,7 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
         seed=seed,
         cycle_override=params.get("groove_cycle_bars"),
         intensity=_as_float(getattr(inst_cfg, "intensity", None), getattr(sec, "intensity", None)),
+        register=_bass_register_bounds(sec, params) if inst_name == "bass" else None,
     )
     if report.get("applied"):
         timeline.events[events_before:] = replaced
@@ -1324,49 +1325,94 @@ def _flat_extra(inst_cfg) -> dict:
     return out
 
 
+def _bass_register_bounds(sec, params) -> Tuple[int, int]:
+    """The bass's effective range: user bounds, else recipe, persona, engine
+    default (28-52). A featured bass section reaches ``solo_register_high``."""
+    try:
+        lo = int(params.get("register_low", 28))
+        hi = int(params.get("register_high", 52))
+        if getattr(sec, "solo", None) is True or getattr(sec, "role", None) == "lead":
+            hi = max(hi, int(params.get("solo_register_high", 64)))
+    except (TypeError, ValueError):
+        lo, hi = 28, 52
+    return lo, max(lo, hi)
+
+
 def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timeline,
                                  events_before, section_start_beat, performance_plan,
                                  transition_context, logger) -> None:
     """The bass follows the song's arrangement DNA: it waits out a riff-alone
-    intro, and (when the song chose it) doubles the signature riff, playing
-    the single-note tail alone where the guitar leaves it open."""
+    intro, plays the band's device into a chorus and its ending, and (when
+    the song chose it) doubles the signature riff, playing the single-note
+    tail alone where the guitar leaves it open. Composed notes take the
+    bass's articulation, and every note stays inside the bass's range."""
     if inst_name != "bass" or performance_plan is None or hplan is None:
         return
-    composer = performance_plan.get("composer.song")
-    if composer is None or not _flag(effective_params_dict(inst_cfg).get("composer")):
-        return
-    arrangement = composer.arrangement_dna()
     new_events = timeline.events[events_before:]
     if not new_events:
         return
-    from ..composer.arrangement import intro_entry_bar
+    params = effective_params_dict(inst_cfg)
+    lo, hi = _bass_register_bounds(sec, params)
+    events = list(new_events)
+    composer = performance_plan.get("composer.song")
+    if composer is not None and _flag(params.get("composer")):
+        events = _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_beat,
+                               performance_plan, transition_context, composer, params, lo, hi,
+                               timeline, logger)
+    # Register: explicit bounds win, then the recipe's, the persona's, and
+    # the engine's. Authored motif notes keep the theme's own register unless
+    # the user bounded the bass.
+    explicit = performance_plan.get(f"composer.bass_register.{sec.id}") or {}
+    from ..engine.bass.voicing import clamp_to_register
 
+    for e in events:
+        if str(e.kind or "") == "motif" and not explicit:
+            continue
+        e.pitch = clamp_to_register(e.pitch, lo, hi)
+    timeline.events[events_before:] = events
+
+
+def _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_beat,
+                  performance_plan, transition_context, composer, params, lo, hi, timeline,
+                  logger):
+    from dataclasses import replace as _replace
+
+    from ..composer.arrangement import intro_entry_bar, into_chorus_device, riff_alone_intro
+    from ..composer.theory import ChordMap
+
+    arrangement = composer.arrangement_dna()
     bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
     total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
     bars = int(round(total / bpb)) if bpb > 0 else 0
     tc = transition_context if isinstance(transition_context, dict) else {}
-    enter = intro_entry_bar(arrangement, str(getattr(sec, "type", "")), bars,
-                            bool(tc.get("is_first_section")))
-    if not _is_band_section(sec):
-        enter = 0
     start0 = float(section_start_beat)
+    key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+    mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+    chords = ChordMap(hplan.chord_slots, key, mode)
+    parts = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+             if getattr(part, "enabled", True) is not False}
+    # The composed drummer plays the song's devices; the bass plays them
+    # with it. A drum engine the user configured plays straight through,
+    # and so does the bass.
+    with_drummer = bool(performance_plan.get(f"composer.drums.{sec.id}"))
+    enter = intro_entry_bar(riff_alone_intro(arrangement, parts), str(getattr(sec, "type", "")),
+                            bars, bool(tc.get("is_first_section"))) if with_drummer else 0
     events = [e for e in new_events if e.start_beat - start0 >= enter * bpb - 0.02]
-    if performance_plan.get(f"composer.bass_owned.{sec.id}", True):
-        timeline.events[events_before:] = events
-        return
+    velocities = sorted(e.velocity for e in new_events)
+    velocity = velocities[len(velocities) // 2]
+    template = new_events[0]
+    near = sorted(e.pitch for e in new_events)[len(new_events) // 2]
+    written = False
+    # A line the user chose, a walking line, or an authored bass motif owns
+    # the bass: the composer's roles and riff doubling step aside for it.
+    owned = performance_plan.get(f"composer.bass_owned.{sec.id}", True) \
+        or any(str(e.kind or "").startswith("walk_") for e in new_events) \
+        or bool((performance_plan.get(f"themes.realized.{sec.id}") or {}).get("bass_motif"))
     comp = performance_plan.get(f"composer.comp.{sec.id}")
     riff = [e for e in (comp or {}).get("events", []) if e.get("tag") == "comp_riff"]
-    if riff and arrangement.bass_doubles:
-        from dataclasses import replace as _replace
-
-        from ..composer.theory import ChordMap
-
-        key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
-        mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
-        chords = ChordMap(hplan.chord_slots, key, mode)
-        velocities = sorted(e.velocity for e in new_events)
-        velocity = velocities[len(velocities) // 2]
-        template = new_events[0]
+    if owned:
+        pass
+    elif riff and arrangement.bass_doubles:
         doubled = []
         # The bass answers in the bars where the guitar leaves its tail open.
         for r in riff + list((comp or {}).get("answers", [])):
@@ -1374,7 +1420,7 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
             if span is None or float(r["beat"]) < enter * bpb - 1e-6:
                 continue
             pc = (span.root_pc + int(r.get("interval") or 0)) % 12
-            pitch = min((p for p in range(28, 48) if p % 12 == pc),
+            pitch = min((p for p in range(lo, max(min(48, hi + 1), lo + 12)) if p % 12 == pc),
                         key=lambda p: (abs(p - 36), p))
             dur = float(r["dur"]) if r["kind"] != "rchug" else min(float(r["dur"]), 0.2)
             doubled.append(_replace(template, start_beat=start0 + float(r["beat"]),
@@ -1387,6 +1433,7 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
             # Transition and ending bars still need their engine bass line.
             kept = [e for e in events if int((e.start_beat - start0 + .02) / bpb) not in riff_bars]
             events = sorted(kept + doubled, key=lambda e: (e.start_beat, e.pitch))
+            written = True
             logger.info("Section '%s': bass doubles the signature riff", sec.id)
     elif _is_band_section(sec):
         # The song's bass role for this section (composer/bass.py).
@@ -1404,41 +1451,104 @@ def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, ti
         drums = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
         kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
         if role != "engine":
-            from dataclasses import replace as _replace
-
             from ..composer.song import section_groups
             from ..composer.bass import bass_bar
-            from ..composer.theory import ChordMap
 
-            key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
-            mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
-            chords = ChordMap(hplan.chord_slots, key, mode)
-            velocities = sorted(e.velocity for e in new_events)
-            velocity = velocities[len(velocities) // 2]
-            template = new_events[0]
-            near = sorted(e.pitch for e in new_events)[len(new_events) // 2]
-            written = []
+            role_events = []
             for b in range(enter, bars):
                 for t, d, p, acc in bass_bar(role, b * bpb, bpb, chords,
                                              approach=bass_dna.approach, near=near,
                                              last_bar=b == bars - 1 and not tc.get("next_section_type"),
                                              dna=bass_dna, kick=kick, section_type=st,
-                                             groups=section_groups(cfg, sec, hplan.meter)):
-                    written.append(_replace(template, start_beat=start0 + t,
-                                            duration_beats=max(0.1, d), pitch=p,
-                                            velocity=min(127, int(velocity * (1.06 if acc else 0.94))),
-                                            kind=f"bass_{role}", expression=None))
-            if written:
-                events = written
+                                             groups=section_groups(cfg, sec, hplan.meter),
+                                             lo=lo, hi=hi):
+                    role_events.append(_replace(template, start_beat=start0 + t,
+                                                duration_beats=max(0.1, d), pitch=p,
+                                                velocity=min(127, int(velocity * (1.06 if acc else 0.94))),
+                                                kind=f"bass_{role}", expression=None))
+            if role_events:
+                events = role_events
+                written = True
                 logger.info("Section '%s': bass plays %s", sec.id, role)
-    register = performance_plan.get(f"composer.bass_register.{sec.id}") or {}
-    if register:
-        from ..engine.bass.voicing import clamp_to_register
 
-        lo, hi = int(register.get("register_low", 0)), int(register.get("register_high", 127))
-        for e in events:
-            e.pitch = clamp_to_register(e.pitch, lo, hi)
-    timeline.events[events_before:] = events
+    # The band's device in the last bar: into a chorus, or the song's ending.
+    device = ""
+    if with_drummer and bars > 0:
+        if tc.get("is_last_section"):
+            device = "ending_" + str(getattr(arrangement, "ending", "ring") or "ring")
+        else:
+            device = into_chorus_device(arrangement, str(getattr(sec, "type", "") or ""),
+                                        tc.get("next_section_type") or "verse")
+    last = (bars - 1) * bpb
+    if device and bars - 1 >= enter:
+        from ..composer.bass import device_bar
+
+        played = device_bar(device, last, bpb, chords, near=near, lo=lo, hi=hi)
+        if played is not None:
+            cut, notes = played
+            kept = []
+            for e in events:
+                local = e.start_beat - start0
+                if local >= cut - 0.02:
+                    continue
+                if local + e.duration_beats > cut - 0.02:
+                    e.duration_beats = max(0.05, cut - local - 0.02)
+                kept.append(e)
+            for t, d, p, scale, kind in notes:
+                kept.append(_replace(template, start_beat=start0 + t, duration_beats=d, pitch=p,
+                                     velocity=max(1, min(127, int(velocity * scale))), kind=kind,
+                                     expression=None))
+            events = sorted(kept, key=lambda e: (e.start_beat, e.pitch))
+            written = True
+            timeline.device_windows.append((start0 + last, start0 + last + bpb))
+            logger.info("Section '%s': bass plays the band's %s", sec.id, device.replace("_", " "))
+
+    if written:
+        events = _articulate_written_bass(events, sec, params, bpb, start0, transition_context)
+    return events
+
+
+def _articulate_written_bass(events, sec, params, bpb, start0, transition_context):
+    """Composed bass notes (roles, riff doubles, device hits) are played with
+    the bass's articulation, like the engine's own line."""
+    style = str(params.get("articulation_style", "finger") or "finger").lower()
+    if style not in ("pick", "mute", "slap"):
+        return events
+    from ..engine.bass.articulation import articulate_written_note
+
+    written_kinds = ("bass_", "riff_double", "stop_hit", "push_hit", "build_drive",
+                     "ending_hit")
+    index = int((transition_context or {}).get("arrangement_index", 0) or 0)
+    rng = random.Random(stable_seed_int("bass.articulation", getattr(sec, "id", ""), index,
+                                        style))
+
+    def rate(name, default):
+        try:
+            return float(params.get(name, default))
+        except (TypeError, ValueError):
+            return default
+
+    lows: Dict[int, int] = {}
+    for e in events:
+        bar = int((e.start_beat - start0 + 0.02) // bpb)
+        lows[bar] = min(lows.get(bar, 127), int(e.pitch))
+    for e in events:
+        kind = str(e.kind or "")
+        if not kind.startswith(written_kinds):
+            continue  # the engine already articulated its own notes
+        local = e.start_beat - start0
+        on_beat = abs(local - round(local)) < 0.03
+        bar = int((local + 0.02) // bpb)
+        dur, vel, suffix = articulate_written_note(
+            style, duration=float(e.duration_beats), velocity=int(e.velocity),
+            strong=on_beat, offbeat=not on_beat, octave_up=int(e.pitch) - lows[bar] >= 12,
+            rng=rng, slap_pop_rate=rate("slap_pop_rate", 0.4),
+            slap_thumb_rate=rate("slap_thumb_rate", 0.9),
+            ghost_perc_rate=rate("ghost_perc_rate", 0.0),
+            slap_velocity_floor=int(rate("slap_velocity_floor", 70)),
+            pop_velocity_boost=int(rate("pop_velocity_boost", 15)))
+        e.duration_beats, e.velocity, e.kind = dur, vel, kind + suffix
+    return events
 
 
 def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, events_before,
@@ -1599,9 +1709,9 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     performance_plan.set(f"composer.drum_dna.{sec.id}", dna)
     active = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
               if name != "harmony" and getattr(part, "enabled", True) is not False}
-    arrangement = composer.arrangement_dna()
-    if not active.intersection({"rhythm_gtr", "acoustic_gtr"}):
-        arrangement = _replace(arrangement, intro="full")
+    from ..composer.arrangement import riff_alone_intro
+
+    arrangement = riff_alone_intro(composer.arrangement_dna(), active)
     hits = plan_drum_section(
         dna, arrangement, section_type=str(getattr(sec, "type", "") or ""),
         bars=bars, beats_per_bar=bpb,

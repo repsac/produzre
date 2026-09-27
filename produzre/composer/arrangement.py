@@ -43,6 +43,43 @@ def intro_entry_bar(arrangement: "ArrangementDNA", section_type: str, bars: int,
     return 0
 
 
+# Parts that can play a riff by themselves at the top of a riff-alone intro.
+RIFF_PLAYERS = ("rhythm_gtr", "acoustic_gtr")
+
+_SECTION_ALIASES = {"pre-chorus": "prechorus", "pre_chorus": "prechorus", "hook": "chorus",
+                    "interlude": "bridge", "lead": "solo"}
+
+
+def riff_alone_intro(arrangement: "ArrangementDNA", parts) -> "ArrangementDNA":
+    """The one rule for who plays a riff-alone intro, shared by every part.
+
+    The riff needs a guitar to play it alone (rhythm or acoustic). Without
+    one the whole band plays the intro from the top. With one, the drums
+    and bass wait out the first half together (``intro_entry_bar``) while
+    the guitar plays; a lead guitar does not count, it plays over a band.
+    """
+    if getattr(arrangement, "intro", "full") != "riff_alone":
+        return arrangement
+    if set(parts or ()) & set(RIFF_PLAYERS):
+        return arrangement
+    from dataclasses import replace
+
+    return replace(arrangement, intro="full")
+
+
+def into_chorus_device(arrangement: "ArrangementDNA", section_type: str,
+                       next_section_type) -> str:
+    """The device the band plays in a section's last bar before a chorus, or ""."""
+    def norm(t):
+        t = str(t or "").strip().lower()
+        return _SECTION_ALIASES.get(t, t)
+
+    if next_section_type is None or norm(next_section_type) != "chorus" \
+            or norm(section_type) == "chorus":
+        return ""
+    return str(getattr(arrangement, "into_chorus", "") or "")
+
+
 def _pick(rng: random.Random, weights: dict) -> str:
     items = sorted(weights.items())
     total = sum(w for _, w in items)

@@ -214,7 +214,9 @@ is the parent of the path printed by `project path`.
 | `acoustic_gtr.persona` | `natural`, `precise`, `expressive`, `percussive`, `delicate` | `natural` | Choose the base playing character for acoustic guitar. |
 
 `tight` favors precise timing; `pocket` and `dub` bass sit behind the beat.
-`walking` favors quarter notes. `funk` bass uses slap articulation. `jangly`
+`walking` plays a walking line (`rhythm_pattern: walking`, see Bass controls);
+a recipe tunes its feel but never turns it back into a rhythm pattern. `funk`
+bass uses slap articulation. `jangly`
 guitar rings longer, while `funky` uses short and muted strokes. Lead personas
 change phrase length, rests, resolution, and contour. Acoustic personas change
 touch, timing, and muting. To change a recipe value, set that control explicitly.
@@ -297,7 +299,7 @@ register ranges and the treatment table.
 | Key | Range or values | Default | What it does |
 |---|---|---|---|
 | `bass.params.lock_to_riff` | 0-1 | 0 | Probability of playing each riff onset. With no bass motif, the riff's realized pitches are quoted at the same rate. |
-| `bass.params.motif_quote_rate` | 0-1 | 0.7 when a `bass_motif` theme exists | Probability of playing each motif onset and quoting its pitch. Approach and pedal notes are left alone. |
+| `bass.params.motif_quote_rate` | 0-1 | 1.0 when a `bass_motif` theme exists | Probability of quoting each motif note's pitch. An authored motif is the bass line: its rhythm and written lengths always play, and a note not quoted plays the chord root near it. 0 turns the coupling off and the bass plays its own line. |
 | `rhythm_gtr.params.lock_to_riff` | 0-1 | 0 | Probability of adding a riff onset to the accent targets. Chords retain their own voicings. |
 | `drums.params.riff_accent_rate` | 0-1 | 0 | Probability of adding a kick at a riff onset. Grid, backbeat spacing, and limb constraints still apply. |
 | `drums.params.riff_accent_boost` | Nonnegative multiplier | 1 | Velocity multiplier for existing kick/snare accents near riff onsets. |
@@ -305,7 +307,10 @@ register ranges and the treatment table.
 | `lead_gtr.params.theme_quote_rate` | 0-1 | 0.65 | Probability of quoting a nearby melody-theme pitch on eligible interior notes. |
 
 Bass, drums, and rhythm guitar require explicit coupling to the riff. An
-authored `bass_motif` or `drum_groove` theme is itself the opt-in. Lead
+authored `bass_motif` or `drum_groove` theme is itself the opt-in. An
+authored `bass_motif` owns the bass in every section, band sections
+included: the composer's bass roles and riff doubling step aside for it.
+With `lock_to_kicks: true` the kick fills only where the motif rests. Lead
 guitar, acoustic melody, and the phrase arpeggiator use the shared melody
 guide automatically. `grid`, MIDI `source`, and section-local theme blocks are
 not implemented. Unsupported keys inside a theme raise an error.
@@ -347,11 +352,11 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 
 | Key | Range or values | Default | What it does |
 |---|---|---|---|
-| `density` | 0-1 | persona | Keep more or fewer eligible rhythm slots. Tight: 0.7. |
-| `rest_rate` | 0-1 | persona | Remove selected notes to leave gaps. Tight: 0. |
-| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`. |
+| `density` | 0-1 | persona | Keep more or fewer eligible rhythm slots. Tight: 0.7. Every bar keeps at least one note. |
+| `rest_rate` | 0-1 | persona | Remove selected notes to leave gaps. Tight: 0. Every bar keeps at least one note. |
+| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`; walking persona: `walking`. |
 | `articulation_style` | `finger`, `pick`, `slap`, `mute` | persona | Change attack, length, and pattern bias. Tight: `finger`. |
-| `register_low`, `register_high` | MIDI pitches 0-127 | persona | Inclusive MIDI pitch limits. Tight: 28, 52. |
+| `register_low`, `register_high` | MIDI pitches 0-127 | persona | Inclusive MIDI pitch limits for every bass note, composed roles, riff doubles and groove-memory restatements included. Your values win over a recipe's, a recipe's over the persona's. Tight: 28, 52. |
 | `approach_rate`, `chromatic_rate` | 0-1 each | persona | Approach-note probability and chromatic choice. Approaches occur before chord changes. Tight: 0, 0. |
 | `max_passing_per_bar` | Integer >= 0 | persona | Passing-note limit per bar. Tight: 0. |
 | `root_bias` | 0-1 | 0.65 engine fallback | Chance of including the root among interior chord-tone candidates. |
@@ -360,7 +365,7 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 | `lock_to_kick`, `lock_to_snare`, `lock_to_hat` | 0-1 each | persona | Add notes at kick, accent, or top-cymbal attacks. Zero disables that source. Tight: 0.8, 0, 0. |
 | `lock_to_kicks` | Boolean | false | Alternate renderer based on drum kick attacks. Distinct from the probability above. |
 | `avoid_fills`, `octave` | Boolean; integer octave | true, 2 | Fill avoidance and starting octave in the alternate kick-locked renderer. |
-| `lock_to_riff`, `motif_quote_rate` | 0-1 each | 0; 0.7 with a bass motif | Theme coupling; see Themes. |
+| `lock_to_riff`, `motif_quote_rate` | 0-1 each | 0; 1.0 with a bass motif | Theme coupling; see Themes. |
 | `slide_rate` | 0-1 | 0.2 | Chance a note slides in from one or two semitones below, written as pitch bend. |
 | `vibrato_rate` | 0-1 | 0.35 | Chance a note held half a beat or longer gets a gentle pitch-bend vibrato. |
 | `accent_strength` | Nonnegative multiplier | persona | Velocity multiplier on accents. Tight: 1.1. |
@@ -376,6 +381,28 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 notes. Use `lock_to_kicks: true` for the alternate kick-led renderer. The older
 bass `swing` and `syncopation` fields were unused and have been removed from
 presets. Use the shared groove and `rhythm_pattern` instead.
+
+A bass line plays every bar. `density` and `rest_rate` thin a bar but never
+empty it; whole silent bars come only from the band's arrangement devices
+(a drop, stop-time, a riff-alone intro) or rests written into a `bass_motif`. The line's rhythm is drawn once per
+section type, so a returning chorus keeps its line instead of redrawing a
+thinner one.
+
+### Walking bass
+
+`rhythm_pattern: walking` (the walking persona sets it) plays a walking line
+planned a bar at a time. Every beat sounds (dotted quarters in 6/8, 9/8 and
+12/8), so every bar has its downbeat in any meter. Each chord starts on its
+root; a chord held into a new bar starts that bar on another chord tone. The
+last beat before each change steps into the next downbeat by a half step or a
+scale step; `chromatic_rate` is the share of half-step approaches. The inner
+beats connect the two with chord tones on the strong beats, and the root
+sounds only on the downbeat. `register_low` and `register_high` bound the
+line. `density`, `rest_rate`, the drum locks, octave jumps, fifth drops,
+fills, slides and vibrato do not apply to a walk: they shape rhythm patterns,
+and a walk has no gaps to fill. A walking line also keeps the engine's line
+in band sections and groove memory leaves it alone. The swing of the song's
+groove applies as usual.
 
 ## Drum controls
 
@@ -696,10 +723,29 @@ not inferred or rewritten.
 In band sections (drums and a guitar) the bass plays a per-song role for
 each section: the engine's line, the song's kick pattern, root eighths,
 octaves, a gallop, or held roots, each with the song's own variations.
-`rhythm_pattern`, `walking`, `lock_to_kick`, `lock_to_riff`, or a motif
-quote keep the engine's line.
+`rhythm_pattern`, `walking`, `lock_to_kick`, `lock_to_riff`, a motif
+quote, a walking persona, or an authored `bass_motif` keep the engine's line.
 Those choices also take precedence over automatic `bass_doubles`.
-Explicit bass register bounds apply after composed roles and doubling.
+The bass register (yours, else the recipe's or persona's) applies after
+composed roles and doubling, and `articulation_style` plays composed notes
+too: slap turns beats into thumb hits and octave or offbeat notes into
+pops, mute and pick shorten them.
+
+Where the composed drummer plays a section, the bass plays the song's
+devices with it, whatever line it plays. Into a chorus: `stop` hits the
+downbeat with the band and rests, `drop` drops out for the bar, `push`
+anticipates the chorus with the band's hit on the last eighth, `fill`
+leaves the last beat to the drum fill, and `build` drives root eighths that
+swell into the chorus. At the song's end the bass stops with a `cold`
+ending, hits and holds for a `big` one, and holds the root under a `ring`.
+A drum part you configured yourself plays straight through these bars, and
+so does the bass.
+
+A riff-alone intro needs a guitar to play the riff alone (rhythm or
+acoustic guitar in the intro; a lead guitar does not count). With one, the
+composed drums and the bass wait out the first half of the intro together.
+Without one, or when you configured the drums yourself, the whole band
+plays the intro from the top.
 
 The drums are composed unless their params set `voices`, `recipe`,
 `pattern`, or `riff_accent_rate`, the section sets `intent`, or a
@@ -749,10 +795,13 @@ engine's own fill, turnaround, or variation. Funk, reggae, Latin, soul, R&B,
 hip-hop, disco, and ska use a two-bar groove.
 
 Restated notes follow the chords and keep their role: a third stays a third,
-and approach notes aim at the next chord. Bars the engine left silent stay
-silent. A returning section type brings back its groove at the new dynamics.
-A clear intensity lift, such as a final chorus, plays its own groove instead.
-Parts that quote a riff or motif theme, and soloing parts, are left alone.
+and approach notes aim at the next chord. A restated bass bar starts on the
+root, unless the engine drew a fifth drop (`fifth_jump_rate`) for that bar.
+Restated pitches stay inside the bass register. Bars the engine left silent
+stay silent. A returning section type brings back its groove at the new
+dynamics. A clear intensity lift, such as a final chorus, plays its own
+groove instead. Parts that quote a riff or motif theme, walking bass lines,
+and soloing parts are left alone.
 
 | Key (instrument params) | Range or values | Default | What it does |
 |---|---|---|---|
@@ -828,8 +877,8 @@ instrument params. See the [engine guide](../produzre/engine/ENGINES.md).
 
 Start with tempo, key, genre, section order, and the instruments that should
 play. Then adjust only what you hear. For a quieter verse, lower its intensity
-or remove an instrument. For walking bass, use the walking persona and a jazz
-recipe. For a repeated hook, author a melody theme. For a heavy chorus, try
+or remove an instrument. For walking bass, use the walking persona (any
+genre) or `rhythm_pattern: walking`. For a repeated hook, author a melody theme. For a heavy chorus, try
 picked bass, a chugging guitar pattern, and fewer rests.
 
 Use [the examples](../examples/README.md) for complete arrangements, including

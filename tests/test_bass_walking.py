@@ -48,12 +48,14 @@ def test_walking_quarter_note_density():
             bar = int(parts[2])
             bars_with_counts[bar] = bars_with_counts.get(bar, 0) + 1
 
-    # With MIDI-learned defaults (density=0.57, rest_rate=0.24), walking
-    # bass produces fewer notes than the traditional 4-per-bar.
-    # Just verify we have some events across multiple bars.
+    # A walk plays every beat: four quarter notes in every 4/4 bar (the
+    # walking engine ignores density and rests, which thin rhythm patterns).
     total_events = sum(bars_with_counts.values()) if bars_with_counts else 0
-    assert total_events >= 2, \
-        f"Walking bass should produce at least 2 events, got {total_events}"
+    # (The persona plays slightly ahead of the beat, so the TSV can file a
+    # downbeat under the bar before; the total is exact.)
+    assert total_events == 4 * len(bars_with_counts), \
+        f"Walking bass should play four quarters a bar, got {bars_with_counts}"
+    assert all(3 <= n <= 5 for n in bars_with_counts.values()), bars_with_counts
 
     if bars_with_counts:
         avg_notes_per_bar = statistics.mean(bars_with_counts.values())
@@ -136,9 +138,9 @@ def test_walking_approach_tones():
         parts = line.split("\t")
         if len(parts) >= 12:
             voice_label = parts[11]
-            if voice_label == "approach_diatonic":
+            if voice_label.startswith("walk_approach_diatonic"):
                 diatonic_count += 1
-            elif voice_label == "approach_chromatic":
+            elif voice_label.startswith("walk_approach_chromatic"):
                 chromatic_count += 1
 
     total_approaches = diatonic_count + chromatic_count
@@ -151,8 +153,8 @@ def test_walking_approach_tones():
     # Chromatic may be zero with low chromatic_rate, but typically present
     # assert chromatic_count > 0, f"Should have chromatic approaches, found {chromatic_count}"
 
-    # Check log for approach statistics
-    assert "approaches=" in result.stderr, "Log should show approach statistics"
+    # Check the log names the walking line
+    assert "walking events" in result.stderr, "Log should report the walking line"
 
     print(f"✓ Approach tones present (total={total_approaches}, dia={diatonic_count}, chr={chromatic_count})")
 

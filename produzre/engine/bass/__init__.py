@@ -20,6 +20,7 @@ from ...model import (
 from ...harmony import HarmonySectionPlan
 from ...rhythm import RhythmGrid
 from ...timeline import InstrumentTimeline
+from ...rng import stable_seed_int
 
 # Import from patterns subpackage
 from .patterns import (
@@ -454,6 +455,11 @@ def render_into_timeline(
 
             _recipe = _all_recipes[_recipe_name]
             _rp = _recipe.get("params", {})
+            # A walking persona chooses the kind of line; a recipe tunes its
+            # feel but cannot turn the walk back into a rhythm pattern.
+            _existing = _effective_bass_params(instrument_cfg)
+            if _rp and _existing.get("rhythm_pattern") == "walking":
+                _rp = {k: v for k, v in _rp.items() if k != "rhythm_pattern"}
             if _rp:
                 # Merge honoring persona < recipe < user (see merge_recipe_params)
                 if isinstance(instrument_cfg, dict):
@@ -514,15 +520,23 @@ def render_into_timeline(
     except (TypeError, ValueError):
         lock_to_riff = 0.0
 
-    # A bass_motif theme supplies pitched onsets the bass quotes outright:
-    # placement (play where the motif plays) and pitch (sing its notes) are
-    # both gated by motif_quote_rate. An authored motif defaults to 0.7. With
-    # no motif, the riff's realized pitches stand in, gated by lock_to_riff.
+    # An authored bass_motif theme is the bass line: the bass plays its
+    # rhythm with its written lengths, and sings each note's pitch at
+    # motif_quote_rate (default 1.0 when authored; 0 turns the coupling off).
+    # With no motif, the riff's realized pitches stand in, gated by
+    # lock_to_riff, as onsets the engine line may take.
     motif_notes: list = []
+    motif_events: list = []
     if plan is not None and section is not None:
         from ...themes.coupling import get_theme_notes
 
         motif_notes = get_theme_notes(plan, section.id, "bass_motif")
+        realized = plan.get(f"themes.realized.{section.id}") if hasattr(plan, "get") else None
+        if isinstance(realized, dict):
+            motif_events = sorted(
+                (float(n["beat"]), float(n.get("duration_beats") or 0.5), int(n["pitch"]))
+                for n in realized.get("bass_motif") or []
+                if isinstance(n, dict) and "beat" in n and "pitch" in n)
     has_motif = bool(motif_notes)
     if not motif_notes and riff_onsets and lock_to_riff > 0:
         from ...themes.coupling import get_theme_notes
@@ -535,11 +549,11 @@ def render_into_timeline(
     if motif_quote_rate is None:
         motif_quote_rate = getattr(params, "motif_quote_rate", None)
     if motif_quote_rate is None:
-        motif_quote_rate = 0.7 if has_motif else (lock_to_riff if motif_notes else 0.0)
+        motif_quote_rate = 1.0 if has_motif else (lock_to_riff if motif_notes else 0.0)
     try:
         motif_quote_rate = max(0.0, min(float(motif_quote_rate), 1.0))
     except (TypeError, ValueError):
-        motif_quote_rate = 0.7 if has_motif else 0.0
+        motif_quote_rate = 1.0 if has_motif else 0.0
 
     # Theme attacks count as accent targets so placed notes punch with them.
     if (riff_onsets or motif_notes) and rhythm_intent is not None:
@@ -565,6 +579,7 @@ def render_into_timeline(
             lock_to_riff=lock_to_riff,
             motif_notes=motif_notes,
             motif_quote_rate=motif_quote_rate,
+            motif_events=motif_events if has_motif else None,
             logger=logger,
         )
 
@@ -584,6 +599,8 @@ def render_into_timeline(
         lock_to_riff=lock_to_riff,
         motif_notes=motif_notes,
         motif_quote_rate=motif_quote_rate,
+        motif_events=motif_events if has_motif else None,
+        transition_context=kwargs.get("transition_context"),
         logger=logger,
     )
 
@@ -604,6 +621,8 @@ def _render_legacy_bass(
     lock_to_riff: float = 0.0,
     motif_notes=None,    # M4b: (beat, pitch) pairs for the bass_motif theme
     motif_quote_rate: float = 0.0,
+    motif_events=None,   # (beat, dur, pitch) of an authored bass_motif
+    transition_context=None,
 ) -> InstrumentNegotiationFeatures:
     """Legacy bass rendering using rhythm grid cells (original implementation).
 
@@ -882,6 +901,32 @@ def _render_legacy_bass(
         or (rhythm_pattern == "anchor" and density >= 0.8 and approach_rate >= 0.25)
     )
 
+    if motif_events and motif_quote_rate > 0:
+        # An authored bass motif is the line: its rhythm and lengths as
+        # written, its pitches quoted at motif_quote_rate.
+        return _render_motif_bass(
+            cfg=cfg, section=section, harmony_plan=harmony_plan, bpb=bpb,
+            section_start_beat=section_start_beat + offset_beats, timeline=timeline,
+            motif_events=motif_events, quote_rate=motif_quote_rate,
+            register_low=register_low, register_high=register_high,
+            articulation_style=articulation_style, accent_strength=accent_strength,
+            base_vel=base_vel, rng=rng, draw_expression=_draw_expression, logger=logger,
+        )
+
+    if is_walking_persona:
+        # A walking line is planned bar by bar (walking.py): every pulse
+        # sounds, so density, rests, drum locks and fills do not apply.
+        return _render_walking_bass(
+            cfg=cfg, section=section, harmony_plan=harmony_plan, bpb=bpb,
+            section_start_beat=section_start_beat + offset_beats, timeline=timeline,
+            register_low=register_low, register_high=register_high,
+            chromatic_rate=chromatic_rate, articulation_style=articulation_style,
+            accent_strength=accent_strength, base_vel=base_vel, rng=rng,
+            slap=(slap_pop_rate, slap_thumb_rate, ghost_perc_rate, slap_velocity_floor,
+                  pop_velocity_boost),
+            transition_context=transition_context, logger=logger,
+        )
+
     # Track previous pitch for voice leading
     prev_pitch = None
 
@@ -902,7 +947,10 @@ def _render_legacy_bass(
     # Select rhythm pattern based on persona
     # Walking bass (is_walking_persona) needs all quarter notes, not just beats 1 and 3
     if rhythm_pattern in ("anchor", "walking"):
-        eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat, walking_quarters=is_walking_persona)
+        # A featured (solo) bass may speak on every beat: two anchor slots a
+        # bar leave a solo sparser than the accompaniment around it.
+        eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat,
+                                                    walking_quarters=is_walking_persona or is_solo_mode)
     elif rhythm_pattern == "push":
         eligible_slots = _get_rhythm_pattern_push(all_slots, bpb, chord_changes, subdivisions_per_beat)
     elif rhythm_pattern == "drive":
@@ -917,11 +965,17 @@ def _render_legacy_bass(
         # Default to anchor pattern
         eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat, walking_quarters=is_walking_persona)
 
+    # The line's rhythm is drawn on a stream keyed by section type, not by
+    # arrangement position, so a returning chorus keeps its line (the same
+    # onsets under this occurrence's pitches) instead of redrawing a thinner
+    # or busier one.
+    rhythm_rng = random.Random(_rhythm_seed(cfg, section, instrument_cfg))
+
     # Apply density filtering
-    selected_slots = _apply_density_filter(eligible_slots, density, rng)
+    selected_slots = _apply_density_filter(eligible_slots, density, rhythm_rng)
 
     # Apply rest filtering
-    selected_slots = _apply_rest_filter(selected_slots, rest_rate, rng)
+    selected_slots = _apply_rest_filter(selected_slots, rest_rate, rhythm_rng)
 
     if rhythm_pattern in ("rock_riff", "funk_16ths"):
         selected_slots = apply_motif_repetition(
@@ -929,7 +983,7 @@ def _render_legacy_bass(
             beats_per_bar=bpb,
             total_beats=total_beats,
             repeat_rate=float(motif_repeat_rate),
-            rng=rng,
+            rng=rhythm_rng,
         )
 
     # Drum locking: pull bass onto drum hits per lock_to_kick / lock_to_snare /
@@ -957,8 +1011,20 @@ def _render_legacy_bass(
                 lock_to_snare=lock_to_snare,
                 lock_to_hat=lock_to_hat,
                 subdivisions_per_beat=subdivisions_per_beat,
-                rng=rng,
+                rng=rhythm_rng,
+                draw=lambda kind, beat, _seed=_rhythm_seed(cfg, section, instrument_cfg): random.Random(
+                    stable_seed_int("bass.lock", _seed, kind, round(beat, 3))).random(),
             )
+
+    # Every bar plays: density and rest draws thin a bar, never empty it.
+    # Whole-bar silences are arrangement devices (stop-time, a drop, a
+    # riff-alone intro), applied by the render pass with the rest of the band.
+    selected_slots = set(selected_slots)
+    for _bar in range(int(round(total_beats / bpb)) if bpb > 0 else 0):
+        _b0, _b1 = _bar * bpb, (_bar + 1) * bpb
+        if not any(_b0 - eps <= s < _b1 - eps for s in selected_slots):
+            _cands = sorted(s for s in eligible_slots if _b0 - eps <= s < _b1 - eps)
+            selected_slots.add(_cands[0] if _cands else _b0)
 
 
     # Theme coupling (M4b): motif onsets re-add dropped notes the same way,
@@ -1602,6 +1668,148 @@ def _render_legacy_bass(
     )
 
 
+def _rhythm_seed(cfg, section, instrument_cfg) -> int:
+    """Seed for the engine line's rhythm: one per section type in a song."""
+    song = getattr(cfg, "song", None)
+    runtime = getattr(cfg, "runtime", None)
+    song_seed = getattr(section, "seed", None)
+    if song_seed is None:
+        song_seed = getattr(song, "seed", 42) if song is not None else 42
+    inst_seed = instrument_cfg.get("seed") if isinstance(instrument_cfg, dict) else \
+        getattr(instrument_cfg, "seed", None)
+    return stable_seed_int("bass.rhythm", getattr(runtime, "project_seed", 0) if runtime else 0,
+                           song_seed, getattr(song, "take", 0) if song is not None else 0,
+                           str(getattr(section, "type", "") or "").strip().lower(), inst_seed)
+
+
+def _stream_seed(name: str, cfg, section, rng) -> int:
+    """Seed for a private bass stream, so its draws never shift the shared one."""
+    material = getattr(rng, "_produzre_seed", None)
+    if material is None:
+        material = (getattr(getattr(cfg, "song", None), "seed", 42), getattr(section, "id", ""))
+    return stable_seed_int(name, material)
+
+
+def _render_walking_bass(*, cfg, section, harmony_plan, bpb, section_start_beat, timeline,
+                         register_low, register_high, chromatic_rate, articulation_style,
+                         accent_strength, base_vel, rng, slap, transition_context,
+                         logger) -> InstrumentNegotiationFeatures:
+    """Render a walking line (see walking.py) into the timeline."""
+    from .walking import WalkChord, walk_pulses, walk_section
+
+    mode = getattr(section, "mode", None) or getattr(cfg.song, "mode", None)
+    offsets = _get_mode_scale_offsets(mode)
+    key_name = (section.key or cfg.song.key or "C").strip().replace("♭", "b").replace("♯", "#")
+    tonic_pc = _KEY_TO_MIDI_ROOT.get(key_name, 36) % 12
+    bass_cfg = section.instruments.get("bass")
+    chords = []
+    for cs in harmony_plan.chord_slots:
+        root = _bass_root_for_numeral(cfg, section, cs.numeral, bass_cfg)
+        tones = _get_chord_tones(root, cs.numeral, offsets)
+        pcs = tuple(dict.fromkeys(int(tones[k]) % 12 for k in ("root", "third", "fifth", "seventh")
+                                  if tones.get(k) is not None))
+        chords.append(WalkChord(float(cs.start_beat), float(cs.end_beat), int(root), pcs))
+    total_beats = float(harmony_plan.chord_slots[-1].end_beat)
+    meter = str(getattr(section, "meter", None) or getattr(cfg.song, "meter", None) or "")
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    walk_rng = random.Random(_stream_seed("bass.walk", cfg, section, rng))
+    notes = walk_section(
+        chords, beats_per_bar=bpb, total_beats=total_beats,
+        scale_pcs=[(tonic_pc + o) % 12 for o in offsets],
+        register_low=int(register_low), register_high=int(register_high),
+        chromatic_rate=float(chromatic_rate or 0.0), rng=walk_rng,
+        pulses=walk_pulses(bpb, meter), final_target_pc=tonic_pc,
+        cadence=bool(tc.get("is_last_section")),
+    )
+    pop_rate, thumb_rate, ghost_rate, vel_floor, pop_boost = slap
+    onset_map: Dict[float, int] = {}
+    accent_map: Dict[float, float] = {}
+    pitches: list[int] = []
+    for n in notes:
+        downbeat = abs(n.beat % bpb) < 1e-6
+        vel = _apply_style_velocity(base_vel, articulation_style, downbeat, walk_rng)
+        dur = _apply_style_duration(n.dur, articulation_style, downbeat)
+        kind = n.kind
+        if articulation_style == "slap":
+            technique = _determine_slap_technique(
+                is_strong_beat=downbeat, is_offbeat=not downbeat, slap_pop_rate=pop_rate,
+                slap_thumb_rate=thumb_rate, ghost_perc_rate=ghost_rate, rng=walk_rng)
+            vel = _apply_slap_velocity(vel, technique, vel_floor, pop_boost)
+            dur = _apply_slap_duration(dur, technique)
+            if technique != "normal":
+                kind = f"{kind}_slap_{technique}"
+        vel = _apply_accent(vel, downbeat, accent_strength)
+        timeline.add_note(start_beat=section_start_beat + n.beat, duration_beats=dur,
+                          pitch=n.pitch, velocity=vel, channel=None, kind=kind)
+        onset_map[n.beat] = onset_map.get(n.beat, 0) + 1
+        if downbeat:
+            accent_map[n.beat] = accent_strength
+        pitches.append(n.pitch)
+    # The walk steps into the next section by itself: the transition pass
+    # leaves its last bar alone (no turnaround or pickup on top of it).
+    if notes and hasattr(timeline, "device_windows"):
+        timeline.device_windows.append((section_start_beat + total_beats - bpb,
+                                        section_start_beat + total_beats))
+    logger.info("[BASS]   Generated %d walking events (style=%s)", len(notes), articulation_style)
+    profile = {}
+    if pitches:
+        profile = {"min_pitch": min(pitches), "max_pitch": max(pitches),
+                   "avg_pitch": sum(pitches) / len(pitches),
+                   "pitch_range": max(pitches) - min(pitches)}
+    return InstrumentNegotiationFeatures(onset_map=onset_map, accent_map=accent_map,
+                                         fill_windows_used=[], register_profile=profile,
+                                         event_count=len(notes))
+
+
+def _render_motif_bass(*, cfg, section, harmony_plan, bpb, section_start_beat, timeline,
+                       motif_events, quote_rate, register_low, register_high,
+                       articulation_style, accent_strength, base_vel, rng,
+                       draw_expression, logger) -> InstrumentNegotiationFeatures:
+    """Play an authored bass motif: its rhythm and written lengths, each note
+    quoted at ``quote_rate`` or replaced by the chord root near it."""
+    bass_cfg = section.instruments.get("bass")
+    total = float(harmony_plan.chord_slots[-1].end_beat)
+    motif_rng = random.Random(_stream_seed("bass.motif", cfg, section, rng))
+    onset_map: Dict[float, int] = {}
+    accent_map: Dict[float, float] = {}
+    pitches: list[int] = []
+    events = [(b, d, p) for b, d, p in motif_events if b < total - 1e-6]
+    for i, (beat, dur, pitch) in enumerate(events):
+        draw = motif_rng.random()  # unconditional: one draw per note
+        nxt = events[i + 1][0] if i + 1 < len(events) else total
+        length = max(0.1, min(dur, nxt - beat))
+        kind = "motif"
+        if draw >= quote_rate:
+            cs = next((c for c in harmony_plan.chord_slots
+                       if c.start_beat - 1e-6 <= beat < c.end_beat - 1e-6),
+                      harmony_plan.chord_slots[-1])
+            root_pc = _bass_root_for_numeral(cfg, section, cs.numeral, bass_cfg) % 12
+            roots = [p for p in range(int(register_low), int(register_high) + 1) if p % 12 == root_pc]
+            if roots:
+                pitch = min(roots, key=lambda p: (abs(p - pitch), p))
+            kind = "motif_root"
+        downbeat = abs(beat % bpb) < 1e-6
+        vel = _apply_style_velocity(base_vel, articulation_style, downbeat, motif_rng)
+        vel = _apply_accent(vel, downbeat, accent_strength)
+        dur = _apply_style_duration(length, articulation_style, downbeat)
+        timeline.add_note(start_beat=section_start_beat + beat, duration_beats=dur,
+                          pitch=int(pitch), velocity=vel, channel=None, kind=kind,
+                          expression=draw_expression(dur))
+        onset_map[beat] = onset_map.get(beat, 0) + 1
+        if downbeat:
+            accent_map[beat] = accent_strength
+        pitches.append(int(pitch))
+    logger.info("[BASS]   Generated %d motif events (quote_rate=%.2f)", len(events), quote_rate)
+    profile = {}
+    if pitches:
+        profile = {"min_pitch": min(pitches), "max_pitch": max(pitches),
+                   "avg_pitch": sum(pitches) / len(pitches),
+                   "pitch_range": max(pitches) - min(pitches)}
+    return InstrumentNegotiationFeatures(onset_map=onset_map, accent_map=accent_map,
+                                         fill_windows_used=[], register_profile=profile,
+                                         event_count=len(events))
+
+
 def _render_rhythm_locked_bass(
     cfg: RootConfig,
     section: SectionConfig,
@@ -1618,6 +1826,7 @@ def _render_rhythm_locked_bass(
     lock_to_riff: float = 0.0,
     motif_notes=None,    # M4b: (beat, pitch) pairs for the bass_motif theme
     motif_quote_rate: float = 0.0,
+    motif_events=None,   # (beat, dur, pitch) of an authored bass_motif
 ) -> InstrumentNegotiationFeatures:
     """Render bass line that locks to drum kick patterns.
 
@@ -1733,10 +1942,23 @@ def _render_rhythm_locked_bass(
         motif_pitch_by_beat = {round(float(b), 3): int(p) for b, p in motif_notes}
 
     eps = 1e-6
-    for beat in strong_beats:
-        # Skip if in fill window
-        if avoid_fills and is_beat_in_fill(beat, drum_features):
-            continue
+    bpb = rhythm_grid.beats_per_bar
+    # Every bar plays: a bar the kick leaves empty still gets its downbeat.
+    _total = float(harmony_plan.chord_slots[-1].end_beat)
+    for _bar in range(int(round(_total / bpb)) if bpb > 0 else 0):
+        if not any(_bar * bpb - eps <= b < (_bar + 1) * bpb - eps for b in strong_beats):
+            strong_beats = sorted(set(strong_beats) | {float(_bar * bpb)})
+    # An authored motif's notes keep their written lengths, and kicks fill
+    # only where the motif rests (a kick never cuts a motif note short).
+    written = {round(float(b), 3): float(d) for b, d, _p in (motif_events or [])}
+    if written:
+        spans = [(float(b), float(b) + float(d)) for b, d, _p in motif_events]
+        strong_beats = [b for b in strong_beats if round(b, 3) in written
+                        or not any(s0 + 0.05 < b < s1 - 0.05 for s0, s1 in spans)]
+    # Kick notes step aside for drum fills; an authored motif keeps its line.
+    played = [b for b in strong_beats if round(b, 3) in written
+              or not (avoid_fills and is_beat_in_fill(b, drum_features))]
+    for _i, beat in enumerate(played):
 
         # Find the chord slot that covers this beat
         cs_for_beat = None
@@ -1777,9 +1999,15 @@ def _render_rhythm_locked_bass(
             is_accent = True
             velocity = min(127, int(velocity * 1.3))  # Boost velocity for accents
 
-        # Duration: sustain until next event or reasonable maximum
-        bpb = rhythm_grid.beats_per_bar
-        duration = min(0.8, bpb / 2.0, cs_for_beat.end_beat - beat, rhythm_grid.total_beats - beat)
+        # Duration: a motif note keeps its written length; a kick-locked
+        # note rings up to 0.8 beats. Neither overlaps the next note.
+        gap = (played[_i + 1] if _i + 1 < len(played) else rhythm_grid.total_beats) - beat
+        if note_kind == "motif" and round(beat, 3) in written:
+            duration = min(written[round(beat, 3)], gap, rhythm_grid.total_beats - beat)
+        else:
+            duration = min(0.8, bpb / 2.0, gap, cs_for_beat.end_beat - beat,
+                           rhythm_grid.total_beats - beat)
+        duration = max(0.1, duration)
 
         song_beat = section_start_beat + beat
         timeline.add_note(
