@@ -5,12 +5,46 @@ from typing import Any, Optional
 import logging
 import math
 
+from ...harmony.spelling import _parse_numeral, chord_intervals
 from ...melody import chord_pitch_classes, guide_pitch_at
 
 # Module-level defaults (used if not specified in engines.yml)
 ENGINE_DEFAULT_PRIORITY = 6
 ENGINE_DEFAULT_CHANNEL = 6
 ENGINE_DEFAULT_PROGRAM = 1  # GM Bright Acoustic Piano
+
+# Patterns whose cycle apex follows the shared melody guide. `phrase` and
+# `cinematic` are the evolving, phrase-shaped figures; `up`, `down`,
+# `up_down` and `ostinato` are fixed figures and keep their own shape.
+_GUIDED_PATTERNS = {"phrase", "cinematic"}
+
+
+def _flat_params(instrument_cfg: Any) -> dict:
+    """Engine params from either config shape, flattening one nested level.
+
+    The loader can nest the user's params under ``extra.extra`` (persona keys
+    then sit at the top); the user's nested values win.
+    """
+    if isinstance(instrument_cfg, Mapping):
+        raw = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
+    else:
+        raw = getattr(instrument_cfg, "extra", {}) or {}
+    if not isinstance(raw, Mapping):
+        return {}
+    out = {k: v for k, v in raw.items() if k != "extra"}
+    if isinstance(raw.get("extra"), Mapping):
+        out.update(raw["extra"])
+    return out
+
+
+def _base_velocity(intensity: float) -> int:
+    """Velocity for an intensity: about 65 at 0.5, 93 at 0.9, 100 at 1.
+
+    The range is as wide as the lead's, so a quiet verse and a full chorus
+    sound different (the old 60-100 mapping left 0.55 and 0.9 about 14
+    velocity units apart).
+    """
+    return int(round(30 + 70 * max(0.0, min(float(intensity), 1.25))))
 
 
 def render_into_timeline(*args: Any, **kwargs: Any) -> None:
@@ -58,15 +92,12 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     # configs): support both like other engines.
     if isinstance(instrument_cfg, Mapping):
         intensity = instrument_cfg.get("intensity")
-        extra = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
-        if not isinstance(extra, Mapping):
-            extra = {}
     else:
         intensity = getattr(instrument_cfg, "intensity", None)
-        extra = getattr(instrument_cfg, "extra", {}) or {}
-        if not isinstance(extra, Mapping):
-            extra = {}
+    extra = _flat_params(instrument_cfg)
 
+    # Instrument intensity overrides the section's resolved intensity (which
+    # carries the section type's level and the rise on repeats).
     if intensity is None:
         intensity = getattr(section, "intensity", None)
     intensity = float(intensity) if intensity is not None else 0.5
@@ -79,14 +110,25 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     if legacy_pattern and "rest_probability" not in extra:
         rest_probability = 0.0
 
-    # Calculate velocity from intensity
-    base_velocity = int(60 + (intensity * 40))  # 60-100 range
+    base_velocity = _base_velocity(intensity)
+    beats_per_bar = float(getattr(rhythm_grid, "beats_per_bar", None)
+                          or getattr(getattr(harmony_plan, "meter", None), "beats_per_bar", None)
+                          or 4.0)
+    groups = None
+    if cfg is not None and section is not None:
+        try:
+            from ...composer.song import section_groups
+
+            groups = section_groups(cfg, section, getattr(harmony_plan, "meter", None))
+        except Exception:
+            groups = None
+    from ...composer.theory import metric_weight
 
     event_count = 0
     previous_pitch = None
     plan = kwargs.get("plan")
     melody_guide = None
-    if plan is not None and hasattr(plan, "get"):
+    if plan is not None and hasattr(plan, "get") and pattern in _GUIDED_PATTERNS:
         section_id = getattr(section, "id", "")
         melody_guide = plan.get(f"melody.guide.{section_id}") or plan.get("melody.guide")
 
@@ -96,7 +138,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
     # Process each chord slot
     for slot_index, slot in enumerate(harmony_plan.chord_slots):
-        # Get chord tones for this slot
+        # Every chord tone the harmony names: triad, seventh, and extensions.
         chord_tones = _get_chord_tones_from_numeral(
             slot.numeral,
             key,
@@ -110,6 +152,9 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         arpeggio_notes = _create_arpeggio_pattern(expanded, slot_pattern)
         if pattern == "ostinato":
             arpeggio_notes = [expanded[0], expanded[min(2, len(expanded) - 1)], expanded[1], expanded[-1]]
+        # The apex is the cycle's highest note, wherever the figure puts it
+        # (the middle of up_down, the head of down).
+        apex_idx = arpeggio_notes.index(max(arpeggio_notes))
 
         # Calculate how many notes fit in this chord slot
         slot_duration = slot.end_beat - slot.start_beat
@@ -122,15 +167,15 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
             # Add slight velocity variation using deterministic RNG
             velocity_variation = int((rng.random() - 0.5) * 10)
-            velocity = max(40, min(100, base_velocity + velocity_variation))
+            velocity = base_velocity + velocity_variation
 
             # Calculate beat position
             local_beat = slot.start_beat + (i * note_duration_beats)
 
-            # Every cycle's apex follows the shared melody. Other notes retain
-            # the chordal pattern, making this a countermoving texture rather
-            # than a doubled lead line.
-            is_apex = note_idx == len(arpeggio_notes) - 1
+            # In the guided patterns every cycle's apex follows the shared
+            # melody. Other notes retain the chordal pattern, making this a
+            # countermoving texture rather than a doubled lead line.
+            is_apex = note_idx == apex_idx
             if is_apex and melody_guide is not None:
                 guided = guide_pitch_at(
                     melody_guide, local_beat, min(expanded), max(expanded) + 7,
@@ -144,12 +189,16 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
                 continue
 
             # Accented bass arrivals and softer upper notes create a hand-like
-            # dynamic hierarchy instead of independent random velocities.
+            # dynamic hierarchy, and the bar's strong beats lean in the way a
+            # player's hand does.
             if note_idx == 0:
                 velocity += 8
             elif is_apex:
                 velocity += 3
-            velocity = max(35, min(112, velocity))
+            if beats_per_bar > 0:
+                mw = metric_weight(local_beat % beats_per_bar, beats_per_bar, groups)
+                velocity += int(round(8 * (mw - 0.5)))
+            velocity = max(20, min(120, velocity))
             gate = 0.82 if pattern in {"ostinato", "cinematic"} else 0.9
 
             # Add note to timeline
@@ -170,6 +219,52 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         )
 
 
+def chord_intervals_with_extensions(numeral: str) -> tuple[int, ...]:
+    """Semitones above the root for every tone a numeral names.
+
+    The shared spelling (``harmony.spelling.chord_intervals``) gives the
+    triad and seventh. This adds what an arpeggio can spell out: sixths
+    (``6``, ``69``), ninths (``9``, ``add9``, ``b9``, ``#9``), elevenths
+    (``11``, ``#11``), thirteenths (``13``, ``b13``) and a flat fifth
+    (``7b5``). A 9, 11 or 13 without ``add`` (or the 6 of a 6/9) implies
+    the seventh, as in chord symbols; a major or dominant 11 drops the third it would clash
+    with. Extensions sit above the octave (a ninth is 14, not 2), the way a
+    keyboard player voices them.
+    """
+    _, _, roman, suffix = _parse_numeral(numeral)
+    base = list(chord_intervals(numeral))
+    s = suffix.replace("♭", "b").replace("♯", "#")
+    added = "add" in s
+    # Strip the numbers that belong to the seventh or alterations before
+    # looking for plain extensions ("maj7#11" has no plain 7-free 11).
+    has13 = "13" in s
+    has11 = "11" in s
+    rest = s.replace("13", "").replace("11", "")
+    has9 = "9" in rest
+    has6 = "6" in rest.replace("69", "6")
+    if (has9 or has11 or has13) and not (added or has6) and len(base) == 3:
+        base.append(11 if "maj" in s else 10)
+    if "b5" in s and 7 in base:
+        base[base.index(7)] = 6
+    ext: list[int] = []
+    if has6:
+        ext.append(9)
+    if has9 or has11 or has13:
+        if "b9" in s:
+            ext.append(13)
+        elif "#9" in s:
+            ext.append(15)
+        elif has9 or (has11 and not added) or (has13 and not added):
+            ext.append(14)
+    if has11:
+        ext.append(18 if "#11" in s else 17)
+        if "#11" not in s and not roman.islower() and 4 in base:
+            base.remove(4)  # a major or dominant 11 is voiced without the third
+    if has13:
+        ext.append(20 if "b13" in s else 21)
+    return tuple(sorted(set(base) | set(ext)))
+
+
 def _get_chord_tones_from_numeral(
     numeral: str,
     key: str,
@@ -178,12 +273,14 @@ def _get_chord_tones_from_numeral(
     """Extract mode-aware chord tones (MIDI note numbers) from a numeral.
 
     Args:
-        numeral: Roman numeral (e.g., "I", "bVII", "vi")
+        numeral: Roman numeral (e.g., "I", "bVII", "vi", "V7", "ii9")
         key: Song key (e.g., "C", "E")
         mode: Song mode (e.g., "ionian", "dorian")
 
     Returns:
-        List of MIDI note numbers for the chord (root, third, fifth)
+        MIDI note numbers for the chord, root first: the triad, then the
+        seventh and any extensions the numeral names (see
+        ``chord_intervals_with_extensions``).
     """
     # Simple key-to-MIDI mapping (bass register).
     # Keys are normalized: note letter uppercased, accidental lowercased, so
@@ -205,7 +302,7 @@ def _get_chord_tones_from_numeral(
     tonic = KEY_TO_MIDI.get(key_norm, 48)
     pcs = chord_pitch_classes(numeral, key_norm, mode or "major")
     root = tonic + ((pcs[0] - tonic) % 12)
-    return [root + ((pc - pcs[0]) % 12) for pc in pcs]
+    return [root + interval for interval in chord_intervals_with_extensions(numeral)]
 
 
 def _create_arpeggio_pattern(chord_tones: list[int], pattern: str) -> list[int]:
@@ -240,10 +337,7 @@ def contribute_plan(*args: Any, **kwargs: Any) -> None:
     instrument_cfg = section_ctx.get("instrument_cfg")
     if section is None:
         return
-    if isinstance(instrument_cfg, Mapping):
-        extra = instrument_cfg.get("extra") or instrument_cfg.get("params") or {}
-    else:
-        extra = getattr(instrument_cfg, "extra", {}) or {}
+    extra = _flat_params(instrument_cfg)
     payload = {
         "pattern": str(extra.get("pattern", "phrase")),
         "note_duration": float(extra.get("note_duration", 0.5)),

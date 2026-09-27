@@ -216,6 +216,9 @@ def test_developed_answers_with_auto_foreground_and_modulation(tmp_path, meter):
     from tests.test_groove_clock import _load_cfg, _render_timelines
     data = config('answers', 'rock', meter, 'develop', 2, foreground='auto')
     data['instruments']['bass']['params'].update(register_low=36, register_high=48)
+    # A plain counter-line leaves the lead holes the bass answers; the drawn
+    # chorus form would otherwise decide how much room the lead leaves.
+    data['song']['arrangement_style'] = {'counter': 'octaves'}
     cfg = _load_cfg(tmp_path, yaml.safe_dump(data))
     timelines, _ = _render_timelines(cfg)
     bass = sorted(timelines['bass'].events, key=lambda n: n.start_beat)

@@ -1637,6 +1637,18 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
         logger.info("Composer: %s drums play %s", sec.id, "/".join(groove) if groove else "verse groove")
 
 
+def _sung_line(performance_plan, sec):
+    """The section's realized melody theme as (beat, duration, pitch): the
+    line a singer carries, which the lead answers or harmonizes."""
+    realized = performance_plan.get(f"themes.realized.{sec.id}")
+    notes = realized.get("melody") if isinstance(realized, dict) else None
+    try:
+        return tuple((float(n["beat"]), float(n["duration_beats"]), int(n["pitch"]))
+                     for n in notes or ()) or None
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan,
                               transition_context, logger) -> None:
     """Publish ``composer.lead.<section>`` for the lead engine to perform."""
@@ -1668,7 +1680,7 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
                       _explicit_settings(lead_cfg, extra, _LEAD_LEGACY_ONLY))
 
     from ..composer.lead import LeadContext
-    from ..composer.song import lead_register, section_groups
+    from ..composer.song import lead_register, lead_register_is_range, section_groups
     from .ensemble import _lead_foreground_mode
 
     arrangement_index = 0
@@ -1707,8 +1719,10 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
         rest_probability=_as_float(shaping.get("rest_probability")),
         contour=str(shaping.get("contour_style") or "balanced").strip().lower(),
         groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
-        strict_register=isinstance(extra.get("register", getattr(lead_cfg, "register", None)),
-                                   (list, tuple)),
+        strict_register=lead_register_is_range(cfg, lead_cfg),
+        seed=_seed_override(cfg, sec, lead_cfg),
+        prev_section_type=(transition_context or {}).get("prev_section_type"),
+        melody=_sung_line(performance_plan, sec),
     )
     notes = composer.compose_lead(ctx)
     payload = [

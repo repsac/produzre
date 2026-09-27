@@ -578,7 +578,7 @@ to use them.
 | `ring_out` | 0-1 | 0.85 | How far a note rings into the silence after it. 0 cuts at the grid cell, 1 rings up to the next note. Staccato notes stay short. |
 | `ring_max_beats` | 0.5 or more | 4 | Longest note that ring-out may create. |
 | `vibrato_rate` | 0-1 | 0.65 | Chance a note held a beat or longer gets pitch-bend vibrato. |
-| `bend_rate` | 0-1 | 0.15 | Chance a note is approached with a short bend-in from below. |
+| `bend_rate` | 0-1 | 0.15 | Chance a note is approached with a short bend-in from below. With the composer, 0.15 plays the composed bends as written, lower values keep that share of them (0 removes them), and higher values also bend untagged notes of half a beat or longer, up to all of them at 1. |
 | `dive_rate` | 0-1 | 0.3 | Solo sections only. Chance a note held 1.5 beats or longer ends in a whammy dive of 7 to 14 semitones. The solo's final held note always dives when this is above 0. |
 | `swell_rate` | 0-1 | 0.25 | Chance a note held 1.5 beats or longer fades in under a volume swell on CC11. |
 
@@ -587,7 +587,9 @@ are written as pitch-bend messages at export, and the writer widens the bend
 range for a dive. Swells ride channel expression (CC11). Because pitch bend is
 per channel, one note's expression moves anything else sounding on that channel.
 
-Use direct `register: low`, `mid`, `high`, `very_high`, or `full`. Direct
+Set `register` as a direct field or in `params`, as a preset name (`low`,
+`mid`, `high`, `very_high`, or `full`, in any case) or a `[low, high]` MIDI
+range in either order. Direct
 `solo: true` or `role: lead` increases activity and permits wider motion.
 Genre selects motif vocabulary; successive phrases develop that motif.
 Use contour, rest probability, resolution, and intensity to shape the part.
@@ -596,8 +598,12 @@ With the composer on, your lead settings shape the composed line instead of
 replacing it. `rest_probability` drops answers, developments, and fills (never
 the hook, cadences, or the solo's structural moments). `contour_style` of
 `stepwise` or `leaping` changes how leaps are weighed. `vibrato_rate`,
-`bend_rate` (0 removes bends), `dive_rate`, and `swell_rate` shape the
-expression, including zero values. `phrase_len_bars`, `theme_quote_rate`,
+`bend_rate` (0 removes bends, above 0.15 adds them), `dive_rate`, and
+`swell_rate` shape the expression, including zero values. A `seed` on the
+lead (instrument or section) re-rolls the composed lead: its verse and
+bridge ideas, its lick bank, and its phrase choices. The hook and its
+answer stay the song's, because the melody guide, the acoustic melody, and
+the arpeggiator share them; a section seed changes that section only. `phrase_len_bars`, `theme_quote_rate`,
 `resolution_strength`, `ring_out`, and `ring_max_beats` tune only the legacy
 generator: the build logs that they are unused and names `composer: false`
 as the way to use them. Persona defaults never count as your choice; values
@@ -636,15 +642,45 @@ your chorus and verse chords. Sections use phrase forms:
 | Intro | Hook line | The guitar hook |
 | Verse | An 8-bar period on the verse idea | Signature licks at phrase ends |
 | Prechorus | A sequence climbing to a held dominant | Same |
-| Chorus | Hook lines: state, answer, lift to a summit, close | A sustained counter-line, then the hook as a tag |
+| Chorus | Hook lines: state, answer, lift to a summit, close | The song's `chorus_form` around the singer, then the hook as a tag |
 | Bridge | A contrasting idea ending on the dominant | A statement, then fills |
-| Solo | Hook quote, development, climax, resolution, final dive | Same |
+| Solo | The song's `solo_story`: climb, melodic, trade, or blues | Same |
 | Outro | The hook, then a held tonic | Same |
+
+Under a singer (`foreground: auto`) the chorus follows `chorus_form`.
+`lift`: a counter-line climbs line by line to a summit before the tag (stabs
+climb in their own voice; guide, octave and fill counters climb as a held
+descant). `call`: the lead stays out of each two-bar vocal line and answers
+it with one of the song's licks in the singer's held note or breath.
+`anthem`: the lead harmonizes the chorus melody (the realized melody theme)
+in thirds and sixths, moving with the singer. A pinned `counter` without a
+pinned `chorus_form` keeps the plain counter-line.
 
 A section type remembers its material. A returning chorus repeats note for
 note while the chords match; the final chorus lifts and ornaments it; a
 second verse keeps the melody with small rhythm changes. An authored melody
-theme becomes the hook. `register` sets the melody range, and solos extend
+theme becomes the hook; its final chorus keeps the written notes and moves
+the whole line up an octave when it fits (a named register may use the
+solo's headroom, a numeric range is a hard bound). When the final chorus
+changes key, the key change is the lift. When neither applies, held notes
+get vibrato and each line slides into its first note, and the build log
+says the octave did not fit. Earlier choruses always play the authored
+notes.
+
+Solo stories fill every two-bar unit. `climb` sequences the hook up the
+neck to a climax lick; `melodic` sings the hook and its answer; `trade`
+fills the lead's bar and plays a pickup out of the band's bar; `blues`
+calls and answers in each unit, AAB across four-bar lines, starting from
+the song's own licks. A later solo takes its licks further along the bank,
+so it is not a replay. A solo straight after another continues it, without
+a second hook statement and from higher up, and a solo followed by another
+hands over on a held dominant instead of the solo ending.
+
+With `foreground: full`, a country song's lead fills between its own phrases
+with its licks (chicken picking, and third or sixth double stops when the
+bank has them) at the `lead_fills` rate: the phrase's last bar keeps its
+first half and cadence, and the fill answers in the second half. Other
+genres fill this way only when `lead_fills` is pinned. `register` sets the melody range, and solos extend
 it up to E6. `vibrato_rate`, `dive_rate`, and `swell_rate` still shape
 expression; bends, slides, and staccato follow the composed techniques.
 `solo: true` or `role: lead` makes any section a solo.
@@ -682,7 +718,17 @@ before its next picked note. Body taps use short low MIDI notes.
 | `rest_probability` | 0-0.65 | 0.08 phrase, 0 legacy | Rest chance, 0-0.65. Legacy patterns are `up`, `down`, and `up_down`. |
 | `octave_range` | Integer 1-3 | 2 | Number of octaves, 1-3. |
 
-The phrase pattern follows the shared melody guide. See [file structure](#file-structure) to enable it in a section.
+`phrase` and `cinematic` rotate through up, up-down and down figures, and
+the top note of each cycle follows the shared melody guide. `up`, `down`,
+`up_down` and `ostinato` are fixed figures and play chord tones only. The
+apex is the cycle's highest note whatever the figure (the middle of
+`up_down`, the first note of `down`). Chords are spelled from the harmony's
+numerals, sevenths and extensions included: `6`, `69`, `9`, `add9`, `b9`,
+`#9`, `11`, `#11`, `13`, `b13` and `7b5`; extensions are voiced above the
+octave. Velocity follows the instrument's intensity, or the section's
+(with its type level and the rise on repeats): about 65 at 0.5, 93 at 0.9
+and 100 at 1, with accented bass notes and strong beats. See
+[file structure](#file-structure) to enable it in a section.
 
 ### Every song its own band
 
@@ -705,7 +751,7 @@ song:
     solo_story: melodic      # climb | melodic | trade | blues
     solo_ending: hold        # dive | hold | trill | slide_off
     counter: stabs           # guide | octaves | stabs | fills (lead under a singer)
-    chorus_form: anthem      # lift | anthem | call
+    chorus_form: anthem      # lift | anthem | call (with or without a singer)
     lead_fills: sparse       # sparse | normal | chatty
     ending: big              # ring | cold | big
     country_style: outlaw    # honky_tonk | bakersfield | outlaw | two_step | ballad | country_rock
@@ -753,7 +799,7 @@ and 0.7 or more adds an offbeat kick to every beat without a backbeat.
 The song's feel applies only when you set no
 `swing`, `push_pull`, `timing_jitter_ms`, groove block swing, or song
 `humanize_timing`. A `seed` on an instrument or section re-rolls that
-part's drummer or comp figures.
+part's drummer, comp figures or lead (the lead keeps the song's hook).
 
 Jazz and swing songs get a swing drummer: the ride on every beat with skip
 notes on the swung "and" (spang-a-lang, or the jazz waltz's 1, 2&, 3), the
