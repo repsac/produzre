@@ -11,8 +11,9 @@
 # solo. Nothing is swung: 12/8 is already in threes.
 #
 # Pins and choices made on purpose:
-#   - arrangement_style intro: riff_alone, so the riff opens the song and
-#     the drums and bass wait out the first half of the intro
+#   - arrangement_style intro: riff_alone, so the riff opens the song
+#     alone and the drums, bass, piano and lead wait out the first half of
+#     the intro
 #   - the bass plays an authored twelve-bar line (a bass_motif theme):
 #     root, third, fifth, sixth or flat seventh, back down, on each chord.
 #     The motif owns the bass rhythm and lengths; the intro and outro turn
@@ -23,7 +24,7 @@
 # written into the progression.
 #
 # Listen for:
-#   - the intro: riff and piano, then drums and bass halfway through
+#   - the intro: the riff alone, then drums, bass and piano halfway through
 #   - four big beats per bar, each split in three (12/8, not 4/4 swing)
 #   - the bass line climbing and falling through each chord
 #   - licks answering the vocal lines at the end of each four bars

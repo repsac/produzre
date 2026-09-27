@@ -627,7 +627,7 @@ to use them.
 | `ring_max_beats` | 0.5 or more | 4 | Longest note that ring-out may create. |
 | `vibrato_rate` | 0-1 | 0.65 | Chance a note held a beat or longer gets pitch-bend vibrato. |
 | `bend_rate` | 0-1 | 0.15 | Chance a note is approached with a short bend-in from below. With the composer, 0.15 plays the composed bends as written, lower values keep that share of them (0 removes them), and higher values also bend untagged notes of half a beat or longer, up to all of them at 1. |
-| `dive_rate` | 0-1 | 0.3 | Solo sections only. Chance a note held 1.5 beats or longer ends in a whammy dive of 7 to 14 semitones. The solo's final held note always dives when this is above 0. |
+| `dive_rate` | 0-1 | 0.3 | Solo sections only. Chance a note held 1.5 beats or longer ends in a whammy dive of 7 to 14 semitones. On the legacy path the solo's final held note always dives when this is above 0. With the composer, 0.3 plays the composed dives as written (a `dive` solo ending), 0 holds them with vibrato instead, and higher values also dive the solo's held notes (1.5 beats or longer, its phrase endings, including bent ones), every one of them at 1. |
 | `swell_rate` | 0-1 | 0.25 | Chance a note held 1.5 beats or longer fades in under a volume swell on CC11. |
 
 Pitch expression is seeded and deterministic. Vibrato, bends, slides, and dives
@@ -704,6 +704,14 @@ it with one of the song's licks in the singer's held note or breath.
 in thirds and sixths, moving with the singer. A pinned `counter` without a
 pinned `chorus_form` keeps the plain counter-line.
 
+The plain counters: `guide` holds a descant, one chord tone per chord;
+`stabs` hits a chord tone on the hook's own attacks; `octaves` plays
+staccato octave stabs, two notes at once, on every chord change and at
+least once in every bar the chord holds. The octave is the chord root's
+when both notes fit the lead's register, else the fifth's (or another
+chord tone's); a register narrower than an octave plays the root alone.
+`fills` answers phrase ends with the song's licks.
+
 A section type remembers its material. A returning chorus repeats note for
 note while the chords match; the final chorus lifts and ornaments it; a
 second verse keeps the melody with small rhythm changes. An authored melody
@@ -723,6 +731,15 @@ the song's own licks. A later solo takes its licks further along the bank,
 so it is not a replay. A solo straight after another continues it, without
 a second hook statement and from higher up, and a solo followed by another
 hands over on a held dominant instead of the solo ending.
+
+The solo ending (`solo_ending`) is the song's last gesture: `hold` (a held
+note with vibrato), `trill` (a quick trill into a held note; the trill
+moves as one ornament under swing and humanization, so its notes stay
+even), `slide_off` (the held note falls away), or `dive` (a whammy dive).
+A drawn dive plays in rock, metal and punk; other genres hold that note
+instead, and the build log names the ending actually played (the
+arrangement line and each solo's composer line). A pinned
+`solo_ending: dive` dives in any genre.
 
 With `foreground: full`, a country song's lead fills between its own phrases
 with its licks (chicken picking, and third or sixth double stops when the
@@ -854,9 +871,11 @@ so does the bass.
 
 A riff-alone intro needs a guitar to play the riff alone (rhythm or
 acoustic guitar in the intro; a lead guitar does not count). With one, the
-composed drums and the bass wait out the first half of the intro together.
-Without one, or when you configured the drums yourself, the whole band
-plays the intro from the top.
+riff plays alone for the first half of the intro, and everything else
+waits for the band's entry bar together: the composed drums, the bass, the
+lead guitar (its intro hook starts with the band), the arpeggiator and any
+other part that is not the riff. Without one, or when you configured the
+drums yourself, the whole band plays the intro from the top.
 
 The drums are composed unless their params set `voices`, `recipe`,
 `pattern`, or `riff_accent_rate`, the section sets `intent`, or a

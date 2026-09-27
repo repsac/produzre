@@ -4,13 +4,17 @@
 # ticks in sixteenths under a clean, sparse rhythm guitar and a straight
 # drummer (hi-hat foot in the verse, sixteenth hats in the prechorus,
 # eighths in the chorus). The lead guitar answers the singer with short
-# licks in the verse and punctuates the chorus with staccato root stabs on
-# the changes (foreground: auto, counter: octaves). The verse sits on the
-# relative minor (vi IV I V), the chorus flips it to the bright I V vi IV.
+# licks in the verse and punctuates the chorus with staccato octave stabs
+# on the changes, twice a bar (foreground: auto, counter: octaves). The
+# verse sits on the relative minor (vi IV I V), the chorus flips it to the
+# bright I V vi IV.
 #
 # Pinned, and why:
-#   - arrangement_style.counter: octaves, the chorus counter-part is root
-#     stabs on the changes rather than a melodic line
+#   - arrangement_style.counter: octaves, the chorus counter-part is octave
+#     stabs on the changes rather than a melodic line: the root and the
+#     root an octave up, or the fifth's octave where the root's does not
+#     fit the lead's [62, 81] register (the Bm bars, and the V and vi bars
+#     of the final chorus in E)
 #   - arrangement_style.comp_activity: sparse, so the guitar stays out of
 #     the arpeggio's way
 #   - arpeggiator pattern up in sixteenths over two octaves: a sequencer
@@ -27,6 +31,8 @@
 #   - the bass locking to the kick in the verse, pedaling eighths in the
 #     chorus
 #   - the verse's minor color opening up into the major chorus
+#   - the lead's octave stabs in every chorus bar before the hook's
+#     two-bar tag
 #   - the final chorus lifted a whole step
 version: 1
 song:

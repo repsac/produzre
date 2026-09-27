@@ -358,12 +358,15 @@ def build_song(
             )
 
     # Transition ramps can lengthen notes after section-level cleanup.
-    # Keep the lead monophonic except explicitly unbent country double stops.
+    # Keep the lead monophonic except double stops (composer.realize).
     lead_timeline = timelines.get("lead_gtr")
     if lead_timeline is not None:
+        from ..composer.realize import sounds_with
+
         notes = sorted(lead_timeline.events, key=lambda e: (e.start_beat, e.pitch))
-        for current, following in zip(notes, notes[1:]):
-            if current.kind == following.kind == "country_double_stac" and abs(current.start_beat-following.start_beat) < .06:
+        for i, current in enumerate(notes):
+            following = next((e for e in notes[i + 1:] if not sounds_with(current, e)), None)
+            if following is None:
                 continue
             current.duration_beats = min(current.duration_beats,
                                          max(0.0, following.start_beat - current.start_beat))
