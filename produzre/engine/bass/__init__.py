@@ -108,6 +108,26 @@ def _effective_bass_params(instrument_cfg) -> dict:
         params = params["extra"]
     return params if isinstance(params, dict) else {}
 
+
+def _user_param_keys(instrument_cfg) -> frozenset:
+    """Param keys the user set: everything but the persona's (``_persona_keys``).
+
+    Read before the recipe merge, which folds recipe defaults in as if they
+    were the user's. A key nested one level down (``extra.extra``) is always
+    the user's.
+    """
+    raw: dict = {}
+    if isinstance(instrument_cfg, dict):
+        raw = instrument_cfg.get("params") or instrument_cfg.get("extra") or {}
+    elif instrument_cfg is not None:
+        raw = getattr(instrument_cfg, "params", None) or getattr(instrument_cfg, "extra", None) or {}
+    if not isinstance(raw, dict):
+        return frozenset()
+    persona = set(raw.get("_persona_keys") or ())
+    nested = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+    keys = {k for k in raw if k not in persona and not str(k).startswith("_") and k != "extra"}
+    return frozenset(keys | set(nested))
+
 # Import from fills module
 from .fills import (
     is_fill_zone,
@@ -177,6 +197,7 @@ def _select_chord_tone_with_voice_leading(
     key_root: int = 60,
     motion_style: str = "stepwise",
     root_bias: Optional[float] = None,
+    new_chord: bool = False,
 ) -> tuple[int, str]:
     """Wrapper for backwards compatibility - injects approach functions."""
     # Inject approach functions (defined later in this file)
@@ -197,6 +218,7 @@ def _select_chord_tone_with_voice_leading(
         get_diatonic_approach=_get_diatonic_approach,
         motion_style=motion_style,
         root_bias=root_bias,
+        new_chord=new_chord,
     )
 
 
@@ -394,6 +416,10 @@ def render_into_timeline(
     # Check if rhythm locking is enabled
     instrument_cfg = kwargs.get("instrument_cfg") or kwargs.get("instrument")
 
+    # The user's own settings, read before a recipe merges its defaults in
+    # (a recipe or persona value is not the user's choice).
+    user_keys = _user_param_keys(instrument_cfg)
+
     # --- Groove recipe resolution (same pattern as drums/rhythm_gtr) ---
     # Recipes provide genre-aware groove defaults merged UNDER user params.
     _all_recipes: dict = {}
@@ -538,6 +564,13 @@ def render_into_timeline(
                 for n in realized.get("bass_motif") or []
                 if isinstance(n, dict) and "beat" in n and "pitch" in n)
     has_motif = bool(motif_notes)
+    if has_motif and lock_to_riff > 0:
+        # An authored bass_motif is the bass line: it wins over lock_to_riff
+        # (the riff would pull the line off the motif's written rhythm).
+        _log = logger.warning if "lock_to_riff" in user_keys else logger.info
+        _log("[BASS] Section '%s': the authored bass_motif owns the bass line; "
+             "lock_to_riff %.2f does not apply", getattr(section, "id", "?"), lock_to_riff)
+        lock_to_riff = 0.0
     if not motif_notes and riff_onsets and lock_to_riff > 0:
         from ...themes.coupling import get_theme_notes
 
@@ -580,6 +613,7 @@ def render_into_timeline(
             motif_notes=motif_notes,
             motif_quote_rate=motif_quote_rate,
             motif_events=motif_events if has_motif else None,
+            transition_context=kwargs.get("transition_context"),
             logger=logger,
         )
 
@@ -601,6 +635,8 @@ def render_into_timeline(
         motif_quote_rate=motif_quote_rate,
         motif_events=motif_events if has_motif else None,
         transition_context=kwargs.get("transition_context"),
+        explicit_pattern="rhythm_pattern" in user_keys,
+        explicit_fifths="fifth_jump_rate" in user_keys,
         logger=logger,
     )
 
@@ -623,6 +659,8 @@ def _render_legacy_bass(
     motif_quote_rate: float = 0.0,
     motif_events=None,   # (beat, dur, pitch) of an authored bass_motif
     transition_context=None,
+    explicit_pattern: bool = False,  # the user set rhythm_pattern themselves
+    explicit_fifths: bool = False,   # the user set fifth_jump_rate themselves
 ) -> InstrumentNegotiationFeatures:
     """Legacy bass rendering using rhythm grid cells (original implementation).
 
@@ -802,14 +840,12 @@ def _render_legacy_bass(
             }
         return expr or None
 
-    # Phase B4: Apply style-based pattern bias if rhythm_pattern wasn't explicitly set
-    # (Only if user didn't override rhythm_pattern in persona or config)
-    style_pattern_bias = _get_style_pattern_bias(articulation_style)
-    # If rhythm_pattern is default "anchor" and style suggests different, use style bias
-    # (This is subtle - we respect explicit user choices but apply style intelligence)
-    if rhythm_pattern == "anchor" and articulation_style in ("pick", "mute", "slap"):
-        # User didn't override pattern, so apply style bias
-        rhythm_pattern = style_pattern_bias
+    # Phase B4: an anchor pattern the user did not choose leans toward the
+    # articulation's own pattern (pick drives, mute and slap syncopate). A
+    # rhythm_pattern the user set is played as written.
+    if rhythm_pattern == "anchor" and articulation_style in ("pick", "mute", "slap") \
+            and not explicit_pattern:
+        rhythm_pattern = _get_style_pattern_bias(articulation_style)
 
     # Section role bias: keep verses grounded, make choruses/bridges move differently
     # when the user has not chosen a more specific rhythm pattern.
@@ -851,6 +887,9 @@ def _render_legacy_bass(
             logger.debug("[BASS] Space budget applied: density %.2f → %.2f", original_density, density)
 
     events_before = len(timeline.events)
+    # The section's own mode (a modal section or a borrowed-mode bridge),
+    # else the song's.
+    section_mode = getattr(section, "mode", None) or getattr(cfg.song, "mode", None) or "ionian"
 
     # Structured debug logging
     if logger:
@@ -869,7 +908,7 @@ def _render_legacy_bass(
             len(harmony_plan.chord_slots),
             numerals_summary,
             section.key or cfg.song.key or "C",
-            getattr(cfg.song, "mode", "ionian"),
+            section_mode,
         )
 
     # Per-section bass offset (can be used to push/pull the line slightly).
@@ -884,7 +923,7 @@ def _render_legacy_bass(
     eps = 1e-6
 
     # Get mode offsets for chord tone calculation
-    mode_offsets = _get_mode_scale_offsets(getattr(cfg.song, "mode", None))
+    mode_offsets = _get_mode_scale_offsets(section_mode)
 
     # Phase B5: Get key root for diatonic approach calculations (middle C register)
     key_name = (section.key or cfg.song.key or "C").strip()
@@ -893,13 +932,24 @@ def _render_legacy_bass(
     bass_key_root = _KEY_TO_MIDI_ROOT.get(key_name, 36)  # C2
     key_root = bass_key_root + 24  # Convert to C4 register (60)
 
-    # Check if walking persona (allows passing tones on strong beats + needs all quarter notes)
-    # Walking bass triggers either explicitly (rhythm_pattern: walking) or
-    # heuristically on a dense anchor pattern with frequent approach tones.
+    # Walking bass: rhythm_pattern walking, or (when nobody chose the anchor
+    # pattern on purpose) a dense anchor line with frequent approach tones.
+    # An anchor the user set stays an anchor, however dense.
     is_walking_persona = (
         rhythm_pattern == "walking"
-        or (rhythm_pattern == "anchor" and density >= 0.8 and approach_rate >= 0.25)
+        or (rhythm_pattern == "anchor" and not explicit_pattern
+            and density >= 0.8 and approach_rate >= 0.25)
     )
+
+    # Compound meters (6/8, 9/8, 12/8) count in dotted-quarter pulses: the
+    # anchor sits on the pulse grid, not on quarter beats.
+    from ...composer.drums import is_compound
+    from ...composer.song import section_groups
+
+    _groups = section_groups(cfg, section, getattr(harmony_plan, "meter", None))
+    compound_pulses = None
+    if is_compound(_groups):
+        compound_pulses = [sum(_groups[:i]) for i in range(len(_groups))]
 
     if motif_events and motif_quote_rate > 0:
         # An authored bass motif is the line: its rhythm and lengths as
@@ -951,7 +1001,8 @@ def _render_legacy_bass(
         # A featured (solo) bass may speak on every beat: two anchor slots a
         # bar leave a solo sparser than the accompaniment around it.
         eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat,
-                                                    walking_quarters=is_walking_persona or is_solo_mode)
+                                                    walking_quarters=is_walking_persona or is_solo_mode,
+                                                    pulses=compound_pulses)
     elif rhythm_pattern == "push":
         eligible_slots = _get_rhythm_pattern_push(all_slots, bpb, chord_changes, subdivisions_per_beat)
     elif rhythm_pattern == "drive":
@@ -964,7 +1015,9 @@ def _render_legacy_bass(
         eligible_slots = get_rhythm_pattern_funk_16ths(all_slots, bpb, subdivisions_per_beat)
     else:
         # Default to anchor pattern
-        eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat, walking_quarters=is_walking_persona)
+        eligible_slots = _get_rhythm_pattern_anchor(all_slots, bpb, subdivisions_per_beat,
+                                                    walking_quarters=is_walking_persona,
+                                                    pulses=compound_pulses)
 
     # The line's rhythm is drawn on a stream keyed by section type, not by
     # arrangement position, so a returning chorus keeps its line (the same
@@ -1004,6 +1057,12 @@ def _render_legacy_bass(
             _DrumHit(beat=b, kind="hat")
             for b in sorted(getattr(drum_features, "hat_beats", set()) or set())
         ]
+        if compound_pulses:
+            # In 6/8 and 12/8 the bass locks with the drums on the pulses;
+            # a kick between them (the third eighth) is the drummer's own,
+            # and doubling it would put the line on a quarter-note grid.
+            _drum_events = [h for h in _drum_events
+                            if min(abs((h.beat % bpb) - p) for p in compound_pulses + [bpb]) < 0.13]
         if _drum_events:
             selected_slots = _apply_drum_locking(
                 slots=selected_slots,
@@ -1017,10 +1076,20 @@ def _render_legacy_bass(
                     stable_seed_int("bass.lock", _seed, kind, round(beat, 3))).random(),
             )
 
-    # Every bar plays: density and rest draws thin a bar, never empty it.
-    # Whole-bar silences are arrangement devices (stop-time, a drop, a
-    # riff-alone intro), applied by the render pass with the rest of the band.
+    # The beat-1 rule: every bar's downbeat sounds, and so does the first
+    # beat of every chord where the pattern has a slot for it. Density and
+    # rests thin the rest of the bar; the bass never leaves the one (or a
+    # chord change) to the rest of the band. Whole-bar silences are
+    # arrangement devices (stop-time, a drop, a riff-alone intro), applied by
+    # the render pass with the rest of the band.
     selected_slots = set(selected_slots)
+    _eligible_keys = {round(s, 6) for s in eligible_slots}
+    for _bar in range(int(round(total_beats / bpb)) if bpb > 0 else 0):
+        selected_slots.add(float(_bar * bpb))
+    for _cs in harmony_plan.chord_slots:
+        if round(float(_cs.start_beat), 6) in _eligible_keys:
+            selected_slots.add(float(_cs.start_beat))
+    selected_slots = {s for s in selected_slots if s < total_beats - eps}
     for _bar in range(int(round(total_beats / bpb)) if bpb > 0 else 0):
         _b0, _b1 = _bar * bpb, (_bar + 1) * bpb
         if not any(_b0 - eps <= s < _b1 - eps for s in selected_slots):
@@ -1063,6 +1132,18 @@ def _render_legacy_bass(
             if _final_eligible:
                 selected_slots = set(selected_slots) | {_final_eligible[0]}
 
+    # The song's last section lands: in its final bar the line plays up to
+    # the first note of the final chord, which rings as the song's last
+    # note (no fill into a next section that never comes).
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    song_end = bool(tc.get("is_last_section"))
+    if song_end and bpb > 0 and harmony_plan.chord_slots:
+        _land_from = max((int(round(total_beats / bpb)) - 1) * bpb,
+                         float(harmony_plan.chord_slots[-1].start_beat))
+        _later = sorted(s for s in selected_slots if s >= _land_from - eps)
+        if _later:
+            selected_slots = {s for s in selected_slots if s <= _later[0] + eps}
+
     # Sort slots for iteration. The list may be extended mid-iteration when a
     # fill is scheduled (fill notes occupy the final subdivisions of a bar).
     slots_iter = sorted(selected_slots)
@@ -1088,6 +1169,9 @@ def _render_legacy_bass(
 
     # Phase B6: Track chord changes for fifth drops and pedal tones
     prev_chord_slot = None
+    tonic_pc = bass_key_root % 12
+    slot_root_pcs = [_bass_root_for_numeral(cfg, section, cs.numeral, bass_cfg) % 12
+                     for cs in harmony_plan.chord_slots]
     pedal_pitch = None  # Pitch to hold for pedal tone
     total_octave_jumps = 0
     total_fifth_drops = 0
@@ -1134,6 +1218,8 @@ def _render_legacy_bass(
 
                 # Decide if we should generate a fill
                 should_fill = _should_generate_fill(fill_rate, fill_avoid_drums, is_drum_filling, rng)
+                if song_end and zone_type == "section_end":
+                    should_fill = False  # the song's last bar lands; nothing to fill into
 
                 if should_fill and active_fill is None:
                     # Generate a new fill
@@ -1287,6 +1373,13 @@ def _render_legacy_bass(
         is_chord_change = (prev_chord_slot is None or prev_chord_slot != cs_for_cell)
         if is_chord_change:
             prev_chord_slot = cs_for_cell
+        # Each chord starts on its root: the first note of a new harmony (not
+        # a held chord's next bar) is the root, never a passing tone or a
+        # pedal held over from the last chord, and a fifth drop only where
+        # the user set fifth_jump_rate. A held chord's next bar may vary
+        # (fifth_jump_rate, the downbeat fifth).
+        new_harmony_note = is_chord_change and (
+            cs_index == 0 or slot_root_pcs[cs_index] != slot_root_pcs[cs_index - 1])
 
         # Detect cadence: the last selected (non-fill) slot within the final
         # chord slot of the section, so root_cadence resolution actually fires
@@ -1422,6 +1515,14 @@ def _render_legacy_bass(
         # Phase B6: Check for pedal tone (hold previous root across chord change)
         use_pedal = _should_use_pedal_tone(pedal_rate, is_chord_change, rng)
 
+        # A pedal holds the key's tonic under a chord that contains it (I held
+        # under IV); any other root carried into the next chord would sound
+        # the old harmony over the new one.
+        chord_pcs = {int(v) % 12 for v in chord_tones.values() if v is not None}
+        if use_pedal and pedal_pitch is not None and pedal_pitch % 12 != root_midi % 12 and not (
+                pedal_pitch % 12 == tonic_pc and pedal_pitch % 12 in chord_pcs):
+            use_pedal = False
+
         if use_pedal and pedal_pitch is not None:
             # Use pedal tone (previous root)
             pitch = pedal_pitch
@@ -1431,7 +1532,11 @@ def _render_legacy_bass(
             # Phase B6: Check for fifth drop on chord change
             use_fifth = _should_use_fifth_drop(fifth_jump_rate, is_chord_change, is_downbeat, rng)
 
-            if use_fifth and not is_cadence:
+            # Recipe and persona fifth drops vary a held chord's bars; a
+            # fifth_jump_rate the user set drops the fifth on any chord
+            # change after the section's first note (their choice wins).
+            if use_fifth and not is_cadence and (
+                    not new_harmony_note or (explicit_fifths and prev_pitch is not None)):
                 # Use fifth instead of root for variety
                 fifth = chord_tones.get("fifth")
                 if fifth:
@@ -1481,6 +1586,7 @@ def _render_legacy_bass(
                     key_root=key_root,
                     motion_style=motion_style,
                     root_bias=root_bias,
+                    new_chord=new_harmony_note,
                 )
 
             # Update pedal pitch if this is a root note on chord change
@@ -1586,6 +1692,14 @@ def _render_legacy_bass(
                 ghost_perc_rate=ghost_perc_rate,
                 rng=rng,
             )
+            # The root that starts a chord or a bar, and a section's
+            # cadence, are thumbed: a percussive ghost there would leave the
+            # one (or the ending) without a pitch. The song's last note is
+            # always a thumbed root.
+            if (new_harmony_note or is_downbeat or is_cadence) and slap_technique == "ghost":
+                slap_technique = "thumb"
+            if is_cadence and song_end:
+                slap_technique = "thumb"
 
             # Apply slap-specific velocity and duration adjustments
             styled_velocity = _apply_slap_velocity(
@@ -1603,6 +1717,12 @@ def _render_legacy_bass(
             if slap_technique != "normal":
                 note_kind = f"{note_kind}_slap_{slap_technique}"
 
+        if is_cadence and song_end:
+            # The song's last note is a real note: it rings for at least a
+            # beat (or to the end), whatever the articulation shortens.
+            styled_duration = max(styled_duration, min(1.0, remaining_in_chord) - 0.02)
+
+        if articulation_style == "slap":
             # Track slap technique usage
             if slap_technique == "thumb":
                 total_thumb_hits += 1
@@ -1748,7 +1868,8 @@ def _render_walking_bass(*, cfg, section, harmony_plan, bpb, section_start_beat,
     onset_map: Dict[float, int] = {}
     accent_map: Dict[float, float] = {}
     pitches: list[int] = []
-    for n in notes:
+    song_end = bool(tc.get("is_last_section"))
+    for i, n in enumerate(notes):
         downbeat = abs(n.beat % bpb) < 1e-6
         vel = _apply_style_velocity(base_vel, articulation_style, downbeat, walk_rng)
         dur = _apply_style_duration(n.dur, articulation_style, downbeat)
@@ -1757,10 +1878,14 @@ def _render_walking_bass(*, cfg, section, harmony_plan, bpb, section_start_beat,
             technique = _determine_slap_technique(
                 is_strong_beat=downbeat, is_offbeat=not downbeat, slap_pop_rate=pop_rate,
                 slap_thumb_rate=thumb_rate, ghost_perc_rate=ghost_rate, rng=walk_rng)
+            if (downbeat and technique == "ghost") or (song_end and i == len(notes) - 1):
+                technique = "thumb"  # the one and the song's last note keep their pitch
             vel = _apply_slap_velocity(vel, technique, vel_floor, pop_boost)
             dur = _apply_slap_duration(dur, technique)
             if technique != "normal":
                 kind = f"{kind}_slap_{technique}"
+        if song_end and i == len(notes) - 1:
+            dur = max(dur, min(1.0, n.dur) - 0.02)  # the song's last note rings
         vel = _apply_accent(vel, downbeat, accent_strength)
         timeline.add_note(start_beat=section_start_beat + n.beat, duration_beats=dur,
                           pitch=n.pitch, velocity=vel, channel=None, kind=kind)
@@ -1850,6 +1975,7 @@ def _render_rhythm_locked_bass(
     motif_notes=None,    # M4b: (beat, pitch) pairs for the bass_motif theme
     motif_quote_rate: float = 0.0,
     motif_events=None,   # (beat, dur, pitch) of an authored bass_motif
+    transition_context=None,
 ) -> InstrumentNegotiationFeatures:
     """Render bass line that locks to drum kick patterns.
 
@@ -1916,7 +2042,7 @@ def _render_rhythm_locked_bass(
         len(harmony_plan.chord_slots),
         " ".join(cs.numeral for cs in harmony_plan.chord_slots),
         section.key or cfg.song.key or "C",
-        getattr(cfg.song, "mode", "ionian"),
+        getattr(section, "mode", None) or getattr(cfg.song, "mode", None) or "ionian",
     )
 
     # Follow kick strong beats
@@ -1966,11 +2092,18 @@ def _render_rhythm_locked_bass(
 
     eps = 1e-6
     bpb = rhythm_grid.beats_per_bar
-    # Every bar plays: a bar the kick leaves empty still gets its downbeat.
+    # The beat-1 rule: every bar plays its downbeat, also where the kick
+    # leaves the one empty (a one-drop) or the bar to the rest of the band.
     _total = float(harmony_plan.chord_slots[-1].end_beat)
-    for _bar in range(int(round(_total / bpb)) if bpb > 0 else 0):
-        if not any(_bar * bpb - eps <= b < (_bar + 1) * bpb - eps for b in strong_beats):
-            strong_beats = sorted(set(strong_beats) | {float(_bar * bpb)})
+    _bars = int(round(_total / bpb)) if bpb > 0 else 0
+    strong_beats = sorted({b for b in strong_beats if b < _total - eps}
+                          | {float(_bar * bpb) for _bar in range(_bars)})
+    # The song's last section lands on its final bar's downbeat, which rings.
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    song_end = bool(tc.get("is_last_section"))
+    if song_end and _bars:
+        _land = float((_bars - 1) * bpb)
+        strong_beats = [b for b in strong_beats if b <= _land + eps]
     # An authored motif's notes keep their written lengths, and kicks fill
     # only where the motif rests (a kick never cuts a motif note short).
     written = {round(float(b), 3): float(d) for b, d, _p in (motif_events or [])}
@@ -2027,6 +2160,9 @@ def _render_rhythm_locked_bass(
         gap = (played[_i + 1] if _i + 1 < len(played) else rhythm_grid.total_beats) - beat
         if note_kind == "motif" and round(beat, 3) in written:
             duration = min(written[round(beat, 3)], gap, rhythm_grid.total_beats - beat)
+        elif song_end and _i == len(played) - 1:
+            # The song's last note rings to the end of its chord.
+            duration = min(gap, cs_for_beat.end_beat - beat, rhythm_grid.total_beats - beat) - 0.02
         else:
             duration = min(0.8, bpb / 2.0, gap, cs_for_beat.end_beat - beat,
                            rhythm_grid.total_beats - beat)

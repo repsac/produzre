@@ -206,7 +206,10 @@ section's harmony block or `song.turnarounds: true`.
 Merge order is persona, recipe, global instrument params, then section params.
 Later values win, including explicit zero. A `persona` on a section's
 instrument replaces the global persona for that section only, at the same
-lowest layer. Recipes are selected by genre,
+lowest layer. A bass persona you name keeps its technique: its
+`articulation_style` is not replaced by the genre recipe's (the `funk`
+persona slaps in a funk song whose recipe plays fingerstyle); your own
+`articulation_style` still wins. Recipes are selected by genre,
 section type, tempo, and section meter. An explicit instrument `recipe` wins
 over automatic selection. A section instrument `genre` overrides the global
 instrument genre, which overrides `song.genre`.
@@ -385,13 +388,13 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 |---|---|---|---|
 | `density` | 0-1 | persona | Keep more or fewer eligible rhythm slots. Tight: 0.7. Every bar keeps at least one note. |
 | `rest_rate` | 0-1 | persona | Remove selected notes to leave gaps. Tight: 0. Every bar keeps at least one note. |
-| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`; walking persona: `walking`. |
-| `articulation_style` | `finger`, `pick`, `slap`, `mute` | persona | Change attack, length, and pattern bias. Tight: `finger`. |
+| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`; walking persona: `walking`. A pattern you set is played as written: an `anchor` you set stays on beats 1 and 3 however dense, and no articulation bias replaces it. |
+| `articulation_style` | `finger`, `pick`, `slap`, `mute` | persona | Change attack and length. An `anchor` pattern you did not set leans toward the style's pattern (pick drives, mute and slap syncopate). Tight: `finger`. |
 | `register_low`, `register_high` | MIDI pitches 0-127 | persona | Inclusive MIDI pitch limits for every bass note, composed roles, riff doubles and groove-memory restatements included. Your values win over a recipe's, a recipe's over the persona's. Tight: 28, 52. |
 | `approach_rate`, `chromatic_rate` | 0-1 each | persona | Approach-note probability and chromatic choice. Approaches occur before chord changes, and the chord change after one lands on the root it stepped toward (never a fifth drop, pedal or octave jump), so a chromatic approach sounds a half step from the next note. Tight: 0, 0. |
 | `max_passing_per_bar` | Integer >= 0 | persona | Passing-note limit per bar. Tight: 0. |
 | `root_bias` | 0-1 | 0.65 engine fallback | Chance of including the root among interior chord-tone candidates. |
-| `octave_jump_rate`, `fifth_jump_rate`, `pedal_rate` | 0-1 each | persona | Octave changes, fifths at chord changes, and held pitch across chords. Tight: 0, 0, 0. |
+| `octave_jump_rate`, `fifth_jump_rate`, `pedal_rate` | 0-1 each | persona | Octave changes, fifth drops, and pedal tones. A persona's or recipe's fifth drops vary only the bars of a held chord; a `fifth_jump_rate` you set also drops the fifth on chord changes. A pedal holds the key's tonic under a chord that contains it, never another root into the next chord. Tight: 0, 0, 0. |
 | `motion_style` | `stepwise`, `leaping`, `mixed` | `stepwise` | Choose how the bass moves between pitches. |
 | `lock_to_kick`, `lock_to_snare`, `lock_to_hat` | 0-1 each | persona | Add notes at kick, accent, or top-cymbal attacks. Zero disables that source. Tight: 0.8, 0, 0. |
 | `lock_to_kicks` | Boolean | false | Alternate renderer based on drum kick attacks. Distinct from the probability above. |
@@ -401,7 +404,7 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 | `vibrato_rate` | 0-1 | 0.35 | Chance a note held half a beat or longer gets a gentle pitch-bend vibrato. |
 | `accent_strength` | Nonnegative multiplier | persona | Velocity multiplier on accents. Tight: 1.1. |
 | `slap_pop_rate`, `slap_thumb_rate`, `ghost_perc_rate` | 0-1 each | persona | Pop, thumb, and percussive ghost choices in slap mode. Tight: 0.4, 0.9, 0. |
-| `slap_velocity_floor`, `pop_velocity_boost` | Velocity 1-127; velocity-unit offset | persona | Slap minimum velocity and added pop velocity units. Tight: 70, 15. |
+| `slap_velocity_floor`, `pop_velocity_boost` | Velocity 1-127; velocity-unit offset | persona | Slap minimum velocity and added pop velocity units. The floor holds for every slapped note (thumb, pop or plain, engine line and composed roles alike), after the groove clock's velocity humanization; only percussive ghost notes (`ghost_perc_rate`) play below it. Tight: 70, 15. |
 | `fill_rate`, `fill_complexity`, `fill_avoid_drums` | 0-1 each | persona | Fill chance, complexity, and reduction during drum fills. Tight: 0.2, 0.3, 0.8. |
 | `phrase_len_bars` | Integer >= 1 | 4 | Fill boundary spacing; `phrase_length_bars` is an alias. |
 | `section_role_variation` | Boolean | false | Bias an anchor pattern toward drive in choruses and syncopation in bridge/solo sections. |
@@ -418,6 +421,25 @@ empty it; whole silent bars come only from the band's arrangement devices
 (a drop, stop-time, a riff-alone intro) or rests written into a `bass_motif`. The line's rhythm is drawn once per
 section type, so a returning chorus keeps its line instead of redrawing a
 thinner one.
+
+The beat-1 rule: every bar's downbeat sounds, also under a riff, a one-drop
+or a kick pattern that leaves the one empty, and each new chord starts on its
+root. Density and rests thin the rest of the bar. This holds for engine
+lines, the kick-locked renderer, composed roles, groove-memory restatements,
+hook responses and modulated final choruses. The exceptions are yours or
+the key's: a `fifth_jump_rate` you set, a tonic pedal (`pedal_rate`) under a
+chord that contains the tonic, an authored `bass_motif` or doubled riff, and
+the band's devices. A held chord's next bar may start on its fifth.
+
+In compound meters (6/8, 9/8, 12/8) the line sits on the dotted-quarter
+pulse: the anchor plays the pulses (both in 6/8, the first and third in
+12/8), drum locks follow the kick and snare only where they land on a
+pulse, and composed roles accent the pulses.
+
+The song's last bass note is a real note. In the last section's final bar
+the line plays up to the final chord's first note and holds it (no fill into
+a section that never comes); a slapped cadence is a thumbed root, never a
+ghost, and no section's cadence or downbeat root is a ghost note.
 
 ### Walking bass
 
@@ -857,7 +879,15 @@ Those choices also take precedence over automatic `bass_doubles`.
 The bass register (yours, else the recipe's or persona's) applies after
 composed roles and doubling, and `articulation_style` plays composed notes
 too: slap turns beats into thumb hits and octave or offbeat notes into
-pops, mute and pick shorten them.
+pops, mute and pick shorten them. Composed notes (roles, riff doubles,
+device hits, hook responses) play at the section's dynamics, like the
+composed drummer: the bass's `intensity` (else the section's, with the
+planner's rise on each repeat) and the section's energy. A quiet bridge
+sits under the choruses around it. Every role starts its bars on the root,
+the kick role included where the kick pattern skips the one.
+
+A `lock_to_riff` next to an authored `bass_motif` does not apply: the motif
+is the bass line. The build logs a warning when you set both.
 
 Where the composed drummer plays a section, the bass plays the song's
 devices with it, whatever line it plays. Into a chorus: `stop` hits the
@@ -921,7 +951,9 @@ the composed lead. When the lead holds or breathes for 1.25 to 4 beats after
 a phrase, the bass fills that hole with the hook's opening rhythm and
 contour, over the current chord, starting on a nearby kick and landing on a
 chord tone. It answers once per 4-bar phrase and at a section's close; the
-groove plays everywhere else. Across six example songs, responses made up
+groove plays everywhere else. An answer note on a bar's downbeat or on a
+chord change is that chord's root, and the bass does not answer inside a
+band device (a stop, a drop, the song's ending). Across six example songs, responses made up
 14% of bass notes and cut simultaneous lead and bass attacks by 6%, at a cost
 of 2% groove repetition and 6% kick alignment.
 
@@ -957,15 +989,19 @@ and approach notes aim at the next chord. A chromatic approach keeps its
 half step: it is retargeted chromatically to the restated bar's next chord,
 in the octave beside the note that chord is played on (a bass line that
 opens the next bar elsewhere resolves to that root instead). Unpitched
-gestures such as acoustic body taps keep their pitch. A restated bass bar starts on the
-root, unless the engine drew a fifth drop (`fifth_jump_rate`) for that bar.
-Restated pitches stay inside the bass register. Bars the engine left silent
-stay silent. A returning section type brings back its groove at the new
-dynamics. A clear intensity lift, such as a final chorus, plays its own
-groove instead. A section with an `intent` recalls only a groove from a
-section with the same intent, so a half-time bridge after a `drop` bridge
-plays its own half-time groove. Parts that quote a riff or motif theme,
-walking bass lines, and soloing parts are left alone.
+gestures such as acoustic body taps keep their pitch. A restated bass bar
+starts on the root, unless the engine drew a fifth drop (`fifth_jump_rate`)
+or a tonic pedal (`pedal_rate`) for that bar; a source bar whose first note
+comes after the downbeat gets a root on one held up to it. A restated bass
+note never rings into the next chord. Restated pitches stay inside the bass
+register. Bars the engine left silent stay silent. A returning section type
+brings back its groove at the new dynamics. A clear intensity lift, such as
+a final chorus, plays its own groove instead; for the bass only when that
+groove is not thinner than the one the section established. A section with
+an `intent` recalls only a groove from a section with the same intent, so a
+half-time bridge after a `drop` bridge plays its own half-time groove. Parts
+that quote a riff or motif theme, walking bass lines, and soloing parts are
+left alone.
 
 | Key (instrument params) | Range or values | Default | What it does |
 |---|---|---|---|
@@ -1002,6 +1038,10 @@ next section's first. For pitched parts, a strummed chord counts as one
 attack and dead-note chucks, ghosts and body taps do not count toward the
 part's loudness, so a chorus of chord stabs after a verse of chucks is not
 mistaken for a drop and softened. Drums count every hit.
+
+A bass pickup replaces the bass notes it lands on: a note starting inside
+the pickup is dropped and a note still ringing is cut where the pickup
+starts, so the bass never plays two notes at once.
 
 Drum `pickup_rate` and `downbeat_rate` are separate performance controls.
 Energy rises favor longer pickups; drops leave more space. Fills are built

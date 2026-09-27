@@ -172,6 +172,18 @@ def map_pitch(pitch: int, src_chord, dst_chord, scale: Sequence[int],
     return moved
 
 
+def _with_bass_anchor(specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """A bass source bar with a note on one (see apply_groove_memory)."""
+    if not specs or any(s.get("anchor") for s in specs):
+        return specs
+    first = min((s for s in specs if not s.get("approach")), key=lambda s: s["off"], default=None)
+    if first is None or first["off"] < 0.25:
+        return specs
+    anchor = dict(first, off=0.0, dur=max(0.1, min(first["off"] - 0.02, 1.0)),
+                  kind="root", approach=False, anchor=True, expression=None)
+    return [anchor] + list(specs)
+
+
 class GrooveMemory:
     """Per-song store of established grooves, keyed by section type."""
 
@@ -318,13 +330,20 @@ def apply_groove_memory(
         stored = None
     if stored is not None and pitched and str(stored.get("mode") or mode).lower() != str(mode).lower():
         stored = None  # a new mode changes chord qualities; start a fresh groove
+    lifted_from = None
     if stored is not None and intensity is not None and stored.get("intensity") is not None \
             and intensity - stored["intensity"] >= 0.08:
         # The arrangement is lifting (e.g., a final chorus): play this
         # occurrence's own, more intense groove instead of the recalled one.
-        stored = None
+        lifted_from, stored = stored, None
 
     fresh = {k: [spec(e, b) for e in groove_part(by_bar.get(b, []))] for k, b in sources.items()}
+    if instrument == "bass" and lifted_from is not None and \
+            sum(len(v) for v in fresh.values()) < sum(len(v) for v in lifted_from["specs"].values()):
+        # A lift never thins the bass: when this occurrence's own groove is
+        # sparser than the one the section established, the established
+        # groove returns at the new dynamics.
+        stored = lifted_from
     if stored is None:
         source_specs = fresh
         vel_ratio = 1.0
@@ -352,6 +371,12 @@ def apply_groove_memory(
 
     if not any(source_specs.get(k) for k in range(cycle)):
         return events, report
+
+    if instrument == "bass":
+        # The beat-1 rule holds in every restated bar: a source bar whose
+        # first note comes after the downbeat gets a root on one, held up to
+        # that note, so no groove bar leaves the one to the rest of the band.
+        source_specs = {k: _with_bass_anchor(v) for k, v in source_specs.items()}
 
     # Re-humanize copies only if the engine humanized the source: a part
     # rendered dead on the grid (humanize off) must stay on the grid.
@@ -402,12 +427,14 @@ def apply_groove_memory(
                 if s.get("anchor") and dst is not None:
                     # The downbeat is the root (the beat-1 tie-break): a fifth
                     # or third on one in the source bar is that bar's
-                    # variation, not the groove. A fifth drop the engine drew
-                    # for this very bar (fifth_jump_rate) is kept.
+                    # variation, not the groove. A fifth drop or a tonic
+                    # pedal the engine drew for this very bar
+                    # (fifth_jump_rate, pedal_rate) is kept.
                     own = [e for e in groove_part(bar_events)
                            if abs(float(e.start_beat) - bar_start) < 0.06]
-                    pc, kind = dst.root_pc, "root"
-                    if own and str(own[0].kind or "").startswith("fifth_drop") \
+                    # (A root keeps its own label, articulation included.)
+                    pc, kind = dst.root_pc, (kind if str(kind).startswith("root") else "root")
+                    if own and str(own[0].kind or "").startswith(("fifth_drop", "pedal")) \
                             and int(own[0].pitch) % 12 in dst.pcs:
                         pc, kind = int(own[0].pitch) % 12, own[0].kind
                     if pitch % 12 != pc:
@@ -420,8 +447,15 @@ def apply_groove_memory(
             jitter = rng.uniform(-jitter_beats, jitter_beats)
             if abs(s["off"]) < 1e-6:
                 jitter = abs(jitter)  # never drag a downbeat into the previous bar
+            dur = s["dur"]
+            if instrument == "bass" and chords is not None and not s["approach"]:
+                # A restated bass note never rings into the next chord: that
+                # would carry this chord's pitch over the new harmony.
+                span = chords.at(min(b * beats_per_bar + max(0.0, s["off"]), chords.total - eps))
+                if span is not None:
+                    dur = max(0.05, min(dur, float(span.end) - (b * beats_per_bar + s["off"]) - 0.02))
             new = replace(template, start_beat=start + jitter,
-                          duration_beats=s["dur"], pitch=pitch,
+                          duration_beats=dur, pitch=pitch,
                           velocity=max(1, min(127, vel)), channel=s["channel"],
                           kind=kind,
                           expression=dict(s["expression"]) if isinstance(s["expression"], dict)

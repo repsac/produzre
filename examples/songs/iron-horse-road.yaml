@@ -18,7 +18,8 @@
 #   - bass locked to the riff an octave down in intro, verses and outro
 #   - the prechorus climbing on iv to a held V, the band stopping on its
 #     last bar, then the chorus opening up
-#   - the solo over the verse chords, then a final chorus up a whole step
+#   - the solo over the verse chords, then a final chorus up a whole step,
+#     the bass on each new chord's root on the downbeat in the new key too
 #   - turnarounds pulling each section home
 version: 1
 song:

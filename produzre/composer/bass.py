@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from ..rng import stable_seed_int
-from .theory import ChordMap, default_groups, nearest_in, scale_pcs
+from .theory import ChordMap, default_groups, nearest_in, scale_pcs, tonic_pc
 
 ROLES = ("engine", "kick", "pedal8", "octaves", "gallop", "whole")
 
@@ -154,8 +154,12 @@ def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near, lo=28, hi=5
     prev = chords.at(bar_start - 1e-3) if bar_start > 0 else None
     held = prev is not None and prev.root_pc == span.root_pc
     fifth = dna.country_fifths.get(section_type, 7)
-    use_fifth = (w.bass_alternation == "bar" and bar % 2 == 1) or \
-        (w.bass_alternation == "change" and held and bar % 2 == 1)
+    # A new chord starts on its root; the alternation to the fifth happens
+    # on the bars a chord is held: every other bar of the chord ("bar"), or
+    # the held chord's odd bars of the song ("change").
+    in_chord = int(round((bar_start - span.start) / 3))
+    use_fifth = held and ((w.bass_alternation == "bar" and in_chord % 2 == 1) or
+                          (w.bass_alternation == "change" and bar % 2 == 1))
     root = _root_pitch(span.root_pc, near, lo, min(47, hi))
     interval = fifth if use_fifth else 0
     pitch = nearest_in(((span.root_pc + interval) % 12,), root + interval, lo, hi)
@@ -228,6 +232,10 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             span = chords.at(t)
             root = _root_pitch(span.root_pc, near, lo, root_hi)
             phase = bar % 2 if waltz else i % 2
+            if waltz and i == 0:
+                # A new chord starts on its root; a held chord alternates.
+                before = chords.at(bar_start - 1e-3) if bar_start > 0 else None
+                phase = phase if before is not None and before.root_pc == span.root_pc else 0
             interval = fifth if phase else 0
             if role == "country_octave" and ordinary:
                 interval = (0, fifth, 12, fifth)[i % 4]
@@ -237,8 +245,10 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
                          (0, third, 12, fifth), (0, fifth, 12, third))
                 interval = paths[figure[bar % 4]][i]
             pc = (span.root_pc+interval)%12
-            if ordinary and dna.country_pedal and chords.spans[0].root_pc in span.pcs:
-                pc = chords.spans[0].root_pc
+            # A pedal holds the key's tonic under the chords that contain it
+            # (I under IV); it never sounds another root over a new chord.
+            if ordinary and dna.country_pedal and tonic_pc(chords.key) in span.pcs:
+                pc = tonic_pc(chords.key)
             pitch = nearest_in((pc,), root+interval, lo, hi)
             end = min(span.end, bar_start + (pulses[i+1] if i+1 < len(pulses) else bpb))
             out.append((t, min(dna.country_lengths.get(section_type, 1.4), end-t-.05), pitch, off % 1 == 0))
@@ -267,6 +277,18 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
                 out = [(a, min(d, t-.25-a-.02) if a < t-.25 else d, p, acc) for a,d,p,acc in out]
                 out.append((t-.25, .12, root-1, False))
         return sorted(n for n in out if n[1] > .02)
+    # Compound meters (6/8, 12/8) move in dotted-quarter pulses: accents,
+    # the gallop and held figures sit on the pulse grid, not on quarters.
+    gs = tuple(float(g) for g in groups) if groups else default_groups(bpb)
+    compound = len(gs) >= 2 and all(abs(g - 1.5) < 1e-6 for g in gs)
+    starts = [sum(gs[:i]) for i in range(len(gs))]
+    strong = starts if compound and len(starts) <= 2 else starts[::2] if compound else None
+
+    def accented(off: float) -> bool:
+        if strong is not None:
+            return any(abs(off - a) < 1e-6 for a in strong)
+        return abs(off % 2) < 1e-6
+
     if role == "whole":
         t = bar_start
         while t < bar_start + bpb - 1e-6:
@@ -278,8 +300,15 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             root = _root_pitch(s.root_pc, near, lo, root_hi)
             span_len = hold_end - t
             if dna.hold_figure == "dotted" and span_len >= 3.0:
-                out.append((t, span_len * 0.75 - 0.05, root, True))
-                out.append((t + span_len * 0.75, span_len * 0.25 - 0.05, root + 12, False))
+                # Dotted half and quarter; in a compound bar, held through to
+                # the last pulse.
+                cut = span_len * 0.75
+                if compound:
+                    inner = [bar_start + a - t for a in starts
+                             if t + 1e-6 < bar_start + a < t + span_len - 1e-6]
+                    cut = inner[-1] if inner else span_len * 0.5
+                out.append((t, cut - 0.05, root, True))
+                out.append((t + cut, span_len - cut - 0.05, root + 12, False))
             elif dna.hold_figure == "halves" and span_len >= 2.0:
                 half = span_len / 2.0
                 out.append((t, half - 0.05, root, True))
@@ -294,14 +323,20 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
     eighths = int(bpb * 2)
     if role == "kick":
         steps = [(i * 0.25, False) for i, c in enumerate(kick[: int(round(bpb * 4))]) if c == "x"]
-        if not steps:
-            steps = [(0.0, False)]
+        if not steps or steps[0][0] > 1e-6:
+            # The bass owns the one even where the kick leaves it (a
+            # syncopated or one-drop kick pattern).
+            steps = [(0.0, False)] + steps
     elif role == "pedal8":
         steps = [(k * 0.5, k == dna.pop_eighth) for k in range(eighths)
                  if k not in dna.drop_eighths]
     elif role == "octaves":
         mask = (dna.octave_mask * 2)[:eighths]
         steps = [(k * 0.5, mask[k]) for k in range(eighths) if k not in dna.drop_eighths[:1]]
+    elif role == "gallop" and compound:
+        # Quarter and two sixteenths on each galloping pulse.
+        steps = [(a + o, False) for i, a in enumerate(starts)
+                 for o in ((0.0, 1.0, 1.25) if i % 4 in dna.gallop_beats else (0.0,))]
     elif role == "gallop":
         steps = [(b + o, False) for b in range(int(bpb))
                  for o in ((0.0, 0.5, 0.75) if b in dna.gallop_beats else (0.0,))]
@@ -316,7 +351,7 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         pitch = root + 12 if up else root
         nxt_off = next((o for o, _ in steps if o > off + 1e-6), bpb)
         dur = max(0.12, min(0.95, nxt_off - off) - 0.05)
-        out.append((t, dur, pitch, abs(off % 2) < 1e-6))
+        out.append((t, dur, pitch, accented(off)))
     # Approach the next chord with a neighbor on the last eighth.
     nxt = chords.at(bar_start + bpb + 1e-3) if bar_start + bpb < chords.total else None
     if approach != "none" and nxt is not None and nxt.root_pc != chords.at(bar_start + bpb - 0.25).root_pc \
@@ -334,6 +369,22 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         if t >= bar_start + bpb - 0.5 - 1e-6:
             out[-1] = (t, min(d, 0.45), lead_in, False)
     return out
+
+
+def land_bar(notes: List[Tuple[float, float, int, bool]], bar_start: float, bpb: float,
+             chords: ChordMap, *, near: int = 36, lo: int = 28, hi: int = 52
+             ) -> List[Tuple[float, float, int, bool]]:
+    """The song's last bar lands: the line plays up to the final chord, whose
+    root rings to the end of the bar as the song's last note."""
+    end = bar_start + bpb
+    final = chords.at(end - 1e-3)
+    if final is None:
+        return notes
+    land = max(bar_start, float(final.start))
+    kept = [(t, min(d, land - t - 0.03), p, a) for t, d, p, a in notes if t < land - 1e-6]
+    kept = [n for n in kept if n[1] > 0.05]
+    root = _root_pitch(final.root_pc, near, lo, min(47, hi))
+    return kept + [(land, end - land - 0.05, root, True)]
 
 
 def device_bar(device: str, bar_start: float, bpb: float, chords: ChordMap, *,

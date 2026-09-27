@@ -82,10 +82,6 @@ def test_bass_voice_labels():
 
     # Check that expected voice label families appear (deterministic with seed)
     assert "root" in tsv_content, "Missing 'root' voice label"
-    # Groove memory restates each section's most typical bar, so which
-    # non-root chord tone survives depends on that bar; some must.
-    assert "fifth" in tsv_content or "third" in tsv_content, \
-        "Missing non-root chord-tone voice label"
     assert "root_cadence" in tsv_content, "Missing 'root_cadence' voice label"
 
     import csv
@@ -95,6 +91,22 @@ def test_bass_voice_labels():
         assert notes[0]["kind"] == "root"
         assert notes[-1]["kind"] == "root_cadence"
         assert all(float(row["duration_beats"]) > 0 for row in notes)
+
+
+def test_bass_non_root_voice_labels_across_seeds(tmp_path):
+    """Non-root chord tones (fifths, thirds) are labeled too. Each chord starts
+    on its root, so which inner beats take another chord tone depends on the
+    seed: across a handful of seeds some must."""
+    import yaml
+    from tests.test_groove_clock import _load_cfg, _render_timelines
+
+    data = yaml.safe_load(Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml").read_text())
+    kinds = set()
+    for seed in range(40, 48):
+        data["song"]["seed"] = seed
+        timelines, _ = _render_timelines(_load_cfg(tmp_path, yaml.safe_dump(data), name=f"b{seed}.yaml"))
+        kinds |= {str(e.kind) for e in timelines["bass"].events}
+    assert any(k.startswith(("fifth", "third")) for k in kinds), kinds
 
 
 def test_bass_structured_logging():

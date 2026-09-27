@@ -46,6 +46,10 @@ def apply_slap_velocity(
 ) -> int:
     """Apply slap-specific velocity adjustments.
 
+    ``slap_velocity_floor`` is the minimum velocity of every slapped note
+    (thumb, pop, or a plain slapped note); only percussive ghost notes
+    (``ghost_perc_rate``) play below it.
+
     Args:
         base_velocity: Base velocity
         slap_technique: "thumb", "pop", "ghost", or "normal"
@@ -66,8 +70,8 @@ def apply_slap_velocity(
         # Thumb hits have a strong floor
         return max(slap_velocity_floor, min(127, base_velocity))
     else:
-        # Normal notes
-        return max(1, min(127, base_velocity))
+        # A plain slapped note still has the slap's attack
+        return max(slap_velocity_floor, min(127, base_velocity))
 
 
 def apply_slap_duration(

@@ -7,14 +7,33 @@ def get_rhythm_pattern_anchor(
     beats_per_bar: float,
     subdivisions_per_beat: int = 4,
     walking_quarters: bool = False,
+    pulses=None,
 ) -> set[float]:
     """Anchor pattern: mostly downbeats (beats 1, 3 in 4/4).
 
     For walking bass (walking_quarters=True), returns all quarter notes.
 
+    ``pulses`` are a compound meter's dotted-quarter pulse starts within the
+    bar (6/8: 0 and 1.5 quarter beats). The anchor then sits on the pulse
+    grid: both pulses of a 6/8 bar, the first and third of 9/8 and 12/8,
+    and with ``walking_quarters`` every eighth (the beats a compound bar is
+    counted in).
+
     Returns set of eligible beat positions for note placement.
     """
     eligible = set()
+
+    if pulses:
+        starts = sorted(float(p) for p in pulses)
+        anchors = starts if len(starts) <= 2 else starts[::2]
+        for slot in slots:
+            pos = slot % beats_per_bar
+            if walking_quarters:
+                if abs(pos * 2 - round(pos * 2)) < 1e-6:
+                    eligible.add(slot)
+            elif any(abs(pos - a) < 1e-6 for a in anchors):
+                eligible.add(slot)
+        return eligible
 
     for slot in slots:
         beat_in_bar = slot % beats_per_bar

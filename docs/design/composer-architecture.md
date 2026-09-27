@@ -353,7 +353,10 @@ What does it:
   walking line (the walking persona) and an authored `bass_motif`, which
   the engine plays with its written rhythm and lengths. Composed notes take
   the bass's `articulation_style` (slap thumb and pop, mute, pick) and its
-  register (user, else recipe, else persona), as engine notes do.
+  register (user, else recipe, else persona), as engine notes do, and play
+  at the section's dynamics (`_composed_bass_velocity`: the drummer's
+  `section_level`). Every role starts its bars on the root, and in compound
+  meters accents and figures sit on the dotted-quarter pulse.
 - **Bass in the arrangement** (`render.py`, `_apply_bass_arrangement_pass`;
   `composer/bass.py`, `device_bar`). Where the composed drummer plays a
   section, the bass plays the song's `into_chorus` device and ending with it,
@@ -379,10 +382,11 @@ What does it:
   fills do not apply. The walking persona sets `rhythm_pattern: walking`,
   and a recipe cannot replace it.
 - **Every bar plays.** The engine line's rhythm is drawn on a stream keyed
-  by section type, so a returning chorus keeps its line, and a bar the
-  density and rest draws would empty keeps its first eligible note. Kick
-  locks draw per hit, so a drummer's extra kick never reshuffles the rest
-  of the line.
+  by section type, so a returning chorus keeps its line, and every bar's
+  downbeat (and every chord start the pattern has a slot for) is kept
+  whatever the density and rest draws do; the first note of a new chord is
+  its root. Kick locks draw per hit, so a drummer's extra kick never
+  reshuffles the rest of the line.
 - **Generated licks.** Most of a song's lick bank is synthesized from lick
   shapes (cry, run down, run up into a bend, motif, pedal point, pre-bend)
   with per-song rhythm unit, box position, and length.
@@ -448,7 +452,9 @@ metrics for the musical findings and limits of the pocket measurements.
   fifths welcome after it). A restated bass bar starts on the root; a fifth
   or third on one in the source was that bar's variation, and only a fifth
   drop the engine drew for the restated bar itself (`fifth_jump_rate`)
-  keeps its fifth. Restated bass pitches stay inside the bass register.
+  keeps its fifth. A source bar that starts late gets a root on one, and a
+  restated bass note ends at the next chord. Restated bass pitches stay
+  inside the bass register.
 - **Chord-relative restatement.** A restated pitch follows the root and keeps
   its chord role (a third stays a third). Approach notes aim at the chord
   they resolve into (the next change inside the bar, else the next bar's).
@@ -892,3 +898,51 @@ Found after the review above, in the examples' exports:
   riff player (`RIFF_PLAYERS`), drums and bass aside, drops what it would
   play before it. The drums are composed before the lead so the entry is
   known.
+
+## Bass: the beat-1 rule, dynamics and meter (third review)
+
+Listening to the rewritten examples found bass lines that left the one to
+the rest of the band, composed bass notes whose loudness had nothing to do
+with the section, and quarter-note bass figures in 6/8.
+
+- **Beat 1.** The groove-memory root tie-break only fixed restated bars that
+  already had a note on one. The engine's density and rest draws dropped
+  downbeats (the rock verse under its riff played 38 fifths and 3 roots,
+  none on one), a recipe's `fifth_jump_rate` and the voicing's 25% downbeat
+  fifth put fifths on new chords (the modulated final chorus of
+  iron-horse-road), and a pedal held any previous root into the next chord
+  (the dub persona's IV root under the I bars). Now every bar's downbeat is
+  protected from thinning (`_render_legacy_bass`, the kick-locked renderer,
+  every composed role, groove-memory restatements via `_with_bass_anchor`,
+  hook responses), each new harmony's first note is its root
+  (`new_harmony_note`, the voicing's `new_chord`), fifth drops vary only a
+  held chord unless the user set `fifth_jump_rate`, and a pedal holds only
+  the key's tonic under a chord that contains it (the country pedal too).
+  Restated bass notes stop at the next chord, and a lifted recurrence never
+  restates a thinner bass groove than the one the section established.
+- **Dynamics.** Composed bass notes took the median of the engine line they
+  replaced, so a pick line's velocity floor and its accent count set the
+  level (the streetlight-summer bridge at 107 over choruses at 91 to 98).
+  They now play `_BASS_TOUCH` (80) times the drummer's `section_level`
+  (intensity with the planner's escalation, and energy), before
+  articulation.
+- **Explicit patterns.** An anchor the user set no longer turns into a walk
+  when dense with approaches, and the articulation's pattern bias applies
+  only to an anchor nobody chose (`_user_param_keys`, read before the recipe
+  merge).
+- **Compound meters.** The engine's anchor took the waltz's second quarter in
+  6/8 and its drum locks doubled the drummer's third-eighth kick, a 3/4 bar;
+  roles accented quarter beats. The anchor, drum locks and role accents now
+  use the dotted-quarter pulses, the gallop gallops on pulses, and the
+  dotted hold figure holds to the last pulse.
+- **Endings and slap.** The song's last bass note could be a 0.07-beat ghost
+  or pop, or a fill into nothing. The last section's final bar now lands on
+  the final chord and rings; cadences and downbeat roots are never ghosts.
+  A named persona keeps its `articulation_style` over the recipe
+  (`_PERSONA_TECHNIQUE_KEYS`), so the funk persona slaps under the funk
+  recipe, and the slap floor holds for every non-ghost slapped note after
+  the groove clock's velocity humanization (`_hold_slap_floor`).
+- **Pickups and answers.** A bass transition pickup replaced nothing and
+  stacked on the line's own note; it now cuts or replaces the notes it lands
+  on (`_clear_bass_for_pickup`). Hook responses skip device windows (they
+  played after a cold ending) and keep the root on one.
