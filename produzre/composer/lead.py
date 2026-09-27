@@ -83,6 +83,9 @@ class LeadContext:
     # A lead `seed` (instrument or section): re-rolls the lead's own ideas
     # and phrase choices. None plays the song's.
     seed: Optional[int] = None
+    # A section or instrument `genre` for the lead: its ideas and licks come
+    # from that genre (the hook stays the song's). None plays the song's.
+    genre: Optional[str] = None
     prev_section_type: Optional[str] = None
     # The singer's line in this section, as (beat, duration, pitch): the
     # realized melody theme the rest of the band follows. `foreground: auto`
@@ -142,33 +145,36 @@ class SongComposer:
         self._plans: Dict[tuple, List[PlanItem]] = {}
         self._realized: Dict[tuple, List[Note]] = {}
         self._dna_views: Dict[tuple, SongDNA] = {}
-        self._part_dnas: Dict[int, SongDNA] = {}
+        self._part_dnas: Dict[tuple, SongDNA] = {}
         # The last plain (unlifted) realization per section memory, with its
         # key: the final chorus lifts an authored line relative to it.
         self._last_plain: Dict[tuple, Tuple[List[Note], str]] = {}
         self._fill_counter = 0
         self.log: List[str] = []
 
-    def part_dna(self, seed: Optional[int]) -> SongDNA:
-        """The DNA a lead ``seed`` plays: the song's hook and answer (the
-        song-level melody every part shares), with the lead's own verse and
-        bridge ideas and lick bank drawn from that seed."""
-        if seed is None:
+    def part_dna(self, seed: Optional[int], genre: Optional[str] = None) -> SongDNA:
+        """The DNA a lead ``seed`` or ``genre`` plays: the song's hook and
+        answer (the song-level melody every part shares), with the lead's own
+        verse and bridge ideas and lick bank drawn from that seed and genre."""
+        genre = genre if genre and genre != self.genre else None
+        if seed is None and genre is None:
             return self.dna
-        cached = self._part_dnas.get(int(seed))
+        key = (None if seed is None else int(seed), genre)
+        cached = self._part_dnas.get(key)
         if cached is None:
-            fresh = compose_dna(seed=int(seed), genre=self.genre, key=self.key, mode=self.mode,
+            seed = self.seed if seed is None else int(seed)
+            fresh = compose_dna(seed=int(seed), genre=genre or self.genre, key=self.key, mode=self.mode,
                                 beats_per_bar=self.bpb,
                                 country_style=self.arrangement_dna().country_style,
                                 verse_fit=self._verse_fit, groups=self.groups)
             base = self.dna
             # Verse and chorus keep contrasting rhythms against the kept hook.
             verse = fresh.verse if fresh.verse.durations != base.hook.durations else base.verse
-            sig = base.signature.split("|verse:")[0] + f"|reseed:{int(seed)}|" + ",".join(
-                l.name for l in fresh.licks)
+            sig = base.signature.split("|verse:")[0] + f"|reseed:{int(seed)}|" + (
+                f"genre:{genre}|" if genre else "") + ",".join(l.name for l in fresh.licks)
             cached = SongDNA(base.hook, base.hook_answer, verse, fresh.bridge, list(fresh.licks),
                              sig, base.authored)
-            self._part_dnas[int(seed)] = cached
+            self._part_dnas[key] = cached
         return cached
 
     def comp_dna(self):
@@ -271,22 +277,27 @@ class SongComposer:
         seed = self.seed if ctx.seed is None else int(ctx.seed)
         rng = random.Random(stable_seed_int("composer.section", seed, ctx.section_id,
                                             st, ctx.occurrence))
+        genre = ctx.genre if ctx.genre and ctx.genre != self.genre else None
         memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register,
-                      ctx.groups, ctx.seed)
-        base_dna = self.dna
-        self.dna = self._dna_for(ctx.beats_per_bar, ctx.groups, part_seed=ctx.seed)
+                      ctx.groups, ctx.seed, genre)
+        base_dna, base_genre, base_family = self.dna, self.genre, self.family
+        self.dna = self._dna_for(ctx.beats_per_bar, ctx.groups, part_seed=ctx.seed, genre=genre)
+        if genre:
+            # The section's genre shapes the lead's vocabulary for this section.
+            self.genre, self.family = genre, genre_family(genre)
         try:
             return self._compose(st, ctx, chords, rng, memory_key)
         finally:
-            self.dna = base_dna
+            self.dna, self.genre, self.family = base_dna, base_genre, base_family
 
-    def _dna_for(self, bpb: float, groups=None, part_seed: Optional[int] = None) -> SongDNA:
+    def _dna_for(self, bpb: float, groups=None, part_seed: Optional[int] = None,
+                 genre: Optional[str] = None) -> SongDNA:
         """The DNA fitted to a section's bar length (meter changes)."""
-        source = self.part_dna(part_seed)
+        source = self.part_dna(part_seed, genre)
         target_groups = tuple(groups) if groups else self.groups if abs(bpb - self.bpb) < 1e-6 else None
         if (abs(bpb - self.bpb) < 1e-6 and target_groups == self.groups) or source.authored:
             return source
-        view_key = (bpb, target_groups, part_seed)
+        view_key = (bpb, target_groups, part_seed, genre)
         cached = self._dna_views.get(view_key)
         if cached is None:
             d = source

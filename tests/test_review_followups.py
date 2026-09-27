@@ -119,3 +119,49 @@ def test_pickup_respects_register_scale_and_meter():
                                 incoming_start=64.0)
         assert p in (65, 66) or p in (68, 69)
     assert choose_pickup_pitch([], instrument="lead_gtr", register=(62, 81)) is None
+
+
+def _mashup(tmp_path, where):
+    inst = {"harmony": {}, "drums": {}, "bass": {}, "rhythm_gtr": {}, "lead_gtr": {}}
+    reggae = {k: dict(v) for k, v in inst.items()}
+    if where == "section":
+        for name in ("drums", "bass", "rhythm_gtr", "lead_gtr"):
+            reggae[name] = {"genre": "reggae"}
+    data = {"version": 1,
+            "song": {"title": f"Mash{where}", "seed": 11, "genre": "hard_rock", "key": "A",
+                     "mode": "minor"},
+            "sections": {
+                "verse": {"type": "verse", "bars": 8, "harmony": {"progression": "i iv v i"},
+                          "instruments": inst},
+                "dub": {"type": "verse", "bars": 8, "harmony": {"progression": "i iv v i"},
+                        "instruments": reggae}},
+            "arrangement": ["verse", "dub"]}
+    if where == "global":
+        data["instruments"] = {n: {"genre": "reggae"} for n in ("drums", "bass", "rhythm_gtr",
+                                                                "lead_gtr")}
+    return _load_cfg(tmp_path, yaml.safe_dump(data, sort_keys=False), name=f"{where}.yaml")
+
+
+def test_a_section_genre_changes_the_composed_band(tmp_path):
+    _, result = _render_timelines(_mashup(tmp_path, "section"))
+    plan = result.performance_plan
+    assert plan.get("composer.drum_dna.verse").idiom == ""
+    assert plan.get("composer.drum_dna.dub").idiom == "reggae"
+    assert plan.get("composer.comp.verse")["riff"] != plan.get("composer.comp.dub")["riff"]
+
+
+def test_global_instrument_genre_applies_to_every_section(tmp_path):
+    _, result = _render_timelines(_mashup(tmp_path, "global"))
+    plan = result.performance_plan
+    for sec in ("verse", "dub"):
+        assert plan.get(f"composer.drum_dna.{sec}").idiom == "reggae"
+    assert plan.get("composer.comp.verse")["riff"] == plan.get("composer.comp.dub")["riff"]
+
+
+def test_a_lead_section_genre_draws_that_genres_licks(tmp_path):
+    _, result = _render_timelines(_mashup(tmp_path, "section"))
+    composer = result.performance_plan.get("composer.song")
+    own = composer.part_dna(None, "reggae")
+    assert own is not composer.dna and "genre:reggae" in own.signature
+    assert own.hook is composer.dna.hook          # the song's hook stays the song's
+    assert composer.part_dna(None, composer.genre) is composer.dna

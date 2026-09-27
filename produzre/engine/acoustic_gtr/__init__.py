@@ -292,7 +292,8 @@ def render_into_timeline(
 
     # Solo fingerstyle owns its figure unless the user chose a picking pattern.
     if plan is not None and plan.get("composer.song") is not None:
-        from ...orchestrate.render import _flat_extra, _explicit_settings, _seed_override, _flag
+        from ...orchestrate.render import (_flat_extra, _explicit_settings, _part_genre,
+                                           _seed_override, _flag)
         from ...composer.acoustic import fingerstyle
         from ...composer.song import section_groups
         from ...composer.theory import ChordMap
@@ -307,7 +308,8 @@ def render_into_timeline(
             seed = _seed_override(cfg, section, instrument_cfg)
             chords = ChordMap(harmony_plan.chord_slots, section.key or cfg.song.key,
                               section.mode or cfg.song.mode)
-            notes = fingerstyle(composer.seed if seed is None else seed, composer.genre,
+            notes = fingerstyle(composer.seed if seed is None else seed,
+                _part_genre(cfg, section, "acoustic_gtr", instrument_cfg, composer),
                 chords, chord_voicings, bars=section_bars, bpb=bpb,
                 groups=section_groups(cfg, section, harmony_plan.meter),
                 section_type=params.section_type, melody_amount=params.melody_amount,

@@ -1132,6 +1132,54 @@ _RHYTHM_FEEL_KEYS = ("density", "palm_mute", "chuck_rate", "voicing", "accent_st
                      "sustain_duration")
 
 
+def _part_genre(cfg, sec, inst_name: str, inst_cfg, composer) -> str:
+    """The genre a composed part plays in this section: the section
+    instrument's ``genre``, else the global instrument's, else the song's
+    (the same order recipe selection uses)."""
+    genre = getattr(inst_cfg, "genre", None)
+    if not genre:
+        genre = getattr(_get_global_instrument_cfg(cfg, inst_name, getattr(sec, "id", None)),
+                        "genre", None)
+    return str(genre or composer.genre or "")
+
+
+def _part_dna(composer, kind: str, genre: str, reseed: Optional[int]):
+    """A part's DNA for its own genre and seed, or None for the song's.
+
+    A part whose genre differs from the song's gets that genre's player
+    (drummer, comping, bass roles), seeded from the song so the choice is
+    stable. Cached on the composer, so repeated sections share one player.
+    """
+    if reseed is None and genre == composer.genre:
+        return None
+    cache = composer.__dict__.setdefault("_genre_part_dnas", {})
+    key = (kind, genre, reseed)
+    if key in cache:
+        return cache[key]
+    from ..composer.country import country_style
+
+    seed = composer.seed if reseed is None else reseed
+    style = (composer.arrangement_dna().country_style if genre == composer.genre else
+             country_style(seed, genre))
+    if kind == "comp":
+        from ..composer.comping import comp_family, compose_comp_dna
+
+        dna = compose_comp_dna(seed=seed, genre=genre, key=composer.key, mode=composer.mode,
+                               shuffle=comp_family(genre) in ("blues", "jazz"),
+                               country_style=style)
+    elif kind == "bass":
+        from ..composer.bass import compose_bass_dna
+
+        dna = compose_bass_dna(seed=seed, genre=genre, country_style=style)
+    else:
+        from ..composer.drums import compose_drum_dna
+
+        dna = compose_drum_dna(seed=seed, genre=genre, beats_per_bar=composer.bpb,
+                               country_style=style)
+    cache[key] = dna
+    return dna
+
+
 def _seed_override(cfg, sec, inst_cfg) -> Optional[int]:
     """An instrument or section ``seed`` re-rolls that part's DNA (the
     documented way to try another take of one part)."""
@@ -1220,15 +1268,9 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
     nxt = (transition_context or {}).get("next_section_type")
     if isinstance(transition_context, dict) and transition_context.get("is_last_section"):
         nxt = None
-    comp_dna = composer.comp_dna()
     reseed = _seed_override(cfg, sec, rhythm_cfg)
-    if reseed is not None:
-        from ..composer.comping import comp_family, compose_comp_dna
-
-        comp_dna = compose_comp_dna(seed=reseed, genre=composer.genre, key=composer.key,
-                                    mode=composer.mode,
-                                    shuffle=comp_family(composer.genre) in ("blues", "jazz"),
-                                    country_style=composer.arrangement_dna().country_style)
+    part_genre = _part_genre(cfg, sec, "rhythm_gtr", rhythm_cfg, composer)
+    comp_dna = _part_dna(composer, "comp", part_genre, reseed) or composer.comp_dna()
     groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
     arrangement = composer.arrangement_dna()
     kicks, snares = _riff_pocket(composer, performance_plan, sec, bpb, groups)
@@ -1255,7 +1297,7 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
                            hplan.chord_slots,
                            getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
                            getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
-                           country="country" in composer.genre.lower())
+                           country="country" in part_genre.lower())
     # Tails the guitar left open: a doubling bass answers the riff there.
     answers = []
     riff_bars = sorted({int(e.beat // bpb) for e in events if e.tag == "comp_riff"})
@@ -1266,7 +1308,7 @@ def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_
         answers += [{"beat": round(b * bpb + n.onset, 4), "dur": n.dur, "kind": n.kind,
                      "accent": n.accent, "interval": n.interval}
                     for n in signature.notes_for_bar(b) if n.kind == "rsingle"]
-    genre = str(getattr(cfg.song, "genre", "") or "").lower()
+    genre = part_genre.lower()
     from ..composer.country import is_waltz
     from ..composer.theory import ChordMap
 
@@ -1452,13 +1494,9 @@ def _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_be
         st = str(getattr(sec, "type", "") or "").strip().lower()
         st = {"pre-chorus": "prechorus", "hook": "chorus", "solo": "chorus",
               "outro": "chorus", "intro": "verse"}.get(st, st)
-        bass_dna = composer.bass_dna()
         reseed = _seed_override(cfg, sec, inst_cfg)
-        if reseed is not None:
-            from ..composer.bass import compose_bass_dna
-
-            bass_dna = compose_bass_dna(seed=reseed, genre=composer.genre,
-                                        country_style=composer.arrangement_dna().country_style)
+        bass_dna = _part_dna(composer, "bass", _part_genre(cfg, sec, "bass", inst_cfg, composer),
+                             reseed) or composer.bass_dna()
         role = bass_dna.roles.get(st, "engine")
         drums = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
         kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
@@ -1680,13 +1718,9 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     from ..composer.drums import apply_feel_knobs, feel_values, for_meter, plan_drum_section
     from ..composer.song import section_groups
 
-    dna = composer.drum_dna()
     reseed = _seed_override(cfg, sec, drums_cfg)
-    if reseed is not None:
-        from ..composer.drums import compose_drum_dna
-
-        dna = compose_drum_dna(seed=reseed, genre=composer.genre, beats_per_bar=composer.bpb,
-                               country_style=composer.arrangement_dna().country_style)
+    dna = _part_dna(composer, "drums", _part_genre(cfg, sec, "drums", drums_cfg, composer),
+                    reseed) or composer.drum_dna()
     for key in ("ghost_rate", "fill_rate", "kick_density", "hat_density"):
         try:
             dna = apply_feel_knobs(dna, **{key: feel.get(key)})
@@ -1831,6 +1865,7 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
         groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
         strict_register=lead_register_is_range(cfg, lead_cfg),
         seed=_seed_override(cfg, sec, lead_cfg),
+        genre=_part_genre(cfg, sec, "lead_gtr", lead_cfg, composer),
         prev_section_type=(transition_context or {}).get("prev_section_type"),
         melody=_sung_line(performance_plan, sec),
     )

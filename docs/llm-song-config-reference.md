@@ -205,6 +205,15 @@ section type, tempo, and section meter. An explicit instrument `recipe` wins
 over automatic selection. A section instrument `genre` overrides the global
 instrument genre, which overrides `song.genre`.
 
+The same genre also chooses the composed player. A drummer, rhythm guitar,
+bass or acoustic part whose genre differs from the song's plays that
+genre's player (a reggae `genre` on a hard rock song's section gets a
+one-drop drummer, a skank and a reggae bass role); the player is seeded
+from the song, so repeated sections share it. A lead with its own genre
+draws its verse and bridge ideas and licks from that genre and keeps the
+song's hook. Arrangement habits (into-chorus devices, endings) stay the
+song's, so the band still agrees on them.
+
 Built-in recipe families include rock, hard_rock, soft_rock, alt_rock, prog_rock,
 arena_rock, blues_rock, pop_rock, grunge, emo, metal, heavy_metal, punk, ska,
 blues, soul, rnb, gospel, jazz, funk, pop, dance_pop, electronic, techno,
