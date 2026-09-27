@@ -30,6 +30,20 @@ class Note:
     role: str = "melody"
 
 
+# Roles whose notes sound together as a double stop, two strings picked at
+# once: country thirds and sixths, and octave stabs. Every monophonic clip of
+# the lead (composer, engine, section render, build) keeps both notes.
+DOUBLE_STOP_ROLES = ("country_double", "stab_octave")
+
+
+def sounds_with(a, b) -> bool:
+    """Whether performed events ``a`` and ``b`` are one double stop: the same
+    double-stop kind, attacked together (humanization apart)."""
+    kind = str(getattr(a, "kind", "") or "")
+    return kind == str(getattr(b, "kind", "") or "") and kind.startswith(DOUBLE_STOP_ROLES) \
+        and abs(float(a.start_beat) - float(b.start_beat)) < .06
+
+
 _BEAM = 14
 
 

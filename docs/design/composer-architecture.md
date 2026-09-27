@@ -362,9 +362,10 @@ What does it:
   pickup on top of a device (or of a walking line's last bar, which walks
   into the next section itself). A riff-alone intro follows one rule for
   every part (`arrangement.riff_alone_intro`): it needs a rhythm or acoustic
-  guitar to play the riff alone, and the composed drums and the bass then
-  wait out the same bars; without one, or with drums the user configured,
-  the band plays from the top.
+  guitar to play the riff alone, and the composed drums, the bass, the lead,
+  the arpeggiator and every other part that is not the riff then wait out
+  the same bars; without one, or with drums the user configured, the band
+  plays from the top.
 - **Walking bass** (`engine/bass/walking.py`). A walk is planned a bar at a
   time, not thinned from a rhythm pattern: every beat sounds (dotted
   quarters in compound meters), each chord starts on its root, the last
@@ -773,3 +774,41 @@ The examples rewrite found seven lead and arpeggiator problems. What changed:
   wrong note for `up_down` and `down`); chords spell sevenths and extensions
   (6, 9, 11, 13 and alterations); velocity spans about 30 to 100 with
   intensity, plus bass and metric accents.
+
+## Lead and arpeggiator follow-ups (2026-09-26)
+
+Found after the review above, in the examples' exports:
+
+- **Octave stabs.** `counter: octaves` played single notes: the composer's
+  `_tidy`, the section render's post-feel clip and the build's final clip
+  all kept one note per attack, and only country double stops were marked
+  as two strings. Octave stabs now carry the role `stab_octave`, and
+  `composer.realize.DOUBLE_STOP_ROLES` / `sounds_with` are the one rule
+  every monophonic clip uses (a double stop's two notes also share their
+  timing humanization and move together under the groove clock). The
+  root's octave had to fit the register whole, so some chords (Bm in a
+  `[62, 81]` register) got no stab at all; the stab now falls back to the
+  fifth's octave (then another chord tone's), plays the root alone in a
+  register narrower than an octave, and every bar a chord holds gets one.
+- **`dive_rate` in composed solos** only touched the final `dive` note.
+  It now works like `bend_rate`: 0.3 plays the composed dives as written,
+  0 holds them, higher values dive held solo notes (1.5 beats or longer,
+  the phrase endings) on a per-note stream, all of them at 1.
+- **Solo ending in the log.** A drawn `dive` ending plays only in rock,
+  metal and punk (`arrangement.DIVE_FAMILIES`); elsewhere the note is held.
+  The arrangement DNA now resolves that when it is drawn, so the
+  signature says `hold`, and each solo's composer line names the ending it
+  played. A pinned `solo_ending: dive` dives in any genre.
+- **Trills under swing.** The trill ending's 32nds sat on sixteenth
+  positions the groove clock swung one by one, reordering them into
+  0.01-beat notes. Trill notes are tagged `trill`: the performance shares
+  one humanization offset across the ornament and the groove clock moves it
+  as a whole with its first note, keeping its note lengths.
+- **Riff-alone intros mean the riff alone.** The lead and the arpeggiator
+  played from bar 1 while the drums and bass waited. The band's entry bar
+  (`render._band_entry_bar`, from `arrangement.riff_alone_intro` and
+  `intro_entry_bar`) is now shared: the lead composer plans its intro hook
+  from that bar (`LeadContext.entry_bar`), and every part that is not a
+  riff player (`RIFF_PLAYERS`), drums and bass aside, drops what it would
+  play before it. The drums are composed before the lead so the entry is
+  known.

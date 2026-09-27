@@ -209,16 +209,19 @@ def test_blues_recipe_rate_and_short_section_prefix(tmp_path, meter, bpb):
     assert build_harmony_plan(cfg, cfg.sections['verse'], logging.getLogger('t')).chord_rate == 2
 
 
-@pytest.mark.parametrize('meter', ['5/8', '11/8', '12/8'])
-def test_developed_answers_with_auto_foreground_and_modulation(tmp_path, meter):
+@pytest.mark.parametrize('meter,counter', [('5/8', 'guide'), ('11/8', 'octaves'),
+                                           ('12/8', 'octaves')])
+def test_developed_answers_with_auto_foreground_and_modulation(tmp_path, meter, counter):
     import yaml
     from tools.composer_round2 import config
     from tests.test_groove_clock import _load_cfg, _render_timelines
     data = config('answers', 'rock', meter, 'develop', 2, foreground='auto')
     data['instruments']['bass']['params'].update(register_low=36, register_high=48)
     # A plain counter-line leaves the lead holes the bass answers; the drawn
-    # chorus form would otherwise decide how much room the lead leaves.
-    data['song']['arrangement_style'] = {'counter': 'octaves'}
+    # chorus form would otherwise decide how much room the lead leaves. In
+    # 5/8 the octave stabs fill every bar (1.25 beats apart), so the held
+    # guide line leaves the holes there.
+    data['song']['arrangement_style'] = {'counter': counter}
     cfg = _load_cfg(tmp_path, yaml.safe_dump(data))
     timelines, _ = _render_timelines(cfg)
     bass = sorted(timelines['bass'].events, key=lambda n: n.start_beat)

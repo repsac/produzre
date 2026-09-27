@@ -16,9 +16,11 @@
 #                   0.15, bend_rate adds bends), vibrato on every note held a
 #                   beat or longer, a volume swell on every note held 1.5
 #                   beats
-#   solo            dive_rate 1: every note held 1.5 beats or longer ends in
-#                   a whammy dive, and so does the solo's last note
-#                   (`solo_ending: dive`, rock and metal only)
+#   solo            dive_rate 1: every note held 1.5 beats or longer (the
+#                   phrase endings) ends in a whammy dive instead of its
+#                   bend or vibrato, and so does the solo's last note
+#                   (pinned with `solo_ending: dive`). At the 0.3 default
+#                   only that last note dives.
 #   chorus_final    the defaults again, the hook lifted as a last chorus
 #                   (most notes a third to a fourth higher)
 #

@@ -39,7 +39,7 @@ from .cells import Cell
 from .dna import SongDNA, compose_dna
 from .licks import LICKS, Lick, genre_family, realize_lick
 from .listener import Listener
-from .realize import Note, realize_cell
+from .realize import DOUBLE_STOP_ROLES, Note, realize_cell
 from .theory import ChordMap, scale_pcs, tonic_pc
 
 # Target information content (mean bits per note of a phrase, judged in
@@ -91,6 +91,9 @@ class LeadContext:
     # realized melody theme the rest of the band follows. `foreground: auto`
     # choruses answer or harmonize it.
     melody: Optional[Tuple[Tuple[float, float, int], ...]] = None
+    # The bar the band enters in a riff-alone intro (arrangement.intro_entry_bar):
+    # the riff plays alone before it, so the lead waits too. 0 plays from the top.
+    entry_bar: int = 0
 
 
 @dataclass(frozen=True)
@@ -279,7 +282,7 @@ class SongComposer:
                                             st, ctx.occurrence))
         genre = ctx.genre if ctx.genre and ctx.genre != self.genre else None
         memory_key = (st, ctx.bars, ctx.foreground, ctx.beats_per_bar, ctx.register, ctx.strict_register,
-                      ctx.groups, ctx.seed, genre)
+                      ctx.groups, ctx.seed, genre, ctx.entry_bar)
         base_dna, base_genre, base_family = self.dna, self.genre, self.family
         self.dna = self._dna_for(ctx.beats_per_bar, ctx.groups, part_seed=ctx.seed, genre=genre)
         if genre:
@@ -331,6 +334,7 @@ class SongComposer:
         plan = self._plans.get(memory_key)
         recalled = plan is not None and st != "solo"
         lifted = False
+        self.solo_ending_played = None
         if not recalled:
             plan = self._plan_section(st, ctx, rng)
             if st != "solo":
@@ -365,6 +369,13 @@ class SongComposer:
         if st != "solo" and not lifted:
             self._last_plain[memory_key] = (notes, ctx.key)
         self.listener.observe([n.pitch for n in notes], [n.dur for n in notes])
+        if st == "solo" and self.solo_ending_played:
+            ending = {"handover": "hands over on the dominant",
+                      "dive": "ends on a whammy dive", "hold": "ends on a held note",
+                      "trill": "ends with a trill into a held note",
+                      "slide_off": "ends sliding off"}.get(self.solo_ending_played,
+                                                           self.solo_ending_played)
+            detail = f"{detail}; {ending}" if detail else ending
         self.log.append(
             f"{ctx.section_id} ({st} #{ctx.occurrence + 1}, {ctx.foreground}): "
             f"{'recalled' if recalled else 'composed'} {len(plan)} phrase items, {len(notes)} notes"
@@ -441,6 +452,13 @@ class SongComposer:
         return lo, hi, anchors
 
     def _plan_section(self, st: str, ctx: LeadContext, rng: random.Random) -> List[PlanItem]:
+        if 0 < ctx.entry_bar < ctx.bars and st != "intro":
+            # A riff-alone intro the lead does not play as an intro (a solo
+            # flag): its part starts with the band, planned for the bars left.
+            shift = ctx.entry_bar * ctx.beats_per_bar
+            sub = _sub_context(replace(ctx, entry_bar=0), ctx.bars - ctx.entry_bar)
+            return [replace(i, start=i.start + shift, end=i.end + shift if i.end else i.end)
+                    for i in self._plan_section(st, sub, rng)]
         full = ctx.foreground == "full"
         if st == "solo":
             return self._plan_solo(ctx, rng)
@@ -796,6 +814,14 @@ class SongComposer:
             first = ctx.bars // 2
             if ctx.bars - first < line:
                 return items
+        if ctx.entry_bar > first:
+            # A riff-alone intro: the riff plays alone until the band enters,
+            # and the lead comes in with the band.
+            first = ctx.entry_bar
+            if ctx.bars - first < line:
+                return [PlanItem("cell", first * ctx.beats_per_bar,
+                                 cell=C.fragment(self.dna.hook, ctx.beats_per_bar),
+                                 anchor=anchors["intro"], role="establish", tag="hook")]
         if ctx.bars >= line:
             for bar in range(first, ctx.bars - line + 1, line):
                 items += self._hook_line(bar, ctx, anchors["intro"],
@@ -934,18 +960,33 @@ class SongComposer:
         if hands_on:
             turn = C.Cell((C.CellNote(0.0, 0.5, 1), C.CellNote(0.5, bpb - 0.5, 1, tech="vib",
                                                               degree=4)), bpb, "solo_turn")
+            self.solo_ending_played = "handover"
             return PlanItem("cell", start, cell=turn, anchor=anchor, cadence=4, role="cadence",
                             tag="solo_turn")
         return PlanItem("cell", start, cell=self._solo_ending(bpb), anchor=anchor, cadence=0,
                         role="cadence", tag="solo_final")
 
     def _solo_ending(self, bpb: float) -> Cell:
-        """The solo's last gesture, the song's own (composer/arrangement.py)."""
+        """The solo's last gesture, the song's own (composer/arrangement.py).
+
+        A drawn dive plays only in rock, metal and punk (a section genre can
+        differ from the song's); a pinned one plays in any genre. The ending
+        played is kept in ``solo_ending_played`` for the build log.
+        """
+        from .arrangement import DIVE_FAMILIES
+
         ending = self.arrangement_dna().solo_ending
-        if ending == "dive" and self.family not in ("rock", "metal", "punk"):
+        pinned = str((self.arrangement_overrides or {}).get("solo_ending") or "").strip().lower()
+        if ending == "dive" and self.family not in DIVE_FAMILIES and pinned != "dive":
             ending = "hold"
-        if ending == "trill" and bpb >= 2:
-            trill = tuple(C.CellNote(k * 0.125, 0.125, 0, degree=(1 if k % 2 else 0))
+        if ending == "trill" and bpb < 2:
+            ending = "hold"
+        self.solo_ending_played = ending
+        if ending == "trill":
+            # Marked as one ornament: the performance moves it as a whole
+            # (timing jitter and swing), so its 32nds stay playable.
+            trill = tuple(C.CellNote(k * 0.125, 0.125, 0, tech="trill",
+                                     degree=(1 if k % 2 else 0))
                           for k in range(8))
             return C.Cell(trill + (C.CellNote(1.0, bpb - 1.0, 0, tech="vib", degree=0),),
                           bpb, "final")
@@ -1310,8 +1351,15 @@ class SongComposer:
         return best[1] if best else []
 
     def _rhythmic_counter(self, it: PlanItem, ctx, chords: ChordMap, lo, hi) -> List[Note]:
-        """Punctuating counter-parts: octave root stabs on the changes, or
-        short chord-tone stabs on the hook's own attacks."""
+        """Punctuating counter-parts: octave stabs on the changes, or short
+        chord-tone stabs on the hook's own attacks.
+
+        Octave stabs sound both notes (role ``stab_octave``, kept together by
+        every monophonic clip, like country double stops) at the change and
+        at least once in every bar the chord holds. The octave is the root's
+        when it fits the register, else the fifth's or another chord tone's;
+        a register narrower than an octave plays the root alone.
+        """
         bpb = ctx.beats_per_bar
         out: List[Note] = []
         hook_offsets = sorted({round(n.onset % bpb, 3) for n in self.dna.hook.notes})
@@ -1320,16 +1368,16 @@ class SongComposer:
                 continue
             end = min(span.end, it.end)
             if it.kind == "octaves":
-                root = min((p for p in range(lo, hi - 11) if p % 12 == span.root_pc),
-                           key=lambda p: (abs(p - it.anchor), p), default=None)
-                if root is None:
+                pitches = _octave_stab(span, lo, hi, it.anchor)
+                if not pitches:
                     continue
+                step = min(bpb, max(1.0, (end - span.start) / 2.0))
                 t = span.start
                 while t < end - 0.25:
-                    for p in (root, root + 12):
+                    for p in pitches:
                         out.append(Note(round(t, 4), 0.45, p, accent=True, tech="stac",
-                                        role="stab"))
-                    t += max(1.0, (end - span.start) / 2.0)
+                                        role="stab_octave" if len(pitches) > 1 else "stab"))
+                    t += step
             else:
                 third = span.pcs[1] if len(span.pcs) > 1 else span.root_pc
                 pitch = min((p for p in range(lo, hi + 1) if p % 12 == third),
@@ -1508,19 +1556,49 @@ def _sub_context(ctx: LeadContext, bars: int) -> LeadContext:
     return replace(ctx, bars=bars, total_beats=bars * ctx.beats_per_bar)
 
 
+def _octave_stab(span, lo: int, hi: int, anchor: float) -> Tuple[int, ...]:
+    """The two pitches of an octave stab on ``span`` inside ``[lo, hi]``.
+
+    The root's octave nearest ``anchor`` when it fits, else the fifth's, else
+    another chord tone's; a register narrower than an octave has no room for
+    a pair and plays the root (or the nearest chord tone) alone.
+    """
+    fifth = (span.root_pc + 7) % 12
+    order = [span.root_pc] + ([fifth] if fifth in span.pcs else []) + \
+        [pc for pc in span.pcs if pc not in (span.root_pc, fifth)]
+    for pc in order:
+        low = min((p for p in range(lo, hi - 11) if p % 12 == pc),
+                  key=lambda p: (abs(p - anchor), p), default=None)
+        if low is not None:
+            return (low, low + 12)
+    for pc in order:
+        single = min((p for p in range(lo, hi + 1) if p % 12 == pc),
+                     key=lambda p: (abs(p - anchor), p), default=None)
+        if single is not None:
+            return (single,)
+    return ()
+
+
 def _tidy(notes: List[Note], total: float) -> List[Note]:
-    """Clip monophonic lines, preserving explicitly unbent country double stops."""
+    """Clip monophonic lines, keeping double stops (``DOUBLE_STOP_ROLES``)
+    sounding together."""
     notes = sorted((n for n in notes if 0 <= n.beat < total - 1e-6), key=lambda n: (n.beat, -n.pitch))
     out: List[Note] = []
     for n in notes:
         together = out and abs(out[-1].beat - n.beat) < 1e-6
-        double = together and out[-1].role == n.role == "country_double"
+        double = together and out[-1].role == n.role and n.role in DOUBLE_STOP_ROLES
         if together and not double:
             continue
         if out and not double and out[-1].beat + out[-1].dur > n.beat - 0.02:
-            prev = out[-1]
-            out[-1] = Note(prev.beat, max(0.1, n.beat - prev.beat - 0.02), prev.pitch,
-                           prev.accent, prev.tech, prev.role)
+            # Clip the whole previous attack, both notes of a double stop.
+            onset = out[-1].beat
+            for i in range(len(out) - 1, -1, -1):
+                prev = out[i]
+                if abs(prev.beat - onset) >= 1e-6:
+                    break
+                if prev.beat + prev.dur > n.beat - 0.02:
+                    out[i] = Note(prev.beat, max(0.1, n.beat - prev.beat - 0.02), prev.pitch,
+                                  prev.accent, prev.tech, prev.role)
         dur = min(n.dur, total - n.beat)
         pitch = n.pitch
         while pitch > 127:

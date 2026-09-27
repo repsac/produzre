@@ -54,9 +54,10 @@ def riff_alone_intro(arrangement: "ArrangementDNA", parts) -> "ArrangementDNA":
     """The one rule for who plays a riff-alone intro, shared by every part.
 
     The riff needs a guitar to play it alone (rhythm or acoustic). Without
-    one the whole band plays the intro from the top. With one, the drums
-    and bass wait out the first half together (``intro_entry_bar``) while
-    the guitar plays; a lead guitar does not count, it plays over a band.
+    one the whole band plays the intro from the top. With one, every other
+    part (drums, bass, lead, arpeggiator) waits out the first half together
+    (``intro_entry_bar``) while the guitar plays; a lead guitar does not
+    count, it plays over a band.
     """
     if getattr(arrangement, "intro", "full") != "riff_alone":
         return arrangement
@@ -134,6 +135,19 @@ def apply_overrides(dna: ArrangementDNA, overrides) -> ArrangementDNA:
     return replace(dna, signature=_signature(dna))
 
 
+# Lead families whose solos end on a whammy dive when the song draws one.
+# Other genres hold that note instead; a pinned `solo_ending: dive` dives in
+# any genre.
+DIVE_FAMILIES = ("rock", "metal", "punk")
+
+
+def dives_in(genre: str) -> bool:
+    """Whether a drawn ``dive`` solo ending plays as a dive in ``genre``."""
+    from .licks import genre_family
+
+    return genre_family(genre) in DIVE_FAMILIES
+
+
 def compose_arrangement_dna(*, seed: int, genre: str, country_style_override=None) -> ArrangementDNA:
     g = str(genre or "").lower()
     heavy = any(t in g for t in ("metal", "hard", "punk", "grunge"))
@@ -185,4 +199,8 @@ def compose_arrangement_dna(*, seed: int, genre: str, country_style_override=Non
         dna = replace(dna, counter=_pick(player, {"guide": 5 if style == "ballad" else 2,
                                                 "fills": 5, "stabs": 2}),
                       solo_story=_pick(player, {"melodic": 5, "trade": 3, "climb": 2}))
+    if dna.solo_ending == "dive" and not dives_in(genre):
+        # The lead holds a drawn dive outside rock, metal and punk; the
+        # song's habits (and the build log) name the ending it plays.
+        dna = replace(dna, solo_ending="hold")
     return replace(dna, signature=_signature(dna))

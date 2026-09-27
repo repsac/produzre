@@ -8,15 +8,15 @@
 # fills between the vocal lines, a held counter-line that climbs through
 # each chorus, and a sixteen-bar solo.
 #
-# Pins: intro: riff_alone, so the acoustic guitar and lead open the song
-# and the bass and drums wait out the first half of the intro.
+# Pins: intro: riff_alone, so the acoustic guitar opens the song alone and
+# the bass, drums and lead wait out the first half of the intro.
 # `genre: country_ballad` names the style, so the composer picks the ballad
 # direction on its own (longer bass notes, fewer attacks). Each 3/4 country
 # song also draws its own waltz band; this one is the band drawn for the
 # shared produzre-examples project.
 #
 # Listen for:
-#   - the intro: acoustic guitar and lead alone, bass and drums at bar 5
+#   - the intro: acoustic guitar alone, then bass, drums and lead at bar 5
 #   - a true waltz: bass on 1, guitar on 2 and 3, never a 4/4 backbeat
 #   - the acoustic guitar fingerpicking the verses, strumming the choruses
 #   - the chorus opening on IV, with a I7 and a snare and bass build

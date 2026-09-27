@@ -40,8 +40,9 @@ pushed chorus takes its crash on the "and" before it; see
 ### Intros and endings
 
 - `intro: riff_alone`: in a song that opens with an intro, the guitar plays
-  alone for the first half; the drums and bass enter together halfway, the
-  drums with a fill and a crash. An intro without a rhythm or acoustic
+  alone for the first half; the drums, the bass and every other part (lead,
+  arpeggiator) enter together halfway, the drums with a fill and a crash.
+  An intro without a rhythm or acoustic
   guitar plays from the top.
 - `ending: ring`: the last bar is one crash and kick, left to ring, with
   the bass holding the root.

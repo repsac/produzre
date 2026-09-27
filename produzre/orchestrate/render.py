@@ -810,13 +810,14 @@ def render_section_instruments(
         # song composer writes this section's lead from the song DNA and its
         # memory of earlier sections; the lead engine performs it. The
         # ensemble's lead windows are replaced with where the lead actually
-        # plays, so accompaniment makes room for real phrases.
-        _compose_lead_for_section(
-            cfg, sec, hplan, rgrid, effective_cfgs.get("lead_gtr"),
-            performance_plan, transition_context, logger,
-        )
+        # plays, so accompaniment makes room for real phrases. The drums go
+        # first: in a riff-alone intro the lead enters with the drummer.
         _compose_drums_for_section(
             cfg, sec, hplan, rgrid, effective_cfgs.get("drums"),
+            performance_plan, transition_context, logger,
+        )
+        _compose_lead_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("lead_gtr"),
             performance_plan, transition_context, logger,
         )
         _compose_rhythm_for_section(
@@ -868,6 +869,8 @@ def render_section_instruments(
             plan=performance_plan,  # Phase RG2: Pass plan for rhythm.accents access
             logger=logger,
         )
+        _wait_for_band(inst_name, sec, rgrid, timeline, events_before, section_start_beat,
+                       performance_plan, transition_context)
 
         # Groove memory (produzre/composer/groove_memory.py): give the rhythm
         # section a bar form and recall established grooves. Runs before the
@@ -929,6 +932,7 @@ def render_section_instruments(
 
                     country_gates = [(ev, ev.duration_beats) for ev in new_events
                                      if str(ev.kind).startswith(("country_lick", "country_double"))]
+                    gestures = _gesture_timing(new_events) if inst_name == "lead_gtr" else []
                     apply_feel(
                         new_events,
                         groove_feel,
@@ -945,12 +949,16 @@ def render_section_instruments(
                     # whole attack; shortening again can erase the note.
                     for ev, duration in country_gates:
                         ev.duration_beats = duration
+                    _restore_gestures(gestures)
 
-        # Clip the lead line after feel, keeping marked unbent double stops.
+        # Clip the lead line after feel, keeping double stops together.
         if inst_name == "lead_gtr":
+            from ..composer.realize import sounds_with
+
             mono = sorted(timeline.events[events_before:], key=lambda e: (e.start_beat, e.pitch))
-            for cur, nxt in zip(mono, mono[1:]):
-                if cur.kind == nxt.kind == "country_double_stac" and abs(cur.start_beat-nxt.start_beat) < .06:
+            for i, cur in enumerate(mono):
+                nxt = next((e for e in mono[i + 1:] if not sounds_with(cur, e)), None)
+                if nxt is None:
                     continue
                 gap = float(nxt.start_beat) - float(cur.start_beat)
                 if gap > 0.02 and float(cur.duration_beats) > gap - 0.01:
@@ -1014,6 +1022,91 @@ def _flag(value: Any, default: bool = True) -> bool:
     if isinstance(value, str):
         return value.strip().lower() not in ("false", "off", "no", "0", "none")
     return bool(value)
+
+
+def _band_entry_bar(sec, rgrid, performance_plan, transition_context) -> int:
+    """The bar the band enters in a riff-alone intro (0: from the top).
+
+    One rule for every part (``arrangement.riff_alone_intro``): the composed
+    drummer comes in on this bar, and the bass, the lead, the arpeggiator and
+    every other part that is not the riff wait for it. Without the composed
+    drummer the band plays from the top.
+    """
+    if performance_plan is None or not performance_plan.get(f"composer.drums.{sec.id}"):
+        return 0
+    composer = performance_plan.get("composer.song")
+    if composer is None:
+        return 0
+    from ..composer.arrangement import intro_entry_bar, riff_alone_intro
+
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    parts = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+             if getattr(part, "enabled", True) is not False}
+    return intro_entry_bar(riff_alone_intro(composer.arrangement_dna(), parts),
+                           str(getattr(sec, "type", "")), bars, bool(tc.get("is_first_section")))
+
+
+def _wait_for_band(inst_name, sec, rgrid, timeline, events_before, section_start_beat,
+                   performance_plan, transition_context) -> None:
+    """In a riff-alone intro, only the riff players sound before the band's
+    entry bar. The drums and the bass arrange their own entry."""
+    from ..composer.arrangement import RIFF_PLAYERS
+
+    if inst_name in RIFF_PLAYERS or inst_name in ("drums", "bass"):
+        return
+    enter = _band_entry_bar(sec, rgrid, performance_plan, transition_context)
+    if enter <= 0:
+        return
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    # Humanized attacks and a slide's grace note lead into the entry
+    # downbeat; a note on the grid before it (a sixteenth or earlier) waits.
+    start = float(section_start_beat) + enter * bpb - 0.2
+    timeline.events[events_before:] = [e for e in timeline.events[events_before:]
+                                       if float(e.start_beat) >= start]
+
+
+def _gesture_timing(events):
+    """The lead's one-gesture note groups with their performed timing, before
+    the groove clock runs: trill runs (kind ``*_trill``), the note each trill
+    lands on, and double stops (``composer.realize.sounds_with``)."""
+    from ..composer.realize import DOUBLE_STOP_ROLES, sounds_with
+
+    gestures, trill, last = [], None, None
+    for ev in sorted(events, key=lambda e: (float(e.start_beat), e.pitch)):
+        start = float(ev.start_beat)
+        if str(ev.kind or "").endswith("_trill"):
+            if trill is None or last is None or start - last > 0.3:
+                trill = ("trill", [])
+                gestures.append(trill)
+            trill[1].append((ev, start, float(ev.duration_beats)))
+            last = start
+        elif trill is not None and last is not None and 0 < start - last < 0.25:
+            # The note the trill lands on moves with it (its own length).
+            gestures.append(("landing", [trill[1][0], (ev, start, float(ev.duration_beats))]))
+            last = None
+        elif gestures and gestures[-1][0] == "double" and sounds_with(gestures[-1][1][0][0], ev):
+            gestures[-1][1].append((ev, start, float(ev.duration_beats)))
+        elif str(ev.kind or "").startswith(DOUBLE_STOP_ROLES):
+            gestures.append(("double", [(ev, start, float(ev.duration_beats))]))
+    return gestures
+
+
+def _restore_gestures(gestures) -> None:
+    """After the groove clock, a gesture moves as a whole with its first note.
+
+    A trill keeps its note lengths: swing per note would shift its sixteenth
+    positions, reorder it and crush its notes. A double stop's strings keep
+    sounding together.
+    """
+    for kind, notes in gestures:
+        shift = float(notes[0][0].start_beat) - notes[0][1]
+        for ev, start, duration in notes:
+            ev.start_beat = start + shift
+            if kind == "trill":
+                ev.duration_beats = duration
 
 
 def _groove_signature(value):
@@ -1868,6 +1961,7 @@ def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan
         genre=_part_genre(cfg, sec, "lead_gtr", lead_cfg, composer),
         prev_section_type=(transition_context or {}).get("prev_section_type"),
         melody=_sung_line(performance_plan, sec),
+        entry_bar=_band_entry_bar(sec, rgrid, performance_plan, transition_context),
     )
     notes = composer.compose_lead(ctx)
     payload = [
