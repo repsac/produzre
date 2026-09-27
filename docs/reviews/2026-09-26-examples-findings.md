@@ -132,6 +132,18 @@ the meter, and were added into silence (`a26bf19`).
     the legacy path; the Composed comping section and the code say they
     shape composed comping.
 
+## Second round
+
+Removing the examples' workarounds exposed more issues. All are fixed with
+property tests (1194 passing):
+
+| Area | Fixed | Commit |
+|---|---|---|
+| Drums and transitions | Ramps keep composed fills, builds and devices (device windows) and use the section's meter; drums never get pitched pickups; `drop` plays closed hats; one hit per voice per step; solo tom answers stay out of build bars; groove memory recalls only a section with the same intent | `40dbce4` |
+| Lead and arpeggiator | Octave counters sound both notes in every bar; `dive_rate` scales dives across solo phrases and logs match what plays; trills survive swing; a riff-alone intro holds back the lead and arpeggiator too | `8d19158` |
+| Bass | Root on beat 1 of every new chord (engine, roles, groove memory, modulated sections); composed bass follows section dynamics; an explicit pattern beats the walking heuristic and style bias; 6/8 uses the pulse; pickups replace overlapped notes; real final notes; the slap floor holds, also after transitions; motif and riff-lock precedence is logged | `1a9f7ee`, `1d128c8` |
+| Guitars, export, groove memory | Body taps keep their pitch; chromatic approaches stay a half step from their target; a section's first chord sits with the rest; tabs are relative to the capo | `e846fef` |
+
 ## Reproducibility
 
 Composed parts combine the song seed with a per-user project seed, so an
