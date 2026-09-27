@@ -467,14 +467,17 @@ def adjust_durations(events: List[Any], factor: float) -> None:
             ev.duration_beats *= factor
 
 
-_COMPOSED_KINDS = ("melody", "lick", "counter", "stab")
+_COMPOSED_KINDS = ("melody", "lick", "counter", "stab", "country_lick", "country_double", "trill")
 # How far the groove clock (swing aside) moves a note off its step, in beats:
 # a note within this of a step belongs to it.
 _STEP_SLACK = 0.06
 
 
 def _drum_structural(ev: Any) -> bool:
-    """Kick, crash and accented snare: the hits a bar's groove stands on."""
+    """Structural kit roles, with a GM fallback for unlabeled legacy events."""
+    kind = str(getattr(ev, "kind", "") or "").lower()
+    if kind in ("kick", "snare", "crash") or kind.startswith(("kick_", "crash_")):
+        return True
     pitch = int(getattr(ev, "pitch", 0))
     if pitch in (35, 36, 49, 52, 55, 57):
         return True
@@ -1379,10 +1382,13 @@ def apply_transition_plan(
     elif recipe.kind == "ramp_down":
         # Ramp-down: decrease energy
         # - Decrease velocity by 20%
-        # - Lengthen durations by 10% (more legato = less perceived motion)
+        # - Lengthen non-bass durations by 10% (more legato)
         # - Thin events by removing every other non-downbeat
         scale_velocities(tail_events, 0.8)
-        adjust_durations(tail_events, 1.1)
+        # Bass gates were already fitted to attacks and harmonic boundaries.
+        # Lengthening them here reintroduces overlapping roots after that pass.
+        if instrument_name != "bass":
+            adjust_durations(tail_events, 1.1)
 
         # Thin events (keep downbeats). A drummer thins the hands, not the
         # kick, backbeat or crash.
@@ -1412,7 +1418,9 @@ def apply_transition_plan(
         if logger:
             logger.debug(
                 f"apply_transition_plan: ramp_down applied to {len(tail_events)} events "
-                f"in {instrument_name} (vel*0.8, dur*1.1, removed {removed_count} events)"
+                f"in {instrument_name} (vel*0.8, "
+                f"dur*{1.0 if instrument_name == 'bass' else 1.1}, "
+                f"removed {removed_count} events)"
             )
 
     # Update notes_added counter (negative for notes removed in ramp_down)

@@ -946,3 +946,29 @@ with the section, and quarter-note bass figures in 6/8.
   stacked on the line's own note; it now cuts or replaces the notes it lands
   on (`_clear_bass_for_pickup`). Hook responses skip device windows (they
   played after a cold ending) and keep the root on one.
+
+
+## Final merged review (2026-09-26)
+
+Transition thinning recognizes country lick and double-stop kinds and trill
+ornaments as composed phrases. Structural drum roles take precedence over the
+legacy GM-pitch and velocity fallback, so soft backbeats and remapped crashes
+survive. Bass ramp-downs preserve the gates already fitted to harmony and attacks;
+lengthening them after rendering would bring overlapping roots back.
+
+Groove memory includes the actual beat groups and effective instrument genre in
+its identity. Its cycle policy also receives that genre, rather than always using
+the song genre. The shared section-group resolver now handles missing harmony
+plans, eliminating the drummer's duplicate meter fallback. Equal bar lengths do
+not imply equivalent grooves: 3/4 differs from 6/8, and 6/4 from 12/8.
+
+A mixed-genre part's comp, bass and drum DNA receives the explicit song-level
+country-style pin before applying genre hints. Existing lead part composition
+already carries the arrangement overrides. No new random draws were added.
+
+The built-in rhythm-guitar registry requires harmony only. Its meter grid comes
+from orchestration, while drum accents are optional. This allows per-part
+`composer: false` to work in a solo guitar section even with the song composer on.
+
+See [the final review](../reviews/2026-09-26-final-review.md) for regression
+proof, example and cross-hash checks, event review, previews and worktree status.

@@ -30,8 +30,6 @@ def section_groups(cfg: Any, sec: Any, meter: Any) -> Optional[Tuple[float, ...]
     An override that does not add up to the section's bar is ignored, so a
     song-level ``"2+2+3"`` only shapes its 7/8 sections.
     """
-    if meter is None:
-        return None
     override = None
     extras = getattr(sec, "extras", None) if sec is not None else None
     if isinstance(extras, dict):
@@ -41,6 +39,10 @@ def section_groups(cfg: Any, sec: Any, meter: Any) -> Optional[Tuple[float, ...]
         song = raw.get("song", {}) if isinstance(raw, dict) else {}
         if isinstance(song, dict):
             override = song.get("meter_grouping")
+    if meter is None:
+        from ..harmony.meter import parse_meter
+
+        meter = parse_meter(str(getattr(sec, "meter", None) or getattr(cfg.song, "meter", "4/4")))
     try:
         return meter_groups(int(meter.numerator), int(meter.denominator), override)
     except (AttributeError, TypeError, ValueError):

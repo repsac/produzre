@@ -1172,7 +1172,11 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
     }.items() if k != "intensity"}
     signature = _groove_signature(settings)
     persona = getattr(inst_cfg, "persona", None)
-    memory_key = (inst_name, str(getattr(sec, "type", "") or "").strip().lower(), bpb,
+    from ..composer.song import section_groups
+
+    groups = tuple(section_groups(cfg, sec, getattr(hplan, "meter", None)) or ())
+    genre = str(getattr(inst_cfg, "genre", None) or getattr(cfg.song, "genre", "") or "")
+    memory_key = (inst_name, str(getattr(sec, "type", "") or "").strip().lower(), bpb, groups, genre,
                   stable_seed_int("groove_sig", persona, signature))
     arrangement_index = 0
     if isinstance(transition_context, dict):
@@ -1189,7 +1193,7 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
         chord_slots=getattr(hplan, "chord_slots", None) if hplan is not None else None,
         key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
         mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
-        genre=str(getattr(cfg.song, "genre", "") or ""),
+        genre=genre,
         bpm=float(getattr(cfg.song, "bpm", 120.0) or 120.0),
         memory=memory,
         memory_key=memory_key,
@@ -1257,7 +1261,7 @@ def _part_dna(composer, kind: str, genre: str, reseed: Optional[int]):
 
     seed = composer.seed if reseed is None else reseed
     style = (composer.arrangement_dna().country_style if genre == composer.genre else
-             country_style(seed, genre))
+             country_style(seed, genre, (composer.arrangement_overrides or {}).get("country_style")))
     if kind == "comp":
         from ..composer.comping import comp_family, compose_comp_dna
 
@@ -1900,13 +1904,8 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
     bars = int(round(total / bpb)) if bpb > 0 else 0
     tc = transition_context if isinstance(transition_context, dict) else {}
-    # Drum-only sections have no harmony plan; the meter still groups them.
-    meter = getattr(hplan, "meter", None)
-    if meter is None:
-        from ..harmony.meter import parse_meter
-
-        meter = parse_meter(str(getattr(sec, "meter", None) or getattr(cfg.song, "meter", "4/4")))
-    groups = section_groups(cfg, sec, meter)
+    # The shared resolver also handles drum-only sections without harmony.
+    groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
     dna = for_meter(dna, bpb, groups)
     performance_plan.set(f"composer.drum_dna.{sec.id}", dna)
     index = int(tc.get("arrangement_index", 0) or 0)

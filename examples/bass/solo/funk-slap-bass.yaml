@@ -8,7 +8,7 @@
 # varies at each phrase end.
 #
 # Listen for:
-#   - intro: a sparse, mostly ghosted slap figure on Em7 with lots of air
+#   - intro: a sparse thumb-led slap figure on Em7 with lots of air
 #   - verse: the two-bar funk_16ths cell (about 5 attacks a bar) with
 #     roots on one, pops on the offbeats and a few ghosted dead
 #     notes, repeated as a motif (motif_repeat_rate), and a diatonic fill
@@ -18,7 +18,7 @@
 #   - chorus: a busier syncopated pattern over A7 and B7, louder, with
 #     more pops, fifth jumps and a fill into the next phrase
 #   - the solo section (solo: true) opens the register from low E up to
-#     D4 and plays the densest line of the piece, with octave leaps
+#     G4 and plays the densest line of the piece, with octave leaps
 #   - the outro thins back out and ends on a low E
 version: 1
 song:

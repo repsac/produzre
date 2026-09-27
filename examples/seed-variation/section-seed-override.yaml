@@ -3,7 +3,7 @@
 # Identical to base-song.yaml except that the chorus has `seed: 999`. The
 # chorus drummer, bass line and rhythm guitar figures are re-rolled in both
 # choruses; the intro, verses and outro keep their notes (only the rhythm
-# guitar's velocities in the first bar after each chorus move).
+# guitar's velocities and note lengths after the first chorus move).
 version: 1
 
 song:

@@ -3,9 +3,9 @@
 # The verse sits on the salsa staple i iv V7 i; the chorus descends the
 # Andalusian cadence (i bVII bVI V7). The lead guitar carries the melody
 # (foreground: full) and the nylon-string acoustic fingerpicks the verses
-# and strums the choruses under it. Groove memory gives Latin a two-bar
-# groove, so drums, bass and the comping guitar lock a bar pair that
-# answers itself, like a clave.
+# and strums the choruses under it. Latin groove memory uses a two-bar
+# cycle for eligible engine parts; the composed drums and comping guitar
+# keep their own phrase figures.
 #
 # Pinned, and why:
 #   - arrangement_style.chorus_form: call, so the chorus melody works as

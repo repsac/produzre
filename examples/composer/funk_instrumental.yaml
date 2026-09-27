@@ -13,7 +13,7 @@
 #     call-and-response groove (funk uses two-bar groove cycles)
 #   - rhythm guitar: a busy sixteenth chank in the choruses, a spaced
 #     figure in the verses
-#   - solo: a climbing story that ends in a dive; the song ends on a ringing
+#   - solo: a climbing story that ends on a held note; the song ends on a ringing
 #     chord
 # `turnarounds: true` turns the end of the intro and of each chorus to V7
 # before the verse or chorus that follows.

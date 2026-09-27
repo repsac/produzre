@@ -48,9 +48,10 @@ rhythm_gtr:
   channel: 2
   program: 29
   enabled: true
-  # Phase RG0: Rhythm guitar consumes harmony, rhythm grid, and accents
+  # Harmony is required. The orchestrator supplies the meter grid; drum
+  # accents are optional, so a classic rhythm guitar can also play alone.
   # Priority 3: runs after harmony (0), drums (1), and bass (2)
-  requires: ["harmony.plan", "rhythm.grid", "rhythm.accents"]
+  requires: ["harmony.plan"]
   provides: ["rhythm.texture", "rhythm.chords"]
   roles: ["rhythm", "pad"]
 

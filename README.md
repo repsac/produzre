@@ -7,10 +7,9 @@ You also get stems (one MIDI file per instrument), section clips (one section
 at a time), and patterns (reusable chunks of notes).
 
 The output is MIDI, so you choose the sounds in your DAW or synthesizer.
-Version 0.9.0 adds shared themes, recurring musical ideas that instruments
-develop across the song. It also adds melodic development and more coordination
-between instruments. See [CHANGELOG.md](CHANGELOG.md) for changes
-that affect existing songs.
+The 0.10.0 development version adds a song composer and shared band habits,
+building on the themes and melodic development introduced in 0.9.0. See
+[CHANGELOG.md](CHANGELOG.md) for changes that affect existing songs.
 
 ## Start here
 
@@ -134,10 +133,10 @@ instruments:
     params: {lock_to_riff: 1.0}
 ```
 
-Sustained lead notes get seeded vibrato, bends, and, in solo sections, a
-closing whammy dive, all written as pitch bend. Set `foreground: full` on the
-lead for instrumental songs so it plays through the whole section instead of
-answering an imaginary singer. See the lead guitar controls for the rates.
+Sustained lead notes get seeded vibrato and bends, written as pitch bend.
+Solos get a style-appropriate ending. Set `foreground: full` on the lead for
+instrumental songs so it plays through the whole section instead of answering
+an imaginary singer. See the lead guitar controls for the rates.
 
 See the [theme controls](docs/llm-song-config-reference.md#themes) for writing
 and developing your own material. [themes_demo.yaml](examples/themes_demo.yaml)
@@ -175,22 +174,24 @@ the phrase: settled when the hook returns, fresher in a development, highest
 at a climax.
 
 The listener also weighs dissonance against metric position and chord changes,
-including notes held across a change. Explicit lead phrase and technique
-controls select the legacy performer; numeric `register: [low, high]` bounds
-are kept exactly. Rhythm density, voicing, and performance controls also take
+including notes held across a change. Lead part selectors such as
+`phrase_len_bars` and `composer: false` select
+the legacy performer; contour, rest and expression controls shape the composed
+part. Numeric `register: [low, high]` bounds are kept exactly. Rhythm density, voicing, and performance controls also take
 precedence over comping. See the [composer review](docs/design/composer-review.md)
 for reproductions, measurements, and remaining limits.
 
 With `foreground: full` the lead carries the melody, for instrumental
 songs. With the default `auto`, it plays the band's guitar part around a
-singer: the hook in the intro, licks at the end of verse phrases, a sustained
-counter-line in the chorus, and the solo.
+singer: the hook in the intro, licks at the end of verse phrases, a chorus
+part shaped by `chorus_form` or a pinned counter, and the solo.
 
 The rhythm guitar is composed too. Each song gets its own signature comp
 figures, drawn from real technique: dead-note chucks, bass-string walks into
 the next chord, sus4 hammer-ons, slid chords, boogie shuffles, stabs, and
 gallops. Verse, chorus, and bridge play contrasting figures, phrases walk up
-into the next, and the bar before a chorus stops dead. Set a rhythm `style`
+into the next, and the bar before a chorus follows the band's chosen
+transition device. Set a rhythm `style`
 yourself and the engine plays that instead.
 
 Every song gets its own band. The drummer's kick patterns, what the hands
@@ -206,9 +207,11 @@ sparse) is a per-song habit too; most songs draw normal or sparse, and
 riffs are chosen to lock with the drummer's kick and snare. See the measured [rhythm-guitar review](docs/design/rhythm-guitar-review.md)
 for the benefits, tradeoffs, and before/after previews.
 
-The rhythm section gets groove memory. Drums, bass, and rhythm guitar settle
+Engine rhythm parts get groove memory. Drums, bass, rhythm and acoustic guitar settle
 into one pattern per section and vary it at phrase ends. The pattern moves
-with the chords, and a returning chorus brings its groove back. Two optional
+with the chords, and a returning chorus brings its groove back when its playing
+settings, beat grouping and genre match. Composed drum and rhythm-guitar parts
+already have their own phrase form. Two optional
 harmony touches mark arrivals: turnarounds that lead each section home, and a
 final-chorus key change.
 
@@ -272,7 +275,7 @@ to `exports`. The song name is sanitized for filenames.
 ```text
 exports/My_Song_<timestamp>/
   My_Song.mid
-  index.yaml
+  My_Song.yaml
   QUICKREF.txt
   instruments/
     bass/
@@ -293,7 +296,7 @@ Pattern IDs identify deduplicated note windows;
 remain distinct in the sequence and index. Pattern meter is part of its identity.
 
 Use the full song for a first listen, stems for separate sounds, or section clips
-for rearranging. `QUICKREF.txt` lists DAW bar markers. `index.yaml` records section
+for rearranging. `QUICKREF.txt` lists DAW bar markers. `<song_name>.yaml` records section
 times, meters, instruments, and file paths. These text files include build metadata
 and are outside the MIDI byte-determinism check.
 
@@ -378,7 +381,7 @@ are `name`, `email`, `url`, `company`, and `band`.
 
 ## Examples and development
 
-The [example library](examples/README.md) has 166 configs covering instruments,
+The [example library](examples/README.md) has 138 configs covering instruments,
 genres, personas, seeds, and orchestration. Start with a simple genre example,
 then compare it with a longer arrangement.
 

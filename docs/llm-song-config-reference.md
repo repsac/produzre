@@ -1,7 +1,7 @@
 # Song configuration reference
 
 Produzre reads a YAML song description and writes MIDI. Use this reference
-for version 0.9.0 when writing configs yourself or with an assistant. Run commands from the repository root with
+for the 0.10.0 development version when writing configs yourself or with an assistant. Run commands from the repository root with
 `python produzre_entry.py`, or use a built `produzre` executable.
 
 ## File structure
@@ -178,7 +178,8 @@ Guitar shapes can simplify a color when an exact playable shape is unavailable.
 
 `chord_rate` is quarter notes per chord, independent of meter. In 4/4, 4 means
 one chord per bar, 2 means two per bar, and 8 means one every two bars. If omitted,
-a matching harmony recipe may supply it; otherwise it is 4. Progressions repeat
+a matching harmony recipe may supply a bar-relative rate; otherwise it is one
+bar in the section's meter. Explicit rates always remain quarter-note beats. Progressions repeat
 to fill the section, and the last chord is clipped at the section boundary.
 
 A **turnaround** marks each arrival. When the next section starts on the
@@ -388,7 +389,7 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 |---|---|---|---|
 | `density` | 0-1 | persona | Keep more or fewer eligible rhythm slots. Tight: 0.7. Every bar keeps at least one note. |
 | `rest_rate` | 0-1 | persona | Remove selected notes to leave gaps. Tight: 0. Every bar keeps at least one note. |
-| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`; walking persona: `walking`. A pattern you set is played as written: an `anchor` you set stays on beats 1 and 3 however dense, and no articulation bias replaces it. |
+| `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`; walking persona: `walking`. A pattern you set is played as written: an `anchor` you set stays on beats 1 and 3 in 4/4 however dense (compound meters use the pulses described below), and no articulation bias replaces it. |
 | `articulation_style` | `finger`, `pick`, `slap`, `mute` | persona | Change attack and length. An `anchor` pattern you did not set leans toward the style's pattern (pick drives, mute and slap syncopate). Tight: `finger`. |
 | `register_low`, `register_high` | MIDI pitches 0-127 | persona | Inclusive MIDI pitch limits for every bass note, composed roles, riff doubles and groove-memory restatements included. Your values win over a recipe's, a recipe's over the persona's. Tight: 28, 52. |
 | `approach_rate`, `chromatic_rate` | 0-1 each | persona | Approach-note probability and chromatic choice. Approaches occur before chord changes, and the chord change after one lands on the root it stepped toward (never a fifth drop, pedal or octave jump), so a chromatic approach sounds a half step from the next note. Tight: 0, 0. |
@@ -543,7 +544,8 @@ Very dense kick playing can suppress pedal hats. Fields under `params.constraint
 
 ## Rhythm guitar controls
 
-There are two renderers. A selected recipe normally enables pattern rendering.
+Classic rhythm guitar can play alone with harmony; drums and their accents
+are optional. There are two classic renderers. A selected recipe normally enables pattern rendering.
 Set `use_patterns: true` explicitly when working without a recipe. Set false
 for the legacy chord/grid controls. `follow_hats: true` selects a separate
 renderer that follows drum density when drum features are available.
@@ -598,7 +600,7 @@ song draws its own signature figures from an idiomatic vocabulary: dead-note
 chucks, bass-string walks, sus4 hammer-ons, slid chords, boogie dyads, stabs,
 and gallops. It arranges them so the verse, chorus, and bridge contrast.
 Phrases walk up into the next phrase's chord, and the bar before a chorus
-is stop-time. A walk only ever leads into a chord change: where the chord
+follows the band's chosen device (stop, build, fill, push or drop). A walk only ever leads into a chord change: where the chord
 holds, a riff's walking note becomes part of the previous gesture and a
 phrase-end walk-up becomes root and fifth. A section's first chord is
 voiced as if the hand came from home (the tonic at its lowest position),
@@ -767,8 +769,9 @@ With `foreground: full`, a country song's lead fills between its own phrases
 with its licks (chicken picking, and third or sixth double stops when the
 bank has them) at the `lead_fills` rate: the phrase's last bar keeps its
 first half and cadence, and the fill answers in the second half. Other
-genres fill this way only when `lead_fills` is pinned. `register` sets the melody range, and solos extend
-it up to E6. `vibrato_rate`, `dive_rate`, and `swell_rate` still shape
+genres fill this way only when `lead_fills` is pinned. Numeric `register: [low, high]`
+bounds remain hard limits, including solos. Named register presets allow the solo
+extra headroom, up to E6. `vibrato_rate`, `dive_rate`, and `swell_rate` still shape
 expression; bends, slides, and staccato follow the composed techniques.
 `solo: true` or `role: lead` makes any section a solo.
 
@@ -847,7 +850,8 @@ song:
     country_style: outlaw    # honky_tonk | bakersfield | outlaw | two_step | ballad | country_rock
 ```
 
-`country_style` applies to country songs. Without a pin, a genre name
+`country_style` applies to country songs and country parts in mixed-genre songs.
+An explicit pin wins over a part's genre hint. Without a pin, a genre name
 that names the style chooses it (`outlaw_country`, `country_rock`,
 `honky_tonk`, `bakersfield`, `texas_country`, `country_ballad`); plain
 `country` draws one per song. In 3/4, each country song also draws its
@@ -999,7 +1003,11 @@ brings back its groove at the new dynamics. A clear intensity lift, such as
 a final chorus, plays its own groove instead; for the bass only when that
 groove is not thinner than the one the section established. A section with
 an `intent` recalls only a groove from a section with the same intent, so a
-half-time bridge after a `drop` bridge plays its own half-time groove. Parts
+half-time bridge after a `drop` bridge plays its own half-time groove. Recall also
+requires matching beat groups and effective part genre: 3/4 and 6/8 do not share
+a groove merely because both bars last three quarter notes. Composed drummers
+and composed rhythm-guitar figures already own their phrase form and skip this
+restatement pass. Parts
 that quote a riff or motif theme, walking bass lines, and soloing parts are
 left alone.
 
@@ -1026,7 +1034,9 @@ Include every setting you want to keep.
 
 Ramps work in the outgoing section's meter: a ramp down keeps each bar's
 downbeat and thins every other note, and on drums it thins only the hands,
-never the kick, backbeat or crash. A band device in the last bar (stop-time,
+never the kick, backbeat or crash, including quiet hits and remapped kit voices.
+Composed lead phrases, country double stops and trills stay intact. Bass ramps
+keep the note lengths already fitted to chord changes and subsequent attacks. A band device in the last bar (stop-time,
 a drop, a push, and the composed drummer's own fills and builds) is that
 boundary's transition, so no ramp, pickup or turnaround touches it. A
 transition pickup on drums is a snare on the last sixteenth, never a pitched
@@ -1060,7 +1070,7 @@ from DAW defaults and accepts these switches:
 | `write_stems` | Boolean | true | Write an entire-song MIDI for each instrument. |
 | `write_sections` | Boolean | true | Write per-occurrence instrument clips. |
 | `write_patterns` | Boolean | true | Write deduplicated patterns and sequences. |
-| `write_index` | Boolean | true | Write `index.yaml` and `QUICKREF.txt`. |
+| `write_index` | Boolean | true | Write `<song_name>.yaml` and `QUICKREF.txt`. |
 | `write_analysis` | Boolean | false | Enable text analysis using the selected views. |
 
 The CLI skip flags can disable section or pattern exports in any mode.
@@ -1083,7 +1093,7 @@ sixteenth notes only in 4/4. Pattern controls live under `song`.
 
 The text views still use the song's bar grid for bar/beat labels, including
 sections with another meter. For mixed-meter DAW markers, use `QUICKREF.txt`
-or `index.yaml`; for precise event positions, use `start_beat_abs`. MIDI time
+or `<song_name>.yaml`; for precise event positions, use `start_beat_abs`. MIDI time
 signatures and note timing use each section's actual meter.
 
 Instrument fields also include `enabled`, `intensity`, `seed`, `variation`,

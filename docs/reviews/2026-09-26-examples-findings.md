@@ -152,3 +152,12 @@ on the machine that wrote it. Fixed with a built-in project,
 `produzre-examples`, whose seed is the same on every installation; every
 example sets `song.project: produzre-examples`, so its header describes
 what every user hears.
+
+
+## Final review of the merged result
+
+The follow-up review found and fixed interaction gaps in transition protection,
+bass note lengths, groove grouping and mixed-genre country-style ownership.
+These changes remain uncommitted for owner review. The original commit mappings
+above describe their historical rounds. Current evidence and header corrections
+are recorded in [the final report](2026-09-26-final-review.md).

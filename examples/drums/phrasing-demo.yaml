@@ -1,8 +1,8 @@
 # Phrasing: where the composed drummer marks phrase ends.
 #
-# The composed drummer thinks in four-bar phrases. Groove memory repeats
-# the section's main bar through each phrase, and the phrase's last bar is
-# where the fill goes. The last bar of a section belongs to the transition
+# The composed drummer owns its four-bar phrase form: its chosen groove
+# repeats through each phrase, and the phrase's last bar is where the fill
+# goes. The last bar of a section belongs to the transition
 # into the next one. Section length and meter decide where those bars fall:
 #
 #   verse        8 bars    fills in bars 4 and 8

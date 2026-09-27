@@ -2,6 +2,21 @@
 
 ## 0.10.0 (unreleased): the composer
 
+### Final merged review
+
+- Keep country lead fills, double stops and trills intact through transition thinning.
+- Protect quiet structural drum hits by role, including remapped kit pitches.
+- Separate groove recall by beat grouping and use the effective part genre for
+  groove-cycle policy. Share the meter resolver with drum-only composition.
+- Honor an explicit country style when a part changes genre inside another song.
+- Preserve fitted bass note lengths through ramp-down transitions, preventing
+  overlapping roots at attacks and section boundaries.
+- Let classic solo rhythm guitar use the orchestrator grid without requiring
+  a drummer when only that part opts out of composition.
+- Correct example descriptions, composer ownership, register bounds, harmonic
+  rhythm and export-index names. See the final merged review report in
+  `docs/reviews/2026-09-26-final-review.md`.
+
 ### Config, guitar and docs fixes from the examples findings
 
 - The top-level `engines:` block works as documented: each field overrides

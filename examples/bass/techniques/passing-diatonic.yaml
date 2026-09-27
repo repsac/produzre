@@ -1,7 +1,7 @@
 # Passing tones: diatonic approaches, a scale step below each new root.
 #
 # passing-none, passing-diatonic and passing-chromatic share the pocket
-# persona, an eighth-note drive pattern, the seed and the progression; only
+# persona, a sixteenth-grid drive pattern, the seed and the progression; only
 # the approach settings differ. An approach note is the last note before a
 # chord change, stepping into the next root (kind approach_diatonic or
 # approach_chromatic in analysis/bass/*.events.tsv).
@@ -33,7 +33,7 @@ instruments:
     intensity: 0.7
     params:
       articulation_style: finger
-      rhythm_pattern: drive  # Eighths: a note just before each change to approach from
+      rhythm_pattern: drive  # Sixteenth grid with gaps and a note before each change
       density: 0.7
       rest_rate: 0.1
       approach_rate: 0.8  # Approach most chord changes

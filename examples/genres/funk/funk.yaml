@@ -1,8 +1,8 @@
 # Funk: a two-chord E dorian groove at 102 BPM, with a singer.
 #
-# Funk is the groove: drums, bass and rhythm guitar lock a two-bar pattern
-# per section (groove memory uses two-bar cycles for funk) and vary it at
-# phrase ends. The verse vamps on i7 and IV7, the dorian major IV; the
+# Funk is the groove: the composed drums and rhythm guitar keep their
+# phrase figures, while groove memory settles the engine bass into a
+# two-bar cycle and varies it at phrase ends. The verse vamps on i7 and IV7, the dorian major IV; the
 # chorus climbs through bVII7 and IV7. The lead guitar plays around an
 # imagined singer (foreground: auto), with rhythmic stabs on the hook's
 # attacks under the chorus.

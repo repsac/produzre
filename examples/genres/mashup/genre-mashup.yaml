@@ -5,8 +5,8 @@
 # comping, and a lead guitar that plays around a singer (foreground: auto).
 # The other sections switch genre with a section instrument `genre`, which
 # chooses that genre's composed player for the part in that section:
-#   - the verses go reggae: a reggae drummer (kick and rim on 3 under open
-#     hats), a skank on the rhythm guitar (offbeat chucks and stabs), and a
+#   - the verses go reggae: a rockers drummer (kick on 1 and 3, rim on 3
+#     under open hats), a skank on the rhythm guitar (offbeat chucks and stabs), and a
 #     reggae bass that plays two or three notes a bar
 #   - the bridge goes jazz: the jazz drummer (spang-a-lang on the closed
 #     hi-hat, hi-hat foot on 2 and 4, swing that reaches the whole band in

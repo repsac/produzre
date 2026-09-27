@@ -17,8 +17,8 @@
 #     device is `stop`), and again at the end of the solo
 #   - the solo tells a melodic story that ends on a held note
 #   - the song is riff-driven: the bass doubles the rhythm guitar's riff in
-#     the intro, verses and outro; drums, bass and rhythm guitar keep one
-#     groove per section (groove memory) and choruses recall theirs
+#     the intro, verses and outro; the composed drummer and guitarist keep
+#     their phrase form, while eligible engine bass lines use groove memory
 #   - drums follow the section intensity: louder in choruses than verses,
 #     and a little louder on each repeat
 #   - `turnarounds: true` turns the intro's last half bar to bVII into the
