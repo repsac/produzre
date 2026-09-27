@@ -336,7 +336,7 @@ def test_bridge_start_keeps_the_composed_first_bar(tmp_path, meter):
                                "instruments": {"drums": {"params": {"hat_density": 0.9}}, "harmony": {}}}}
             cfg = _song(tmp_path, f"b{seed}{meter[0]}", seed=seed, meter=meter, sections=secs,
                         arrangement=["verse", "bridge"],
-                        song_extra={"transitions": {"enabled": True, "bridge_start_bars": 1, "strength": 1.0}})
+                        song_extra={"params": {"transitions": {"enabled": True, "bridge_start_bars": 1, "strength": 1.0}}})
             tl, res = _render_timelines(cfg)
             meta = res.performance_plan.sections[1]
             bpb = meta.beats_per_bar
