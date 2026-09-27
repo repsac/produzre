@@ -5,31 +5,34 @@
 # verses; the lead guitar answers each vocal line with a lick (foreground:
 # auto) and then takes two choruses of solo. A piano (the arpeggiator)
 # rolls the triplets, the rhythm guitar plays a signature riff under the
-# verses and strums through the solo, and the drums play the slow-blues
-# pattern: ride on all twelve eighths, snare on pulses 2 and 4.
+# verses and strums through the solo, and the composed drummer plays on the
+# 12/8 pulse: snare on pulses 2 and 4, ride eighths in the intro, a busier
+# closed hi-hat in the verses and hi-hat eighths with an open hat in the
+# solo. Nothing is swung: 12/8 is already in threes.
 #
-# Pins: none in arrangement_style. Choices made on purpose:
-#   - groove swing 0: 12/8 is already in threes, so nothing gets swung
-#   - drums composer: false keeps the drum engine, whose 12/8 groove puts
-#     the snare on the dotted-quarter pulses; the composed drummer's
-#     patterns are built on a sixteenth grid
+# Pins and choices made on purpose:
+#   - arrangement_style intro: riff_alone, so the riff opens the song and
+#     the drums and bass wait out the first half of the intro
 #   - the bass plays an authored twelve-bar line (a bass_motif theme):
 #     root, third, fifth, sixth or flat seventh, back down, on each chord.
-#     lock_to_kicks with motif_quote_rate 1.0 plays its rhythm; the intro
-#     and outro turn quoting off because the line is written for 12 bars
+#     The motif owns the bass rhythm and lengths; the intro and outro turn
+#     quoting off (motif_quote_rate 0) because the line is written for 12
+#     bars, so the bass plays held roots there
 #   - the lead uses the bluesy persona for its phrasing and bends
 # The quick-change form (IV7 in bar 2) and the V7 turnaround in bar 12 are
 # written into the progression.
 #
 # Listen for:
-#   - the intro: the guitar riff alone, then drums and piano join
+#   - the intro: riff and piano, then drums and bass halfway through
 #   - four big beats per bar, each split in three (12/8, not 4/4 swing)
 #   - the bass line climbing and falling through each chord
 #   - licks answering the vocal lines at the end of each four bars
 #   - the turnaround on V7 pulling each chorus back to the top
-#   - the solo building over two choruses, then a quieter last verse
+#   - the second solo chorus developing the first (varied, not repeated)
+#     over a louder band, then a quieter last verse without rhythm guitar
 version: 1
 song:
+  project: produzre-examples
   title: "Cold Coffee Blues"
   bpm: 80
   key: G
@@ -37,6 +40,7 @@ song:
   meter: "12/8"
   genre: blues
   seed: 6003
+  arrangement_style: {intro: riff_alone}
   exports_root: "exports"
 
 exports:
@@ -44,9 +48,6 @@ exports:
     enabled: true
     views: [events, grid]
     subdiv: 12
-
-groove:
-  swing: 0
 
 themes:
   slow_walk:
@@ -67,10 +68,6 @@ themes:
       5:1.5 7:1 2+:.5 3+:1.5 2+:1 7:.5
 
 instruments:
-  drums:
-    params: {composer: false}
-  bass:
-    params: {lock_to_kicks: true, motif_quote_rate: 1.0}
   lead_gtr:
     persona: bluesy
     params:

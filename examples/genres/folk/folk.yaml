@@ -3,29 +3,32 @@
 # The acoustic guitar is the heart of the song. Alone in the intro and
 # outro it is composed (seeded treble and thumb figures, a chord-tone
 # melody, a held final chord); with the band it Travis-picks the verses
-# and strums the choruses. An upright-style acoustic bass holds the
-# bottom, light drums join only for the choruses and the break, and
+# and strums the choruses. An upright-style acoustic bass holds a root
+# under each verse bar and moves to root and fifth in the choruses, light
+# drums (a ride, not hats) join only for the choruses and the break, and
 # the lead part is a harmonica (the lead_gtr engine on GM program 22)
 # playing around an imagined singer (foreground: auto).
 #
 # Pinned, and why:
-#   - instrument programs: acoustic bass (32) and harmonica (22) for
-#     the folk instrumentation
+#   - engine programs: acoustic bass (32) and harmonica (22) for the
+#     folk instrumentation
 #   - acoustic_gtr picking_pattern: travis in the verses, the folk picking
 #   - solo_story: melodic and solo_ending: hold, a singing harmonica break
 #     with no guitar dive (dive_rate 0)
 #   - drums hat_density 0.6 and fill_rate 0.1, a light touch
-#   - bass density 0.8 and rest_rate 0: the folk bass recipe rests a lot,
-#     so this keeps a steady root and fifth under every bar
-# The drummer's figures, bass line and harmonica licks come from the seed.
+# The drummer's figures, bass line and harmonica part come from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
 #   - the guitar alone, then Travis picking under the verse
-#   - harmonica answers at the ends of the singer's lines
-#   - the band opening up in the chorus on IV, then a harmonica break
+#   - a short harmonica answer at the end of each verse, leaving the
+#     singer room
+#   - the band opening up in the chorus on IV, the harmonica harmonizing
+#     the singer's line, then a harmonica break
 #   - the guitar alone again at the end, holding the last chord
 version: 1
 song:
+  project: produzre-examples
   title: "Lantern by the Ferry Road"
   bpm: 100
   key: D
@@ -45,16 +48,18 @@ exports:
     views: [events, grid]
     subdiv: 16
 
+engines:
+  lead_gtr: {program: 22}
+  bass: {program: 32}
+
 instruments:
   lead_gtr:
-    program: 22
     params:
       foreground: auto
       register: [62, 84]
       dive_rate: 0
   bass:
-    program: 32
-    params: {articulation_style: finger, density: 0.8, rest_rate: 0}
+    params: {articulation_style: finger}
   drums:
     params: {hat_density: 0.6, fill_rate: 0.1}
 

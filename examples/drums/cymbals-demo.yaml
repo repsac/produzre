@@ -3,15 +3,25 @@
 # `voices` is a part selector: every section here sets drum voices, so the
 # classic drum engine plays them with its kit-voice controls instead of
 # the composed drummer. See README.md for the composed drum demos.
+#
+#   verse_hats_crash        hats with a low crash rate (0.2): no crash here
+#   chorus_ride_bell        the ride, with `bell_rate: 0.3` (a chance per ride
+#                           bar) adding bell accents on the downbeat of two bars
+#   bridge_splash_china     splash and china at their highest rates: both
+#                           cymbals are rare by design (about one splash in
+#                           two sections, a china only in a section's last bar);
+#                           this seed plays one splash and a closing china
+#   outro_crash_placements  a crash placed on beat 1
 version: 1
 song:
+  project: produzre-examples
   title: "CymbalsDemo"
   bpm: 120
   key: C
   mode: major
   meter: "4/4"
   beats_per_bar: 4
-  seed: 4004
+  seed: 4040
   variation: 0.0
   humanize_velocity: 0.0
   humanize_timing: 0.0
@@ -74,8 +84,8 @@ sections:
           voices:
             # Sparse splash and china for color
             cymbals:
-              splash_rate: 0.4
-              china_rate: 0.3
+              splash_rate: 1.0
+              china_rate: 1.0
 
             # Moderate crash rate
             crash:

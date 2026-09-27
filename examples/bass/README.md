@@ -44,12 +44,12 @@ python produzre_entry.py build examples/bass/baseline/baseline-demo.yaml
 
 ### Techniques
 
-- [techniques/passing-chromatic.yaml](techniques/passing-chromatic.yaml): hear chromatic approaches with `approach_rate: 0.8`, `chromatic_rate: 0.4`, and up to three passing notes per bar.
-- [techniques/passing-diatonic.yaml](techniques/passing-diatonic.yaml): hear diatonic approaches with `approach_rate: 0.8` and `chromatic_rate: 0`, compared with both at 0 in `passing-none`.
-- [techniques/passing-none.yaml](techniques/passing-none.yaml): hear the pocket foundation with `approach_rate: 0`, `chromatic_rate: 0`, and no passing notes.
-- [techniques/passing-walking.yaml](techniques/passing-walking.yaml): hear the walking persona at density 0.95 with up to four passing notes per bar.
-- [techniques/walking-blues.yaml](techniques/walking-blues.yaml): hear a continuous walking line over eight bars of `I I I I IV IV I I` at 120 BPM.
-- [techniques/walking-jazz.yaml](techniques/walking-jazz.yaml): hear a continuous walking line over `I vi ii V` at 140 BPM, with `approach_rate: 0.4`.
+- [techniques/passing-chromatic.yaml](techniques/passing-chromatic.yaml): hear chromatic approaches (a half step below the next root) with `approach_rate: 0.8` and `chromatic_rate: 0.4`.
+- [techniques/passing-diatonic.yaml](techniques/passing-diatonic.yaml): hear diatonic approaches (a scale step below the next root) with `approach_rate: 0.8` and `chromatic_rate: 0`, compared with both at 0 in `passing-none`.
+- [techniques/passing-none.yaml](techniques/passing-none.yaml): hear the plain line with `approach_rate: 0` and no approach notes. The three passing files share the pocket persona, an eighth-note `drive` pattern (so a note falls just before each change), the seed and `I vi ii V`.
+- [techniques/passing-walking.yaml](techniques/passing-walking.yaml): hear the walking persona: a quarter note on every beat, chord and scale tones between the roots, and a step into each change, with `chromatic_rate: 0.2`.
+- [techniques/walking-blues.yaml](techniques/walking-blues.yaml): hear a continuous walking line over eight bars of `I I I I IV IV I I` at 120 BPM, with `chromatic_rate: 0.3`.
+- [techniques/walking-jazz.yaml](techniques/walking-jazz.yaml): hear a continuous walking line over `I vi ii V` at 140 BPM, with `chromatic_rate: 0.25`.
 - [techniques/walking-vs-pocket.yaml](techniques/walking-vs-pocket.yaml): compare the jazz walking file with pocket bass at density 0.65 and `approach_rate: 0.1`; the progression and tempo match.
 
 ### Grooves
@@ -73,7 +73,7 @@ python produzre_entry.py build examples/bass/baseline/baseline-demo.yaml
 
 ### Advanced
 
-- [advanced/motion-style-demo.yaml](advanced/motion-style-demo.yaml): compare `motion_style: stepwise`, `leaping`, and `mixed` across a full band arrangement; articulation and density change too.
+- [advanced/motion-style-demo.yaml](advanced/motion-style-demo.yaml): compare `motion_style: stepwise`, `leaping`, and `mixed` across a full band arrangement with the composed drummer; articulation and density change too.
 - [solo/](solo/): the bass on its own, as a feature.
 - [advanced/solo-comparison.yaml](advanced/solo-comparison.yaml): hear the same bass settings move from verse to `solo: true` and back over the same progression.
 - [advanced/solo-funk.yaml](advanced/solo-funk.yaml): hear a slap bass feature with `role: lead`, syncopated attacks, and `chromatic_rate: 0.3`.
@@ -95,7 +95,9 @@ for drum locking and the alternate kick-led renderer.
 Try [themes_demo.yaml](../themes_demo.yaml) to hear bass quote a theme;
 the [theme controls](../../docs/llm-song-config-reference.md#themes) explain coupling.
 
-For walking bass, start from the walking persona and a jazz recipe. For funk,
+For walking bass, choose the walking persona (or `rhythm_pattern: walking`):
+it sounds every beat in any meter, so density, rests and drum locks do not
+apply, and `chromatic_rate` sets the share of half-step approaches. For funk,
 try slap articulation, a syncopated pattern, and moderate kick locking. For
 metal, try picked articulation and a drive pattern. Full defaults, ranges,
 and fill controls are in the [bass reference](../../docs/llm-song-config-reference.md#bass-controls).

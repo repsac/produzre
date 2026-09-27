@@ -1,16 +1,18 @@
 # Into the chorus: `stop`.
 #
 # One of five short songs that differ only in `arrangement_style.into_chorus`,
-# the band's way into a chorus. Drums and rhythm guitar play it together
-# (the bass keeps its own line through the bar):
+# the band's way into a chorus. Drums, bass and rhythm guitar play it
+# together:
 #
 #   stop   the band hits beat 1 together and leaves the bar open; the drums
-#          play a two-note snare pickup and the guitar a chuck and an upstroke
+#          play a two-note snare pickup and the guitar a chuck and an
+#          upstroke, while the bass waits for the chorus
 #
 # The other files in this folder play the same band (same seed and chords)
 # with stop, build, fill, push and drop. Listen to bar 4 and bar 12.
 version: 1
 song:
+  project: produzre-examples
   title: "Into Chorus Stop"
   bpm: 120
   key: A

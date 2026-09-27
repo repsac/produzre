@@ -1,24 +1,31 @@
 # Porch Light Waltz: a slow country waltz in 3/4.
 #
 # A sung ballad (the voice is not rendered) with a country waltz band: the
-# bass on beat 1 alternating root and fifth, the guitar answering on 2
-# and 3, and a drummer with kick on 1 and cross-stick on 2 and 3. An acoustic guitar fingerpicks the verses and strums the choruses,
-# and a clean lead plays steel-like fills between the vocal lines and a
-# short, singing solo.
+# bass holding the root on beat 1 and walking into each chord change, the
+# guitar answering on 2 and 3, and a drummer with kick on 1, cross-stick on
+# 2 and 3 and the ride on 1, 2, 2&, 3, 3&. An acoustic guitar fingerpicks
+# the verses and strums the choruses, and a clean lead plays steel-like
+# fills between the vocal lines, a held counter-line that climbs through
+# each chorus, and a sixteen-bar solo.
 #
-# Pins: none. `genre: country_ballad` names the style, so the composer picks
-# the ballad direction on its own (longer bass notes, fewer attacks). Each
-# 3/4 country song also draws its own waltz band from the seed.
+# Pins: intro: riff_alone, so the acoustic guitar and lead open the song
+# and the bass and drums wait out the first half of the intro.
+# `genre: country_ballad` names the style, so the composer picks the ballad
+# direction on its own (longer bass notes, fewer attacks). Each 3/4 country
+# song also draws its own waltz band; this one is the band drawn for the
+# shared produzre-examples project.
 #
 # Listen for:
 #   - the intro: acoustic guitar and lead alone, bass and drums at bar 5
 #   - a true waltz: bass on 1, guitar on 2 and 3, never a 4/4 backbeat
 #   - the acoustic guitar fingerpicking the verses, strumming the choruses
-#   - the chorus opening on IV, with a I7 pulling into it at the verse end
+#   - the chorus opening on IV, with a I7 and a snare and bass build
+#     pulling into it at the verse end
 #   - the solo over the verse chords, then a last chorus and a quiet outro
 #     that walks home through vi, ii and V
 version: 1
 song:
+  project: produzre-examples
   title: "Porch Light Waltz"
   bpm: 96
   key: D
@@ -26,6 +33,7 @@ song:
   meter: "3/4"
   genre: country_ballad
   seed: 5601
+  arrangement_style: {intro: riff_alone}
   turnarounds: true
   exports_root: "exports"
 

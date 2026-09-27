@@ -3,24 +3,29 @@
 # A fingerpicked steel-string acoustic plays the song alone for the intro
 # and first verse, a Travis pattern with the melody on the top strings.
 # The bass joins for verse 2, the drums come in at the first chorus, and a
-# second acoustic guitar (lead_gtr on a steel-string patch) adds fills
-# around the voice (foreground: auto) from verse 3 on. The last verse drops back to guitar and
-# bass before the final chorus, and the outro is the guitar alone again.
+# second acoustic guitar (lead_gtr on a steel-string patch) enters in verse
+# 3 around the voice (foreground: auto): a fill at the end of the verse,
+# then a harmony line in thirds and sixths under the singer's chorus melody
+# (this band draws the anthem chorus form). The last verse drops back to
+# guitar and bass before the final chorus, and the outro is the guitar
+# alone again.
 #
 # Pins: none. The acoustic guitar's technique follows the section: it
-# picks the verses and strums the choruses, with picking_pattern: travis
-# set for the verses. A capo on 2 gives the open-string chord shapes a
-# brighter ring. The folk bass recipe is very sparse, so the bass sets
-# density 0.8 and rest_rate 0.05 to hold the low end when it plays
-# without drums.
+# picks the verses and the bridge and strums the choruses, with
+# picking_pattern: travis set for the verses. A capo on 2 gives the
+# open-string chord shapes a brighter ring. Without drums the folk bass
+# holds one root per bar, a quiet floor under the picking; with the band
+# it plays driving roots in the choruses and octaves in the bridge.
 #
 # Listen for:
 #   - the Travis picking alone: alternating thumb bass, melody on top
-#   - each entrance: bass in verse 2, drums in the chorus, fills in verse 3
+#   - each entrance: bass in verse 2, drums in the chorus, the second
+#     guitar in verse 3
 #   - the guitar switching from picking to strumming at each chorus
 #   - the quiet last verse, then the full band for the final chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Juniper Hollow"
   bpm: 96
   key: D
@@ -41,8 +46,6 @@ engines:
   lead_gtr: {program: 25}
 
 instruments:
-  bass:
-    params: {density: 0.8, rest_rate: 0.05}
   acoustic_gtr:
     params: {capo: 2}
   lead_gtr:

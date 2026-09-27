@@ -6,33 +6,36 @@
 # (foreground: full, an instrumental), takes a solo over the A changes, and
 # plays the head out.
 #
-# The composer provides the jazz idioms: the drummer swings on the ride
-# with feathered kicks and its own snare comping, the walking bass plays
-# quarter notes that approach each change, and the comping guitar draws a
-# swing comp figure per song.
+# The composer provides the jazz idioms: the jazz drummer plays quarter
+# notes on the ride with the swung skip note, the hi-hat foot on 2 and 4,
+# a feathered kick and soft snare comping between the beats; the walking
+# bass plays a real quarter-note walk that lands on the root of each change
+# and approaches the next one; the comping guitar draws a swing figure for
+# each section (a Charleston in the intro and outro, a shuffle in the A
+# heads, a looser comp in the bridge and solo).
 #
 # Pinned, and why:
-#   - bass persona walking, with density 1 and rest_rate 0 so no quarter
-#     note drops out (the jazz recipe is sparser), the kick, snare and
-#     ride locks at 0 so the walk stays in plain quarters instead of
-#     doubling the drummer's swung eighths, and fifth_jump_rate 0 so every
-#     change starts on its root
+#   - bass persona walking: the walk comes from the persona alone, no
+#     density or lock overrides are needed
 #   - arrangement_style.solo_story: trade, the solo plays a phrase and
 #     leaves a bar for the band to answer, like trading with the drummer
 #   - engines: jazz guitar and acoustic bass sounds instead of the rock
 #     defaults
-# The drummer's comping, the comp figures and the melody come from the seed.
+# The drummer's comping, the comp figures and the melody come from the
+# shared produzre-examples project and the seed.
 #
 # Listen for:
-#   - swung eighths on the ride and bell, a feathered kick, and snare
-#     comping between the beats
-#   - a walking bass that lands on the root of each change and approaches
-#     the next one chromatically or by step
-#   - the head melody returning note for note in every A section
+#   - the ride's swing, the hi-hat foot on 2 and 4, a kick you feel more
+#     than hear, and snare comping between the beats
+#   - a walking bass, four notes to the bar, root on each downbeat and a
+#     chromatic or diatonic approach into the next change
+#   - the head melody returning in every A section, with small variations
 #   - the B section's move to Eb and the backdoor Ab7 back home
-#   - a solo that trades phrases with the band, then the head out
+#   - a solo that trades phrases with the band, then the head out and a
+#     cold ending
 version: 1
 song:
+  project: produzre-examples
   title: "Backdoor Blue Room"
   bpm: 156
   key: Bb
@@ -59,7 +62,6 @@ engines:
 instruments:
   bass:
     persona: walking
-    params: {density: 1.0, rest_rate: 0.0, lock_to_kick: 0, lock_to_hat: 0, lock_to_snare: 0, fifth_jump_rate: 0}
   lead_gtr:
     params:
       foreground: full

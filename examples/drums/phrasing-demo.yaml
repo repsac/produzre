@@ -14,15 +14,17 @@
 #
 # Every section but the chorus sets fill_rate 0.6 (a fill every four bars),
 # so the only thing that changes is the section's length or meter. A
-# drummer with a one-beat fill habit also adds short fills in between.
-# `into_chorus: fill` and `ending: ring` are pinned so the transitions
-# are the same on every machine.
+# drummer with a one-beat fill habit would also add short fills in
+# between; this song's drummer has none, so only the chorus has them.
+# `into_chorus: fill` and `ending: ring` are pinned, so the 7/8 outro's
+# last bar is the ringing ending rather than a fill.
 #
 # Check it: analysis/drums/*.events.tsv marks fill hits with kind "fill".
 # Its bar numbers follow the song's 4/4 grid, so the 6/8 and 7/8 fills sit
 # at shorter spacings there; `start_beat_abs` gives the exact position.
 version: 1
 song:
+  project: produzre-examples
   title: "Composed Drum Phrasing"
   bpm: 104
   key: E

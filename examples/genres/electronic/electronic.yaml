@@ -2,32 +2,33 @@
 #
 # An instrumental dance track built in layers: intro, build, drop,
 # breakdown, a second build and drop, and an outro that strips back down.
-# The kit plays an authored drum_groove theme (kick on every beat, open hat
-# on every offbeat) over the drum engine's electronic backbeat, a synth
-# bass pulses under a sixteenth-note synth arpeggio (the arpeggiator on
-# GM program 81), and a synth lead (the lead_gtr engine on GM program 80)
-# carries the hook as the melody (foreground: full).
+# The composed dance drummer plays the kick on every beat throughout, with
+# closed sixteenth hats in the builds and open offbeat hats in the drops;
+# a synth bass rolls sixteenths under a sixteenth-note synth arpeggio (the
+# arpeggiator on GM program 81), and a synth lead (the lead_gtr engine on
+# GM program 80) carries the hook as the melody (foreground: full).
 #
 # Pinned, and why:
-#   - a drum_groove theme, locked (allow_development: false): the composed
-#     drummer has no four-on-the-floor pattern, and the theme opts the
-#     drums into the drum engine with the exact club pulse
-#   - instrument programs: synth bass (38), square lead (80) and saw
+#   - engine programs: synth bass (38), square lead (80) and saw
 #     arpeggio (81)
-#   - bass rhythm_pattern: drive (density 0.9, rest_rate 0): steady
-#     eighths on the chord tones under the four-on-the-floor kick
+#   - bass rhythm_pattern: drive (density 0.9, rest_rate 0): a steady
+#     sixteenth-note line on the chord tones under the kick
 #   - lead bend_rate 0 and dive_rate 0: no guitar bends on a synth
 #   - arpeggiator pattern: ostinato at sixteenths (note_duration 0.25)
 #   - section intensities shape the builds, drops and breakdown
-# The hook, its answer and the developments come from the seed.
+# The drummer, the hook, its answer and the developments come from the
+# seed (examples use the shared produzre-examples project).
 #
 # Listen for:
-#   - the kick and offbeat hats from the first bar, the arpeggio on top
-#   - the bass arriving in the build, the lead hook landing in the drop
+#   - the kick alone under the arpeggio, then offbeat hats and a snare
+#     backbeat join halfway through the intro
+#   - the bass arriving in the build, the kick dropping out under two
+#     claps before the drop, the lead hook landing in the drop
 #   - the breakdown with no drums, just arpeggio, bass and melody
 #   - the second drop recalling the first, then the outro thinning out
 version: 1
 song:
+  project: produzre-examples
   title: "Afterglow Frequency"
   bpm: 126
   key: A
@@ -37,11 +38,10 @@ song:
   seed: 7461
   exports_root: "exports"
 
-themes:
-  club_pulse:
-    role: drum_groove
-    allow_development: false
-    events: "1:.5 4:.5 1:.5 4:.5 1:.5 4:.5 1:.5 4:.5"
+engines:
+  bass: {program: 38}
+  lead_gtr: {program: 80}
+  arpeggiator: {program: 81}
 
 exports:
   midi_text:
@@ -51,7 +51,6 @@ exports:
 
 instruments:
   lead_gtr:
-    program: 80
     params:
       foreground: full
       register: [64, 84]
@@ -59,10 +58,8 @@ instruments:
       dive_rate: 0
       vibrato_rate: 0.2
   bass:
-    program: 38
     params: {articulation_style: pick, rhythm_pattern: drive, density: 0.9, rest_rate: 0}
   arpeggiator:
-    program: 81
     params: {pattern: ostinato, note_duration: 0.25, octave_range: 2, rest_probability: 0}
 
 sections:

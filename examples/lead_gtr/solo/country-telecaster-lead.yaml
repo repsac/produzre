@@ -2,25 +2,29 @@
 # lead guitar, with chicken picking, double stops and a solo.
 #
 # genre: country with the Bakersfield style pinned (arrangement_style) gives
-# the lead the country lick bank before its licks are composed: chicken-
-# picked staccato runs, unbent third and sixth double stops, and bright
-# hybrid-picked figures. A lone lead defaults to foreground: full, so the
-# composer writes the whole melody from one song DNA; the licks come out
-# in the solo, which trades short phrases (solo_story: trade). bend_rate is kept low
+# the lead the country lick bank before its licks are composed. Under the
+# shared produzre-examples project the bank holds a double-stop pickup, a
+# sixths lick and a chromatic run. A lone lead defaults to foreground: full,
+# so the composer writes the whole melody from one song DNA, and like a
+# country player it answers its own lines with those licks at phrase ends
+# (lead_fills: chatty), verses and choruses alike. bend_rate is kept low
 # (country bends are few and deliberate) and dives are off.
 #
 # Listen for:
-#   - intro: the hook, stated once over I-IV-V
-#   - verse: a two-step melody on the verse idea, mostly chord tones with
-#     the major sixth and passing notes; verse 2 varies its rhythm slightly
-#   - chorus: the hook and its answer over IV-I-V, higher and louder,
-#     repeated note for note; the last chorus lifts it higher
+#   - intro: the hook over I-IV-V
+#   - verse: a two-step melody on the verse idea, answered at phrase ends by
+#     chicken-picked staccato fills, one with an unbent sixth double stop
+#     (B and G together); verse 2 varies its rhythm slightly
+#   - chorus: the hook and its answer over IV-I-V, higher and louder, with
+#     the same fills, repeated note for note; the last chorus lifts it higher
 #   - bridge: the relative minor idea resolving to the dominant
-#   - solo (solo_story: trade): short chicken-picked phrases answered by
-#     staccato sixth double stops, ending on a held note (solo_ending: hold)
+#   - solo (solo_story: trade): two-bar turns, each a lick in the lead's
+#     bar and a short pickup back in from the band's bar, climbing to a
+#     peak and ending on a held G (solo_ending: hold)
 #   - outro: the hook, then a held G
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Lead Country Bakersfield"
   bpm: 132
   key: G
@@ -44,8 +48,8 @@ exports:
 
 instruments:
   lead_gtr:
+    register: [55, 84]
     params:
-      register: [55, 84]
       bend_rate: 0.08
       dive_rate: 0.0
       vibrato_rate: 0.4

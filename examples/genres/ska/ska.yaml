@@ -1,15 +1,18 @@
 # Ska: an upbeat two-tone song in Bb major with a singer.
 #
-# The guitar skanks on every offbeat, the bass walks quarter notes through
-# the changes, and the drummer keeps a fast backbeat. The lead guitar plays
+# The guitar skanks on every offbeat (doubled up in the bridge and solo),
+# the bass walks quarter notes through the changes, and the drummer keeps
+# a fast backbeat with the hi-hat foot on every beat in the verse and a
+# stomp in the chorus. The lead guitar plays
 # around the singer (foreground: auto) like a horn section: the hook in the
 # intro, and rhythmic stabs on the hook's attacks under the chorus. Groove
 # memory gives ska a two-bar groove.
 #
 # Pinned, and why:
-#   - bass rhythm_pattern walking with density 1: the ska walking line
-#     (a line setting like this keeps the bass engine rather than a
-#     composed bass role)
+#   - bass rhythm_pattern walking: the ska walking line, a real walk with
+#     every beat sounding, a root on each change and a step or half step
+#     into the next (a line setting like this keeps the bass engine rather
+#     than a composed bass role)
 #   - rhythm_gtr register_max 76: keeps the skank chords in the middle of
 #     the neck instead of up around the lead
 #   - arrangement_style.counter: stabs, horn-section style hits with the
@@ -18,15 +21,20 @@
 #     figure every bar
 #   - arrangement_style.solo_story: trade, short phrases with gaps, like a
 #     horn trading with the band
-# The drummer, the skank figures and the hook come from the seed.
+# The drummer, the skank figures and the hook come from the shared
+# produzre-examples project and the seed, including the stop before each
+# chorus: the band hits the downbeat of the last verse (or solo) bar and
+# rests until a quick pickup.
 #
 # Listen for:
+#   - two bars of skank alone in the intro, then the band
 #   - upstroke skanks on the "and" of every beat
 #   - a walking bass under the I vi ii V verse
 #   - the lead stabbing the chorus hook rhythm like horns
 #   - the bridge on vi, then back to the chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Two Tone Tuesday"
   bpm: 158
   key: Bb
@@ -49,7 +57,7 @@ exports:
 
 instruments:
   bass:
-    params: {rhythm_pattern: walking, density: 1.0, rest_rate: 0.0}
+    params: {rhythm_pattern: walking}
   rhythm_gtr:
     params: {register_max: 76}
   lead_gtr:

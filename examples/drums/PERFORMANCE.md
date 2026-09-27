@@ -21,26 +21,54 @@ What you can shape, per section, in the drum params:
 |---|---|
 | `ghost_rate` | 0: no ghost notes. Below 0.3: a grace note before the backbeat every other bar. 0.3 or more: a grace before and after every backbeat. |
 | `fill_rate` | 0: no fills. Below 0.5: a fill every 8 bars. 0.5 or more: every 4 bars. 0.75 or more: one-beat fills every 2 bars as well. |
-| `kick_density` | 0.3 or less: kick on 1 and 3 only. 0.7 or more: the verse plays the chorus kick pattern. |
-| `hat_density` | 0.3 or less: quarter-note hands. 0.8 or more: sixteenths. Verse and prechorus. |
+| `kick_density` | 0.3 or less: kick on 1 and 3 only. 0.7 or more: an extra kick on the "and" of every beat without a backbeat. |
+| `hat_density` | 0.3 or less: quarter-note hands (dotted quarters in 6/8 and 12/8). 0.8 or more: sixteenth-note hats. |
+
+All four apply in every section type, and to the jazz and dance drummers
+too (for the jazz drummer, `hat_density` moves the ride to plain quarters
+or to skip notes on every beat).
 
 Fills carry their own crescendo: each hit's velocity rises through the
 fill, and a big fill ends on the next section's crash. See
 [groove-shaping-demo.yaml](groove-shaping-demo.yaml) and
 [fills-demo.yaml](fills-demo.yaml).
 
+### Dynamics
+
+The composed drummer follows section intensity (and energy): a verse at
+the default intensity plays at the drummer's base touch, a default chorus
+about a quarter louder, and each repeat of a section type a little harder
+than the one before (the planner adds 0.05 intensity per repeat). An
+instrument `intensity` on the drums outranks the section's. Set the same
+`intensity` on sections you want to compare at one level, as
+[groove-shaping-demo.yaml](groove-shaping-demo.yaml) and
+[fills-demo.yaml](fills-demo.yaml) do.
+
+### Idioms
+
+Jazz and swing songs get a swing drummer (ride on every beat with skip
+notes, hi-hat foot on 2 and 4, feathered kick, soft comping); dance,
+electronic, techno, house and disco songs get a four-on-the-floor
+drummer. A section or instrument `genre` chooses the drummer for that
+part. [solo/jazz-ride-kit.yaml](solo/jazz-ride-kit.yaml) plays the jazz
+drummer on its own.
+
 ### Feel and timing
 
 The drummer's feel (straight, laid back, pushing, or shuffle) reaches the
-whole band through the shared groove clock. It applies only when you set
-no timing of your own. Any of these keep the song's feel out and use yours:
+whole band through the shared groove clock. A straight, laid-back or
+pushing drummer keeps recipe and persona swing out of the band; 6/8 and
+12/8 are never swung unless you set swing yourself. The feel applies only
+when you set no timing of your own. Any of these keep the song's feel out
+and use yours:
 
 - drum `swing`, `swing_16th`, `push_pull`, or `timing_jitter_ms`;
 - `swing` or `swing_16th` in the top-level `groove` block;
 - song `humanize_timing`.
 
-A song-wide drum `persona` (under `instruments.drums`) supplies timing
-jitter and velocity humanization for the composed drummer as well; its
+A drum `persona` (under `instruments.drums`, or on a section) supplies
+timing jitter, velocity humanization and its push or pull for the composed
+drummer as well (a laid-back or pushing drummer keeps its own); its
 pattern settings (`fill_rate`, `hat_density`, voice rates) do not count as
 your choice and leave the drummer's DNA alone.
 

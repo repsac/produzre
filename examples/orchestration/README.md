@@ -46,8 +46,9 @@ rhythm_gtr:
     follow_hats: true      # strum with the drummer's hands
 ```
 
-Bass `rhythm_pattern`, `walking`, `lock_to_kick`, `lock_to_riff`, or a motif
-quote keep the bass engine's line; see
+Bass `rhythm_pattern`, `walking`, `lock_to_kick` or `lock_to_riff` keep the
+bass engine's line, and an authored `bass_motif` theme owns the bass with
+its written rhythm and lengths; see
 [bass controls](../../docs/llm-song-config-reference.md#bass-controls)
 for the difference between added kick locking and the kick-led renderer
 (`lock_to_kicks: true`). The drum settings the composed drummer honors
@@ -56,8 +57,8 @@ others lock to.
 
 ## Themes and transitions
 
-[themes_demo.yaml](../themes_demo.yaml) enables bass, rhythm-guitar, and drum
-theme coupling; see [theme controls](../../docs/llm-song-config-reference.md#themes) for their different roles.
+[themes_demo.yaml](../themes_demo.yaml) enables rhythm-guitar and drum riff
+coupling next to an authored bass motif; see [theme controls](../../docs/llm-song-config-reference.md#themes) for their different roles.
 
 See the [config reference](../../docs/llm-song-config-reference.md#transitions)
 for the transition planner, [DETERMINISM.md](../../DETERMINISM.md) for seed

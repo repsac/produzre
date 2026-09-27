@@ -1,6 +1,6 @@
 # Punk: a fast, short three-chord song in E major with a singer.
 #
-# Power chords, a bass locked to the kick in the verse and pumping root
+# Power chords, a bass locked to the kick in the verse and pumping octave
 # eighths in the chorus, and a drummer driving straight through. The lead
 # guitar (foreground: auto) stays out of the way: a short hook in the
 # intro, a few licks, a counter-line in the chorus and a quick solo. The
@@ -15,22 +15,25 @@
 #   - arrangement_style.into_chorus: push, the band hits the chorus an
 #     eighth early
 #   - arrangement_style.ending: cold, one last hit and silence
-#   - drums kick_density 0.8 and hat_density 0.9: the verse kick plays the
-#     chorus pattern and the hands drive sixteenths
+#   - drums kick_density 0.8 and hat_density 0.9: an extra kick on the
+#     last eighth of every beat without a backbeat, and sixteenth-note hats
+#     in every section
 #   - bass articulation pick
-#   - groove swing 0: the punk drum recipe carries a slight swing; this
-#     song is played dead straight
-# The drummer's fills, the guitar figures and the hook come from the seed.
+# The composed punk drummer plays dead straight (no swing setting needed).
+# The drummer's fills, the guitar figures and the hook come from the shared
+# produzre-examples project and the seed.
 #
 # Listen for:
 #   - a sixteenth-note hi-hat verse with the bass on the kick
-#   - the chorus: kick on every beat, bass and guitar hammering eighths
+#   - the chorus: kick on every beat (a stomp), bass octaves and guitar
+#     hammering eighths
 #   - the chorus arriving an eighth early (push)
 #   - the half-bar lead fills between vocal lines
 #   - the bridge on the relative minor, then the last chorus
 #   - a cold stop
 version: 1
 song:
+  project: produzre-examples
   title: "No Time for Sirens"
   bpm: 184
   key: E
@@ -45,9 +48,6 @@ song:
     comp_activity: busy
     into_chorus: push
     ending: cold
-
-groove:
-  swing: 0
 
 exports:
   midi_text:

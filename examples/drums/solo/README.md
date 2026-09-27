@@ -6,9 +6,9 @@ form without any other instrument.
 
 | File | Style | What plays it | What it shows |
 |---|---|---|---|
-| `rock-drum-feature.yaml` | Rock, 4/4, 124 BPM | Composed drummer | Song drum DNA, a different hand voice per section, tom answers in bars 2 and 4 of each phrase, fills into every chorus, a half-time bridge, a drum solo section and a big ending |
-| `six-eight-drums.yaml` | Soft rock ballad, 6/8, 96 BPM | Composed drummer | The two-pulse 6/8 feel (kick on the first dotted quarter, snare on the second), build fills into the choruses, a ringing ending |
-| `jazz-ride-kit.yaml` | Jazz swing, 4/4, 144 BPM | Classic drum engine | Every voice authored: spang-a-lang ride placements, hi-hat foot on 2 and 4, cross-stick against full snare, ghost-note placements, tom grooves, flams and drags in the drum solo |
+| `rock-drum-feature.yaml` | Rock, 4/4, 124 BPM | Composed drummer | Song drum DNA, a different hand voice per section, the backbeat kept in every bar with tom answers at phrase ends, fills into every chorus, a half-time bridge, a drum solo section and a big ending |
+| `six-eight-drums.yaml` | Soft rock ballad, 6/8, 96 BPM | Composed drummer | The two-pulse 6/8 feel (kick on the first dotted quarter, snare on the second) with no harmony needed, a snare build into each chorus, a ringing ending |
+| `jazz-ride-kit.yaml` | Jazz swing, 4/4, 144 BPM | Composed jazz drummer | Spang-a-lang ride, hi-hat foot on 2 and 4, feathered kick, soft comping, a different ride figure per section, triplet fills in the drum solo, the `jazz-lite` persona |
 
 ## Build
 
@@ -23,31 +23,32 @@ The export folder holds the full MIDI, the drum stem and, under
 
 Unless the drums set `voices`, `recipe`, `pattern` or
 `riff_accent_rate`, a section sets `intent`, or a `drum_groove` theme
-exists, the composer plays the kit. The two composed pieces only use
-settings that shape the composed drummer (`ghost_rate`, `fill_rate`) and
-arrangement pins (`song.arrangement_style.into_chorus` and `ending`).
-The drummer itself (kick figure, hand voice per section, feel) is drawn
-from the song seed combined with your local project seed, so another
-project can hear a different drummer than the one described in the
-header comments.
+exists, the composer plays the kit. All three pieces only use settings
+that shape the composed drummer (`ghost_rate`, `fill_rate`, a drum
+`persona`) and arrangement pins (`song.arrangement_style.into_chorus` and
+`ending`). The drummer itself (kick figure, hand voice per section, feel)
+is drawn from the song seed. Every example uses the shared
+`produzre-examples` project, so every machine builds the same drummer as
+the one the header comments describe.
 
-`jazz-ride-kit.yaml` is a classic-engine demo: `composer: false` and the
-explicit `voices` blocks keep the older drum engine so every placement is
-heard exactly as written. Voice blocks go directly under the drums
-instrument, not inside `params`.
+`genre: jazz` gives `jazz-ride-kit.yaml` the composed swing drummer. For
+the classic drum engine with every voice authored, see
+[classic-engine-demo.yaml](../classic-engine-demo.yaml) and the voice demos
+listed in the [drum examples README](../README.md).
 
 ## What to listen for
 
 - Rock feature: the prechorus moving to the ride, the fill and crash at
   each chorus entrance, sixteenth-note hats in the chorus, the half-time
-  bridge on the hi-hat foot.
-- Six-eight: the lilt of two pulses per bar, and tom answers turning each
-  phrase.
+  bridge under a washy open hat.
+- Six-eight: the lilt of two pulses per bar, tom answers at the phrase
+  ends, and the snare build into each chorus.
 - Jazz ride kit: the ride's skip note on the swung "and" of 2 and 4, the
-  foot chick, and the change from cross-stick in the head to full snare in
-  the strain.
+  foot chick, the stick on the closed hat in the intro, and the ride
+  figure changing in the drum solo and the bridge.
 
-Composed drums keep the same velocity scale in every section: section and
-instrument `intensity` do not change how hard the composed drummer plays,
-so the dynamic shape comes from the hand voice, fills and crashes rather
-than from loudness.
+Drums alone keep the backbeat in every bar; the last beat of bars 2 and 4
+of each four-bar phrase answers on the toms unless a fill is already
+there. Composed drums follow section intensity: a verse plays under a
+chorus, and each repeat of a section plays a little harder than the one
+before.

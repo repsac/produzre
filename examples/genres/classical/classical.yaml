@@ -3,16 +3,16 @@
 # A small chamber piece in rondo form (A B A C A): the main theme returns
 # three times with contrasting episodes between. There are no drums or
 # guitars. The piano (the arpeggiator) plays broken chords, the cello (the
-# bass engine on GM program 42) holds the harmony underneath, and the
-# violin (the lead_gtr engine on GM program 40) carries the melody as an
-# instrumental voice (foreground: full).
+# bass engine on GM program 42) holds a root under each bar and steps
+# through the cadences, and the violin (the lead_gtr engine on GM program
+# 40) carries the melody as an instrumental voice (foreground: full).
 #
 # Pinned, and why:
-#   - instrument programs: violin (40) and cello (42); the piano is the
+#   - engine programs: violin (40) and cello (42); the piano is the
 #     arpeggiator's default program
 #   - foreground: full, the violin is the melody, not an accompanist
-#   - bass register 36 to 57 (the cello's range), density 0.8 and
-#     rest_rate 0: a steady line under every bar
+#   - bass register 36 to 57 (the cello's range); the cello keeps the
+#     engine's held roots rather than a walking line
 #   - bend_rate 0 and dive_rate 0: no guitar bends or whammy dives on a
 #     violin; vibrato and swells stay on for bowed expression
 #   - section keys: the first episode moves to the dominant (D major), the
@@ -20,7 +20,8 @@
 #   - ending: ring, the coda ends on a held chord, never a rock-style
 #     cold stop
 #   - classical cadences (ii V7 I, IV V7 I) instead of rock progressions
-# The melody's hook, periods and developments come from the seed.
+# The melody's hook, periods and developments come from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
 #   - the theme (the "chorus" section) stated, answered and closed
@@ -29,6 +30,7 @@
 #   - a quiet coda closing on a held tonic
 version: 1
 song:
+  project: produzre-examples
   title: "Rondo for a Garden Party"
   bpm: 112
   key: G
@@ -46,9 +48,12 @@ exports:
     views: [events, grid]
     subdiv: 12
 
+engines:
+  lead_gtr: {program: 40}
+  bass: {program: 42}
+
 instruments:
   lead_gtr:
-    program: 40
     params:
       foreground: full
       register: [62, 88]
@@ -57,8 +62,7 @@ instruments:
       vibrato_rate: 0.5
       swell_rate: 0.35
   bass:
-    program: 42
-    params: {articulation_style: finger, register_low: 36, register_high: 57, density: 0.8, rest_rate: 0}
+    params: {articulation_style: finger, register_low: 36, register_high: 57}
   arpeggiator:
     params: {pattern: phrase, note_duration: 0.5, rest_probability: 0}
 

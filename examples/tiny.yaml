@@ -1,7 +1,10 @@
 # Tiny: the smallest useful song, for quick checks. Eight bars of solo
-# drums (no harmony needed), filling every two bars (`fill_rate: 1.0`).
+# drums (no harmony needed). `fill_rate: 1.0` puts a fill at the end of
+# every two bars (bars 2, 4 and 6), and the song ends cold on one crash hit
+# in bar 8.
 version: 1
 song:
+  project: produzre-examples
   title: "TinySong"
   bpm: 140
   key: E

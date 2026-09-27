@@ -10,10 +10,10 @@
 #   - arrangement_style.counter: stabs, the lead punches the chorus hook
 #     rhythm with the band instead of playing a long counter-melody
 #   - arrangement_style.solo_story: melodic, a pop rock solo you can hum
-#   - arrangement_style.into_chorus: build, a snare build and fill into
-#     each chorus
+#   - arrangement_style.into_chorus: build, a snare build into each
+#     chorus, with the bass driving along with it
 # The drummer, the comp figures, the bass roles and the hook come from the
-# seed.
+# shared produzre-examples project and the seed.
 #
 # Listen for:
 #   - verse (I IV vi V) to prechorus (ii IV V) to a big chorus (I V IV)
@@ -23,6 +23,7 @@
 #   - turnarounds pointing each section home
 version: 1
 song:
+  project: produzre-examples
   title: "Summer on Fifth Street"
   bpm: 124
   key: A

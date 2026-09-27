@@ -5,17 +5,20 @@
 # parts come from the song's drum DNA, so the three files in this folder
 # play the same hits and differ only in how they are played:
 #
-#   jazz-lite  about 8 ms of jitter, the widest velocity variation, a looser feel
+#   jazz-lite  about 20 ms ahead of the beat, 8 ms of jitter and the widest
+#              velocity variation
 #
 # persona-tight.yaml, persona-rock.yaml and persona-jazz-lite.yaml share
 # key, tempo, seed and chords. Compare the drum stems, or the
 # start_beat_abs and velocity columns of analysis/drums/*.events.tsv.
 #
-# A persona's pattern settings (fill_rate, hat_density, voice rates) do not
-# steer the composed drummer; set the drum params yourself for that, or set
+# A persona's pattern settings (fill_rate, hat_density, voice rates) and
+# its swing do not steer the composed drummer, which plays the song's own
+# straight feel here; set the drum params yourself for that, or set
 # `composer: false` to hear the persona on the classic engine.
 version: 1
 song:
+  project: produzre-examples
   title: "Drum Persona Jazz Lite"
   bpm: 110
   key: G

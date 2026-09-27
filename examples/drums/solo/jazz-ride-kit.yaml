@@ -1,30 +1,31 @@
-# classic-engine demo
+# Jazz ride kit: a medium swing tune on the kit alone.
 #
-# Jazz ride and cross-stick: a medium swing tune on the kit alone, with every
-# voice authored. `composer: false` and the explicit `voices` blocks keep the
-# classic drum engine, so each control below is heard exactly as written.
-# The jazz_swing recipe supplies the ride cymbal, the swing clock (0.65, a
-# triplet feel) and the base ghost vocabulary; the voices place the rest.
+# `genre: jazz` gives the song a composed swing drummer, so nothing about
+# the kit is authored: the ride plays every beat with its skip note on the
+# swung "and" (spang-a-lang), the hi-hat foot closes on 2 and 4, the kick
+# feathers every beat with the odd bomb, and the left hand comps softly on
+# the triplet partials. The song seed draws the ride figure for each
+# section, the comping and the fills. The jazz-lite persona loosens the
+# time (a little ahead of the beat, looser timing, wider velocities)
+# without changing what is played. Drums follow the section intensity, so
+# the strain plays louder than the head.
 #
-# Kit map used throughout:
-#   ride (hats.pattern)  spang-a-lang: 1, 2, 2&, 3, 4, 4& (the "&" is swung)
-#   hi-hat foot          2 and 4 (hats.pedal)
-#   kick                 a light anchor on 1, a few "bombs" on the "&"
-#   snare                cross-stick on 2 and 4 in the head, soft ghosts
-#                        (brush-like taps) on the triplet partials
+# Two arrangement pins are musical choices: `into_chorus: fill` (a triplet
+# fill into each strain, where a snare-roll build would be out of style)
+# and `ending: ring`.
 #
 # Listen for:
-#   - intro and head: cross-stick backbeat, quiet ghost taps, the ride's
-#     skip note, hi-hat chick on 2 and 4
-#   - the strain (chorus) opens up: full snare, ride accents on 2 and 4,
-#     more ghost comping and occasional kick bombs
-#   - the drum solo: the time stays on the ride and hi-hat foot while the
-#     left hand moves to the toms, with flams, drags and a long fill at
-#     each four-bar phrase end
-#   - the bridge drops back to cross-stick with no fills, then the last
-#     head and a short tag that ends on a crash
+#   - the intro keeps time with the stick on the closed hi-hat, no fills
+#   - the head and strain move to the ride: spang-a-lang with the skip on
+#     2 and 4; the last beat of bars 2 and 4 of each phrase answers on
+#     the toms, except where a fill leads into the next section
+#   - the drum solo plays a skip note on every beat, with one-beat triplet
+#     fills in bars 2 and 6 and longer fills at bars 4 and 8 (fill_rate 0.9)
+#   - the bridge thins the ride to a late skip on 4 only, with no fills
+#   - the last head and a short outro that ends on one ringing ride crash
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Drums Jazz Ride Kit"
   bpm: 144
   key: Bb
@@ -32,6 +33,7 @@ song:
   meter: "4/4"
   genre: jazz
   seed: 5207
+  arrangement_style: {into_chorus: fill, ending: ring}
   exports_root: "exports"
 
 exports:
@@ -43,98 +45,37 @@ exports:
 instruments:
   drums:
     persona: jazz-lite
-    recipe: jazz_swing
-    voices:
-      ride:
-        bell_rate: 0.0
-      hats:
-        pattern: {rate: 1.0, placements: ["1", "2", "2&", "3", "4", "4&"]}
-        pedal: {rate: 1.0, placements: ["2", "4"]}
-        open: {rate: 0.0}
-        accents: {rate: 0.6, placements: ["2", "4"], boost: 10, bias: -6}
-      kick:
-        density: 0.4
-        syncopation: {rate: 0.08, placements: ["2&", "4&"]}
-        double: {rate: 0.0}
-      snare:
-        articulation: {default: crossstick}
-        ghosts: {rate: 0.3, placements: ["1&", "2a", "3&", "4a"], velocity_bias: -10}
-    params:
-      composer: false
-      swing: 0.65
-      velocity_humanize: 0.08
-      timing_jitter_ms: 4
-      push_pull: 0.0
-      phrase_len_bars: 4
-      fill_length: short
 
 sections:
   intro:
     type: intro
     bars: 4
-    intensity: 0.45
     instruments:
-      drums:
-        params: {fill_rate: 0.0}
+      drums: {params: {fill_rate: 0.0}}
   head:
     type: verse
     bars: 8
-    intensity: 0.55
     instruments:
-      drums:
-        params: {fill_rate: 0.25}
+      drums: {}
   strain:
     type: chorus
     bars: 8
-    intensity: 0.75
     instruments:
-      drums:
-        voices:
-          snare:
-            articulation: {default: normal}
-            ghosts: {rate: 0.45, placements: ["1&", "2a", "3&", "4e", "4a"], velocity_bias: -8}
-          kick:
-            density: 0.5
-            syncopation: {rate: 0.2, placements: ["1&", "2&", "3&", "4&"]}
-        params:
-          fill_rate: 0.5
+      drums: {}
   drum_solo:
     type: solo
     bars: 8
-    intensity: 0.9
     instruments:
-      drums:
-        voices:
-          toms: {groove: {rate: 0.6}, fills: {rate: 1.0}}
-          snare:
-            articulation: {default: normal}
-            ghosts: {rate: 0.5, placements: ["1&", "1a", "2a", "3&", "3a", "4a"], velocity_bias: -6}
-        params:
-          fill_rate: 1.0
-          fill_length: long
-          fill_chatter: 0.3
-          flam_rate: 0.15
-          drag_rate: 0.1
+      drums: {params: {fill_rate: 0.9}}
   bridge:
     type: bridge
     bars: 8
-    intensity: 0.5
     instruments:
-      drums:
-        voices:
-          snare:
-            ghosts: {rate: 0.15, placements: ["2a", "4a"], velocity_bias: -12}
-        params:
-          fill_rate: 0.0
+      drums: {params: {fill_rate: 0.0}}
   outro:
     type: outro
     bars: 4
-    intensity: 0.6
     instruments:
-      drums:
-        voices:
-          crash: {rate: 1.0, placements: ["1"]}
-        params:
-          fill_rate: 1.0
+      drums: {}
 
 arrangement: [intro, head, strain, head, strain, drum_solo, bridge, head, outro]

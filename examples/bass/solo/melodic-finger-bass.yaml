@@ -2,24 +2,27 @@
 # song, from a quiet intro to a high melodic solo.
 #
 # A bass by itself plays the bass engine's own line, so each control is
-# heard directly. Finger articulation with slides and vibrato (written as
-# pitch bend), diatonic passing notes between chord tones, fills at phrase
-# ends, and a different rhythm pattern for each part of the form.
+# heard directly. Finger articulation, diatonic approach notes into chord
+# changes, fills at phrase ends, and a different rhythm pattern for each
+# part of the form. Slides and vibrato (written as pitch bend) color the
+# pattern sections; the walking sections play plain quarter notes.
 #
 # Listen for:
-#   - intro: quiet quarter notes on D and G roots and fifths
-#   - verse: a quarter-note line that climbs each chord (root, third,
-#     fifth) with a few slides and chromatic approaches into changes
-#   - prechorus: a push pattern, two notes a bar, anticipating the changes
+#   - intro: a quiet walking line in quarter notes over D and G, the root
+#     on each downbeat and scale steps between
+#   - verse: the same walk through I V vi IV, stepping into each change
+#   - prechorus: a push pattern, two notes a bar (a held note on beat 1
+#     and a push on the and of 4), then a fill up into the chorus
 #   - chorus: a busier syncopated line, louder, with octave jumps and a
 #     diatonic fill at the end of each four-bar phrase
-#   - bridge: the relative minor, long held roots with pushes into the
-#     next chord, the calm before the solo
-#   - the bass solo (solo: true) opens up to C#4 with sixteenth pickups,
+#   - bridge: the relative minor, long held roots and fifths with a step on
+#     the and of 4 into the next chord, the calm before the solo
+#   - the bass solo (solo: true) opens up to D4 with sixteenth pickups,
 #     longer held notes with vibrato, and motif repeats
-#   - the last chorus returns and the outro settles back on the D root
+#   - the last chorus returns and the outro walks back down to the D root
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Bass Melodic Finger"
   bpm: 84
   key: D
@@ -61,7 +64,7 @@ sections:
     instruments:
       harmony: {}
       bass:
-        params: {rhythm_pattern: anchor, density: 1.0, rest_rate: 0.0, fill_rate: 0.0}
+        params: {rhythm_pattern: walking}
   verse:
     type: verse
     bars: 8
@@ -70,7 +73,7 @@ sections:
     instruments:
       harmony: {}
       bass:
-        params: {rhythm_pattern: anchor, density: 1.0, fifth_jump_rate: 0.3, rest_rate: 0.0}
+        params: {rhythm_pattern: walking}
   prechorus:
     type: prechorus
     bars: 4
@@ -116,6 +119,6 @@ sections:
     instruments:
       harmony: {}
       bass:
-        params: {rhythm_pattern: anchor, density: 1.0, rest_rate: 0.0, fill_rate: 0.0}
+        params: {rhythm_pattern: walking}
 
 arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, bass_solo, chorus, outro]

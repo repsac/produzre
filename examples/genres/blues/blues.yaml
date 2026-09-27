@@ -2,27 +2,29 @@
 #
 # Every verse is the full 12-bar form with dominant sevenths and a quick
 # change to IV in bar 2. The lead guitar plays around an imagined singer
-# (foreground: auto), so it answers the vocal lines with licks at the ends
-# of phrases, then takes a whole chorus as a solo.
+# (foreground: auto), so it answers each vocal line with a lick in the
+# second bar of the phrase, then takes a whole chorus as a solo. The bass
+# walks quarter notes through every bar of the form.
 #
 # Pinned, and why:
-#   - groove swing 0.66: a true triplet shuffle for the whole band (an
-#     explicit swing also keeps the drummer's drawn feel out, so the shuffle
-#     is guaranteed)
+#   - groove swing 0.66: an exact triplet shuffle for the whole band (the
+#     composed blues drummer already shuffles, a little straighter)
 #   - solo_story: blues, a slow-blues solo built on the song's licks
-#   - bass rhythm_pattern: walking (density 0.9, rest_rate 0): a steady
-#     walking line through every bar of the form
-# The drummer, the boogie comp figures and the licks are drawn from the
-# seed.
+#   - bass rhythm_pattern: walking, a walking line under the shuffle
+# The drummer, the comp figures and the licks are drawn from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
 #   - the intro starts on the V7 turnaround, like a band counting in
 #   - guitar licks fill the gaps between the singer's lines in each verse
 #   - bars 9 to 12 turn around (V7 IV7 I7 V7) back to the top of the form
-#   - verse 2 keeps verse 1's licks with small changes
-#   - the solo chorus, then a last verse and a short tag ending on I7
+#   - every verse answering the singer with the same licks, a band's
+#     arranged part
+#   - the solo chorus, the drummer moving to the ride under it, then a
+#     last verse and a short tag ending on I7
 version: 1
 song:
+  project: produzre-examples
   title: "Lowdown Kitchen Shuffle"
   bpm: 96
   key: A
@@ -49,7 +51,7 @@ instruments:
       foreground: auto
       register: [57, 81]
   bass:
-    params: {rhythm_pattern: walking, density: 0.9, rest_rate: 0}
+    params: {rhythm_pattern: walking}
 
 sections:
   intro:

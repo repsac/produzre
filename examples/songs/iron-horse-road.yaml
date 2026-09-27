@@ -3,22 +3,26 @@
 # The whole band is built on one signature riff. The intro plays it alone
 # on the rhythm guitar, the bass doubles it an octave down once the band
 # comes in, and the verses ride it while the singer (not rendered) carries
-# the tune. The lead guitar plays around the voice (foreground: auto):
-# licks at phrase ends, a counter-line in the choruses, then a solo.
+# the tune. The lead guitar plays around the voice (foreground: auto): a
+# lick at the end of each verse, a line through the prechorus, a
+# counter-line that climbs through each chorus, then a blues-style solo.
 #
 # Pins (song.arrangement_style): riff_driven, bass_doubles and intro:
 # riff_alone make sure this is a riff song with a riff-alone intro; every
-# other habit (fills, chorus form, comp activity, solo story) is drawn from
-# the seed, so a new seed gives the same song shape played by a new band.
+# other habit (fills, chorus form, comp activity, solo story) is the band
+# drawn for the shared produzre-examples project, so a new seed gives the
+# same song shape played by a new band.
 #
 # Listen for:
-#   - the riff alone for four bars, then drums and bass slam in with it
+#   - the riff alone for two bars, then drums and bass slam in with it
 #   - bass locked to the riff an octave down in intro, verses and outro
-#   - the prechorus climbing on iv to a held V, then the chorus opening up
+#   - the prechorus climbing on iv to a held V, the band stopping on its
+#     last bar, then the chorus opening up
 #   - the solo over the verse chords, then a final chorus up a whole step
 #   - turnarounds pulling each section home
 version: 1
 song:
+  project: produzre-examples
   title: "Iron Horse Road"
   bpm: 124
   key: A

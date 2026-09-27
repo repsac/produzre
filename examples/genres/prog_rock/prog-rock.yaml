@@ -14,7 +14,8 @@
 #   - arrangement_style.solo_story: climb, a solo that builds by sequence
 #   - section meters and groupings: the point of the example
 #   - song.final_chorus: modulate, the last chorus lifts a whole step
-# The drummer, the riff and the melody come from the seed.
+# The drummer, the riff and the melody come from the shared
+# produzre-examples project and the seed.
 #
 # Listen for:
 #   - the 2+2+3 riff in the intro and verse, guitar and bass in unison
@@ -24,6 +25,7 @@
 #   - the final chorus up a whole step
 version: 1
 song:
+  project: produzre-examples
   title: "Seven Gates of Morning"
   bpm: 132
   key: D

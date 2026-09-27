@@ -14,8 +14,12 @@
 # lead behaves under the sung chorus (`counter: guide`, a sustained line of
 # guide tones moving by step) and how often it fills (`lead_fills: normal`,
 # every four bars). Other counter styles are `octaves`, `stabs` and `fills`.
+# Because `counter` is pinned and `chorus_form` is not, the sung chorus
+# plays that plain counter-line; pin `chorus_form` (`lift` climbs, `anthem`
+# harmonizes the singer's line, `call` answers it) to shape it instead.
 version: 1
 song:
+  project: produzre-examples
   title: "Lead Foreground Comparison"
   bpm: 96
   key: G

@@ -1,27 +1,33 @@
-# Fingerpicked folk: a country-folk song in G for fingerpicked acoustic
-# guitar alone.
+# Fingerpicked folk: a country-folk song in A for fingerpicked acoustic
+# guitar alone, played the folk way: G shapes with a capo at the second
+# fret.
 #
 # Every section fingerpicks and no picking_pattern is set, so the composed
-# fingerstyle plays the whole piece. The song seed draws the player's
-# picking DNA once: a thumb style (alternating Travis bass, steady roots,
-# or a walking thumb), a right-hand figure for the verses and a different
-# one for the choruses, and where the melody notes sit against the beat.
-# A top-voice melody follows the chords on the treble strings while the
-# thumb keeps time; the last section closes on a held chord.
+# fingerstyle plays the whole piece. The capo changes the shapes, not the
+# key: the thumb, inner strings and melody all sound in A, fingered as G,
+# C and D shapes above the capo, and the natural persona keeps them open
+# so the strings ring. The song seed draws the player's picking DNA once
+# (examples use the shared produzre-examples project, so everyone hears the
+# same player): an alternating Travis thumb on root and fifth, a forward
+# roll for the verses and a banjo-style roll for the choruses. The top
+# voice follows the chords on the treble strings while the thumb keeps
+# time; the last bar is held.
 #
 # Listen for:
-#   - intro and verses: the thumb keeps an independent bass pulse (roots
-#     and fifths) while a melody rides on top, louder than the inner strings
-#   - each two-bar figure recurs and answers itself at phrase ends
-#   - the chorus switches to the second right-hand figure, lifts the melody
-#     higher and adds inner-string pinches, then the verse figure returns
+#   - intro and verses: the thumb alternates root and fifth on every beat
+#     while a melody rides on top, louder than the inner strings
+#   - every second bar answers the first with the melody moved off its spot
+#   - the chorus switches to the banjo-style figure and lifts the melody
+#     toward the top of each shape, then the verse figure returns
 #   - the bridge moves to the relative minor and back to the dominant
-#   - the outro slows the figure and ends on a held G chord
+#   - the outro plays the figure softly and ends on a held low A under the
+#     melody's last note
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Acoustic Fingerpicked Folk"
   bpm: 100
-  key: G
+  key: A
   mode: major
   meter: "4/4"
   genre: folk
@@ -38,7 +44,7 @@ instruments:
   acoustic_gtr:
     params:
       technique: fingerpicking
-      voicing_style: open
+      capo: 2
       melody_amount: 0.8
 
 sections:

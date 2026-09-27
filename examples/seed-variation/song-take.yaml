@@ -1,13 +1,16 @@
 # Seed variation: a new take.
 #
 # Identical to base-song.yaml except for `take: 1`. A take is a new
-# performance of the same song: the parts stay (at most a transition
-# pickup or a bass note changes), while timing and velocity humanization
-# are drawn again. The song's themes are preserved.
+# performance of the same song: every note's velocity is drawn again, while
+# the parts and the song's themes stay. Only a few details change: the drum
+# and bass pickup at the end of the intro, one bass note at the end of the
+# first chorus, and the strum spread (and a dropped chord tone) in a few
+# rhythm guitar bars.
 # Compare with `seed` overrides, which re-roll the parts themselves.
 version: 1
 
 song:
+  project: produzre-examples
   title: "Seed Variation Take"
   bpm: 120
   key: E

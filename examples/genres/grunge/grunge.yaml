@@ -1,25 +1,31 @@
 # Grunge: quiet verse, loud chorus, in D minor at 116 BPM, with a singer.
 #
 # The soft-loud dynamic is the point: verses sit low (intensity 0.5) with
-# the riff ticking over, then the chorus slams in at full intensity. The
-# harmony mixes minor with the major IV and bIII power-chord moves grunge
-# borrowed from punk. The lead guitar plays around an imagined singer
-# (foreground: auto) and its solo restates the vocal melody, grunge style.
+# the riff ticking over half-time drums, then the chorus slams in at full
+# intensity with the bass pumping octaves. The harmony mixes minor with
+# the major IV and bIII power-chord moves grunge borrowed from punk. The
+# lead guitar plays around an imagined singer (foreground: auto), stabs
+# under the chorus, and its solo follows the vocal melody, grunge style,
+# before ending in a whammy dive.
 #
 # Pinned, and why:
 #   - riff_driven: a low signature riff in the intro, verses and outro
+#   - intro: riff_alone, the riff by itself before the band comes in
 #   - into_chorus: build, so the band swells into each loud chorus
 #   - solo_story: melodic, the solo plays the tune rather than shredding
 #   - section intensities for the soft-loud contrast
-# The drummer, bass role, figures and licks are drawn from the seed.
+# The drummer, bass roles, figures and licks are drawn from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
-#   - the riff alone and quiet, then a build into a loud chorus
+#   - the riff alone and quiet, a drum pickup, then the band
+#   - a snare build and driving bass eighths into a loud chorus
 #   - the chorus power chords over i iv bIII bVI
-#   - a half-time bridge, then a melodic solo quoting the hook
+#   - a half-time bridge on the floor tom, then a melodic solo on the hook
 #   - the final chorus louder again, then the riff to close
 version: 1
 song:
+  project: produzre-examples
   title: "Wet Flannel Static"
   bpm: 116
   key: D
@@ -31,6 +37,7 @@ song:
   exports_root: "exports"
   arrangement_style:
     riff_driven: true
+    intro: riff_alone
     into_chorus: build
     solo_story: melodic
 

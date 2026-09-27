@@ -5,30 +5,32 @@
 # held for two bars (chord_rate 6). The harmony is church harmony, not rock:
 # I to I7 into IV, the minor iv plagal color, a ii7 V7 cadence, and a
 # chorus that walks IV V iii vi before resolving. A piano (the
-# arpeggiator) rolls triplet eighths under everything. The lead guitar
-# plays around an imagined singer (foreground: auto), and the last chorus
-# steps up a whole tone, the classic gospel key change.
+# arpeggiator) rolls triplet eighths under everything. The bass pedals
+# eighth-note roots in the verses and pumps octaves in the choruses. The
+# lead guitar plays around an imagined singer (foreground: auto), and the
+# last chorus steps up a whole tone, the classic gospel key change.
 #
 # Pinned, and why:
 #   - meter "6/8" with chord_rate 6: the slow gospel triplet feel
 #   - final_chorus: modulate, the choir-lifting key change
 #   - ending: ring, a held final chord rather than a cold stop
 #   - lead_fills: normal, so the guitar answers the singer every phrase
-#   - intro: full, the whole band plays the intro from the first bar (the
-#     intro has no rhythm guitar, so a riff-alone intro would have no
-#     riff to play)
 #   - drums ghost_rate 0.1 and fill_rate 0.2: a patient drummer at this
 #     tempo
-#   - bass density 0.8 and rest_rate 0: no accidental silent bars
-# The drummer's grooves, the comp figures and the licks come from the seed.
+# The drummer's grooves, the intro, the bass roles, the comp figures and
+# the licks come from the seed (examples use the shared produzre-examples
+# project).
 #
 # Listen for:
+#   - the whole band from the first bar of the intro
 #   - the I7 (Ab7) pulling to IV, then the minor iv before home
 #   - piano triplets rolling through every section
-#   - the vamp in the bridge building before the final chorus
+#   - the bridge easing back (softer drums, the bass on held roots and
+#     fifths) before the final chorus
 #   - the last chorus a whole step higher, then a ringing amen chord
 version: 1
 song:
+  project: produzre-examples
   title: "Sunday Morning Glory Road"
   bpm: 96
   key: Ab
@@ -42,7 +44,6 @@ song:
   arrangement_style:
     ending: ring
     lead_fills: normal
-    intro: full
 
 exports:
   midi_text:
@@ -57,8 +58,6 @@ instruments:
       register: [60, 81]
   arpeggiator:
     params: {pattern: phrase, note_duration: 0.5, rest_probability: 0.05}
-  bass:
-    params: {density: 0.8, rest_rate: 0}
   drums:
     params: {ghost_rate: 0.1, fill_rate: 0.2}
 

@@ -13,19 +13,23 @@
 #   - counter: stabs, the lead punctuates the chorus like a horn section
 #   - bass hook_response: true, the bass answers the lead in its gaps
 #   - bass articulation_style: slap with rhythm_pattern: funk_16ths
-#     (density 0.8, rest_rate 0.1): a busy slap line that keeps the
-#     engine's kick-locked sixteenths
+#     (density 0.8, rest_rate 0.1): a slap line on the engine's sixteenth
+#     grid (thumb on the beat, pops on the offbeats), busier in the chorus
 #   - drums ghost_rate 0.35 and fill_rate 0.15: a ghost-note snare with
 #     fills saved for phrase ends
-# The drummer, the chank figures and the licks are drawn from the seed.
+# The drummer, the chank figures and the licks are drawn from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
 #   - the two-bar call and response between the bars of each groove
-#   - ghost notes around the backbeat and sixteenth-note chanks
+#   - ghost notes around the backbeat and sixteenth-note chanks, the
+#     verse groove on the floor tom and the chorus on the hi-hat
+#   - the band stopping on the last downbeat of each verse
 #   - the bass filling holes after the lead's phrases
 #   - the bridge on bVI7 and bVII7, then a solo over the vamp
 version: 1
 song:
+  project: produzre-examples
   title: "Sixteen Shades of Grease"
   bpm: 102
   key: E

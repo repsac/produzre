@@ -5,23 +5,27 @@
 # tune: a hook for the refrain, a verse idea, and three signature licks
 # drawn from the blues vocabulary. The groove block swings the eighths
 # (the lead has no drummer to take a feel from). Settings used all shape
-# the composed line: a leaping contour, frequent bend-ins (bend_rate),
-# wide vibrato, whammy dives in the solos (dive_rate), and the song's solo
-# story pinned to a climb that ends in a dive (arrangement_style).
+# the composed line: a register of E3 to C6, a leaping contour, frequent
+# bend-ins (bend_rate above 0.15 also bends untagged notes), wide vibrato,
+# no volume swells, and the song's solo pinned to the blues story with a
+# held ending (arrangement_style).
 #
 # Listen for:
 #   - intro: the refrain's hook over a V-IV-I turnaround
 #   - verse: a 12-bar blues melody that states, repeats over IV and
-#     answers over V, with bends into the target notes
-#   - refrain (chorus): the hook and its answer, higher and louder; every
-#     refrain returns note for note
-#   - the 12-bar solo tells a story: a hook quote, a climb up the neck
-#     through the signature licks with bends, a climax around B5 and a
-#     whammy dive to finish
-#   - the last refrain comes back an octave higher
+#     answers over V, with bends into the target notes; verse 2 keeps the
+#     rhythm and changes some notes, like a new lyric
+#   - refrain (chorus): the hook and its answer, higher and louder; the
+#     second refrain returns note for note
+#   - the 12-bar solo (solo_story: blues) is built from the signature
+#     licks, call and response with space between phrases, a peak around
+#     C6 near the end and a held low note with vibrato to finish
+#   - the last refrain comes back lifted, much of it an octave or a fifth
+#     higher
 #   - the outro quotes the hook and holds the tonic
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Lead Blues Shuffle"
   bpm: 92
   key: A
@@ -30,8 +34,8 @@ song:
   genre: blues
   seed: 9202
   arrangement_style:
-    solo_story: climb
-    solo_ending: dive
+    solo_story: blues
+    solo_ending: hold
     lead_fills: chatty
   exports_root: "exports"
 
@@ -47,13 +51,12 @@ groove:
 instruments:
   lead_gtr:
     persona: bluesy
+    register: [52, 84]
     params:
-      register: [52, 84]
       contour_style: leaping
       rest_probability: 0.25
       bend_rate: 0.45
       vibrato_rate: 0.75
-      dive_rate: 0.4
       swell_rate: 0.0
 
 sections:

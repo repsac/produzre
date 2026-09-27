@@ -19,6 +19,7 @@
 #   - the last chorus strums hardest and the outro strums sparsely to a stop
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Acoustic Strum and Slap"
   bpm: 112
   key: E
@@ -38,7 +39,6 @@ instruments:
   acoustic_gtr:
     persona: percussive
     params:
-      voicing_style: open
       vel_variation: 10
       timing_variation: 0.015
 

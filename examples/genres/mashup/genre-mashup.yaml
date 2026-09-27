@@ -3,33 +3,30 @@
 # The song is rock (song.genre), so the intro, the choruses and the outro
 # are played by the composer's rock band: a composed drummer, composed
 # comping, and a lead guitar that plays around a singer (foreground: auto).
-# The other sections switch genre by choosing their parts explicitly, and
-# explicit choices always win over the composer:
-#   - the verses go reggae: a reggae drum recipe (one drop), the rhythm
-#     guitar's reggae_skank style, and a reggae bass
-#   - the bridge goes jazz: a swing drum recipe (its swing reaches the whole
-#     band in that section), a walking bass and jazz_comp guitar over
-#     seventh chords
-#   - the solo goes metal: a metal drum recipe, palm-muted gallop chugs
-#     (the grid renderer's chug style) and a picked bass following the
-#     kick drum (lock_to_kicks), under a lead solo
-# All sections share one key, one tempo and the song's melodic DNA, so the
-# hook still ties the song together.
-#
-# Why not just set a section instrument's genre? A genre override selects
-# that genre's recipe for the instrument, but the composer draws its drums,
-# comping and bass roles from song.genre, so a composed part keeps playing
-# rock. Choosing the part (recipe, style, rhythm_pattern) is what switches
-# it.
+# The other sections switch genre with a section instrument `genre`, which
+# chooses that genre's composed player for the part in that section:
+#   - the verses go reggae: a reggae drummer (kick and rim on 3 under open
+#     hats), a skank on the rhythm guitar (offbeat chucks and stabs), and a
+#     reggae bass that plays two or three notes a bar
+#   - the bridge goes jazz: the jazz drummer (spang-a-lang on the closed
+#     hi-hat, hi-hat foot on 2 and 4, swing that reaches the whole band in
+#     that section), a real walking bass and a jazz comp over seventh chords
+#   - the solo goes metal: a metal drummer on the ride and bell with a
+#     syncopated kick, palm-muted chugs and power chords, a busy bass line,
+#     and a lead that draws its solo licks from metal
+# Each genre's player is seeded from the song, so both reggae verses share
+# one reggae band. Arrangement habits (the push into each chorus, the cold
+# ending) stay the song's, so the band still agrees on them. All sections
+# share one key, one tempo and the song's hook, which ties the song
+# together.
 #
 # Listen for:
 #   - the rock intro and chorus against the offbeat skank of the verse
-#   - the one-drop verse drums (nothing on 1, kick and rim on 3)
 #   - the bridge swinging, with a walking bass under iv7 bVII7 bIIImaj7
-#   - the solo over gallop chugs and a metal beat, then back to the rock
-#     chorus
+#   - the solo over chugs and a metal beat, then back to the rock chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Crossfade City"
   bpm: 100
   key: E
@@ -64,9 +61,9 @@ sections:
     harmony: {progression: "i iv i iv"}
     instruments:
       harmony: {}
-      drums: {recipe: reggae_straight}
-      bass: {genre: reggae, params: {density: 0.8, rest_rate: 0.12, fifth_jump_rate: 0.05}}
-      rhythm_gtr: {genre: reggae, params: {style: reggae_skank}}
+      drums: {genre: reggae}
+      bass: {genre: reggae}
+      rhythm_gtr: {genre: reggae}
       lead_gtr: {}
   chorus_rock:
     type: chorus
@@ -79,22 +76,19 @@ sections:
     harmony: {progression: "iv7 bVII7 bIIImaj7 bVImaj7 iiø7 V7 i7 V7"}
     instruments:
       harmony: {}
-      drums: {recipe: jazz_swing}
-      bass:
-        genre: jazz
-        params: {rhythm_pattern: walking, density: 1.0, rest_rate: 0.0, lock_to_kick: 0,
-                 lock_to_hat: 0, lock_to_snare: 0, fifth_jump_rate: 0, octave_jump_rate: 0}
-      rhythm_gtr: {genre: jazz, params: {style: jazz_comp}}
+      drums: {genre: jazz}
+      bass: {genre: jazz}
+      rhythm_gtr: {genre: jazz}
   solo_metal:
     type: solo
     bars: 8
     harmony: {progression: "i bVI bVII i"}
     instruments:
       harmony: {}
-      drums: {recipe: metal_straight}
-      bass: {genre: metal, params: {articulation_style: pick, lock_to_kicks: true}}
-      rhythm_gtr: {genre: metal, params: {use_patterns: false, style: chug, pattern: gallop}}
-      lead_gtr: {}
+      drums: {genre: metal}
+      bass: {genre: metal}
+      rhythm_gtr: {genre: metal}
+      lead_gtr: {genre: metal}
   outro:
     type: outro
     bars: 4

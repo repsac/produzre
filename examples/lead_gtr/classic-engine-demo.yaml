@@ -19,6 +19,7 @@
 # Everything else in the band stays composed.
 version: 1
 song:
+  project: produzre-examples
   title: "Classic Lead Engine"
   bpm: 100
   key: A

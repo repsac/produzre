@@ -17,10 +17,12 @@
 # The last verse also ends with the song's way into a chorus, and the
 # chorus has no settings: the song's contrasting chorus figure.
 # Settings that pick a different part (style, strum_style, sustain_mode,
-# pattern, follow_hats, use_patterns, recipe, lock_to_riff) hand the section
-# to the classic engine instead; see classic-engine-demo.yaml.
+# playstyle, pattern, play_pattern, follow_hats, use_patterns, recipe, a
+# nonzero lock_to_riff, composer: false) hand the section to the classic
+# engine instead; see classic-engine-demo.yaml.
 version: 1
 song:
+  project: produzre-examples
   title: "Composed Comping Feel"
   bpm: 104
   key: A

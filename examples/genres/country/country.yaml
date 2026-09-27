@@ -2,29 +2,33 @@
 #
 # A full country band: the composed rhythm guitar plays honky-tonk figures
 # (Carter scratch, chucks, bass-string walks), an acoustic guitar strums
-# along underneath, the bass plays root and fifth with walk-ups into the
-# changes, and the drummer plays train or backbeat grooves with short
-# fills. The lead guitar plays around an imagined singer (foreground:
-# auto): chicken-picked fills between the vocal lines and an instrumental
-# break over the verse changes.
+# along underneath, the bass plays a two-beat line on 1 and 3 with leading
+# notes into the changes, and the drummer shuffles on the ride in the
+# verses and the hi-hat in the choruses, with short fills. The lead guitar
+# plays around an imagined singer (foreground: auto): chicken-picked and
+# slide fills at the ends of the verse phrases, a harmony line with the
+# singer in the choruses, and an instrumental break over the verse changes.
 #
 # Pinned, and why:
 #   - country_style: honky_tonk, the shared shuffle and honky-tonk
 #     vocabulary for every player (plain `country` would draw one per song)
+#   - lead_fills: normal, a fill answering every verse phrase
 #   - turnarounds: true, V7 turnarounds lead back into each section
 #   - acoustic_gtr technique: strumming (strum_density 1.0), a steady
 #     strummed acoustic bed on every beat
 #   - drums ghost_rate 0.1: a clean country snare
-# Each player's personal figures, the fills and the licks come from the
-# seed, so another seed is a different honky-tonk band.
+# Each player's personal figures, the intro, the fills and the licks come
+# from the seed (examples use the shared produzre-examples project).
 #
 # Listen for:
+#   - guitars alone for two bars, then a train beat brings in the band
 #   - the II7 (A7) in the chorus pulling to V7, a classic country move
-#   - bass walk-ups into chord changes
+#   - a two-bar snare build and driving bass eighths into each chorus
 #   - lead fills answering the singer, then a solo over the verse chords
 #   - the shared shuffle across drums, bass and guitars
 version: 1
 song:
+  project: produzre-examples
   title: "Jukebox on Route Nine"
   bpm: 116
   key: G
@@ -36,6 +40,7 @@ song:
   exports_root: "exports"
   arrangement_style:
     country_style: honky_tonk
+    lead_fills: normal
 
 exports:
   midi_text:

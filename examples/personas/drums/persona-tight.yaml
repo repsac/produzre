@@ -11,11 +11,13 @@
 # key, tempo, seed and chords. Compare the drum stems, or the
 # start_beat_abs and velocity columns of analysis/drums/*.events.tsv.
 #
-# A persona's pattern settings (fill_rate, hat_density, voice rates) do not
-# steer the composed drummer; set the drum params yourself for that, or set
+# A persona's pattern settings (fill_rate, hat_density, voice rates) and
+# its swing do not steer the composed drummer, which plays the song's own
+# straight feel here; set the drum params yourself for that, or set
 # `composer: false` to hear the persona on the classic engine.
 version: 1
 song:
+  project: produzre-examples
   title: "Drum Persona Tight"
   bpm: 110
   key: G

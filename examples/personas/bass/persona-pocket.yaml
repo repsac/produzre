@@ -11,6 +11,7 @@
 # own feel out of the band's timing, so any offset you hear is the persona.
 version: 1
 song:
+  project: produzre-examples
   title: "Bass Persona Pocket"
   bpm: 120
   key: E

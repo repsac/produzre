@@ -3,19 +3,23 @@
 #
 # Scenario: a producer likes the song but wants to
 #   1. try a completely different bridge: the bridge section gets `seed: 555`,
-#      a new drummer and new guitar figures for those eight bars only
+#      a new drummer, bass line and guitar figures for those eight bars (plus
+#      the drum fill that leads into it and the first guitar bar after it)
 #   2. keep the choruses: the composer remembers a section type, so the
 #      second chorus repeats the first, and the last chorus (after the solo)
-#      lifts it, whatever the seeds elsewhere
+#      recalls it and lifts: louder, with a new rhythm guitar figure
 #   3. re-roll only the rhythm guitar under the solo: its `seed: 42`
-#      draws new figures while the drums and bass keep theirs
+#      draws new figures while the drums, bass and lead keep theirs
 #
-# The composed lead is written from the song seed, so a lead `seed` changes
-# only its humanization. To try another solo, pin a different
-# `arrangement_style.solo_story` (climb, melodic, trade, blues) instead.
+# To try another solo, give the solo's lead a `seed` (for example
+# `lead_gtr: {seed: 7}`): it re-rolls the composed solo in that section only,
+# while the song's hook stays, since it belongs to the song. The pinned
+# `arrangement_style.solo_story` (climb, melodic, trade, blues) sets the
+# solo's shape.
 version: 1
 
 song:
+  project: produzre-examples
   title: "A/B Comparison"
   bpm: 130
   key: A

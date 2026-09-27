@@ -2,12 +2,13 @@
 #
 # Identical to base-song.yaml except that the chorus drums have
 # `seed: 777`: a different drummer in the chorus only. The bass and rhythm
-# guitar keep their notes (the second chorus bass only changes a few
-# velocities where it listens to the new drummer), and every other section
-# is unchanged.
+# guitar keep their notes (the chorus bass changes only its velocities,
+# which follow the new drummer's accents), and every other section is
+# unchanged.
 version: 1
 
 song:
+  project: produzre-examples
   title: "Seed Variation Drum Seed"
   bpm: 120
   key: E

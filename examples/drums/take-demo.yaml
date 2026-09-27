@@ -9,14 +9,19 @@
 #                 1, 2, 3... and rebuild: every take is repeatable.
 #   drums seed    a new drummer. An instrument `seed` re-rolls that part's
 #                 drum DNA (kick patterns, hands per section, ghosts, fill
-#                 vocabulary). Here the second verse and chorus give the
-#                 drums `seed: 7`, while bass and rhythm guitar keep playing
-#                 the song's own parts.
+#                 vocabulary, feel). Here the second verse and chorus give
+#                 the drums `seed: 5`. The rhythm guitar keeps the song's
+#                 verse figure; the bass locks to the kick in the verses,
+#                 so it follows the new drummer's kick there.
 #
-# Listen for: verse and chorus played by the song's drummer, then the same
-# sections with a different drummer: other hands, another kick pattern.
+# Listen for: the song's drummer (eighth-note hats in the verse, washy
+# hats over a stomping backbeat in the chorus, a laid-back feel), then the
+# new drummer on the same sections: sixteenth-note hats with ghost notes
+# in the verse, ride with bell accents in the chorus, another kick
+# pattern, and straight time.
 version: 1
 song:
+  project: produzre-examples
   title: "Drummer Takes and Seeds"
   bpm: 116
   key: C
@@ -48,11 +53,11 @@ sections:
     type: verse
     bars: 8
     harmony: {progression: "I V vi IV"}
-    instruments: {harmony: {}, drums: {seed: 7}, bass: {}, rhythm_gtr: {}}
+    instruments: {harmony: {}, drums: {seed: 5}, bass: {}, rhythm_gtr: {}}
   chorus_new_drummer:
     type: chorus
     bars: 8
     harmony: {progression: "IV I V vi"}
-    instruments: {harmony: {}, drums: {seed: 7}, bass: {}, rhythm_gtr: {}}
+    instruments: {harmony: {}, drums: {seed: 5}, bass: {}, rhythm_gtr: {}}
 
 arrangement: [verse, chorus, verse_new_drummer, chorus_new_drummer]

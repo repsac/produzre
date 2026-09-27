@@ -4,13 +4,16 @@
 # three files in this folder play the same drums and chords (key, tempo and
 # seed match) so only the bass player changes:
 #
-#   walking  steady quarter notes on roots and fifths, a little behind the beat
+#   walking  a walking line: a quarter note on every beat, each chord's root
+#            on its downbeat, scale and chord tones between and a step into
+#            the next chord, about 5 ms ahead of the beat
 #
 # Compare persona-tight.yaml, persona-pocket.yaml and persona-walking.yaml
 # in analysis/bass/*.events.tsv. `humanize_timing: 0` keeps the drummer's
 # own feel out of the band's timing, so any offset you hear is the persona.
 version: 1
 song:
+  project: produzre-examples
   title: "Bass Persona Walking"
   bpm: 120
   key: E

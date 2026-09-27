@@ -12,6 +12,7 @@
 version: 1
 
 song:
+  project: produzre-examples
   title: "Seed Variation Base"
   bpm: 120
   key: E

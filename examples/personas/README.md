@@ -29,16 +29,19 @@ for section overrides and how recipes combine with personas.
 | Acoustic guitar | `natural` (default), `precise`, `expressive`, `percussive`, `delicate` |
 
 Tight players use restrained timing variation. Pocket and dub bass sit later;
-walking bass favors continuous chord movement. Funk and metal choices change
-articulation and activity. Acoustic personas change picking/strumming behavior,
-muting, percussion, and expression.
+walking bass plays a walking line (a quarter note on every beat, stepping
+into each chord change) whatever the recipe, density or drum locks. Funk and
+metal choices change articulation and activity. Acoustic personas change
+picking/strumming behavior, muting, percussion, and expression.
 
 With the composer on (the default), a persona is a starting point, not a
 part. Only settings you write yourself count as your choice:
 
 - Drum personas set the composed drummer's touch and timing (jitter,
-  velocity variation, push or pull). Its patterns come from the song's
-  drum DNA, so persona fill, hat and voice rates do not change them.
+  velocity variation, push or pull against the beat). Its patterns and
+  feel come from the song's drum DNA, so persona fill, hat and voice rates
+  and persona swing do not change them. Your own `fill_rate`,
+  `hat_density`, `kick_density`, `ghost_rate` and `swing` do.
 - Lead personas set phrase length, contour, rests and resolution for the
   classic lead generator. The composed lead is shaped only by the
   `rest_probability` and `contour_style` you set yourself.
@@ -62,8 +65,8 @@ for the tight persona's locking defaults.
 
 - [bass/persona-tight.yaml](bass/persona-tight.yaml): the tight baseline for the pocket and walking comparisons, over drums.
 - [bass/persona-pocket.yaml](bass/persona-pocket.yaml): `persona: pocket`, a few milliseconds behind the beat; key, tempo, seed, drums and progression match.
-- [bass/persona-walking.yaml](bass/persona-walking.yaml): `persona: walking`, steady quarter notes over the same E dorian progression and seed.
-- [drums/persona-tight.yaml](drums/persona-tight.yaml), [drums/persona-rock.yaml](drums/persona-rock.yaml), [drums/persona-jazz-lite.yaml](drums/persona-jazz-lite.yaml): the same composed drummer and band with three drum personas; the hits match and the timing and velocity differ.
+- [bass/persona-walking.yaml](bass/persona-walking.yaml): `persona: walking`, a walking quarter-note line over the same E dorian progression and seed.
+- [drums/persona-tight.yaml](drums/persona-tight.yaml), [drums/persona-rock.yaml](drums/persona-rock.yaml), [drums/persona-jazz-lite.yaml](drums/persona-jazz-lite.yaml): the same composed drummer and band with three drum personas; the hits match and the timing and velocity differ (tight on the grid, rock about 5 ms ahead, jazz-lite about 20 ms ahead with the widest spread).
 
 ```bash
 for file in examples/personas/drums/*.yaml examples/personas/bass/*.yaml; do

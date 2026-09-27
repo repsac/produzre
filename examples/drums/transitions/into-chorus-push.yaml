@@ -1,16 +1,18 @@
 # Into the chorus: `push`.
 #
 # One of five short songs that differ only in `arrangement_style.into_chorus`,
-# the band's way into a chorus. Drums and rhythm guitar play it together
-# (the bass keeps its own line through the bar):
+# the band's way into a chorus. Drums, bass and rhythm guitar play it
+# together:
 #
-#   push   the band anticipates the chorus by an eighth note: crash and kick
-#          on the last "and", ringing over the downbeat
+#   push   the band anticipates the chorus by an eighth note: the drums
+#          play the groove, then crash and kick on the last "and", ringing
+#          over the downbeat; bass and guitar hit the same "and"
 #
 # The other files in this folder play the same band (same seed and chords)
 # with stop, build, fill, push and drop. Listen to bar 4 and bar 12.
 version: 1
 song:
+  project: produzre-examples
   title: "Into Chorus Push"
   bpm: 120
   key: A

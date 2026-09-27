@@ -2,7 +2,7 @@
 #
 # The lead is the melody (`foreground: full`) over ii-V-I changes. The
 # jazz drummer swings on the ride with feathered kicks and its own snare
-# comping, and the bass keeps its own engine line.
+# comping, and the bass walks four to the bar.
 # `arrangement_style` and the lead params set a singing solo:
 #
 #   solo_story: melodic   the solo sings the hook, answers it, lifts it and
@@ -15,6 +15,7 @@
 # the song's last chorus.
 version: 1
 song:
+  project: produzre-examples
   title: "Jazz Head and Solo"
   bpm: 144
   key: F

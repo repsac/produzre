@@ -1,12 +1,20 @@
+# Passing tones: diatonic approaches, a scale step below each new root.
+#
+# passing-none, passing-diatonic and passing-chromatic share the pocket
+# persona, an eighth-note drive pattern, the seed and the progression; only
+# the approach settings differ. An approach note is the last note before a
+# chord change, stepping into the next root (kind approach_diatonic or
+# approach_chromatic in analysis/bass/*.events.tsv).
 version: 1
 song:
+  project: produzre-examples
   title: "PassingTones_Diatonic"
   bpm: 120
   key: C
   mode: major
   meter: "4/4"
   beats_per_bar: 4
-  seed: 501  # Fixed seed for reproducibility
+  seed: 504  # Same seed in passing-none, -diatonic and -chromatic
   variation: 0.0
   humanize_velocity: 0.0
   humanize_timing: 0.0
@@ -25,19 +33,19 @@ instruments:
     intensity: 0.7
     params:
       articulation_style: finger
-      rhythm_pattern: anchor
+      rhythm_pattern: drive  # Eighths: a note just before each change to approach from
       density: 0.7
       rest_rate: 0.1
-      approach_rate: 0.8  # High rate for reliable testing
+      approach_rate: 0.8  # Approach most chord changes
       chromatic_rate: 0.0  # Only diatonic (scale-based)
       max_passing_per_bar: 2
 
 sections:
   verse1:
     type: verse
-    bars: 4
+    bars: 8
     harmony:
-      progression: "I IV V I"
+      progression: "I vi ii V I vi ii V"  # Targets A, D, G: scale and half steps differ
     instruments:
       harmony: {}
       bass: {}

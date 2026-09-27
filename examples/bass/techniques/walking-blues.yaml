@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "Walking_Blues"
   bpm: 120
   key: C
@@ -21,16 +22,11 @@ exports:
 instruments:
   bass:
     enabled: true
-    persona: walking
+    persona: walking  # A walking line: every beat sounds, a step into each change
     intensity: 0.75
     params:
       articulation_style: finger
-      rhythm_pattern: anchor
-      density: 1.0
-      rest_rate: 0.0
-      approach_rate: 0.50    # Higher for blues
-      chromatic_rate: 0.30   # More chromatic for blues
-      max_passing_per_bar: 4
+      chromatic_rate: 0.30   # More half-step approaches for blues
 
 sections:
   verse1:

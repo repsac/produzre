@@ -1,9 +1,10 @@
 # Metal: a riff-driven song in E minor with a singer, a breakdown and a solo.
 #
 # The song rides one signature riff: palm-muted chugs and power-chord moves
-# on the low strings, bar two answering bar one, chosen to lock with the
-# drummer's kick. The bass doubles it an octave down. The chorus opens up
-# into big power chords, the breakdown drops to the bII for a heavy
+# on the low strings, bar two answering bar one, sharing its accents with
+# the drummer's kick. The bass doubles it an octave down in the intro,
+# verses and outro, and pedals eighth notes under the choruses and the
+# solo. The chorus opens up into big power chords, the breakdown drops to the bII for a heavy
 # half-bar lurch, and the lead (foreground: auto) plays around the singer,
 # then takes a solo that climbs to a peak and ends in a whammy dive.
 #
@@ -12,21 +13,24 @@
 #     sound of the genre, so every seed shows it
 #   - arrangement_style.solo_story: climb and solo_ending: dive
 #   - arrangement_style.ending: cold, the band stops dead on the last hit
-#   - drums kick_density 0.8: the verse kick plays the chorus pattern, a
-#     busier foot like a double-kick player
+#   - drums kick_density 0.8: an extra kick on the last eighth of every
+#     beat without a backbeat, in every section, a busier foot like a
+#     double-kick player
 #   - bass articulation pick, for attack under the chugs
 # Everything else (the riff itself, the drummer's fills, the licks) comes
-# from the seed.
+# from the shared produzre-examples project and the seed.
 #
 # Listen for:
-#   - the intro riff alone before the band crashes in
-#   - kick, palm-muted guitar and picked bass hitting the same sixteenths
+#   - two bars of the intro riff alone, a drum fill, then the band
+#   - palm-muted guitar and picked bass hitting the same sixteenths, the
+#     kick landing on the riff's accents
 #   - the chorus power chords over i bVI bIII bVII
 #   - the breakdown's E to F (i to bII) grind
 #   - the solo climbing to its peak and diving out
 #   - a cold stop at the very end
 version: 1
 song:
+  project: produzre-examples
   title: "Iron Meridian"
   bpm: 168
   key: E

@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "PassingTones_Walking"
   bpm: 120
   key: C
@@ -21,16 +22,11 @@ exports:
 instruments:
   bass:
     enabled: true
-    persona: walking  # Walking bass style
+    persona: walking  # Quarter notes, passing tones between the chord tones
     intensity: 0.8
     params:
       articulation_style: finger
-      rhythm_pattern: anchor  # Steady quarter notes
-      density: 0.95  # Nearly every beat
-      rest_rate: 0.0
-      approach_rate: 0.6  # High approach rate for walking
-      chromatic_rate: 0.2  # Some chromatic motion
-      max_passing_per_bar: 4  # Allow many passing tones
+      chromatic_rate: 0.2  # Share of half-step approaches into each change
 
 sections:
   verse1:

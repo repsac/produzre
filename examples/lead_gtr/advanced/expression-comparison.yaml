@@ -8,19 +8,25 @@
 #   chorus_dry      bend_rate 0, vibrato_rate 0, swell_rate 0: no bends and
 #                   no swells; vibrato only where the composer wrote it (the
 #                   held cadence notes)
-#   chorus          the defaults: some bends, vibrato on most held notes
-#   chorus_wet      vibrato_rate 1, swell_rate 1: vibrato on every note held a
-#                   beat or longer, a volume swell on every note held 1.5 beats
-#   solo            dive_rate 1: every long held note in the solo ends in a
-#                   whammy dive, and so does the solo's last note
+#   chorus          the defaults: this hook carries no composed bends, so
+#                   none play; vibrato on most held notes and a volume swell
+#                   on a few of them
+#   chorus_wet      bend_rate 1, vibrato_rate 1, swell_rate 1: untagged
+#                   notes of half a beat or longer bend in from below (above
+#                   0.15, bend_rate adds bends), vibrato on every note held a
+#                   beat or longer, a volume swell on every note held 1.5
+#                   beats
+#   solo            dive_rate 1: every note held 1.5 beats or longer ends in
+#                   a whammy dive, and so does the solo's last note
 #                   (`solo_ending: dive`, rock and metal only)
-#   chorus_final    the defaults again, lifted and ornamented as a last chorus
+#   chorus_final    the defaults again, the hook lifted as a last chorus
+#                   (most notes a third to a fourth higher)
 #
-# `bend_rate` keeps a share of the composed bends up to its 0.15 default;
-# higher values do not add bends to the composed line. Pitch bend is per
-# MIDI channel, so assign the lead its own channel in your DAW.
+# Pitch bend is per MIDI channel, so assign the lead its own channel in
+# your DAW.
 version: 1
 song:
+  project: produzre-examples
   title: "Lead Expression Comparison"
   bpm: 108
   key: E
@@ -66,7 +72,7 @@ sections:
       drums: {}
       bass: {}
       rhythm_gtr: {}
-      lead_gtr: {params: {vibrato_rate: 1.0, swell_rate: 1.0}}
+      lead_gtr: {params: {bend_rate: 1.0, vibrato_rate: 1.0, swell_rate: 1.0}}
   solo:
     type: solo
     bars: 8

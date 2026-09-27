@@ -1,32 +1,38 @@
 # Reggae: a roots song in G major with a one-drop drummer and a dub bass.
 #
-# The composer knows reggae. The drummer plays the one-drop (kick and rim
-# together on beat 3, beat 1 left empty) with its own hand figure, the
-# rhythm guitar skanks on the offbeats, and groove memory locks every part
-# into a two-bar riddim that returns with each section. The lead plays
-# around a singer (foreground: auto): a hook in the intro, licks at phrase
-# ends, a counter-line under the chorus.
+# The composer knows reggae. The drummer plays the one-drop in the intro,
+# verses and bridge (kick and rim together on beat 3, beat 1 left empty)
+# and switches to rockers in the choruses and outro (kick on 1 and 3), the
+# rhythm guitar skanks (on 2 and 4 with a double chuck on the drop in the
+# verses and bridge, on the "and" of every beat elsewhere), and groove
+# memory locks every part into a riddim that returns with each section.
+# The lead plays around a singer (foreground: auto): a hook in the intro,
+# a lick at the end of each verse, a sparse counter-line under the chorus.
 #
 # Pinned, and why:
-#   - bass persona dub: a round bass that sits behind the beat; density,
-#     rest_rate and fifth_jump_rate are raised or lowered from the reggae
-#     recipe so the line keeps a root on every downbeat and still leaves
-#     holes around the drop
+#   - bass persona dub (a round bass that sits behind the beat), with
+#     density 0.8, rest_rate 0.12, pedal_rate 0.1 and fifth_jump_rate 0.05:
+#     a choice for a roots line that plays each chord's root on the
+#     downbeat, two or three notes a bar with holes around the drop, rather
+#     than the persona's sparser dub line
 #   - arrangement_style.comp_activity: sparse, so the skank stays simple and
 #     the bass carries the melody of the riddim
-#   - arrangement_style.into_chorus: drop, the band thins out for a beat
-#     before the chorus, a classic reggae lift
+#   - arrangement_style.into_chorus: drop, the bass drops out and the skank
+#     thins for the bar before each chorus, a classic reggae lift
 # Everything else (the drummer's hand figure, fills, the lead's licks) is
-# drawn from the seed.
+# drawn from the shared produzre-examples project and the seed.
 #
 # Listen for:
-#   - the one-drop: nothing on beat 1, kick and rim on 3
-#   - offbeat skanks on the "and" of every beat, never on the beat
-#   - a bass line with holes in it, sitting on the drop with the kick
+#   - the one-drop in the verse: nothing on beat 1, kick and rim on 3
+#   - the choruses lifting to rockers, the kick on 1 and 3
+#   - the skank on 2 and 4 in the verse, then on every offbeat in the
+#     chorus
+#   - a bass line with holes in it, a root on each downbeat
 #   - the I IV cycle of the verse against the IV V I vi of the chorus
-#   - the chorus riddim returning note for note each time
+#   - the bass dropping out for a bar before each chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Hillside Riddim"
   bpm: 74
   key: G

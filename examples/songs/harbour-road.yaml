@@ -1,26 +1,31 @@
 # Harbour Road: a roots reggae song, one-drop in the verses.
 #
 # A slow, heavy groove in A minor. The drummer plays a one-drop in the
-# verses (nothing on 1, kick and cross-stick together on 3) and moves to a
-# rockers kick on 1 and 3 in the choruses. The rhythm guitar skanks on the
-# offbeats, and the bass plays an authored four-bar riddim (a bass_motif
-# theme) that it quotes note for note in the verses and the dub. The
+# verses and the dub (nothing on 1, kick and cross-stick together on 3) and
+# moves to a rockers kick on 1 and 3 in the choruses. The rhythm guitar
+# skanks on the offbeats, and the bass plays an authored four-bar riddim (a
+# bass_motif theme) note for note in the intro, verses, dub and outro. The
 # melody is played on a harmonica patch (lead_gtr, program 22), in the
-# spirit of instrumental melodica reggae (foreground: full).
+# spirit of instrumental melodica reggae: with no singer, the lead carries
+# the tune throughout (foreground: full).
 #
-# Pins: none in arrangement_style. The one-drop verse comes from this
-# seed's drummer (reggae drummers draw one-drop, rockers or steppers).
-# Bass: lock_to_kicks with motif_quote_rate 1.0 plays the riddim's own
-# rhythm; the chorus turns quoting off so the bass follows the new chords.
-# The rhythm guitar has its own seed (3) for a plain one-drop skank.
+# Pins and choices made on purpose (none in arrangement_style):
+#   - drums seed 8: reggae drummers draw one-drop, rockers or steppers per
+#     section, and this drummer plays one-drop verses and rockers choruses
+#     under the shared produzre-examples project
+#   - the chorus turns riddim quoting off (motif_quote_rate 0), since the
+#     riddim is written for i and iv; there the bass plays roots and fifths
+#     with the rockers kick on 1 and 3
 #
 # Listen for:
+#   - the intro: skank and melody first, drums and bass halfway through
 #   - the one-drop: an empty beat 1 and the drop on 3 in every verse bar
 #   - the riddim bass line repeating under every verse
 #   - the skank on the offbeats, and the kick opening up in the chorus
 #   - the dub: drums and bass alone, then the band dropping back in
 version: 1
 song:
+  project: produzre-examples
   title: "Harbour Road"
   bpm: 74
   key: A
@@ -52,10 +57,10 @@ themes:
       5:1 .:.5 5:.5 7:.5 2+:.5 7:.5 5:.5
 
 instruments:
-  rhythm_gtr: {seed: 3}
+  drums: {seed: 8}
   bass:
     persona: dub
-    params: {motif_quote_rate: 1.0, lock_to_kicks: true, articulation_style: finger}
+    params: {articulation_style: finger}
   lead_gtr:
     params:
       foreground: full
@@ -79,7 +84,7 @@ sections:
     instruments:
       harmony: {}
       drums: {}
-      bass: {params: {motif_quote_rate: 0, lock_to_kicks: false, density: 0.9, rest_rate: 0.1}}
+      bass: {params: {motif_quote_rate: 0}}
       rhythm_gtr: {}
       lead_gtr: {}
   dub:

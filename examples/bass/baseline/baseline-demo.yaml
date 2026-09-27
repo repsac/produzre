@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassBaseline"
   bpm: 110
   key: E

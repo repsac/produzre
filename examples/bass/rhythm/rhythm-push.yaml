@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassRhythm_Push"
   bpm: 120
   key: C

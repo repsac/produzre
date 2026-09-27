@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "ThemeShowcase"
   bpm: 122
   key: E
@@ -24,9 +25,13 @@ exports:
 #                  their own voicings.
 #   chorus_hook  - the song's hook: the composer builds the lead around it.
 #                  The lead is the melody here (`foreground: full`), so both
-#                  choruses state it with its written pitches.
-#   bass_hook    - the bass quotes its pitches and onsets in every section
-#                  (`motif_quote_rate: 0.7`, set explicitly).
+#                  choruses state it four times with its written rhythm
+#                  (the 1st and 3rd statements end open on the 2, the others
+#                  close on the written 1), and the final chorus lifts it an
+#                  octave.
+#   bass_hook    - the bass plays it in every bar it plays, with its
+#                  written rhythm, lengths and pitches (only the turnaround
+#                  into the outro changes).
 #   kit_groove   - 2-bar kit pattern using all seven drum voices:
 #                  signature double kick on the "e of 3", an open hat at the
 #                  end of bar 1, an off-beat crash and a bar-end tom in bar 2.
@@ -64,7 +69,6 @@ themes:
 instruments:
   lead_gtr: {params: {foreground: full}}
   rhythm_gtr: {params: {lock_to_riff: 1.0}}
-  bass: {params: {motif_quote_rate: 0.7}}
 
 sections:
   intro:
@@ -86,8 +90,9 @@ sections:
     type: breakdown
     bars: 4
     # No harmony block, drums only: the signature groove still plays.
-    # The rock recipe moves the line to ride here (open-hat onsets become
-    # ride hits), while the crash and tom accents punch through.
+    # As in the choruses, the rock recipe moves the hat line to ride here
+    # (open-hat onsets become ride hits), while the crash and tom accents
+    # punch through.
     instruments: { drums: {} }
   chorus2:
     type: chorus

@@ -1,4 +1,4 @@
-# Heavy metal: a galloping riff in E minor at 168 BPM, with a singer.
+# Heavy metal: a chugging riff in E minor at 168 BPM, with a singer.
 #
 # Classic heavy metal: one signature riff on the low strings, doubled by
 # the bass, a harmonic-minor V chord for tension, a big chorus, and a solo
@@ -11,16 +11,21 @@
 #   - solo_story: trade and solo_ending: dive, the metal solo habit
 #   - drums kick_density 1.3 and ghost_rate 0.05: a busier kick and a
 #     straight snare, no funky ghost notes
-# The drummer's grooves, the comp figures and the licks come from the seed.
+# The drummer's grooves, the bass roles, the comp figures and the licks
+# come from the seed (examples use the shared produzre-examples project).
 #
 # Listen for:
-#   - the riff alone, then the whole band locked to it
-#   - the riff under the verse, chugging power chords and a galloping
-#     bass in the chorus
+#   - the riff alone for two bars, a drum pickup, then the whole band
+#     locked to it
+#   - the riff under the verse; in the chorus, power chords and chugs over
+#     sixteenth hats with the bass locked to the kick
+#   - the prechorus stopping dead on its last downbeat before each chorus
 #   - the major V (B) in the prechorus and bridge pulling back to E minor
-#   - the solo trading phrases and ending in a dive, then a last chorus
+#   - the solo trading phrases with the band and ending in a dive, then a
+#     last chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Anvil of the Night"
   bpm: 168
   key: E

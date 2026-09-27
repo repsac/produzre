@@ -2,21 +2,26 @@
 # ii-V-I changes and taking a solo.
 #
 # A bass by itself plays the bass engine's own line. The walking persona
-# plus rhythm_pattern: walking give a quarter note on every beat, chord
-# tones on strong beats, and diatonic or chromatic approach notes into each
-# chord change. The groove block swings the eighth-note pickups and fills.
+# walks: a quarter note on every beat, each chord's root on its downbeat,
+# chord and scale tones between, and a half step or scale step into the
+# next chord. chromatic_rate sets the share of half-step approaches. A walk
+# has no gaps, so density, rests and fills do not apply to it. The groove
+# block swings eighth notes, which the solo plays.
 #
 # Listen for:
-#   - intro: a two-feel (half notes, roots and fifths) over a ii-V turnaround
+#   - intro: a two-feel (half notes on beats 1 and 3: roots, thirds and
+#     fifths) over a ii-V turnaround
 #   - the head (verse) walks four to the bar through ii-V-I in Bb, landing
 #     on each new chord's root and approaching it a step or half step away
-#   - the second strain (chorus) moves through a iii-VI-ii-V cycle with more
-#     chromatic approaches and a fill at each four-bar phrase end
+#   - the second strain (chorus) moves through a iii-VI-ii-V cycle with
+#     more chromatic approaches (chromatic_rate 0.6)
 #   - the bass solo (solo: true) leaves strict quarters for a denser,
-#     higher, syncopated line with octave leaps, then the head returns
+#     higher, swung syncopated line with octave leaps and a fill at the
+#     four-bar phrase end, then the strain and head return
 #   - the outro walks the last ii-V home to the Bb root
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Bass Jazz Walk"
   bpm: 160
   key: Bb
@@ -40,19 +45,9 @@ instruments:
     persona: walking
     params:
       articulation_style: finger
-      rhythm_pattern: walking
       register_low: 28
       register_high: 55
-      density: 1.0
-      rest_rate: 0.0
-      approach_rate: 0.45
       chromatic_rate: 0.4
-      max_passing_per_bar: 2
-      motion_style: mixed
-      root_bias: 0.5
-      fill_rate: 0.25
-      fill_complexity: 0.4
-      phrase_len_bars: 4
 
 sections:
   intro:
@@ -80,7 +75,7 @@ sections:
     instruments:
       harmony: {}
       bass:
-        params: {chromatic_rate: 0.6, approach_rate: 0.55, fill_rate: 0.5}
+        params: {chromatic_rate: 0.6}
   bass_solo:
     type: solo
     solo: true
@@ -98,7 +93,6 @@ sections:
     harmony: {progression: "ii7 V7 Imaj7 Imaj7"}
     instruments:
       harmony: {}
-      bass:
-        params: {fill_rate: 0.0}
+      bass: {}
 
 arrangement: [intro, head, strain, head, bass_solo, strain, head, outro]

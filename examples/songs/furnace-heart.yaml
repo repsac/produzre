@@ -4,22 +4,25 @@
 # Phrygian bite. A palm-muted chugging riff drives the verses with the
 # bass doubling it an octave down, the chorus pounds power-chord eighths
 # over a pedalling bass, and the drummer adds extra kicks around the
-# backbeat. The lead guitar plays around the voice (foreground: auto) and
-# takes a melodic solo. The breakdown drops to half-time on the same
-# i and bII chords before the solo lifts everything back up.
+# backbeat. The lead guitar plays around the voice (foreground: auto),
+# answering every other bar of the verses, and takes a blues-style
+# call-and-answer solo that ends on a dive. The breakdown drops to
+# half-time on the same i and bII chords before the solo lifts everything
+# back up.
 #
 # Pins: riff_driven and bass_doubles for a riff song with the bass in
-# unison. Feel settings shape the composed parts without replacing them:
+# unison, and intro: riff_alone so the riff opens the song. Feel settings shape the composed parts without replacing them:
 # palm_mute on the rhythm guitar turns plain strums into chugs, and
 # kick_density on the drums adds extra kicks.
 #
 # Listen for:
-#   - the riff alone in the intro, then the whole band in unison with it
+#   - the riff alone for two bars, then the whole band in unison with it
 #   - the bII (F) chord against the E pedal in verse and breakdown
 #   - the prechorus ending on V (B major) to set up the chorus
 #   - the breakdown's half-time weight, then the solo and last chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Furnace Heart"
   bpm: 168
   key: E
@@ -32,6 +35,7 @@ song:
   arrangement_style:
     riff_driven: true
     bass_doubles: true
+    intro: riff_alone
 
 exports:
   midi_text:

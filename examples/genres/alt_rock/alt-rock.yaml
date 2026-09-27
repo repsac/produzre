@@ -3,22 +3,27 @@
 # The verse borrows the flat seventh (E, D, A) for that open alt-rock
 # jangle, the prechorus turns to the relative minor, and the chorus lands
 # on IV to start its lift. The lead guitar plays around an imagined singer
-# (foreground: auto); under the chorus it plays octave lines, a signature
-# alt-rock lead sound.
+# (foreground: auto); under the chorus it punctuates each chord with
+# octave root stabs (the octaves counter), then plays the hook as a tag.
 #
 # Pinned, and why:
-#   - counter: octaves, the lead's octave melody under the singer's chorus
+#   - counter: octaves, the lead's octave stabs under the singer's chorus
+#     (a pinned counter keeps the plain counter-line in the chorus)
 #   - comp_activity: sparse, so the rhythm guitar states its figure and
 #     leaves air in the verses
-#   - drums hat_density 0.85: a slightly lighter top cymbal line
-# The drummer, bass role, into-chorus device and licks come from the seed.
+# The drummer, bass roles, into-chorus device and licks come from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
 #   - the D chord (bVII) giving the verse its open, modal sound
-#   - octave lines under the chorus, then the hook as a tag
-#   - the bridge on ii, IV, vi, V, then a solo that sets up the last chorus
+#   - the band stopping on the prechorus's last downbeat, then sixteenth
+#     hats and driving bass eighths in the chorus
+#   - octave stabs under the chorus, then the hook as a tag
+#   - the bridge on ii, IV, vi, V, then a climbing solo that sets up the
+#     last chorus
 version: 1
 song:
+  project: produzre-examples
   title: "Radio Tower Weather"
   bpm: 124
   key: E
@@ -43,8 +48,6 @@ instruments:
     params:
       foreground: auto
       register: [59, 81]
-  drums:
-    params: {hat_density: 0.85}
 
 sections:
   intro:

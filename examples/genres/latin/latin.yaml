@@ -15,17 +15,22 @@
 #   - bass register_high 50: keeps the bass line below the nylon guitar
 #   - engines: nylon guitar for the acoustic and a clean electric for the
 #     lead, the usual sounds of a Latin guitar band
-# The drummer, the comp figures (clave hits, montuno arpeggios) and the
-# melody come from the seed.
+# The drummer, the comp figures (montuno arpeggios in the verse, a 3-3-2
+# figure in the chorus, clave hits in the solo) and the melody come from
+# the shared produzre-examples project and the seed.
 #
 # Listen for:
-#   - the two-bar comp figure in the verse that answers itself, bar to bar
-#   - the bass locking to the syncopated kick pattern
+#   - the two-bar kick pattern that answers itself, bar to bar, under the
+#     montuno arpeggios of the verse
+#   - the bass pedaling eighths in the verse, then locking to the
+#     syncopated kick in the choruses and solo, with a snare-style build
+#     into each chorus
 #   - the nylon guitar fingerpicking the verse, strumming the chorus
 #   - the chorus melody as a call, then its answer
 #   - a turnaround V7 at the end of each section leading home to i
 version: 1
 song:
+  project: produzre-examples
   title: "Calle de la Luna"
   bpm: 100
   key: A

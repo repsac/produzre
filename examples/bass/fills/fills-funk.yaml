@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "Bass_Fills_Funk"
   bpm: 115
   key: C

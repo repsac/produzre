@@ -19,6 +19,7 @@
 # bass plays its own chorus role.
 version: 1
 song:
+  project: produzre-examples
   title: "Signature Riff Answers"
   bpm: 122
   key: E

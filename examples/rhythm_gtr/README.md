@@ -4,8 +4,9 @@ The rhythm guitar is composed by default. Each song draws its own figures
 from an idiomatic vocabulary (dead-note chucks, bass-string walks, sus4
 hammer-ons, slid chords, boogie dyads, stabs, gallops), gives each a
 personal variation, and arranges them so verse, chorus and bridge
-contrast. Phrases walk or slide into the next phrase, and the bar before a
-chorus follows the song's way into it. The build log names each figure:
+contrast. Phrases walk or slide into the next phrase's chord (a walk only
+ever leads into a chord change; where the chord holds, it plays root and
+fifth instead), and the bar before a chorus follows the song's way into it. The build log names each figure:
 
 ```text
 [INFO] Composer: verse rhythm guitar plays 'gen_low:r---x-u-r-a-x-u-'
@@ -30,6 +31,7 @@ Feel settings shape the composed part per section:
 | `sustain_cut_rate` | Chance a strum is cut to a stab. |
 | `voicing` | `power` or `octaves` plays power shapes throughout. |
 | `register_min`, `register_max` | Shapes shift by octaves to fit. |
+| `sustain_duration` | Longest any note rings, in beats. |
 | `accent_strength`, `downbeat_boost`, `humanize_velocity` | Dynamics. |
 | `strum_ms`, `humanize_timing`, `offset_beats`, `style_bias` | Timing and intensity. |
 
@@ -47,8 +49,8 @@ A rhythm guitar `seed` re-rolls its figures.
 
 Settings that choose a different part hand the section to the classic
 engine: `style`, `strum_style`, `sustain_mode`, `playstyle`, `pattern`,
-`play_pattern`, `follow_hats`, `use_patterns`, `recipe`, `lock_to_riff`,
-and `composer: false`.
+`play_pattern`, `follow_hats`, `use_patterns`, `recipe`, a nonzero
+`lock_to_riff`, and `composer: false`.
 
 - [classic-engine-demo.yaml](classic-engine-demo.yaml): `composer: false` with pattern styles (`straight_8s`, `chugs`, `pop_push`, `half_time`, `syncopated`), `strum_style`, `phrase_len_bars` and `section_contrast`.
 

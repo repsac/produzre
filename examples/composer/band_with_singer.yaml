@@ -1,21 +1,33 @@
-# Band with a singer: the lead guitar plays hooks, fills, and a solo.
+# Band with a singer: the lead guitar plays around the vocal.
 #
-# The lead guitar is the "singer" (foreground: full). Every lead phrase
-# derives from one song DNA: a hook chosen by a memorability search over
-# the chorus chords, a verse idea, a contrasting bridge idea, and a bank of
-# three signature licks.
+# `foreground: auto` puts the lead behind a singer: no vocal part is
+# rendered, and the song's hook stands in for the singer's line. Every lead
+# phrase derives from one song DNA: a hook chosen by a memorability search
+# over the chorus chords, a verse idea, a contrasting bridge idea, and a bank
+# of three signature licks. The arrangement choices named below are drawn
+# under the shared produzre-examples project, so every build hears them.
 #
 # Listen for:
-#   - intro states the hook; every chorus plays it again (note-identical
-#     while the harmony matches), the final chorus lifts it and embellishes it
-#   - verse 2 keeps verse 1's melody with small "new lyric" rhythm changes
-#   - the prechorus climbs by sequence and holds the dominant
-#   - the solo tells a story: hook quote, development, climax, dive
-#   - bass, drums, and rhythm guitar lock a groove per section (groove
-#     memory) and vary it at phrase ends; choruses recall their groove
-#   - turnarounds lead each section into the next
+#   - the intro states the guitar hook over the signature riff; the song is
+#     riff-driven, so the bass doubles the riff in the intro, verses and outro
+#   - verses leave room: signature licks only at phrase ends, and verse 2
+#     repeats verse 1
+#   - the prechorus climbs by sequence, and the band stops dead in its last
+#     bar before each chorus (the drawn into-chorus device is `stop`)
+#   - choruses follow the drawn chorus form `call`: the lead stays out of
+#     each two-bar vocal line, answers it with a lick, and closes on the hook
+#     as a tag. The second chorus repeats the first note for note; the final
+#     chorus (`final_chorus: modulate`) moves up a whole step, and the outro
+#     stays in the new key
+#   - the bridge states its idea, then fills; the solo tells a melodic story
+#     that ends on a held note, and the band stops again into the last chorus
+#   - drums follow the section intensity: louder in choruses than verses, and
+#     a little louder on each repeat
+#   - `turnarounds: true` turns the intro's last half bar to bVII into the
+#     verse; the song ends cold on the tonic
 version: 1
 song:
+  project: produzre-examples
   title: "Composer Band"
   bpm: 128
   key: E
@@ -39,7 +51,7 @@ instruments:
       foreground: auto
       register: [60, 79]
   bass:
-    params: {articulation_style: pick, lock_to_kick: 0.6}
+    params: {articulation_style: pick}
 
 sections:
   intro:

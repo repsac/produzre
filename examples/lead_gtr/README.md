@@ -18,7 +18,7 @@ python produzre_entry.py build examples/lead_gtr/basics/foreground-comparison.ya
 
 ## Advanced
 
-- [advanced/expression-comparison.yaml](advanced/expression-comparison.yaml): the same chorus line played dry, with the default expression, and with vibrato and swells on every long note; then a solo with `dive_rate: 1`.
+- [advanced/expression-comparison.yaml](advanced/expression-comparison.yaml): the same chorus line played dry, with the default expression, and fully wet (`bend_rate: 1` adds bends, vibrato and swells on every long note); then a solo with `dive_rate: 1`.
 
 ## Styles
 
@@ -27,7 +27,7 @@ Each style pins a different solo with `song.arrangement_style`:
 - [styles/blues-lead.yaml](styles/blues-lead.yaml): an instrumental 12-bar blues; `solo_story: blues`, `solo_ending: hold`.
 - [styles/jazz-lead.yaml](styles/jazz-lead.yaml): head, solo, head over ii-V-I changes; `solo_story: melodic`, `solo_ending: trill`, no bends, stepwise contour.
 - [styles/rock-solo.yaml](styles/rock-solo.yaml): a band with a singer, octave stabs under the chorus, and a solo with `solo_story: climb`, `solo_ending: slide_off` and `register: full`.
-- [styles/metal-lead.yaml](styles/metal-lead.yaml): an instrumental metal song around an authored hook, with a doubled signature riff; `solo_story: trade`, `solo_ending: dive`.
+- [styles/metal-lead.yaml](styles/metal-lead.yaml): an instrumental metal song around an authored hook, with a doubled signature riff and a last chorus lifted an octave; `solo_story: trade` (licks with pickups back in), `solo_ending: dive`.
 - [solo/](solo/): the lead guitar on its own.
 
 ## The classic engine
@@ -39,10 +39,10 @@ Each style pins a different solo with `song.arrangement_style`:
 | Setting | Effect |
 |---|---|
 | `foreground` | `full`: the lead is the melody. `auto` (default): hooks, fills, counter-lines and solos around a singer. Per section or for the whole song. |
-| `register` | The melody range: a named preset (`low`, `mid`, `high`, `very_high`, `full`) or a hard `[low, high]` MIDI range. Solos extend a named range upward. |
+| `register` | The melody range: a named preset (`low`, `mid`, `high`, `very_high`, `full`) or a hard `[low, high]` MIDI range, set on the instrument or under `params`. Solos extend a named range upward. |
 | `rest_probability` | Drops answers, developments and fills; never the hook, cadences, or the solo's structural moments. |
 | `contour_style` | `stepwise` makes leaps cost more, `leaping` makes them cheaper. A subtle change: the phrase forms and chords still decide most intervals. |
-| `bend_rate`, `vibrato_rate`, `dive_rate`, `swell_rate` | Expression: `bend_rate` keeps a share of the composed bends (0 removes them; values above 0.15 add none), the others as in the [reference](../../docs/llm-song-config-reference.md#lead-guitar-controls). |
+| `bend_rate`, `vibrato_rate`, `dive_rate`, `swell_rate` | Expression: `bend_rate` 0.15 plays the composed bends as written, lower keeps a share of them (0 removes them), higher also bends other notes of half a beat or longer (all of them at 1); the others as in the [reference](../../docs/llm-song-config-reference.md#lead-guitar-controls). |
 | `solo: true` or `role: lead` | Makes any section a solo. |
 | An authored `melody` theme | Becomes the song's hook; see [themes_demo.yaml](../themes_demo.yaml). |
 
@@ -51,8 +51,12 @@ Song habits, pinned with `song.arrangement_style`
 `solo_story` (`climb`, `melodic`, `trade`, `blues`), `solo_ending` (`dive`,
 `hold`, `trill`, `slide_off`; a dive only in rock and metal), `counter` (the
 lead under a sung chorus: `guide`, `octaves`, `stabs`, `fills`),
-`chorus_form` (`lift`, `anthem`, `call`) and `lead_fills` (`sparse`,
-`normal`, `chatty`).
+`chorus_form` (`lift` climbs, `anthem` harmonizes the singer's line,
+`call` answers it; it shapes a `foreground: auto` chorus unless you pin
+`counter` alone) and `lead_fills` (`sparse`, `normal`, `chatty`). A
+`foreground: full` lead in a country song answers its own lines with the
+song's licks in verses and choruses; other genres do when `lead_fills` is
+pinned.
 
 `phrase_len_bars`, `theme_quote_rate`, `resolution_strength`, `ring_out` and
 `ring_max_beats` tune only the classic engine. With the composer on, the
@@ -60,5 +64,8 @@ build log lists them as unused. Lead personas set phrase length, rests,
 contour and resolution; persona values never count as your choice, so they
 leave the composed line alone.
 
-A lead `seed` changes the performance's humanization, not the composed
-notes: the line comes from the song seed.
+A lead `seed` (on the instrument or a section) re-rolls the composed lead:
+its verse and bridge ideas, its licks and its phrase choices. The hook and
+its answer stay the song's, because other parts share them. Every example
+uses the shared `produzre-examples` project, so what each header describes
+is what everyone hears.

@@ -3,22 +3,25 @@
 # A singer carries the verses (not rendered). Around the voice, a clean
 # electric lead plays chicken-picked licks and a solo (foreground: auto),
 # an acoustic guitar strums the chorus, and the band shuffles: bass on
-# roots and fifths with walks into the changes, boom-chuck guitar, and a
-# drummer on a train beat or backbeat with the swing that honky-tonk
-# shares across the band. The chorus takes a II7 (a secondary dominant)
-# on its way to V, and the last chorus goes up a whole step.
+# roots and fifths with a swung pickup note leading into the changes,
+# boom-chuck guitar, and a drummer on a train beat in the verses and a
+# backbeat on the ride bell in the choruses, with the swing that
+# honky-tonk shares across the band. The chorus takes a II7 (a secondary
+# dominant) on its way to V, and the last chorus goes up a whole step.
 #
 # Pins: country_style: honky_tonk. Plain `genre: country` would draw one of
-# six country styles per seed; this song wants the shuffle. The players
-# (bass figures, guitar figures, the drummer's hands) are still the seed's.
+# six country styles per song; this song wants the shuffle. The players
+# (bass figures, guitar figures, the drummer's hands) are the band drawn
+# for the shared produzre-examples project.
 #
 # Listen for:
 #   - the shuffle feel shared by drums, bass and guitars
-#   - bass walking up or down into each chord change
+#   - the bass pickup leading into each chord change
 #   - chicken-picking fills at the ends of vocal phrases
 #   - the II7 to V in the chorus, and the final chorus key change
 version: 1
 song:
+  project: produzre-examples
   title: "Two Dollar Jukebox"
   bpm: 152
   key: G

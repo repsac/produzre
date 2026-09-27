@@ -5,6 +5,7 @@
 # the composed drummer. See README.md for the composed drum demos.
 version: 1
 song:
+  project: produzre-examples
   title: "SnareDemo"
   bpm: 120
   key: C

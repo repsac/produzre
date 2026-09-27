@@ -1,29 +1,32 @@
 # Groove shaping: the four settings that steer the composed drummer.
 #
 # The drummer's groove comes from the song's drum DNA. Four drum params
-# shape it per section without replacing it:
+# shape it in any section type without replacing it:
 #
 #   ghost_rate    0 no ghost notes; below 0.3 a grace note before the
 #                 backbeat every other bar; 0.3 or more a grace before and
 #                 after every backbeat
-#   kick_density  0.3 or less: kick on 1 and 3 only; 0.7 or more: the
-#                 verse borrows the busier chorus kick pattern
-#   hat_density   0.3 or less: quarter-note hats; 0.8 or more: sixteenths
-#                 (verse and prechorus hands)
+#   kick_density  0.3 or less: kick on 1 and 3 only; 0.7 or more: an extra
+#                 kick on the "and" of every beat without a backbeat
+#   hat_density   0.3 or less: quarter-note hats; 0.8 or more: sixteenth
+#                 hats (either one replaces this drummer's floor-tom eighths)
 #   fill_rate     how often it fills (see fills-demo.yaml); every verse here
 #                 uses 0.2, so each section ends with one fill
 #
 # Each verse changes one setting against the first verse, which plays the
-# drummer's own choices. Bass and rhythm guitar keep their parts, except
-# in the two kick verses: the signature riff is chosen to lock with the
-# drummer's kick, so it changes with it. That is the band listening.
-# `arrangement_style` pins the riff (`riff_driven: true`), the fill into the
-# chorus and the ending, so every machine hears the same arrangement.
+# drummer's own choices: eighths on the floor tom, a light ghost before the
+# backbeat, and kicks on 1, the "and" of 1, 3, and the "and" and "a" of 4.
+# Every verse sets `intensity: 0.7`, a choice for this comparison: repeated
+# verses would otherwise grow louder one by one, and here only the setting
+# should change. Bass and rhythm guitar play the same parts in every verse.
+# `arrangement_style` pins the riff (`riff_driven: true`), the fill into
+# the chorus and the ending.
 #
 # Check it: analysis/drums/*.events.tsv marks ghost notes with kind
-# "snare_ghost"; kicks are pitch 36, closed hats 42.
+# "snare_ghost"; kicks are pitch 36, closed hats 42, the floor-tom hand 45.
 version: 1
 song:
+  project: produzre-examples
   title: "Composed Drum Shaping"
   bpm: 100
   key: G
@@ -43,6 +46,7 @@ exports:
 sections:
   verse:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:
@@ -52,6 +56,7 @@ sections:
       rhythm_gtr: {}
   verse_no_ghosts:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:
@@ -61,6 +66,7 @@ sections:
       rhythm_gtr: {}
   verse_busy_ghosts:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:
@@ -70,6 +76,7 @@ sections:
       rhythm_gtr: {}
   verse_sparse_kick:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:
@@ -79,6 +86,7 @@ sections:
       rhythm_gtr: {}
   verse_driving_kick:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:
@@ -88,6 +96,7 @@ sections:
       rhythm_gtr: {}
   verse_quarter_hats:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:
@@ -97,6 +106,7 @@ sections:
       rhythm_gtr: {}
   verse_sixteenth_hats:
     type: verse
+    intensity: 0.7
     bars: 4
     harmony: {progression: "I V vi IV"}
     instruments:

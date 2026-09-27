@@ -4,9 +4,8 @@
 # the melody everywhere (`foreground: full`). The hook is authored below,
 # so the composer builds the song around it instead of choosing its own:
 # the intro and every chorus state it, and each chorus repeats the first
-# note for note, a little louder each time. (An authored hook keeps its
-# written pitches, so the last chorus is not lifted the way a composed
-# hook would be.)
+# note for note, a little louder each time. The last chorus, after the
+# breakdown, lifts the authored line an octave.
 #
 # `arrangement_style` pins the band's habits:
 #
@@ -14,7 +13,9 @@
 #                               on the low strings, locked to the drummer's
 #                               kick, and the bass doubles it an octave down
 #   into_chorus: push           the band anticipates each chorus by an eighth
-#   solo_story: trade           the solo trades licks with the band, the
+#   solo_story: trade           the solo trades with the band: a lick in the
+#                               lead's bar, then a two-note pickup out of
+#                               the band's bar into the next lick, the
 #                               hottest one at the climax
 #   solo_ending: dive           the solo's last note ends in a whammy dive
 #
@@ -22,6 +23,7 @@
 # Degrees: 1=E 2=F# 3=G 4=A 5=B 6=C 7=D.
 version: 1
 song:
+  project: produzre-examples
   title: "Flying High"
   bpm: 140
   key: E

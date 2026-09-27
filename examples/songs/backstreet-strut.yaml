@@ -2,25 +2,29 @@
 #
 # Tight funk in E dorian. The verses ride a signature riff that the slap
 # bass doubles an octave down, the choruses switch to busy sixteenth-note
-# chanks over popping bass octaves, the bass answers the melody when it
-# breathes (hook_response), and the drummer keeps a ghost-note groove. The lead guitar plays the
-# tune (foreground: full): a short syncopated hook that returns in every
-# chorus.
+# chanks over slapped root eighths with an octave pop, the bass answers the
+# melody when it breathes (hook_response), and the drummer keeps sixteenth
+# hi-hats with snare ghost notes around the backbeat. The lead guitar plays
+# the tune (foreground: full): a short syncopated hook that returns in
+# every chorus.
 #
 # Pins: comp_activity: busy, so the rhythm guitar plays its full figure
-# every bar (the point of the song is the interlock). The seed chose the
-# rest: a riff-driven verse with the bass doubling it, the band dropping
-# out before each chorus, a chatty lead.
+# every bar (the point of the song is the interlock), and riff_driven with
+# bass_doubles, so the verses, intro and outro ride the riff with the bass
+# in unison. The band drawn for the shared produzre-examples project chose
+# the rest: the band dropping out for the bar before each chorus, a
+# trading solo, a cold ending.
 #
 # Listen for:
 #   - guitar riff and slap bass in unison through the verses
-#   - two-bar call and response grooves in drums, bass and guitar
+#   - the kick opening up and the guitar chanking harder in the choruses
 #   - snare ghost notes around the backbeat (ghost_rate)
 #   - the bass answering the lead's hook in the holes it leaves
 #   - the breakdown: just drums and slap bass, then the band crashes back
 #   - the chorus moving to bIII7 and IV7 before landing back on i7
 version: 1
 song:
+  project: produzre-examples
   title: "Backstreet Strut"
   bpm: 98
   key: E
@@ -32,6 +36,8 @@ song:
   exports_root: "exports"
   arrangement_style:
     comp_activity: busy
+    riff_driven: true
+    bass_doubles: true
 
 exports:
   midi_text:

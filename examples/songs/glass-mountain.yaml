@@ -6,21 +6,25 @@
 # hook lines that climb to a summit. The solo is a story told over sixteen
 # bars: a quote of the hook, development up the neck, a climax, and a dive.
 #
-# Pins: only solo_ending: dive, so the solo ends on a whammy dive. The seed
-# chose every other band habit (a climbing solo story, an anthem chorus, a
-# busy rhythm guitar, the band dropping out for a beat before each chorus).
-# The chorus bass is set to rhythm_pattern: drive so it pumps eighths under
-# the hook; everywhere else the bass plays the role the composer gives it.
+# Pins: solo_ending: dive, so the solo ends on a whammy dive, and
+# chorus_form: lift, so each chorus climbs to its summit on the third line.
+# The band drawn for the shared produzre-examples project chose every other
+# habit (a climbing solo story, sparse rhythm guitar, a drum fill into each
+# chorus, the drums and bass waiting out the first half of the intro). The
+# chorus bass is set to rhythm_pattern: drive so it pumps eighths under the
+# hook; everywhere else the bass plays the role the composer gives it.
 #
 # Listen for:
-#   - the hook in the intro coming back note for note in every chorus
-#   - the bass pedalling eighths in the verses, driving harder in choruses
+#   - the hook's shape from the intro coming back higher in every chorus,
+#     note for note from one chorus to the next
+#   - the bass holding roots in the verses, driving eighths in the choruses
 #   - verse 2 repeating the verse tune with small rhythm changes
 #   - the bridge turning to bVII and IV, ending on V to set up the solo
 #   - a sixteen-bar solo that climbs, peaks, and ends on a dive
 #   - the last chorus lifted higher and ornamented, then a held tonic
 version: 1
 song:
+  project: produzre-examples
   title: "Glass Mountain"
   bpm: 116
   key: D
@@ -32,6 +36,7 @@ song:
   exports_root: "exports"
   arrangement_style:
     solo_ending: dive
+    chorus_form: lift
 
 exports:
   midi_text:

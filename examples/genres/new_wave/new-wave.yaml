@@ -1,30 +1,36 @@
 # New wave: a synth-and-guitar song in D major with a singer.
 #
 # A sequenced synth arpeggio (the arpeggiator engine on a sawtooth patch)
-# ticks in sixteenths under a clean, staccato rhythm guitar, a straight
-# eighth-note drummer, and a lead guitar that answers the singer with
-# octave lines (foreground: auto, counter: octaves). The verse sits on the
+# ticks in sixteenths under a clean, sparse rhythm guitar and a straight
+# drummer (hi-hat foot in the verse, sixteenth hats in the prechorus,
+# eighths in the chorus). The lead guitar answers the singer with short
+# licks in the verse and punctuates the chorus with staccato root stabs on
+# the changes (foreground: auto, counter: octaves). The verse sits on the
 # relative minor (vi IV I V), the chorus flips it to the bright I V vi IV.
 #
 # Pinned, and why:
-#   - arrangement_style.counter: octaves, the chiming octave guitar under
-#     the chorus is a signature of the style
+#   - arrangement_style.counter: octaves, the chorus counter-part is root
+#     stabs on the changes rather than a melodic line
 #   - arrangement_style.comp_activity: sparse, so the guitar stays out of
 #     the arpeggio's way
 #   - arpeggiator pattern up in sixteenths over two octaves: a sequencer
-#     figure whose six-note cycle rolls across the four-sixteenth beat; the
-#     top note of each cycle follows the melody
+#     figure, a six-note triad cycle that restarts on every chord change
+#     and rolls across the four-sixteenth beat (pattern up is a choice: it
+#     keeps the machine-like figure instead of following the melody)
 #   - engines: sawtooth synth for the arpeggiator, clean electric guitars
-# The drummer, the bass role and the licks come from the seed.
+# The drummer, the bass role and the licks come from the shared
+# produzre-examples project and the seed.
 #
 # Listen for:
 #   - the arpeggio alone with the drums in the intro
-#   - sixteenth-note synth, eighth-note guitar and bass locking together
+#   - the arpeggio growing louder from verse to chorus
+#   - the bass locking to the kick in the verse, pedaling eighths in the
+#     chorus
 #   - the verse's minor color opening up into the major chorus
-#   - octave guitar lines under the chorus
 #   - the final chorus lifted a whole step
 version: 1
 song:
+  project: produzre-examples
   title: "Glass Radio"
   bpm: 134
   key: D

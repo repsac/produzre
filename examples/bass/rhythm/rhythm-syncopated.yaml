@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassRhythm_Syncopated"
   bpm: 120
   key: C

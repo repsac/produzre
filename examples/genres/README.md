@@ -13,8 +13,11 @@ python produzre_entry.py build examples/genres/hard_rock/hard-rock.yaml
 python produzre_entry.py build examples/genres/country/country.yaml
 ```
 
-Copy a file and change its key, tempo, seed or `song.arrangement_style` to
-make your own song in that genre. See
+Every file sets `project: produzre-examples`, a built-in project with a
+fixed seed, so everyone who builds an example gets the same MIDI and the
+headers describe exactly what you hear. Copy a file and change its key,
+tempo, seed or `song.arrangement_style` to make your own song in that
+genre. See
 [recipes and personas](../../docs/llm-song-config-reference.md#recipes-and-personas)
 for how a genre selects defaults.
 
@@ -36,7 +39,7 @@ for how a genre selects defaults.
 | gospel | [gospel.yaml](gospel/gospel.yaml) | Sunday Morning Glory Road | Ab major | 96 | 6/8 | A slow 6/8 praise song in Ab at 96 BPM, with a singer. |
 | grunge | [grunge.yaml](grunge/grunge.yaml) | Wet Flannel Static | D minor | 116 | 4/4 | Quiet verse, loud chorus, in D minor at 116 BPM, with a singer. |
 | hard_rock | [hard-rock.yaml](hard_rock/hard-rock.yaml) | Gravel and Thunder | A minor | 132 | 4/4 | A riff-driven band with a singer, in A minor at 132 BPM. |
-| heavy_metal | [heavy-metal.yaml](heavy_metal/heavy-metal.yaml) | Anvil of the Night | E minor | 168 | 4/4 | A galloping riff in E minor at 168 BPM, with a singer. |
+| heavy_metal | [heavy-metal.yaml](heavy_metal/heavy-metal.yaml) | Anvil of the Night | E minor | 168 | 4/4 | A chugging riff in E minor at 168 BPM, with a singer. |
 | jazz | [jazz.yaml](jazz/jazz.yaml) | Backdoor Blue Room | Bb major | 156 | 4/4 | A medium-up swing tune in Bb for guitar trio (plus a comping guitar). |
 | latin | [latin.yaml](latin/latin.yaml) | Calle de la Luna | A minor | 100 | 4/4 | An instrumental in A minor with a clave-driven band and a nylon guitar. |
 | mashup | [genre-mashup.yaml](mashup/genre-mashup.yaml) | Crossfade City | E minor | 100 | 4/4 | One song in E minor that changes genre section by section. |

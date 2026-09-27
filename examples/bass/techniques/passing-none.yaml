@@ -1,12 +1,20 @@
+# Passing tones: none (approach_rate 0), the plain chord-tone line.
+#
+# passing-none, passing-diatonic and passing-chromatic share the pocket
+# persona, an eighth-note drive pattern, the seed and the progression; only
+# the approach settings differ. An approach note is the last note before a
+# chord change, stepping into the next root (kind approach_diatonic or
+# approach_chromatic in analysis/bass/*.events.tsv).
 version: 1
 song:
+  project: produzre-examples
   title: "PassingTones_None"
   bpm: 120
   key: C
   mode: major
   meter: "4/4"
   beats_per_bar: 4
-  seed: 500  # Fixed seed for reproducibility
+  seed: 504  # Same seed in passing-none, -diatonic and -chromatic
   variation: 0.0
   humanize_velocity: 0.0
   humanize_timing: 0.0
@@ -25,7 +33,7 @@ instruments:
     intensity: 0.7
     params:
       articulation_style: finger
-      rhythm_pattern: anchor
+      rhythm_pattern: drive  # Eighths: a note just before each change to approach from
       density: 0.7
       rest_rate: 0.1
       approach_rate: 0.0  # No passing tones
@@ -35,9 +43,9 @@ instruments:
 sections:
   verse1:
     type: verse
-    bars: 4
+    bars: 8
     harmony:
-      progression: "I IV V I"
+      progression: "I vi ii V I vi ii V"  # Targets A, D, G: scale and half steps differ
     instruments:
       harmony: {}
       bass: {}

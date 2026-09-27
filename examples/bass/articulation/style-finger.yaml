@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassStyle_Finger"
   bpm: 100
   key: C

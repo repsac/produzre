@@ -1,8 +1,25 @@
-# Funk instrumental: two-bar grooves, a syncopated hook, and a lead that
-# answers itself. Groove memory uses two-bar cycles for funk, so the drums,
-# bass, and rhythm guitar lock a call-and-response bar pair per section.
+# Funk instrumental: a syncopated hook, a lead that answers itself, and a
+# band locked to the kick.
+#
+# The lead carries the melody (foreground: full): each chorus states the
+# hook (it starts on the "a" of beat 1), answers it, lifts and closes. The
+# second chorus repeats the first; the final chorus lifts it higher. With the
+# shared produzre-examples project the composer draws:
+#   - drums: a half-time floor-tom pulse in the verses and eighth hats with a
+#     syncopated kick in the choruses, louder in the choruses and on each
+#     repeat; a snare build leads into every chorus (`into chorus: build`),
+#     and the bass plays the build with it
+#   - bass: it plays the drummer's kick; in the choruses it keeps a two-bar
+#     call-and-response groove (funk uses two-bar groove cycles)
+#   - rhythm guitar: a busy sixteenth chank in the choruses, a spaced
+#     figure in the verses
+#   - solo: a climbing story that ends in a dive; the song ends on a ringing
+#     chord
+# `turnarounds: true` turns the end of the intro and of each chorus to V7
+# before the verse or chorus that follows.
 version: 1
 song:
+  project: produzre-examples
   title: "Composer Funk"
   bpm: 104
   key: D

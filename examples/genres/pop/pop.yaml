@@ -4,31 +4,32 @@
 # the song and follows the melody guide, the acoustic guitar fingerpicks
 # the verses and strums the choruses, and the electric rhythm guitar joins
 # for the prechorus and chorus. The lead guitar plays around the singer
-# (foreground: auto): the hook in the intro, fills in the verse, a counter
-# line and the hook as a tag in the chorus. The last chorus steps up a
-# whole tone.
+# (foreground: auto): the hook in the intro, a few licks in the verse, a
+# harmony line under the singer's chorus melody and the hook as a tag at
+# the end of each chorus. The last chorus steps up a whole tone.
 #
 # Pinned, and why:
-#   - arrangement_style.chorus_form: anthem, the chorus states the hook,
-#     varies it, states it again, then closes (A A' A A''), the pop way
+#   - arrangement_style.chorus_form: anthem, the lead harmonizes the
+#     chorus melody in thirds and sixths, like a band singing along
 #   - arrangement_style.into_chorus: stop, a stop-time bar before each
-#     chorus so it lands hard
+#     chorus so it lands hard (the bass and drums hit it together)
 #   - song.final_chorus: modulate, the classic truck-driver key change
-#   - bass density 0.7, rest_rate 0.1 and fifth_jump_rate 0.03 (the pop
-#     recipe is sparser and jumps to the fifth more), so the verse line
-#     plants a root on every downbeat; the chorus still gets the song's
-#     composed bass role
 #   - engines: acoustic piano for the arpeggiator
-# The drummer, the comp figures and the hook come from the seed.
+# The drummer, the comp figures, the bass roles and the hook come from the
+# shared produzre-examples project and the seed.
 #
 # Listen for:
-#   - the piano figure alone in the intro, the band joining in the verse
+#   - the piano figure and the guitar hook alone in the intro, the band
+#     joining in the verse
+#   - the verse bass locked to the kick, a root on every downbeat
 #   - the prechorus climbing (ii iii IV V) into a stop, then the chorus
-#   - the hook repeated through the chorus, tagged by the lead guitar
-#   - the bridge dropping to the relative minor
+#   - the lead harmonizing the chorus melody, then tagging the hook
+#   - the bridge dropping to the relative minor, with its own stop into
+#     the last chorus
 #   - the final chorus up a whole step
 version: 1
 song:
+  project: produzre-examples
   title: "Paper Planes Tonight"
   bpm: 116
   key: E
@@ -53,8 +54,6 @@ engines:
   arpeggiator: {program: 0}   # GM Acoustic Grand Piano
 
 instruments:
-  bass:
-    params: {density: 0.7, rest_rate: 0.1, fifth_jump_rate: 0.03}
   arpeggiator:
     params: {pattern: phrase, note_duration: 0.5}
   lead_gtr:

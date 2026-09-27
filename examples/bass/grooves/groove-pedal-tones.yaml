@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "Groove_PedalTones"
   bpm: 100
   key: C

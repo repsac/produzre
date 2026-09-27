@@ -6,8 +6,9 @@
 # memorable it sounds over the chorus chords, an answer phrase, a verse
 # idea, a contrasting bridge idea and three signature licks. harmony: {}
 # in each section gives the lead the chords it is melodizing. Only
-# composer-shaping settings are used: a stepwise contour, breathing room
-# (rest_probability), and expression rates for vibrato, bends and swells.
+# composer-shaping settings are used: a G3 to G5 register, a stepwise
+# contour, breathing room (rest_probability), the lift chorus form, and
+# expression rates for vibrato, bends and swells.
 #
 # Listen for:
 #   - intro: the hook stated once, softly, as a preview
@@ -23,6 +24,7 @@
 #   - outro: the hook one last time, then a held tonic
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Lead Melodic Ballad"
   bpm: 72
   key: D
@@ -47,8 +49,8 @@ exports:
 instruments:
   lead_gtr:
     persona: melodic
+    register: [55, 79]
     params:
-      register: [55, 79]
       contour_style: stepwise
       rest_probability: 0.2
       vibrato_rate: 0.7

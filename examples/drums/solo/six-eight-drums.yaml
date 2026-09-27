@@ -2,31 +2,35 @@
 #
 # 6/8 pulses in two dotted quarters, so the composed drummer builds its
 # grooves on that two-beat pulse (not a 3/4 backbeat): kick on the first
-# pulse, snare on the second, hands on the eighths. Phrase fills fall every
-# two bars by default in this meter. Nothing about the kit is authored, so
-# the song seed draws the drummer; ghost_rate and fill_rate only shape it.
-# Each section still names a progression: no pitched part plays it, but it
-# gives the section a harmony plan, which is what carries the 6/8 beat
-# grouping to the drummer (without one the kit falls back to a 3/4 grid).
+# pulse, snare on the second, hands on the eighths. No section needs a
+# harmony progression: a drum-only section takes its beat grouping from
+# the meter. Nothing about the kit is authored, so the song seed draws the
+# drummer (chosen here for a different hand voice in every section);
+# ghost_rate and fill_rate only shape it. Drums follow the section
+# intensity: verses and the bridge sit under the choruses, and each chorus
+# repeat plays a little harder than the last.
 #
 # Listen for:
-#   - the intro floats on a floor-tom pulse, then the verse settles the
-#     two-pulse lilt: kick on the first dotted quarter, snare on the second
-#   - bars 2 and 4 of each phrase answer the snare on the toms, and fills
-#     turn the four-bar phrase ends
-#   - the chorus changes what the hands play (a busier hat figure), and a
-#     build fill leads into every chorus
-#   - the bridge moves the hands to a washy half-open hat
-#   - the outro moves to the ride and ends on a ringing crash
+#   - the intro rolls eighths on the low tom, then the verse moves the
+#     hands to closed hats over the two-pulse lilt
+#   - solo drums keep the backbeat in every bar; bars 2 and 6 of each
+#     eight-bar section answer on the toms in their last pulse, and fills
+#     turn bars 4 and 8
+#   - the chorus moves the hands to the ride, and a snare build (eighths
+#     rising to sixteenths over the last two bars) leads into every chorus
+#     (into_chorus: build)
+#   - the bridge opens the hands to a washy open hat
+#   - the outro stays on the ride and ends on a ringing crash (ending: ring)
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Drums Six Eight"
   bpm: 96
   key: D
   mode: major
   meter: "6/8"
   genre: soft_rock
-  seed: 6802
+  seed: 6818
   arrangement_style:
     into_chorus: build
     ending: ring
@@ -46,31 +50,26 @@ instruments:
 sections:
   intro:
     type: intro
-    harmony: {progression: "I IV"}
     bars: 4
     instruments:
       drums: {}
   verse:
     type: verse
-    harmony: {progression: "I vi IV V"}
     bars: 8
     instruments:
       drums: {}
   chorus:
     type: chorus
-    harmony: {progression: "IV I V vi"}
     bars: 8
     instruments:
       drums: {params: {fill_rate: 0.6}}
   bridge:
     type: bridge
-    harmony: {progression: "vi IV I V"}
     bars: 8
     instruments:
       drums: {}
   outro:
     type: outro
-    harmony: {progression: "IV I"}
     bars: 4
     instruments:
       drums: {}

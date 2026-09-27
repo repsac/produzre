@@ -8,9 +8,12 @@ python produzre_entry.py build examples/drums/fills-demo.yaml
 
 The drums are composed by default: each song draws its own drummer (kick
 patterns, a groove per section type, ghost notes, fills, crash habits and
-a feel) and the band locks to it. The build log prints the drummer and
-what it plays in each section. [PERFORMANCE.md](PERFORMANCE.md) explains
-what you can shape and what belongs to the classic engine.
+a feel) and the band locks to it. It plays each section at the section's
+intensity, so a verse sits under a chorus and repeats grow. Jazz songs get
+a swing drummer and dance genres a four-on-the-floor drummer. The build
+log prints the drummer and what it plays in each section.
+[PERFORMANCE.md](PERFORMANCE.md) explains what you can shape and what
+belongs to the classic engine.
 
 ## The composed drummer
 
@@ -21,9 +24,9 @@ Most demos play with a bass and rhythm guitar, as a band drummer would.
 - [phrasing-demo.yaml](phrasing-demo.yaml): where phrase fills land in 8, 6 and 12-bar sections, in 6/8 and in 7/8. Notes: [PHRASING.md](PHRASING.md).
 - [section-types-demo.yaml](section-types-demo.yaml): the groove changes per section type, intro to outro.
 - [transitions-demo.yaml](transitions-demo.yaml): a riff-alone intro, walk-ups, stop-time into every chorus, and a cold ending, pinned with `song.arrangement_style`. Notes: [TRANSITIONS.md](TRANSITIONS.md).
-- [transitions/](transitions/): five short songs, one per `into_chorus` value (`stop`, `build`, `fill`, `push`, `drop`), with the same band.
+- [transitions/](transitions/): five short songs, one per `into_chorus` value (`stop`, `build`, `fill`, `push`, `drop`), with the same band; drums, bass and rhythm guitar play each device together.
 - [take-demo.yaml](take-demo.yaml): `song.take` for a new performance of the same parts, and a drum `seed` for a new drummer.
-- [solo/](solo/): the drums on their own, as a feature.
+- [solo/](solo/): the drums on their own, as a feature: a rock song, a 6/8 ballad and a jazz tune on the composed swing drummer.
 
 ## The classic engine
 
@@ -36,7 +39,7 @@ Part selectors hand a section to the classic drum engine: `composer: false`,
 - [hats-demo.yaml](hats-demo.yaml): open and pedal hat rates 1.0 against 0.5, with different placements and accent boosts.
 - [kick-demo.yaml](kick-demo.yaml): `double.rate` 0, 1.0 and 0.3 alongside different syncopated kick placements.
 - [snare-demo.yaml](snare-demo.yaml): cross-stick, rimshot and normal snare with ghost rates 0.3, 0.15 and 0.5.
-- [cymbals-demo.yaml](cymbals-demo.yaml): a ride chorus with `bell_rate: 0.3`, splash and china additions, and an outro crash on beat 1.
+- [cymbals-demo.yaml](cymbals-demo.yaml): a ride chorus with `bell_rate: 0.3` bell accents, a rare splash and china, and an outro crash on beat 1.
 - [toms-demo.yaml](toms-demo.yaml): `groove.rate: 0.2` against `fills.rate: 0.8`, then groove and fill toms together at 0.4 and 0.5.
 
 Kit-voice controls go under `drums.voices`. Placements count quarter notes

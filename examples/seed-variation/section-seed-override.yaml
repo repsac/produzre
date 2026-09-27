@@ -1,12 +1,13 @@
 # Seed variation: a section seed override.
 #
 # Identical to base-song.yaml except that the chorus has `seed: 999`. The
-# chorus drummer and rhythm guitar figures are re-rolled, and the bass
-# follows them; the intro, verse and outro keep their parts. The last bar of
-# each verse changes too, because it leads into the new chorus.
+# chorus drummer, bass line and rhythm guitar figures are re-rolled in both
+# choruses; the intro, verses and outro keep their notes (only the rhythm
+# guitar's velocities in the first bar after each chorus move).
 version: 1
 
 song:
+  project: produzre-examples
   title: "Seed Variation Section Seed"
   bpm: 120
   key: E

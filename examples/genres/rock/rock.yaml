@@ -5,28 +5,32 @@
 # single-note tail, bar two answering bar one), the chorus opens out on
 # IV V I. The intro starts with the riff alone, the drums crash in, and
 # the lead guitar plays around the singer (foreground: auto) before taking
-# a solo over the verse riff. The song ends on a big finish.
+# a solo over the verse changes, trading phrases with the band. The song
+# ends on a big finish.
 #
 # Pinned, and why:
 #   - arrangement_style.riff_driven: true and intro: riff_alone, the
 #     classic rock opening
 #   - arrangement_style.bass_doubles: false, the bass keeps its own line
-#     locked to the kick instead of doubling the riff
+#     instead of doubling the riff (under the verse riff a sparse line that
+#     leaves the downbeat to the guitar; from the prechorus on it locks to
+#     the kick)
 #   - arrangement_style.ending: big, a held last chord with a drum roll
 #   - drums fill_rate 0.6: a fill every four bars, a rock drummer who
 #     marks every phrase
 # The riff, the drummer's kick pattern and the solo's story come from the
-# seed.
+# shared produzre-examples project and the seed.
 #
 # Listen for:
 #   - the riff alone for two bars, then the band
-#   - the bass locked to the kick under the riff
+#   - the bass locking to the kick from the prechorus on
 #   - the G chord (bVII) in the verse riff
 #   - a drum fill at the end of every four-bar phrase
 #   - the chorus opening up on IV V I
 #   - turnarounds into each section, and a big final chord
 version: 1
 song:
+  project: produzre-examples
   title: "Highway Sixty Nights"
   bpm: 132
   key: A

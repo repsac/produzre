@@ -3,26 +3,33 @@
 # Each song's drummer draws a right-hand timekeeper (closed or open hats,
 # sixteenths, quarters, ride, ride bell, crash-ride, floor-tom pulse, pedal
 # hat, washy hats) and a backbeat (backbeat, half-time or stomp) for every
-# section type. The verse and chorus always contrast, bridges and
-# breakdowns lean toward half-time, and every section starts with a crash.
-# The build log names each choice:
+# section type. The verse and chorus always contrast, and bridges and
+# breakdowns lean toward half-time. The build log names each choice:
 #
-#   [INFO] Composer: chorus drums play ride8/backbeat
+#   [INFO] Composer: chorus drums play hat8_open/backbeat
 #
-# The section type is what moves the composed drummer. Section `intensity`
-# and `energy` do not change its pattern (the classic engine reads them; see
-# classic-engine-demo.yaml). The second chorus recalls the first one's
-# groove, and the song closes with a big finish (`ending: big`).
+# The section type decides what the composed drummer plays. Section
+# intensity decides how hard it plays: every section type has a default
+# (intro and breakdown soft, choruses loudest) and a repeat plays a little
+# harder, so the second chorus sits above the first. The song closes with
+# a big finish (`ending: big`); the other habits are this song's own draw.
 #
 # Listen for:
-#   - the hands and the backbeat change at every section boundary, while
-#     the kick keeps the song's own two patterns (one for verse-like
+#   - the guitar plays the intro alone at first (this song's riff-alone
+#     intro); the drums enter halfway with a fill and a crash
+#   - the hands change at every section boundary: washy hats in the intro,
+#     ride in the verse, floor tom in the prechorus, open hats in the
+#     chorus, ride again in the bridge, ride bell over a half-time snare in
+#     the breakdown
+#   - the kick keeps the song's own two patterns (one for verse-like
 #     sections, a busier one for chorus, solo and outro)
-#   - the bar before each chorus uses the song's way into a chorus (a stop,
-#     a build, a fill, a push or a drop; see transitions/)
+#   - the band pushes into each chorus (this song's way in): crash and kick
+#     on the last "and", ringing over the downbeat; every other section
+#     starts with a crash
 #   - bass and rhythm guitar change figures with the drummer at every section
 version: 1
 song:
+  project: produzre-examples
   title: "Drummer Section Types"
   bpm: 118
   key: D

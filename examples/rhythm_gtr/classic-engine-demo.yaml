@@ -24,6 +24,7 @@
 # every section. The rest of the band stays composed.
 version: 1
 song:
+  project: produzre-examples
   title: "Classic Rhythm Engine"
   bpm: 112
   key: G

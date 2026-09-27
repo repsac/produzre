@@ -9,16 +9,20 @@
 #
 # Listen for:
 #   - intro: a sparse, mostly ghosted slap figure on Em7 with lots of air
-#   - verse: the two-bar funk_16ths cell (5 attacks a bar) with thumb
-#     roots, ghosted dead notes and chromatic approaches, repeated as a
-#     motif (motif_repeat_rate)
+#   - verse: the two-bar funk_16ths cell (about 5 attacks a bar) with
+#     roots on one, pops on the offbeats and a few ghosted dead
+#     notes, repeated as a motif (motif_repeat_rate), and a diatonic fill
+#     at the end of each verse. density 1.0 and rest_rate 0 are a choice:
+#     they keep the whole cell, where the funk recipe's lower density
+#     would leave one or two notes a bar
 #   - chorus: a busier syncopated pattern over A7 and B7, louder, with
 #     more pops, fifth jumps and a fill into the next phrase
 #   - the solo section (solo: true) opens the register from low E up to
-#     B3 and plays the densest line of the piece, with octave leaps
-#   - the outro thins back to thumb notes and lands on the low E
+#     D4 and plays the densest line of the piece, with octave leaps
+#   - the outro thins back out and ends on a low E
 version: 1
 song:
+  project: produzre-examples
   title: "Solo Bass Funk Slap"
   bpm: 100
   key: E

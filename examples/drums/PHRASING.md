@@ -27,7 +27,11 @@ Within a section the drummer fills:
 | 4 bars | bar 4 (the section's end) |
 
 `fill_rate: 0` removes every fill, including the one into the next
-section. See [fills-demo.yaml](fills-demo.yaml) for the rates side by side.
+section.
+
+When the drums play alone, the backbeat stays in every bar and the last
+beat of bars 2 and 4 of each four-bar phrase answers on the toms (unless a
+fill is already there); see [solo/](solo/). See [fills-demo.yaml](fills-demo.yaml) for the rates side by side.
 
 ## Crashes
 
@@ -38,10 +42,13 @@ or a china instead.
 
 ## Meters
 
-Phrases count bars in every meter. In 6/8 and 7/8 the drummer places its
-backbeat on the meter's group starts (6/8 on the "4", 7/8 on its 2+2+3
-starts) and fills keep inside the bar. `song.meter_grouping` or a
-section's `meter_grouping` changes the grouping; see
+Phrases count bars in every meter. In compound meters the drummer plays
+on the dotted-quarter pulse: 6/8 puts the backbeat on its "4" (the second
+pulse), 12/8 on pulses 2 and 4, and fills are whole pulses. In 7/8 the
+backbeat falls on the 2+2+3 group starts. Fills keep inside the bar. A
+drum-only section takes its grouping from the meter, so it needs no
+harmony progression. `song.meter_grouping` or a section's
+`meter_grouping` changes the grouping; see
 [meter and beat units](../../docs/llm-song-config-reference.md#meter-and-beat-units).
 
 The text views number bars on the song's own bar grid, so a 6/8 section in

@@ -7,23 +7,27 @@
 # doubles that riff. Each section below shows one way the parts line up:
 #
 #   verse           the composed band: the signature riff over the drummer,
-#                   bass doubling it an octave down (`riff_driven`,
-#                   `bass_doubles` pinned in `arrangement_style`)
+#                   the bass doubling its rhythm, mostly an octave down,
+#                   and playing the riff's tail alone every other bar
+#                   (`riff_driven`, `bass_doubles` pinned in
+#                   `arrangement_style`)
 #   prechorus       rhythm guitar `follow_hats: true`: the classic follow-
-#                   the-hats renderer strums with the drummer's hands, here
-#                   sixteenth hats (`hat_density: 0.9`)
-#   chorus          bass `lock_to_kick: 0.9`: the bass engine line adds a
-#                   note on nearly every kick of the drummer's busier
-#                   chorus pattern
+#                   the-hats renderer strums on the drummer's hat hits;
+#                   `hat_density: 0.9` pins sixteenth hats here
+#   chorus          bass `lock_to_kick: 0.9`: the bass engine line adds
+#                   notes so that every kick of the drummer's busier
+#                   chorus pattern has a bass note on it
 #   verse (again)   the verse groove comes back, and the song ends on it
 #
-# `into_chorus: fill` is pinned too, so the drums fill into the chorus while
-# the follow-the-hats guitar keeps strumming.
+# `into_chorus: fill` is pinned too, so the drums fill the last prechorus
+# bar (the bass joins the fill) while the follow-the-hats guitar keeps
+# strumming.
 #
 # Check it: compare the kick (pitch 36) onsets in analysis/drums with the
 # bass and rhythm guitar onsets in their events TSVs.
 version: 1
 song:
+  project: produzre-examples
   title: "Rhythm Lock Demo"
   bpm: 120
   key: E

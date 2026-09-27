@@ -1,16 +1,18 @@
 # Into the chorus: `fill`.
 #
 # One of five short songs that differ only in `arrangement_style.into_chorus`,
-# the band's way into a chorus. Drums and rhythm guitar play it together
-# (the bass keeps its own line through the bar):
+# the band's way into a chorus. Drums, bass and rhythm guitar play it
+# together:
 #
-#   fill   the guitar keeps its figure, then three dead-note chucks and an
-#          upstroke; the drums play their big fill
+#   fill   the drums play their big fill through the bar; the bass leaves
+#          the last beat to it; the guitar keeps its figure, then dead-note
+#          chucks and an upstroke
 #
 # The other files in this folder play the same band (same seed and chords)
 # with stop, build, fill, push and drop. Listen to bar 4 and bar 12.
 version: 1
 song:
+  project: produzre-examples
   title: "Into Chorus Fill"
   bpm: 120
   key: A

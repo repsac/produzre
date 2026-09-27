@@ -1,24 +1,29 @@
 # Emo: fast, bright and heartbroken, in G major at 158 BPM, with a singer.
 #
-# Major-key harmony with a sad lean on iii and vi, played fast with
-# driving eighths. The lead guitar plays around an imagined singer
-# (foreground: auto) and answers the chorus with melodic fills instead of
-# a sustained counter-line. The bridge drops to half time for the
-# breakdown before the last chorus.
+# Major-key harmony with a sad lean on iii and vi, played fast: half-time
+# drums under the verses, then a crashing backbeat and full strums in the
+# choruses. The lead guitar plays around an imagined singer (foreground:
+# auto) and answers the chorus with a melodic fill instead of a sustained
+# counter-line, then plays the hook as a tag. The bridge pulls back to a
+# quieter half-time groove on the ride bell before the last chorus.
 #
 # Pinned, and why:
 #   - counter: fills, the lead answers the singer in the chorus gaps
 #   - into_chorus: push, the band anticipates each chorus downbeat
 #   - bridge intensity 0.55, a quieter half-time breakdown for contrast
 #   - drums ghost_rate 0.05: a straight, punchy snare, not a funky one
-# The drummer, bass roles, comp figures and licks are drawn from the seed.
+# The drummer, the intro, bass roles, comp figures and licks are drawn
+# from the seed (examples use the shared produzre-examples project).
 #
 # Listen for:
+#   - the guitars alone for two bars, then the band
 #   - the verse's I iii IV motion, then a chorus that leans into vi
-#   - lead fills answering the chorus lines
+#   - the band pushing into each chorus ahead of the downbeat
+#   - a lead fill answering the chorus lines, then the hook
 #   - the pulled-back bridge, then the final chorus at full power
 version: 1
 song:
+  project: produzre-examples
   title: "Notebook Margins in July"
   bpm: 158
   key: G

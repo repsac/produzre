@@ -17,6 +17,7 @@
 #     the whole band follows it
 version: 1
 song:
+  project: produzre-examples
   title: "Slow Blues Lead"
   bpm: 76
   key: E

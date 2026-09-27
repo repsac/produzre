@@ -11,13 +11,17 @@
 #   open        ride instead of hats, spacious
 #   stomp       heavy kicks, steady hats, a harder backbeat
 #
-# Bass and rhythm guitar stay composed throughout.
+# Bass and rhythm guitar stay composed throughout. An intent section plays
+# at the composed drummer's level for its intensity, so the handoff does
+# not jump in volume; the stomp breakdown sets `intensity: 0.85`, a choice
+# so it lands hard instead of at a breakdown's default quiet level.
 #
 # Want a half-time bridge without leaving the composed drummer? Leave
 # `intent` off: each song's drummer already draws its own bridge feel
 # (often half-time), which section-types-demo.yaml shows.
 version: 1
 song:
+  project: produzre-examples
   title: "Drum Section Intents"
   bpm: 140
   key: D
@@ -71,6 +75,7 @@ sections:
   breakdown_stomp:
     type: breakdown
     intent: stomp
+    intensity: 0.85
     bars: 4
     harmony: {progression: "i i bVI bVII"}
     instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}

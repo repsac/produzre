@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "Groove_Combined"
   bpm: 110
   key: C

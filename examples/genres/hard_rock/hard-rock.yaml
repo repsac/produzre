@@ -4,10 +4,9 @@
 # intro, verses and outro, and the bass doubles it an octave down, so the
 # band hits every accent together. The lead guitar plays around an
 # imagined singer (foreground: auto): the guitar hook in the intro, licks
-# at the ends of verse phrases, a counter-line and hook tag in the chorus,
-# and a solo after the bridge. This seed drew octave lines for the
-# chorus counter and a normal comp activity, so the riff answers itself
-# across guitar and bass on alternate bars.
+# at the ends of verse phrases, a held counter-line climbing through the
+# chorus before the hook tag, and a solo after the bridge. In the chorus
+# the bass leaves the riff to pedal root eighths under sixteenth hats.
 #
 # Pinned in song.arrangement_style, and why:
 #   - riff_driven and bass_doubles: the defining hard rock sound, one riff
@@ -18,17 +17,20 @@
 #   - solo_story: climb and ending: big, for an arena-sized finish
 #   - drums fill_rate 0.3 and ghost_rate 0.1: a few more fills, few ghosts
 # Everything else (the drummer, comp figures, licks, chorus form) is drawn
-# from the seed, so the song keeps its own band identity.
+# from the seed, so the song keeps its own band identity (examples use the
+# shared produzre-examples project).
 #
 # Listen for:
-#   - the riff alone, then drums and bass locking to it
-#   - verse 2 keeps verse 1's licks with small rhythm changes
+#   - the riff alone for two bars, a drum pickup, then drums and bass
+#     locking to it
+#   - verse 2 answering the singer with the same licks as verse 1
 #   - a stop-time bar into each chorus, then a crash on the downbeat
 #   - the solo climbs to a peak and resolves; the last chorus moves up a
 #     whole step (final_chorus: modulate)
 #   - turnarounds lead each section back to the tonic
 version: 1
 song:
+  project: produzre-examples
   title: "Gravel and Thunder"
   bpm: 132
   key: A

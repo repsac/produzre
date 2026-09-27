@@ -4,23 +4,26 @@
 # doubling it an octave down so guitar and bass hit every accent together.
 # The verse is an 8-bar blues on E7 and A7, the chorus lifts through the
 # rock move bVI bVII, and the solo is a full 12-bar blues chorus. The lead
-# guitar plays around an imagined singer (foreground: auto).
+# guitar plays around an imagined singer (foreground: auto) and answers
+# the singer's chorus lines (the song's chorus form is call).
 #
 # Pinned, and why:
 #   - riff_driven and bass_doubles: blues rock lives on the riff played in
 #     unison by guitar and bass
 #   - solo_story: blues, so the solo is built from the song's blues licks
 #   - turnarounds: true, the V7 turnaround back into each section
-# The drummer, feel, chorus figures and licks are drawn from the seed.
+# The drummer, feel, chorus figures and licks are drawn from the seed
+# (examples use the shared produzre-examples project).
 #
 # Listen for:
 #   - the riff with the bass locked underneath it
-#   - the chorus lifting through C and D (bVI bVII) with the bass pumping
-#     octaves
-#   - the 12-bar solo telling a blues story, then a final chorus and the
-#     riff again in the outro
+#   - a drum fill into each chorus, the chorus lifting through C and D
+#     (bVI bVII) with the bass letting go of the riff to hold long roots
+#   - the 12-bar solo telling a blues story over the ride, then a final
+#     chorus and the riff again in the outro
 version: 1
 song:
+  project: produzre-examples
   title: "Mudflap Boogie Engine"
   bpm: 118
   key: E

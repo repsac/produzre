@@ -16,6 +16,7 @@
 # for note, and the final chorus lifting after the solo.
 version: 1
 song:
+  project: produzre-examples
   title: "Rock Solo Climb"
   bpm: 138
   key: D

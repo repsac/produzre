@@ -9,13 +9,15 @@
 #                    keeps the section seed's figures
 #
 # Use case: you love the song but want different chorus drums. Give the
-# chorus drums a seed and rebuild; everything else stays the same, apart
-# from the last bar of each verse, which leads into the new chorus.
+# chorus drums a seed and rebuild: only the chorus drums change, apart from
+# the bass, which follows the new drummer's accents (and its turnaround into
+# the second verse) in the first chorus.
 # For a new performance of the same parts, set `song.take` instead.
 # The seed-variation/ folder compares each change against a base song.
 version: 1
 
 song:
+  project: produzre-examples
   title: "Seed Variation Demo"
   bpm: 120
   key: E

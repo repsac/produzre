@@ -9,8 +9,9 @@
 #
 # Pins: riff_driven and bass_doubles, so the verses, intro and outro ride
 # a signature riff with the bass in unison an octave down (the prog
-# signature). The seed chose the rest: a climbing solo, the push into each
-# chorus, how busy the comping is.
+# signature). The band drawn for the shared produzre-examples project
+# chose the rest: a climbing solo, the band dropping out for the bar before
+# each chorus, and sparse comping that answers itself every fourth bar.
 #
 # Listen for:
 #   - count the verse bars: 1-2, 1-2, 1-2-3
@@ -19,6 +20,7 @@
 #   - the melody phrasing in the meter's groups instead of fighting them
 version: 1
 song:
+  project: produzre-examples
   title: "Clockwork Tide"
   bpm: 132
   key: F#

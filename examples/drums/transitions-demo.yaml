@@ -3,24 +3,30 @@
 # Each song draws arrangement habits that every part agrees on. This demo
 # pins them with `song.arrangement_style` so you hear each device:
 #
-#   intro: riff_alone     the guitar plays the riff alone; the drums enter
-#                         halfway through the intro with a fill and a crash
+#   intro: riff_alone     the guitar plays the riff alone; the drums and
+#                         bass enter halfway through the intro, the drums
+#                         with a fill and a crash
 #   riff_driven: true     verses, intro and outro ride a signature riff
-#   phrase_fill: walkup   the rhythm guitar walks up into each new phrase
-#   into_chorus: stop     the bar before every chorus is stop-time: drums
-#                         and guitar hit beat 1 together, leave the bar
-#                         open, and pick up into the chorus (the bass keeps
-#                         its line)
-#   ending: cold          the song stops dead on the last downbeat, crash choked
+#   phrase_fill: walkup   the rhythm guitar walks up into the second half
+#                         of each chorus
+#   into_chorus: stop     the bar before every chorus is stop-time: drums,
+#                         bass and guitar hit beat 1 together and leave the
+#                         bar open; the drums and guitar pick up into the
+#                         chorus
+#   ending: cold          the song stops dead on the last downbeat, crash
+#                         choked, bass and guitar cut short with it
 #
 # Every other boundary gets a fill in its last bar, and every section
-# starts with a crash. Try the other devices in transitions/: one short
-# song per `into_chorus` value, the same band in each.
+# starts with a crash. The drums follow the section intensity: verses sit
+# under the choruses, and each chorus plays a little harder than the last.
+# Try the other devices in transitions/: one short song per `into_chorus`
+# value, the same band in each.
 #
 # The classic drum engine's `pickup_rate` and `downbeat_rate` do not apply
 # to the composed drummer; see classic-engine-demo.yaml for them.
 version: 1
 song:
+  project: produzre-examples
   title: "Composed Band Transitions"
   bpm: 126
   key: E

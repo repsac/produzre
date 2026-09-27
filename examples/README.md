@@ -13,10 +13,11 @@ python produzre_entry.py build examples/drums/solo/rock-drum-feature.yaml
 The build log prints the export directory. Open its full-song MIDI in a DAW
 and play it. The [root README](../README.md#output-files) describes the output files.
 
-Composed parts draw on the song seed combined with your local project seed,
-so your build can hear a different drummer, picking figure or lick bank than
-the one a header describes. Settings a file pins (for example in
-`song.arrangement_style`) are the same everywhere.
+Every example sets `project: produzre-examples` in its `song:` block. That is
+a built-in project with a fixed seed, so every build of an example produces
+the same MIDI on every machine, and the drummer, picking figure or lick bank a
+header describes is the one you hear. To hear your own project's take on an
+example, copy it and change or remove `song.project`.
 
 ## Find an example
 

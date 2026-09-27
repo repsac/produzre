@@ -5,11 +5,13 @@
 # structural (answers, developments, fills) on a seeded stream. The hook,
 # cadences and the solo's big moments always stay.
 #
-#   verse           unset: the composer's full verse period
-#   verse_space     0.5:  about half the notes, same melody
-#   verse_sparse    0.85: a phrase or two and the cadence
-#   chorus_sparse   0.85: the answers go, but every hook statement stays,
-#                   so the chorus still sings its hook
+#   verse           unset: the composer's full verse period, a phrase in
+#                   every bar
+#   verse_space     0.5:  three of the eight bars (the half cadence, the
+#                   next phrase and the final cadence), same melody
+#   verse_sparse    0.85: only the two cadence bars (bars 4 and 8)
+#   chorus_sparse   0.85: the answers (bars 2 and 6) go, but every hook
+#                   statement stays, so the chorus still sings its hook
 #
 # The three verses play the same remembered verse melody, so you hear the
 # same line with more air. From the second verse on, the composer also
@@ -17,6 +19,7 @@
 # instrumental melody here (`foreground: full`).
 version: 1
 song:
+  project: produzre-examples
   title: "Lead Rest Comparison"
   bpm: 100
   key: A

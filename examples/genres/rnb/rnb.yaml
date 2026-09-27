@@ -19,16 +19,19 @@
 #     space for the singer and the Rhodes
 #   - engines: electric piano for the arpeggiator, clean guitars
 # The drummer's pattern and feel, the comp figures and the hook come from
-# the seed. Groove memory gives R&B a two-bar groove.
+# the shared produzre-examples project and the seed. Groove memory gives
+# R&B a two-bar groove.
 #
 # Listen for:
 #   - seventh-chord colors throughout, maj7 on IV and I
 #   - ghost notes around the backbeat
-#   - the bass answering the melody at phrase ends, then back in the groove
+#   - the bass answering the melody at phrase ends in the prechorus and
+#     chorus, then back in the groove
 #   - the Rhodes figure moving with the melody
 #   - the bridge's borrowed bVImaj7 bVII7 lifting into Imaj7
 version: 1
 song:
+  project: produzre-examples
   title: "Velvet After Midnight"
   bpm: 86
   key: Ab

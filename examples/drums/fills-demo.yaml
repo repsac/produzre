@@ -8,22 +8,27 @@
 #
 #   verse_no_fills  fill_rate 0     no fills at all, not even into the next section
 #   verse_sparse    fill_rate 0.2   one big fill, in the last bar (every 8 bars)
-#   verse_phrase    fill_rate 0.6   a fill every 4 bars: bars 4 and 8 (plus
-#                                   one-beat fills if this drummer has that habit)
+#   verse_phrase    fill_rate 0.6   a fill every 4 bars: bars 4 and 8 (a drummer
+#                                   with a one-beat fill habit adds more; this one
+#                                   has none)
 #   verse_busy      fill_rate 0.9   bars 4 and 8, plus one-beat fills in bars 2 and 6
 #
-# `arrangement_style` pins two song habits so the ends are the same on every
-# machine: the last verse fills into the chorus (`into_chorus: fill`), and
-# the song closes on a big finish (`ending: big`).
+# `arrangement_style` pins two song habits: the last verse fills into the
+# chorus (`into_chorus: fill`), and the song closes on a big finish
+# (`ending: big`). Every verse sets `intensity: 0.7`, a choice for this
+# comparison: repeated verses would otherwise grow a little louder each
+# time, and here only the fills should change.
 #
 # Listen for:
-#   - the kick, snare and hats stay locked with the bass and rhythm guitar;
-#     only the phrase ends change
+#   - the kick, snare and hi-hat foot stay locked with the bass and rhythm
+#     guitar in this drummer's shuffle feel; only the phrase ends change
 #   - the chorus has no fill_rate, so it plays the song's own fill habit
+#     (a fill every 4 bars for this drummer) and then the big ending
 #
 # Check it: analysis/drums/*.events.tsv marks fill hits with kind "fill".
 version: 1
 song:
+  project: produzre-examples
   title: "Composed Drum Fills"
   bpm: 112
   key: A
@@ -43,6 +48,7 @@ exports:
 sections:
   verse_no_fills:
     type: verse
+    intensity: 0.7
     bars: 8
     harmony: {progression: "i bVI bIII bVII"}
     instruments:
@@ -52,6 +58,7 @@ sections:
       rhythm_gtr: {}
   verse_sparse:
     type: verse
+    intensity: 0.7
     bars: 8
     harmony: {progression: "i bVI bIII bVII"}
     instruments:
@@ -61,6 +68,7 @@ sections:
       rhythm_gtr: {}
   verse_phrase:
     type: verse
+    intensity: 0.7
     bars: 8
     harmony: {progression: "i bVI bIII bVII"}
     instruments:
@@ -70,6 +78,7 @@ sections:
       rhythm_gtr: {}
   verse_busy:
     type: verse
+    intensity: 0.7
     bars: 8
     harmony: {progression: "i bVI bIII bVII"}
     instruments:
