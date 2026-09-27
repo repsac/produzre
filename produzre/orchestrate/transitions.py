@@ -12,7 +12,7 @@ Phase 4: Section-level and per-instrument overrides.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import logging
 
 
@@ -615,8 +615,13 @@ def choose_pickup_pitch(
     instrument: str = "bass",
     rng: Any = None,
     logger: Optional[logging.Logger] = None,
-) -> int:
-    """Choose a safe pitch for a pickup (anacrusis) note.
+    *, incoming_chords: Optional[Any] = None, register: Optional[Tuple[int, int]] = None,
+    beats_per_bar: float = 4.0, incoming_start: float = 0.0,
+) -> Optional[int]:
+    """Choose a safe pitch for a pickup (anacrusis) note, or None.
+
+    A pickup leads into a note; when section B's head has none for this
+    instrument there is nothing to lead into, and the caller adds no pickup.
 
     Selects a pitch that approaches the first strong note of section B,
     using chord tones or approach tones for musical coherence.
@@ -648,16 +653,17 @@ def choose_pickup_pitch(
     # Find first strong note in section B (downbeat preferred)
     if not section_b_events:
         if logger:
-            logger.debug("choose_pickup_pitch: no events in section B, using default pitch")
-        return default_pitch
+            logger.debug("choose_pickup_pitch: no events in section B, no pickup")
+        return None
 
-    # Find first event on or near a downbeat (beat % 4 < 0.5)
+    # Find first event on or near a downbeat of section B's own meter
     target_event = None
     eps = 0.5
+    bpb = float(beats_per_bar) if beats_per_bar and beats_per_bar > 0 else 4.0
 
     for ev in section_b_events:
         start_beat = getattr(ev, 'start_beat', 0.0)
-        beat_in_bar = start_beat % 4.0
+        beat_in_bar = (start_beat - incoming_start) % bpb
         if beat_in_bar < eps:
             target_event = ev
             break
@@ -675,14 +681,30 @@ def choose_pickup_pitch(
     else:
         approach_distance = 1
 
-    pickup_pitch = target_pitch - approach_distance
-
-    # Clamp to instrument register
-    if instrument == "bass":
-        pickup_pitch = max(bass_min, min(bass_max, pickup_pitch))
+    if register is not None:
+        lo, hi = sorted((int(register[0]), int(register[1])))
+    elif instrument == "bass":
+        lo, hi = bass_min, bass_max
     else:
-        # General MIDI range
-        pickup_pitch = max(21, min(108, pickup_pitch))
+        lo, hi = 21, 108  # General MIDI range
+    scale = None
+    if incoming_chords is not None:
+        from ..composer.theory import scale_pcs
+
+        scale = set(scale_pcs(incoming_chords.key, incoming_chords.mode))
+
+    def fits(p: int) -> bool:
+        return lo <= p <= hi and (scale is None or p % 12 in scale)
+
+    # Approach from a step below; from above when below would leave the
+    # instrument's register. With the incoming harmony, the approach is a
+    # scale tone of the key it leads into.
+    order = [approach_distance, 3 - approach_distance]
+    candidates = [target_pitch - d for d in order] + [target_pitch + d for d in order]
+    pickup_pitch = next((p for p in candidates if fits(p)), None)
+    if pickup_pitch is None:
+        pickup_pitch = next((p for p in candidates if lo <= p <= hi), target_pitch - approach_distance)
+    pickup_pitch = max(lo, min(hi, pickup_pitch))
 
     if logger:
         logger.debug(
@@ -946,13 +968,19 @@ def apply_transition_plan(
         rng = metadata.get("rng") if metadata else None
 
         # Choose pickup pitch
+        pickup_ctx = (metadata or {}).get("pickup", {}) or {}
         pickup_pitch = choose_pickup_pitch(
             section_b_events,
-            harmony_plan=None,  # TODO: pass actual harmony plan
             instrument=instrument_name,
             rng=rng,
             logger=logger,
+            incoming_chords=pickup_ctx.get("incoming_chords"),
+            register=pickup_ctx.get("register"),
+            beats_per_bar=pickup_ctx.get("beats_per_bar", 4.0),
+            incoming_start=head_start,
         )
+        if pickup_pitch is None:
+            return
 
         # Compute pickup beat: last half-beat before section B
         # Use quarter-beat (0.25 beats) duration for short anacrusis
@@ -1490,6 +1518,24 @@ def evaluate_transitions(
                     harmony["allow_turnaround"] = not ("country" in str(cfg.song.genre).lower()
                         and beats_per_bar == 3 and tuple(harmony["groups"]) == (1, 1, 1))
 
+            pickup = {}
+            if inst_name != "drums" and i+1 < len(planned_sections):
+                from ..composer.theory import ChordMap
+
+                b = planned_sections[i+1]
+                if b.harmony_plan:
+                    pickup = dict(
+                        incoming_chords=ChordMap(b.harmony_plan.chord_slots,
+                                                 getattr(b.sec, "key", None) or cfg.song.key,
+                                                 getattr(b.sec, "mode", None) or cfg.song.mode),
+                        beats_per_bar=float(getattr(b.harmony_plan.meter, "beats_per_bar", 4.0) or 4.0))
+                if inst_name == "bass" and harmony.get("register"):
+                    pickup["register"] = harmony["register"]
+                elif inst_name == "lead_gtr":
+                    from ..composer.song import lead_register
+
+                    pickup["register"] = lead_register(cfg)
+
             # Build transition plan
             plan_obj = TransitionPlan(
                 section_a_id=section_a_id,
@@ -1502,6 +1548,7 @@ def evaluate_transitions(
                 },
                 metadata={
                     "harmony": harmony,
+                    "pickup": pickup,
                     "profile_a": profile_a,
                     "profile_b": profile_b,
                     "beats_per_bar_b": beats_per_bar_b,

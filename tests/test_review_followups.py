@@ -56,3 +56,66 @@ def test_every_example_uses_only_known_structure_keys():
 
     for f in glob.glob("examples/**/*.yaml", recursive=True):
         assert unknown_structure_warnings(yaml.safe_load(open(f))) == [], f
+
+
+@pytest.mark.parametrize("section_type,bars", [("intro", 4), ("solo", 8), ("breakdown", 4),
+                                              ("verse", 1)])
+@pytest.mark.parametrize("device", ["stop", "drop", "push", "build"])
+def test_drums_and_comp_agree_on_the_device_into_any_chorus(section_type, bars, device):
+    from produzre.composer.arrangement import into_chorus_device
+    from produzre.composer.comping import compose_comp_dna, plan_comp_section
+    from produzre.composer.drums import compose_drum_dna, plan_drum_section
+    from tests.test_album_diversity import _arr
+    from tests.test_composer import _slots
+
+    arr = _arr(into_chorus=device)
+    assert into_chorus_device(arr, section_type, "chorus") == device
+    last = (bars - 1) * 4
+    comp = compose_comp_dna(seed=5, genre="rock", key="E", mode="minor", shuffle=False)
+    events, _, _ = plan_comp_section(comp, section_type=section_type, occurrence=0,
+                                     is_final_of_type=True, bars=bars, beats_per_bar=4.0,
+                                     chord_slots=_slots(["i"] * bars), key="E", mode="minor",
+                                     next_section_type="chorus", arrangement=arr)
+    ordinary, _, _ = plan_comp_section(comp, section_type=section_type, occurrence=0,
+                                       is_final_of_type=True, bars=bars, beats_per_bar=4.0,
+                                       chord_slots=_slots(["i"] * bars), key="E", mode="minor",
+                                       next_section_type="verse", arrangement=arr)
+    tail = lambda evs: [(e.beat, e.kind, e.dur, e.tag) for e in evs if e.beat >= last]
+    assert tail(events) != tail(ordinary)
+    drums = compose_drum_dna(seed=5, genre="rock")
+    hits = plan_drum_section(drums, arr, section_type=section_type, bars=bars,
+                             beats_per_bar=4, next_section_type="chorus")
+    plain = plan_drum_section(drums, arr, section_type=section_type, bars=bars,
+                              beats_per_bar=4, next_section_type="verse")
+    dtail = lambda hs: sorted((round(h.beat, 3), h.voice) for h in hs if h.beat >= last)
+    assert dtail(hits) != dtail(plain)
+
+
+def _note(beat, pitch):
+    from types import SimpleNamespace
+    return SimpleNamespace(start_beat=beat, pitch=pitch)
+
+
+def test_pickup_respects_register_scale_and_meter():
+    import random
+    from produzre.composer.theory import ChordMap
+    from produzre.orchestrate.transitions import choose_pickup_pitch
+    from tests.test_composer import _slots
+
+    chords = ChordMap(_slots(["I", "IV"]), "C", "major")
+    for seed in range(20):
+        rng = random.Random(seed)
+        # Approaches the downbeat target from a scale step below.
+        p = choose_pickup_pitch([_note(64.0, 64)], instrument="lead_gtr", rng=rng,
+                                incoming_chords=chords, register=(55, 81), incoming_start=64.0)
+        assert p in (62, 63) and p % 12 in (2,)  # D, the scale tone below E
+        # Near the bottom of the register it approaches from above.
+        p = choose_pickup_pitch([_note(64.0, 62)], instrument="lead_gtr", rng=rng,
+                                incoming_chords=chords, register=(62, 81), incoming_start=64.0)
+        assert 62 <= p <= 81 and p % 12 in (4, 5)
+        # In 3/4 the downbeat is found on the section's own bar grid.
+        p = choose_pickup_pitch([_note(64.5, 72), _note(67.0, 67)], instrument="lead_gtr",
+                                rng=rng, register=(55, 81), beats_per_bar=3.0,
+                                incoming_start=64.0)
+        assert p in (65, 66) or p in (68, 69)
+    assert choose_pickup_pitch([], instrument="lead_gtr", register=(62, 81)) is None

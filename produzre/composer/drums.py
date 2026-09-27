@@ -871,8 +871,11 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
     prev = _ALIASES.get(str(prev_section_type or "").lower(), str(prev_section_type or "").lower())
     pushed_in = st == "chorus" and prev not in ("", "chorus") and arrangement.into_chorus == "push"
     nxt = _ALIASES.get(str(next_section_type or "").lower(), str(next_section_type or "").lower())
-    into_chorus = nxt == "chorus" and st != "chorus"
-    device = arrangement.into_chorus if into_chorus else "fill"
+    from .arrangement import into_chorus_device
+
+    into = into_chorus_device(arrangement, st, next_section_type)
+    into_chorus = bool(into)
+    device = into or "fill"
     hits: List[DrumHit] = []
     voice, offsets = (COMPOUND_TIMEKEEPERS if compound else TIMEKEEPERS).get(
         tk, (COMPOUND_TIMEKEEPERS if compound else TIMEKEEPERS)["hat8"])

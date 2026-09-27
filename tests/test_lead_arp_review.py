@@ -75,7 +75,7 @@ def test_numeric_register_works_in_every_form(tmp_path, form, composer):
         timelines, _ = _render_timelines(_song(tmp_path, lead, seed=seed, name=f"s{seed}.yaml"))
         # Section-boundary pickups come from the shared transition pass.
         pitches = [e.pitch for e in timelines["lead_gtr"].events
-                   if e.kind not in ("slide_grace", "pickup_transition")]
+                   ]
         assert pitches and all(62 <= p <= 81 for p in pitches), (form, composer, seed)
 
 

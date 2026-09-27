@@ -800,13 +800,19 @@ def plan_comp_section(
     activity = getattr(arrangement, "comp_activity", "normal")
     tail_every = 1 if activity == "busy" else (4 if activity == "sparse" else 2)
     fill_every = 8 if activity == "sparse" else 4
+    # The same rule the drums and bass use (composer/arrangement.py), so the
+    # whole band plays the device into any chorus.
+    from .arrangement import into_chorus_device
+
+    device = (into_chorus_device(arrangement, st, next_section_type) if arrangement is not None
+              else ("stop" if nxt == "chorus" and st != "chorus" else ""))
     slide_next = False
     for b in range(bars):
         start = b * bpb
         last_bar = b == bars - 1
         phrase_end = (b % phrase == phrase - 1) and not last_bar
-        if last_bar and nxt == "chorus" and st in ("prechorus", "verse", "bridge") and bars >= 2:
-            events += _into_chorus(into, riff, start, bpb, chords, groups)
+        if last_bar and device:
+            events += _into_chorus(device, riff, start, bpb, chords, groups)
             continue
         if last_bar and next_section_type is None and st != "breakdown":
             ending = getattr(arrangement, "ending", "ring")
