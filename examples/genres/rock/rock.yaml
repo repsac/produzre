@@ -12,9 +12,9 @@
 #   - arrangement_style.riff_driven: true and intro: riff_alone, the
 #     classic rock opening
 #   - arrangement_style.bass_doubles: false, the bass keeps its own line
-#     instead of doubling the riff (under the verse riff a sparse line that
-#     leaves the downbeat to the guitar; from the prechorus on it locks to
-#     the kick)
+#     instead of doubling the riff (under the verse riff a picked line, the
+#     root on every downbeat and fifths around the riff; from the prechorus
+#     on it locks to the kick)
 #   - arrangement_style.ending: big, a held last chord with a drum roll
 #   - drums fill_rate 0.6: a fill every four bars, a rock drummer who
 #     marks every phrase
@@ -23,6 +23,7 @@
 #
 # Listen for:
 #   - the riff alone for two bars, then the band
+#   - the bass on each chord's root on the downbeat under the verse riff
 #   - the bass locking to the kick from the prechorus on
 #   - the G chord (bVII) in the verse riff
 #   - a drum fill at the end of every four-bar phrase

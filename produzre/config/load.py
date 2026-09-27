@@ -29,7 +29,7 @@ import pathlib
 import importlib.resources
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import yaml
 
@@ -617,6 +617,11 @@ def _load_personas_registry_for_instrument(instrument: str) -> Dict[str, Any]:
     return merged
 
 
+# Keys that are a persona's technique rather than a genre default: when the
+# user names the persona, a recipe does not replace them.
+_PERSONA_TECHNIQUE_KEYS: Dict[str, Tuple[str, ...]] = {"bass": ("articulation_style",)}
+
+
 def _persona_setting(instrument_cfg: Optional[Dict[str, Any]]) -> Optional[str]:
     """The persona an instrument entry names: a direct ``persona`` field, or
     ``persona`` inside its ``params`` or ``extra`` block (direct wins)."""
@@ -675,7 +680,9 @@ def _resolve_section_personas(raw: Dict[str, Any], instruments_raw: Any) -> None
             entry: Dict[str, Any] = {
                 "persona": name,
                 "params": _deep_merge_dict(persona_params, user_params),
-                "persona_keys": sorted(k for k in persona_params if k not in user_params),
+                # A named persona keeps its technique over the recipe.
+                "persona_keys": sorted(k for k in persona_params if k not in user_params
+                                       and k not in _PERSONA_TECHNIQUE_KEYS.get(inst, ())),
             }
             if inst == "drums":
                 voices = data.get("voices", {}) or {}
@@ -920,9 +927,13 @@ def load_root_config(path: str) -> RootConfig:
     raw["_effective"]["instruments"]["bass"]["persona"] = effective_bass_persona
     raw["_effective"]["instruments"]["bass"]["params"] = _deep_merge_dict(bass_persona_params, bass_inst_params)
     # Persona-sourced keys (not overridden by the user): recipes may override
-    # these but never explicit user params (persona < recipe < user).
+    # these but never explicit user params (persona < recipe < user). A
+    # persona the user named keeps its technique: the funk persona slaps
+    # under any genre's recipe.
     raw["_effective"]["instruments"]["bass"]["persona_keys"] = sorted(
         k for k in (bass_persona_params or {}) if k not in bass_inst_params
+        and not (_persona_setting(bass_instrument_cfg) is not None
+                 and k in _PERSONA_TECHNIQUE_KEYS.get("bass", ()))
     )
 
     # === Rhythm guitar persona resolution ===

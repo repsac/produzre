@@ -25,7 +25,6 @@ instruments:
     intensity: 0.75
     params:
       articulation_style: finger
-      rhythm_pattern: anchor
       density: 1.0           # Quarter notes
       rest_rate: 0.0         # Continuous walking
       approach_rate: 0.40    # Strong approach tones

@@ -59,6 +59,9 @@ def test_bass_response_is_opt_in(tmp_path):
     attacks = [e.start_beat for e in on["lead_gtr"].events if e.kind != "slide_grace"]
     assert not any(abs(a.start_beat - t) < 0.1 for a in answers for t in attacks)
     # The two choruses answer identically: the response is part of the song.
-    first = [(round(e.start_beat, 3), e.pitch) for e in answers if e.start_beat < 32]
-    second = [(round(e.start_beat - 32, 3), e.pitch) for e in answers if e.start_beat >= 32]
+    # The song's last bar is the band's ending, which the bass plays as
+    # written: no answer there.
+    first = [(round(e.start_beat, 3), e.pitch) for e in answers if e.start_beat < 28]
+    second = [(round(e.start_beat - 32, 3), e.pitch) for e in answers if 32 <= e.start_beat < 60]
     assert [p for _, p in first] == [p for _, p in second]
+    assert not any(e.start_beat >= 60 - 0.02 for e in answers)

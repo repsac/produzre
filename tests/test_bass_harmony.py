@@ -313,7 +313,9 @@ def test_bass_cadence_resolution(tmp_path):
                 "kind": parts[11],
             })
 
-    assert len(events) >= 8, f"Dense config should fill all bars, got {len(events)} events"
+    # Every bar plays; the song's last bar lands on its cadence and rings.
+    assert {e["bar"] for e in events} == {1, 2, 3, 4}, \
+        f"Dense config should fill all bars, got {len(events)} events"
 
     # The tonic must be established: bar 1, beat 1 is a root C (I chord).
     first = events[0]
@@ -331,15 +333,9 @@ def test_bass_cadence_resolution(tmp_path):
     assert cadence["pitch"] % 12 == 0, \
         f"Cadence should resolve to C in C major, got: {cadence['note']}"
 
-    # Nothing after the cadence except fill notes (the pickup run into the
-    # next loop): the cadence is the last structural note.
-    after_cadence = [
-        e for e in events
-        if (e["bar"], e["beat"]) > (cadence["bar"], cadence["beat"])
-    ]
-    for e in after_cadence:
-        assert e["kind"].startswith("fill"), \
-            f"Non-fill event after cadence: {e}"
+    # The cadence is the song's last note: nothing follows it (no fill runs
+    # into a next section that never comes).
+    assert (cadence["bar"], cadence["beat"]) == max((e["bar"], e["beat"]) for e in events)
 
     print(f"✓ Cadence resolves to {cadence['note']} in bar {cadence['bar']}")
 

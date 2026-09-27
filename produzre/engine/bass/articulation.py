@@ -169,6 +169,7 @@ def articulate_written_note(
     ghost_perc_rate: float = 0.0,
     slap_velocity_floor: int = 70,
     pop_velocity_boost: int = 15,
+    final: bool = False,
 ) -> tuple[float, int, str]:
     """Play a composer-written bass note (a role, a riff double, a device hit)
     with the bass's articulation. Returns (duration, velocity, kind suffix).
@@ -176,6 +177,8 @@ def articulate_written_note(
     Written parts already have their own note lengths, so finger keeps them;
     pick shortens and sharpens, mute dampens to a short thud, and slap turns
     strong beats into thumb hits and octave or offbeat notes into pops.
+    A ``final`` note (the song's ending hit) is a real note: slapped with the
+    thumb at its written length, never a ghost or a clipped pop.
     """
     from .slap import apply_slap_duration, apply_slap_velocity, determine_slap_technique
 
@@ -184,6 +187,9 @@ def articulate_written_note(
         return max(0.1, duration * 0.8), max(1, min(127, int(max(velocity, 65) * 1.05))), ""
     if style == "mute":
         return max(0.1, min(duration * 0.45, 0.45)), max(1, int(velocity * 0.85)), "_mute"
+    if style == "slap" and final:
+        return max(0.1, duration), apply_slap_velocity(velocity, "thumb", slap_velocity_floor,
+                                                        pop_velocity_boost), "_slap_thumb"
     if style == "slap":
         technique = determine_slap_technique(
             is_strong_beat=strong, is_offbeat=offbeat or octave_up,

@@ -907,6 +907,27 @@ def build_bass_turnaround(
     return turnaround_events
 
 
+def _clear_bass_for_pickup(timeline: Any, pickup_beat: float, head_start: float) -> None:
+    """The bass is one voice: a pickup replaces the notes it lands on.
+
+    A note that starts inside the pickup's window is dropped (the pickup takes
+    its place), and a note still ringing into it is cut short where the
+    pickup starts, so the pickup never stacks on the line's own notes.
+    """
+    kept = []
+    for ev in timeline.events:
+        start = float(ev.start_beat)
+        if start >= head_start - 1e-6:
+            kept.append(ev)
+            continue
+        if start >= pickup_beat - 0.06:
+            continue  # on (or a hair before) the pickup: the pickup replaces it
+        if start + float(ev.duration_beats) > pickup_beat + 1e-6:
+            ev.duration_beats = max(0.05, pickup_beat - start - 0.01)
+        kept.append(ev)
+    timeline.events[:] = kept
+
+
 def apply_transition_plan(
     timeline: Any,  # InstrumentTimeline
     instrument_name: str,
@@ -997,6 +1018,9 @@ def apply_transition_plan(
                and abs(e.start_beat - pickup_beat) < 1e-6 for e in near) or any(
                 str(getattr(e, "kind", "") or "").startswith(_COMPOSED_KINDS) for e in near):
             return
+
+        if instrument_name == "bass":
+            _clear_bass_for_pickup(timeline, pickup_beat, head_start)
 
         # Add pickup note to timeline. add_note() resolves the instrument's
         # own channel (engine spec / name map) — a bare NoteEvent(channel=0)

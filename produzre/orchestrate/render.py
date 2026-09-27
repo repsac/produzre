@@ -18,7 +18,7 @@ subsystem once timelines are fully rendered.
 import logging
 import random
 from collections.abc import Mapping
-from dataclasses import fields
+from dataclasses import fields, replace as _replace_note
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..model import RootConfig
@@ -946,6 +946,9 @@ def render_section_instruments(
                     for ev, duration in country_gates:
                         ev.duration_beats = duration
 
+        if inst_name == "bass":
+            _hold_slap_floor(timeline.events[events_before:], effective_params_dict(effective_cfg))
+
         # Clip the lead line after feel, keeping marked unbent double stops.
         if inst_name == "lead_gtr":
             mono = sorted(timeline.events[events_before:], key=lambda e: (e.start_beat, e.pitch))
@@ -1452,8 +1455,10 @@ def _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_be
     enter = intro_entry_bar(riff_alone_intro(arrangement, parts), str(getattr(sec, "type", "")),
                             bars, bool(tc.get("is_first_section"))) if with_drummer else 0
     events = [e for e in new_events if e.start_beat - start0 >= enter * bpb - 0.02]
-    velocities = sorted(e.velocity for e in new_events)
-    velocity = velocities[len(velocities) // 2]
+    # Written notes (roles, riff doubles, device hits) play at the section's
+    # dynamics, like the composed drummer: intensity (with the planner's
+    # macro-dynamics) and energy, not the engine line they replace.
+    velocity = _composed_bass_velocity(sec, inst_cfg)
     template = new_events[0]
     near = sorted(e.pitch for e in new_events)[len(new_events) // 2]
     written = False
@@ -1502,16 +1507,22 @@ def _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_be
         kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
         if role != "engine":
             from ..composer.song import section_groups
-            from ..composer.bass import bass_bar
+            from ..composer.bass import bass_bar, land_bar
 
             role_events = []
             for b in range(enter, bars):
-                for t, d, p, acc in bass_bar(role, b * bpb, bpb, chords,
-                                             approach=bass_dna.approach, near=near,
-                                             last_bar=b == bars - 1 and not tc.get("next_section_type"),
-                                             dna=bass_dna, kick=kick, section_type=st,
-                                             groups=section_groups(cfg, sec, hplan.meter),
-                                             lo=lo, hi=hi):
+                song_end = b == bars - 1 and not tc.get("next_section_type")
+                written_bar = bass_bar(role, b * bpb, bpb, chords,
+                                       approach=bass_dna.approach, near=near,
+                                       last_bar=song_end, dna=bass_dna, kick=kick,
+                                       section_type=st,
+                                       groups=section_groups(cfg, sec, hplan.meter),
+                                       lo=lo, hi=hi)
+                if song_end and not with_drummer:
+                    # No band ending to play: the line lands on its last chord.
+                    written_bar = land_bar(written_bar, b * bpb, bpb, chords, near=near,
+                                           lo=lo, hi=hi)
+                for t, d, p, acc in written_bar:
                     role_events.append(_replace(template, start_beat=start0 + t,
                                                 duration_beats=max(0.1, d), pitch=p,
                                                 velocity=min(127, int(velocity * (1.06 if acc else 0.94))),
@@ -1558,6 +1569,42 @@ def _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_be
     return events
 
 
+# The composed bass's touch at a default verse (section level 1.0); the
+# composed drummer's is 72. Articulation shapes it afterwards (pick sharpens,
+# mute dampens, slap thumbs and pops).
+_BASS_TOUCH = 80
+
+
+def _composed_bass_velocity(sec, inst_cfg) -> int:
+    """Velocity of the composer's bass notes in a section: the bass touch
+    scaled by the section's level (composer/drums.py ``section_level``), from
+    the bass's own intensity, else the section's resolved intensity, and the
+    section's energy."""
+    from ..composer.drums import section_level
+    from .energy import resolve_section_energy
+
+    intensity = _as_float(getattr(inst_cfg, "intensity", None), getattr(sec, "intensity", None))
+    energy = resolve_section_energy(getattr(sec, "energy", None),
+                                    str(getattr(sec, "type", "") or "verse"))
+    return max(1, min(127, int(round(_BASS_TOUCH * section_level(intensity, energy)))))
+
+
+def _hold_slap_floor(events, params) -> None:
+    """``slap_velocity_floor`` is the slap's minimum: every slapped note
+    (engine line, composed role, answer) stays at or above it after the
+    groove clock's velocity humanization. Percussive ghost notes are the
+    only notes below it."""
+    if str(params.get("articulation_style", "finger") or "finger").lower() != "slap":
+        return
+    try:
+        floor = max(1, min(127, int(params.get("slap_velocity_floor", 70))))
+    except (TypeError, ValueError):
+        floor = 70
+    for e in events:
+        if "ghost" not in str(e.kind or ""):
+            e.velocity = max(int(e.velocity), floor)
+
+
 def _articulate_written_bass(events, sec, params, bpb, start0, transition_context):
     """Composed bass notes (roles, riff doubles, device hits) are played with
     the bass's articulation, like the engine's own line."""
@@ -1596,7 +1643,8 @@ def _articulate_written_bass(events, sec, params, bpb, start0, transition_contex
             slap_thumb_rate=rate("slap_thumb_rate", 0.9),
             ghost_perc_rate=rate("ghost_perc_rate", 0.0),
             slap_velocity_floor=int(rate("slap_velocity_floor", 70)),
-            pop_velocity_boost=int(rate("pop_velocity_boost", 15)))
+            pop_velocity_boost=int(rate("pop_velocity_boost", 15)),
+            final=kind.startswith("ending_hit"))
         e.duration_beats, e.velocity, e.kind = dur, vel, kind + suffix
     return events
 
@@ -1627,6 +1675,20 @@ def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, ev
     kicks = getattr((rhythm_features or {}).get("drums"), "strong_beats", None)
     if kicks:
         holes = align_to_kicks(holes, [float(t) for t in kicks])
+    # A band device (into-chorus stop or drop, the song's ending) or a
+    # walk's last bar is played as written: the bass answers only before it.
+    start = float(section_start_beat)
+    devices = [(float(a) - start, float(b) - start)
+               for a, b in getattr(timeline, "device_windows", ()) or ()
+               if float(b) > start and float(a) < start + total]
+    clipped = []
+    for a, b in holes:
+        for d0, d1 in devices:
+            if a < d1 and b > d0:
+                b = min(b, d0) if a < d0 else a
+        if b - a >= 0.25:
+            clipped.append((a, b))
+    holes = clipped
     new_events = timeline.events[events_before:]
     if not holes or not new_events:
         return
@@ -1647,9 +1709,22 @@ def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, ev
                      answer=dna.hook_answer)
     if not answer:
         return
+    # The beat-1 rule holds in an answer too: a note on a bar's downbeat or
+    # where a chord starts is that chord's root (the hook keeps its rhythm).
+    chord_map = ChordMap(hplan.chord_slots, key, mode)
+    lo_r, hi_r = int(params.get("register_low", 28)), int(params.get("register_high", 55))
+    starts = [float(cs.start_beat) for cs in hplan.chord_slots]
+    for i, n in enumerate(answer):
+        on_one = abs(n.beat - round(n.beat / bpb) * bpb) < 0.06
+        if not (on_one or any(abs(n.beat - s) < 0.06 for s in starts)):
+            continue
+        span = chord_map.at(min(n.beat + 0.06, total - 1e-6))
+        if span is not None and n.pitch % 12 != span.root_pc:
+            roots = [p for p in range(lo_r, max(hi_r, lo_r + 11) + 1) if p % 12 == span.root_pc]
+            if roots:
+                answer[i] = _replace_note(n, pitch=min(roots, key=lambda p: (abs(p - n.pitch), p)))
     used = [h for h in holes if any(h[0] - 1e-6 <= n.beat < h[1] for n in answer)]
-    velocities = sorted(e.velocity for e in new_events)
-    velocity = min(127, int(velocities[len(velocities) // 2] * 1.05))
+    velocity = min(127, int(_composed_bass_velocity(sec, inst_cfg) * 1.05))
     template = new_events[0]
     kept = []
     for ev in new_events:
