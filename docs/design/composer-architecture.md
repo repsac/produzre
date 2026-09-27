@@ -728,6 +728,44 @@ compound meters, unidiomatic in jazz and missing for dance music.
   occasional `ride_bell` accents vanished; bell kinds are now protected
   decorations.
 
+## Drum and transition follow-ups (2026-09-26)
+
+Found after the drum review, in the examples' exports:
+
+- **Ramps and the drummer's own transitions.** The transition `ramp_down`
+  thinned every other non-downbeat note of the tail with 4 beats per bar
+  from beat 0, so composed fills and builds lost half their hits (a 6/8
+  build kept 7 of 12 snares), and a pushing persona (`push_pull`) moved
+  downbeats off the grid and the next section's first hits into the tail,
+  so personas played different hits. `plan_drum_section(windows=...)`
+  reports the spans the drummer arranged itself (fills, build bars,
+  stop/drop/push bars, the ending); the render publishes them as
+  `composer.drums_windows.<section>` and the drum engine registers them in
+  `InstrumentTimeline.device_windows`, as the bass does for its device
+  bars. Every recipe that edits the tail skips a tail with a device window
+  (the bridge start checks its head). Ramps use the outgoing section's
+  meter with its bar lines as origin, take tail events by the step they sit
+  on (0.06 beats either side), and thin only drum hands.
+- **Drum pickups.** `choose_pickup_pitch` gave drums the first head note
+  minus a step (MIDI 34 or 35). Drums now get a snare on the last sixteenth
+  in the kit's own snare pitch, skipped where the composed drummer ends the
+  section or the bar already has a fill, pickup or snare there.
+- **Drop intent.** Its "no open hats" applied only when neither the user nor
+  the recipe set an open-hat rate, so genre recipes kept theirs. Only the
+  user's own `voices.hats` rate now outranks a drop or stomp.
+- **One hit per voice per step.** Entry and ending kicks on the groove's
+  downbeat kick, two-bar answer kicks on kicks, and an accent crash played on
+  the ride (`accent_voice: ride`) over the ride stroke doubled notes.
+  `one_hit_per_voice` keeps the stronger hit (an accent merged into a stroke
+  keeps the accent's role and ring); the engine does the same per pitch
+  within 0.02 beats (a pickup's hand jitter; a flam grace is 0.06 early and
+  stays).
+- **Solo answers.** Tom answers were layered over build bars. Bars holding a
+  fill, build or device play as arranged.
+- **Groove memory and intent.** A section's groove was recalled by section
+  type, so a half-time bridge replayed the preceding drop bridge. The
+  recall key includes the section's intent.
+
 ## Lead and arpeggiator review (2026-09-26)
 
 The examples rewrite found seven lead and arpeggiator problems. What changed:

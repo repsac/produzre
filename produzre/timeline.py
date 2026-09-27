@@ -101,7 +101,8 @@ class InstrumentTimeline:
             built-in instrument-name map for events added without an explicit
             channel.
         device_windows: Song-beat (start, end) windows where the part plays
-            an arrangement device (stop-time, a drop, a push into a chorus).
+            an arrangement device (stop-time, a drop, a push into a chorus,
+            a composed drum fill or build).
             The device is that boundary's transition, so the transition
             pass leaves these bars as written.
 

@@ -436,6 +436,9 @@ def adjust_durations(events: List[Any], factor: float) -> None:
 
 
 _COMPOSED_KINDS = ("melody", "lick", "counter", "stab")
+# How far the groove clock (swing aside) moves a note off its step, in beats:
+# a note within this of a step belongs to it.
+_STEP_SLACK = 0.06
 
 
 def _drum_structural(ev: Any) -> bool:
@@ -470,7 +473,6 @@ def thin_events(
 
     result = []
     non_downbeat_count = 0
-    eps = 0.01
 
     for ev in events:
         start_beat = getattr(ev, 'start_beat', 0.0)
@@ -483,8 +485,9 @@ def thin_events(
 
         # Check if downbeat
         if keep_downbeats:
-            beat_in_bar = (start_beat - origin) % beats_per_bar
-            if beat_in_bar < eps:
+            # Nearest step: a humanized downbeat a hair either side counts.
+            beat_in_bar = (start_beat - origin + _STEP_SLACK) % beats_per_bar
+            if beat_in_bar < 2 * _STEP_SLACK:
                 # It's a downbeat, always keep
                 result.append(ev)
                 continue
@@ -715,6 +718,36 @@ def choose_pickup_pitch(
     return pickup_pitch
 
 
+_SNARES = (38, 40, 37)
+
+
+def _add_drum_pickup(timeline: Any, head_start: float, plan: "TransitionPlan",
+                     recipe: "TransitionRecipe", logger: Optional[logging.Logger]) -> None:
+    """A drum pickup is a snare on the last sixteenth, never a pitched note.
+
+    The composed drummer writes its own lead-ins (fills, builds, devices),
+    so its section end gets none; nor does a bar whose last beat already
+    moves (a fill) or already has a snare on that sixteenth.
+    """
+    if plan.metadata.get("composed_drums_a"):
+        return
+    beat = head_start - 0.25
+    tail = timeline.get_events_in_range(head_start - 1.0 - _STEP_SLACK, head_start - _STEP_SLACK)
+    if any("fill" in str(getattr(e, "kind", "") or "") or "pickup" in str(getattr(e, "kind", "") or "")
+           for e in tail):
+        return
+    if any(e.pitch in _SNARES and abs(e.start_beat - beat) < _STEP_SLACK for e in tail):
+        return
+    # The kit's own snare (rimshot or cross-stick articulations included).
+    pitch = next((e.pitch for e in sorted(tail, key=lambda e: -e.velocity)
+                  if e.pitch in _SNARES and "ghost" not in str(e.kind or "")), 38)
+    timeline.add_note(start_beat=beat, duration_beats=0.25, pitch=int(pitch), velocity=72,
+                      kind="pickup_transition")
+    recipe.notes_added = 1
+    if logger:
+        logger.info(f"[PICKUP] drums snare at beat {beat:.3f}")
+
+
 def build_bass_turnaround(
     tail_start: float,
     tail_end: float,
@@ -936,11 +969,13 @@ def apply_transition_plan(
     if recipe.kind == "none":
         return
 
-    # A band device (stop-time, a drop, a push into the chorus) is this
-    # boundary's transition: the bar stays as the arrangement wrote it.
-    tail = plan.edit_windows.get("tail")
-    if tail and any(s < tail[1] - 1e-6 and e > tail[0] + 1e-6
-                    for s, e in getattr(timeline, "device_windows", ()) or ()):
+    # A band device (stop-time, a drop, a push into the chorus, a composed
+    # drum fill or build) is this boundary's transition: the bar stays as
+    # the arrangement wrote it. The bridge start edits the incoming head,
+    # every other recipe the outgoing tail.
+    edited = plan.edit_windows.get("head" if recipe.kind == "bridge_start" else "tail")
+    if edited and any(s < edited[1] - 1e-6 and e > edited[0] + 1e-6
+                      for s, e in getattr(timeline, "device_windows", ()) or ()):
         return
 
     if instrument_name == "bass" and recipe.kind in ("pickup", "turnaround") and not (
@@ -966,6 +1001,10 @@ def apply_transition_plan(
         # Get RNG from metadata if available (for determinism)
         metadata = plan.metadata
         rng = metadata.get("rng") if metadata else None
+
+        if instrument_name == "drums":
+            _add_drum_pickup(timeline, head_start, plan, recipe, logger)
+            return
 
         # Choose pickup pitch
         pickup_ctx = (metadata or {}).get("pickup", {}) or {}
@@ -1252,8 +1291,10 @@ def apply_transition_plan(
 
     tail_start, tail_end = tail_window
 
-    # Get events in tail window
-    tail_events = timeline.get_events_in_range(tail_start, tail_end)
+    # Events in the tail by the step they sit on: a note the groove clock
+    # played a hair early (pocket, push) belongs to the beat it anticipates,
+    # so the next section's pushed downbeat is not the outgoing tail's.
+    tail_events = timeline.get_events_in_range(tail_start - _STEP_SLACK, tail_end - _STEP_SLACK)
 
     if not tail_events:
         if logger:
@@ -1262,9 +1303,9 @@ def apply_transition_plan(
             )
         return
 
-    # Get beats_per_bar for downbeat detection
-    # We'll use a default of 4.0, could be improved by passing actual beats_per_bar
-    beats_per_bar = 4.0
+    # Downbeats in the outgoing section's own meter, counted from its bar
+    # lines (the tail starts on one).
+    beats_per_bar = float(plan.metadata.get("beats_per_bar_a") or 4.0)
 
     if recipe.kind == "ramp_up":
         # Ramp-up: increase energy
@@ -1287,8 +1328,15 @@ def apply_transition_plan(
         scale_velocities(tail_events, 0.8)
         adjust_durations(tail_events, 1.1)
 
-        # Thin events (keep downbeats)
-        thinned_events = thin_events(tail_events, keep_downbeats=True, beats_per_bar=beats_per_bar)
+        # Thin events (keep downbeats). A drummer thins the hands, not the
+        # kick, backbeat or crash.
+        if instrument_name == "drums":
+            thinned_events = [ev for ev in tail_events if _drum_structural(ev)] + thin_events(
+                [ev for ev in tail_events if not _drum_structural(ev)],
+                keep_downbeats=True, beats_per_bar=beats_per_bar, origin=tail_start)
+        else:
+            thinned_events = thin_events(tail_events, keep_downbeats=True,
+                                         beats_per_bar=beats_per_bar, origin=tail_start)
         removed_count = len(tail_events) - len(thinned_events)
 
         # Remove thinned events from timeline using identity-based filtering
@@ -1551,7 +1599,11 @@ def evaluate_transitions(
                     "pickup": pickup,
                     "profile_a": profile_a,
                     "profile_b": profile_b,
+                    "beats_per_bar_a": float(beats_per_bar or 4.0),
                     "beats_per_bar_b": beats_per_bar_b,
+                    "composed_drums_a": bool(
+                        inst_name == "drums" and performance_plan is not None
+                        and performance_plan.get(f"composer.drums.{section_a_id}")),
                     "composed_drums": bool(
                         inst_name == "drums" and performance_plan is not None
                         and performance_plan.get(f"composer.drums.{section_b_id}")),

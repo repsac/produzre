@@ -150,6 +150,12 @@ quarter louder, and each implicit repeat a little louder again. A section
 handed to the drum engine by `intent` plays at the same dynamics as the
 composed sections around it.
 
+The intents' feels: `drop` plays sparse kick and snare with closed hats only
+(no open hats, no ride), `half_time` one snare in the middle of the bar,
+`build` fills at every phrase end, `stomp` heavy kicks under steady closed
+hats, `open` the ride instead of hats. Your own `voices.hats.open` rate still
+opens hats in a `drop` or `stomp`; a recipe's open-hat rate does not.
+
 The ensemble planner assigns lead activity windows, accompaniment density,
 and fill ownership. Short sections still get a lead window. Bass can avoid
 drum fills, and rhythm guitar leaves room during lead phrases.
@@ -874,7 +880,11 @@ beat before a chorus.
 The drums play the `into_chorus` device too: `build` is a snare roll that
 rises from eighths to sixteenths over the last bar or two (each song draws
 the length), distinct from `fill`. Drums alone keep the backbeat in every
-bar and answer on the toms on the last beat of bars 2 and 4 of each phrase.
+bar and answer on the toms on the last beat of bars 2 and 4 of each phrase,
+except in a bar that already holds a fill, a build or an into-chorus device.
+Layers that land together (an entry or ending kick on the groove's kick, an
+accent crash on the ride the hand is riding) sound once, as the stronger
+hit; the same holds for the drum engine.
 
 ### Bass hook responses
 
@@ -920,8 +930,10 @@ root, unless the engine drew a fifth drop (`fifth_jump_rate`) for that bar.
 Restated pitches stay inside the bass register. Bars the engine left silent
 stay silent. A returning section type brings back its groove at the new
 dynamics. A clear intensity lift, such as a final chorus, plays its own
-groove instead. Parts that quote a riff or motif theme, walking bass lines,
-and soloing parts are left alone.
+groove instead. A section with an `intent` recalls only a groove from a
+section with the same intent, so a half-time bridge after a `drop` bridge
+plays its own half-time groove. Parts that quote a riff or motif theme,
+walking bass lines, and soloing parts are left alone.
 
 | Key (instrument params) | Range or values | Default | What it does |
 |---|---|---|---|
@@ -943,6 +955,15 @@ Include every setting you want to keep.
 | `turnaround_rate` | 0-1 | 0.25 | Set the chance of a planned turnaround. |
 | `bridge_start_bars` | 0-2 bars | 1 | Bridge introduction length in the bridge's meter, clamped to 0-2 bars. The composed drummer's bar keeps every hit; engine drums thin only hand timekeeping, never the kick, backbeat or crash. |
 | `debug` | Boolean | false | Detailed transition logging. |
+
+Ramps work in the outgoing section's meter: a ramp down keeps each bar's
+downbeat and thins every other note, and on drums it thins only the hands,
+never the kick, backbeat or crash. A band device in the last bar (stop-time,
+a drop, a push, and the composed drummer's own fills and builds) is that
+boundary's transition, so no ramp, pickup or turnaround touches it. A
+transition pickup on drums is a snare on the last sixteenth, never a pitched
+note, and only where the bar has no fill or pickup of its own; the composed
+drummer writes its own lead-ins.
 
 Drum `pickup_rate` and `downbeat_rate` are separate performance controls.
 Energy rises favor longer pickups; drops leave more space. Fills are built

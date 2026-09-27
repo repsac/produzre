@@ -851,8 +851,15 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                       next_section_type: Optional[str] = None,
                       prev_section_type: Optional[str] = None,
                       is_first_section: bool = False,
-                      groups: Optional[Sequence[float]] = None, solo: bool = False, fills_enabled: bool = True) -> List[DrumHit]:
-    """Arrange one section of drums from the song's DNA."""
+                      groups: Optional[Sequence[float]] = None, solo: bool = False, fills_enabled: bool = True,
+                      windows: Optional[List[Tuple[float, float]]] = None) -> List[DrumHit]:
+    """Arrange one section of drums from the song's DNA.
+
+    ``windows``, when given, receives the section-relative (start, end)
+    spans the drummer arranged itself: fills, build bars, into-chorus
+    devices and the ending. The transition pass leaves those as written
+    (``InstrumentTimeline.device_windows``), and solo tom answers stay out
+    of them."""
     st = _ALIASES.get(str(section_type or "verse").lower(), str(section_type or "verse").lower())
     bpb = float(beats_per_bar)
     dna = for_meter(dna, bpb, groups)
@@ -919,6 +926,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
     if device == "build" and next_section_type is not None and fills_enabled and not self_building:
         build_n = max(1, min(dna.build_bars, bars - enter - 1)) if bars - enter >= 2 else 1
     build_from = (bars - build_n) * bpb
+    arranged: List[Tuple[float, float]] = []
     for b in range(bars):
         start = b * bpb
         last = b == bars - 1
@@ -929,6 +937,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
                 fill = dna.fills["medium"]
                 hits += [DrumHit(start + bpb - fill.beats + off, v, vel, "fill")
                          for off, v, vel in fill.hits]
+                arranged.append((start + bpb - fill.beats, start + bpb))
             continue
         if b == enter and enter > 0:
             hits.append(DrumHit(start, "crash", 1.15, "crash", 1.0))
@@ -951,6 +960,10 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         if not fills_enabled:
             fill = None
         fill_from = start + bpb - fill.beats if fill else start + bpb
+        if fill:
+            arranged.append((fill_from, start + bpb))
+        if building or last and next_section_type is not None and device in ("stop", "drop", "push"):
+            arranged.append((start, start + bpb))
         # Crash: every section start, and the song's phrase crash.
         crash = ((b == 0 or b % dna.crash_every == 0) if dna.crash_policy == "regular" else
                  b == 0 and (dna.crash_policy == "section" or
@@ -1003,6 +1016,7 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         last = end - bpb
         hits = [h for h in hits if h.beat < last + 1e-6]
         ending = arrangement.ending
+        arranged.append((last, end))
         if ending == "cold":
             # Everyone stops on the downbeat; the crash is choked.
             hits += [DrumHit(last, "crash", 1.15, "crash", 0.25), DrumHit(last, "kick", 1.1, "kick")]
@@ -1024,8 +1038,41 @@ def plan_drum_section(dna: DrumDNA, arrangement: ArrangementDNA, *, section_type
         hits = [replace(h, voice=dna.accent_voice, vel=h.vel*.8) if h.voice == "crash" else h
                 for h in hits if h.voice != "crash" or dna.crash_policy != "none"]
     if solo:
-        hits = solo_development(hits, dna, bars, bpb, next_section_type is None)
-    return sorted(hits, key=lambda h: (h.beat, h.voice))
+        hits = solo_development(hits, dna, bars, bpb, next_section_type is None, arranged)
+    if windows is not None:
+        windows.extend(_merge_windows(arranged))
+    return one_hit_per_voice(hits)
+
+
+def _merge_windows(spans: Sequence[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    out: List[Tuple[float, float]] = []
+    for s, e in sorted(spans):
+        if out and s <= out[-1][1] + 1e-6:
+            out[-1] = (out[-1][0], max(out[-1][1], e))
+        else:
+            out.append((s, e))
+    return out
+
+
+def one_hit_per_voice(hits: Sequence[DrumHit]) -> List[DrumHit]:
+    """One hit per voice per step, the stronger one kept. Layers that land
+    together (an entry or ending kick on the groove's downbeat kick, a
+    two-bar answer kick on a kick, an accent crash played on the ride the
+    right hand is already riding) would otherwise sound as doubled notes.
+    An accent merged into a stroke keeps its role: the stroke becomes the
+    accent and rings as long."""
+    best: Dict[Tuple[str, int], DrumHit] = {}
+    for h in hits:
+        key = (h.voice, int(round(h.beat * 1000)))
+        held = best.get(key)
+        if held is None:
+            best[key] = h
+            continue
+        strong, weak = (h, held) if h.vel > held.vel else (held, h)
+        if weak.kind == "crash" and strong.kind != "crash":
+            strong = replace(strong, kind="crash", dur=max(strong.dur, weak.dur))
+        best[key] = strong
+    return sorted(best.values(), key=lambda h: (h.beat, h.voice))
 
 
 def _groove_bar(dna: DrumDNA, st: str, b: int, start: float, steps: int, beats: int, unit: int,
@@ -1148,15 +1195,19 @@ def _snare_steps(backbeat: str, beats: int, steps: int,
 _HAND_KINDS = ("hat", "ride", "tom_low", "snare_ghost")
 
 
-def solo_development(hits, dna, bars, bpb, closing):
+def solo_development(hits, dna, bars, bpb, closing, arranged=()):
     """Solo drums develop a four-bar phrase: statement, answer, a stronger
     statement, and a response. The groove keeps time in every bar (kick,
     backbeat, the hands). The answer bar and the phrase's last bar answer
     on their last beat: the hands there move around the toms
-    (a tom pair where the hands rest), unless a fill already answers."""
+    (a tom pair where the hands rest), unless a fill already answers. A bar
+    the drummer arranged itself (``arranged`` spans: a fill, a build, an
+    into-chorus device) plays as arranged, with no answer layered on it."""
     voices = [v for _, v, _ in dna.fills["big"].hits if v.startswith("tom")]
     answer = tuple(dict.fromkeys(voices)) or ("tom_high", "tom_low")
     window = 1.0
+    arranged_bars = {b for b in range(bars) if any(
+        s < (b + 1) * bpb - 1e-6 and e > b * bpb + 1e-6 for s, e in arranged)}
     out = []
     for h in hits:
         bar = int(h.beat // bpb)
@@ -1167,7 +1218,7 @@ def solo_development(hits, dna, bars, bpb, closing):
         voice, kind = h.voice, h.kind
         pos = h.beat - bar * bpb
         if phase in (1, 3) and pos >= bpb - window - 1e-6 and h.kind in _HAND_KINDS \
-                and h.voice != "hat_pedal":
+                and h.voice != "hat_pedal" and bar not in arranged_bars:
             voice = answer[(int((pos - (bpb - window)) * 4) + bar // 4) % len(answer)]
             kind = "solo_answer"
         gain = (0.82, 0.9, 1.04, 0.94)[phase]
@@ -1175,7 +1226,7 @@ def solo_development(hits, dna, bars, bpb, closing):
     # An answer bar whose last beat had no hands (quarter-note or pedal
     # timekeepers) still answers: two sixteenths down the toms.
     for bar in (b for b in range(bars) if b % 4 in (1, 3)):
-        if closing and bar == bars - 1:
+        if closing and bar == bars - 1 or bar in arranged_bars:
             continue
         end = (bar + 1) * bpb
         if any(end - window - 1e-6 <= h.beat < end and h.kind in ("solo_answer", "fill")

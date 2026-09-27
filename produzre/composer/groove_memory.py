@@ -187,13 +187,19 @@ def apply_groove_memory(
     cycle_override: Any = None,
     intensity: Optional[float] = None,
     register: Optional[Tuple[int, int]] = None,
+    intent: Optional[str] = None,
 ) -> Tuple[List[Any], Dict[str, Any]]:
     """Restate groove bars in ``events`` (this section's new events).
 
     Returns (new_events, report). Events are NoteEvent-like objects with
     start_beat / duration_beats / pitch / velocity / kind. ``register``
     bounds restated pitches (the part's own range; bass default 24-64).
+    ``intent`` is the section's feel (drop, half_time, build...): a groove
+    is recalled only by a section with the same intent (or none), so a drop
+    never becomes a half-time bridge's groove.
     """
+    if memory_key is not None:
+        memory_key = tuple(memory_key) + (str(intent or "").strip().lower(),)
     report: Dict[str, Any] = {"applied": False}
     if bars < 3 or beats_per_bar <= 0 or not events:
         return events, report

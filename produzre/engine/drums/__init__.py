@@ -131,6 +131,32 @@ def _ghost_placements_to_steps(
     return out
 
 
+def _one_event_per_pitch(events: list) -> list:
+    """One hit per kit piece per step, the stronger one kept (a fill's snare
+    on a pickup snare, an entry kick on the groove's kick, an accent on the
+    ride the hand is riding). A drum cannot sound twice at once. Hits closer
+    than ``_SAME_STEP`` beats (a pickup's hand jitter) share a step; a flam's
+    grace note (0.06 before) is its own stroke."""
+    order = sorted(range(len(events)), key=lambda i: (int(events[i].pitch), float(events[i].beat), i))
+    drop: set = set()
+    held = None
+    for i in order:
+        ev = events[i]
+        if held is not None and int(events[held].pitch) == int(ev.pitch) \
+                and float(ev.beat) - float(events[held].beat) < _SAME_STEP:
+            if ev.velocity > events[held].velocity:
+                drop.add(held)
+                held = i
+            else:
+                drop.add(i)
+            continue
+        held = i
+    return [ev for i, ev in enumerate(events) if i not in drop] if drop else events
+
+
+_SAME_STEP = 0.02
+
+
 def contribute_plan(*args: Any, **kwargs: Any) -> None:
     """Export rhythm.grid and rhythm.accents to the PerformancePlan (Phase N6).
 
@@ -658,7 +684,11 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     hats_density_raw = hats_voice_params_m.get("density", None)
     hats_density = None if hats_density_raw is None else float(hats_density_raw)
 
-    hats_open_rate_raw = hats_voice_params_m.get("open_rate", hats_voice_params_m.get("open_hat_rate", (_recipe_groove or {}).get("open_hat_rate")))
+    # The user's own open-hat rate (voices.hats); a recipe's rate is a genre
+    # default that an intent's feel (drop, stomp: closed hats only) replaces.
+    hats_open_rate_user = hats_voice_params_m.get("open_rate", hats_voice_params_m.get("open_hat_rate"))
+    hats_open_rate_raw = hats_open_rate_user if hats_open_rate_user is not None else \
+        (_recipe_groove or {}).get("open_hat_rate")
     hats_open_rate = None if hats_open_rate_raw is None else float(hats_open_rate_raw)
 
     hats_pedal_rate_raw = hats_voice_params_m.get("pedal_rate", None)
@@ -1047,7 +1077,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         # Reduce hat density (only when not explicitly set by user config)
         if hats_density_raw is None:
             hats_density = 0.5  # Sparse hats
-        if hats_open_rate_raw is None:
+        if hats_open_rate_user is None:
             hats_open_rate = 0.0  # No open hats
     elif section_intent == "half_time":
         # Half-time: lone snare at the bar midpoint (beat 3 in 4/4), slower feel.
@@ -1071,7 +1101,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         template_updates["use_ride"] = False  # Closed hats only
         if hats_density_raw is None:
             hats_density = 1.0  # Steady hats for stomp pulse
-        if hats_open_rate_raw is None:
+        if hats_open_rate_user is None:
             hats_open_rate = 0.0  # No open hats
         # Increase snare velocity for powerful backbeat (will use base_velocity boost)
         base_velocity = max(base_velocity, 80)
@@ -1461,6 +1491,12 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
             for h in _composed
             if 0.0 <= float(h["beat"]) < total_beats
         ]
+        # The drummer's fills, builds and devices are that boundary's
+        # transition: the transition pass leaves them as written.
+        if timeline is not None and hasattr(timeline, "device_windows"):
+            timeline.device_windows.extend(
+                (section_start_beat + float(a), section_start_beat + float(b))
+                for a, b in (_composed_plan.get(f"composer.drums_windows.{section_id}") or ()))
     elif _composed_plan is not None and hasattr(_composed_plan, "get") and \
             _composed_plan.get(f"composer.drums_handoff.{section_id}"):
         # A section the composed drummer hands to the engine (`intent`)
@@ -1525,6 +1561,7 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
 
     from ...composer.song import section_groups
 
+    events = _one_event_per_pitch(events)
     notes = humanize_events(
         events=events,
         section_start_beat=section_start_beat,

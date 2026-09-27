@@ -1101,6 +1101,7 @@ def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timel
         cycle_override=params.get("groove_cycle_bars"),
         intensity=_as_float(getattr(inst_cfg, "intensity", None), getattr(sec, "intensity", None)),
         register=_bass_register_bounds(sec, params) if inst_name == "bass" else None,
+        intent=getattr(sec, "intent", None) or (getattr(sec, "extras", None) or {}).get("intent"),
     )
     if report.get("applied"):
         timeline.events[events_before:] = replaced
@@ -1690,6 +1691,7 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
         return
     performance_plan.data.pop(f"composer.drums.{sec.id}", None)
     performance_plan.data.pop(f"composer.drums_handoff.{sec.id}", None)
+    performance_plan.data.pop(f"composer.drums_windows.{sec.id}", None)
     composer = performance_plan.get("composer.song")
     if composer is None:
         return
@@ -1747,6 +1749,7 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
     from ..composer.arrangement import riff_alone_intro
 
     arrangement = riff_alone_intro(composer.arrangement_dna(), active)
+    windows: list = []
     hits = plan_drum_section(
         dna, arrangement, section_type=str(getattr(sec, "type", "") or ""),
         bars=bars, beats_per_bar=bpb, occurrence=occurrence,
@@ -1756,6 +1759,7 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
         groups=groups,
         solo=active == {"drums"},
         fills_enabled=_as_float(feel.get("fill_rate")) != 0.0,
+        windows=windows,
     )
     # The song's feel reaches the whole band through the groove clock, unless
     # the drums or the song's `groove:` block already set one.
@@ -1777,6 +1781,8 @@ def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_pl
         performance_plan.set(f"composer.drums.{sec.id}", [
             {"beat": h.beat, "voice": h.voice, "vel": h.vel, "kind": h.kind, "dur": h.dur}
             for h in hits])
+        # Fills, builds and devices: the drummer's own transitions.
+        performance_plan.set(f"composer.drums_windows.{sec.id}", windows)
         groove = dna.grooves.get(str(getattr(sec, "type", "") or "").lower())
         logger.info("Composer: %s drums play %s", sec.id, "/".join(groove) if groove else "verse groove")
 
