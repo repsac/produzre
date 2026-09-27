@@ -60,7 +60,7 @@ engine controls. Avoid splitting the same control across both forms.
 | `meter` | "numerator/denominator" | `4/4` | Time signature. Write it as a quoted string, such as `"4/4"`. |
 | `beats_per_bar` | Positive quarter-note count | Derived from `meter` | Legacy quarter-note bar length override. Normally omit it. |
 | `genre` | Recipe family name | Unset | Selects matching recipes where available. |
-| `project` | Project name | Local default project | Project seed to combine with `seed`. |
+| `project` | Project name | Local default project | Project seed to combine with `seed`. The built-in `produzre-examples` project has the same seed everywhere. |
 | `seed` | Integer | 0 | Integer seed for song material and performance. |
 | `take` | Integer | 0 | Performance version; preserves the theme bank, the song's stored recurring musical ideas. |
 | `variation` | Nonnegative; start at 0-1 | 0 | Bias toward different performance choices; its effect depends on the engine. |

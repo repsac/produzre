@@ -165,3 +165,14 @@ def test_a_lead_section_genre_draws_that_genres_licks(tmp_path):
     assert own is not composer.dna and "genre:reggae" in own.signature
     assert own.hook is composer.dna.hook          # the song's hook stays the song's
     assert composer.part_dna(None, composer.genre) is composer.dna
+
+
+def test_builtin_examples_project_builds_the_same_everywhere():
+    from produzre.config.registry import BUILTIN_PROJECTS, resolve_project_seed
+
+    seed = BUILTIN_PROJECTS["produzre-examples"]
+    for reg in ({}, {"default_project": "mine", "projects": {"mine": {"seed": 7}}},
+                {"projects": {"produzre-examples": {"seed": 99}}}):
+        assert resolve_project_seed(reg, "produzre-examples") == ("produzre-examples", seed)
+    assert resolve_project_seed({"default_project": "mine", "projects": {"mine": {"seed": 7}}},
+                                None) == ("mine", 7)

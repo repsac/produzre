@@ -80,6 +80,10 @@ python produzre_entry.py project import my-song-project.yml
 Select `song.project: my-song` on both machines; the
 [README](README.md#seeds-and-projects) explains import options and registry locations.
 
+The built-in project `produzre-examples` needs no import: it has the same
+seed on every installation. The repository's examples use it, so a build of
+any example matches what its header describes.
+
 ## Verify a build
 
 ```bash

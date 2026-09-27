@@ -4,9 +4,26 @@ Rewriting the examples meant writing about 90 new configs against the
 current app: 31 genre songs, 12 songs, 12 solo pieces, and the rewritten
 instrument demos. The agents writing them reported the bugs and limits
 below. Several were found independently by more than one writer. They are
-deduplicated here and ranked by how much they limit real songs. None were
-fixed in the examples pass; where an example works around one, its header
-says so.
+deduplicated here and ranked by how much they limit real songs.
+
+## Resolution
+
+Every finding below is fixed, each with property tests (1060 passing), and
+the examples no longer work around any of them.
+
+| Findings | Fix | Commit |
+|---|---|---|
+| 1, 2, 3, 4, 10, 12, 14, 15 (drum knobs), 27 | Composed drum dynamics, compound-meter drummer and swing, jazz and dance players, audible builds, bridge-start keeps its first bar, solo backbeat kept, density knobs in every section, protected ride bell | `114885d` |
+| 5, 6, 9, 11, 19, 20, 21, 22 | Walking lines, no silent bars or thinning choruses, bass plays into-chorus devices and endings, one riff-alone intro rule, enforced registers, root on beat 1, authored motif ownership, articulation on composed roles | `5806bf3` |
+| 7, 8 (chorus_form), 15 (bend_rate), 16, 17, 18, 26 | Lead register forms, chorus_form under auto, bend_rate range, lead seeds, authored final-chorus lift, dense and developing solos, country fills, arpeggiator guide, extensions and dynamics | `eb52dec` |
+| 8 (engines block, section persona, unknown params), 13, 23, 24, 25, 28 | `engines:` block, section personas, unknown-key warnings, walks only into chord changes, capo and barre ranges, sustain_duration, corrected docs | `21893b1` |
+| 8 (section and instrument genre) | A part's own genre chooses its composed player | `2cd2a73` |
+
+Found while fixing and also fixed: the drum engine always played the tight
+persona, and unknown song and section keys were silent (`65cd51e`); drums
+and comp disagreed on which sections play the into-chorus device, and
+transition pickups ignored the instrument's register, the incoming key and
+the meter, and were added into silence (`a26bf19`).
 
 ## High impact
 
@@ -115,10 +132,11 @@ says so.
     the legacy path; the Composed comping section and the code say they
     shape composed comping.
 
-## Reproducibility note
+## Reproducibility
 
-Composed parts combine the song seed with a random per-user project seed
-(`registry.py`), so a header's description of a drummer, picking figure or
-lick bank holds for the machine that wrote it. There is no pin for drum
-hand voices or the lead lick bank, so examples pin what they depend on
-through `song.arrangement_style` and feel knobs and describe only that.
+Composed parts combine the song seed with a per-user project seed, so an
+example header describing a drummer, picking figure or lick bank held only
+on the machine that wrote it. Fixed with a built-in project,
+`produzre-examples`, whose seed is the same on every installation; every
+example sets `song.project: produzre-examples`, so its header describes
+what every user hears.

@@ -150,6 +150,13 @@ def ensure_default_project(reg: Dict[str, Any]) -> Dict[str, Any]:
     return reg
 
 
+# Built-in projects every installation shares, so a file that names one
+# builds the same everywhere without a registry entry. The repository's
+# examples use `song.project: produzre-examples`, which makes their header
+# comments describe what every user hears.
+BUILTIN_PROJECTS: Dict[str, int] = {"produzre-examples": 20260926}
+
+
 def resolve_project_seed(reg: Dict[str, Any], requested: Optional[str]) -> Tuple[str, int]:
     """Resolve a project name to a numeric seed.
 
@@ -181,6 +188,8 @@ def resolve_project_seed(reg: Dict[str, Any], requested: Optional[str]) -> Tuple
         return pname, seed
 
     pname = str(requested)
+    if pname in BUILTIN_PROJECTS:
+        return pname, BUILTIN_PROJECTS[pname]
     if pname not in projects:
         raise ConfigError(
             f"Unknown project '{pname}'.\n"
