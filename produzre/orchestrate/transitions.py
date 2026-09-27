@@ -122,11 +122,23 @@ class GrooveCues:
     snare_beats: set[float] = field(default_factory=set)
 
 
+# Percussive articulations in pitched parts: dead-note chucks, ghosted and
+# body-tap hits are always soft by design, so they say nothing about how
+# loud the part is playing.
+_PERCUSSIVE_KIND_TOKENS = ("chuck", "dead", "ghost", "body_tap")
+
+
+def _is_percussive_kind(kind: Any) -> bool:
+    k = str(kind or "").lower()
+    return any(t in k for t in _PERCUSSIVE_KIND_TOKENS)
+
+
 def compute_energy_profile(
     events: List[Any],
     beats_total: float,
     meter: str,
     logger: Optional[logging.Logger] = None,
+    chordal: bool = False,
 ) -> EnergyProfile:
     """Compute energy profile from a list of MIDI events.
 
@@ -139,11 +151,18 @@ def compute_energy_profile(
     - Register center: mean pitch (MIDI note number)
     - Syncopation: fraction of notes not on integer beats
 
+    With ``chordal`` (pitched parts), density counts gestures rather than
+    notes: a strummed chord is one attack, not six, so a bar of chord stabs
+    and a bar of single notes at the same rhythm measure alike. The average
+    velocity then leaves out percussive articulations (chucks, dead notes,
+    ghosts, body taps). Drums count every hit.
+
     Args:
         events: List of MIDI events (NoteEvent or similar with start_beat, pitch, velocity).
         beats_total: Total length of the section in beats.
         meter: Meter string (e.g., "4/4").
         logger: Optional logger for debug output.
+        chordal: Measure a pitched part by gestures (see above).
 
     Returns:
         EnergyProfile: Computed energy metrics.
@@ -162,11 +181,24 @@ def compute_energy_profile(
             articulation=0.0,
         )
 
-    # Density: notes per beat
-    density = len(events) / beats_total
+    # Density: notes per beat (gestures per beat for a chordal part: notes
+    # attacked within a strum's spread of each other are one gesture)
+    if chordal:
+        starts = sorted(float(getattr(ev, 'start_beat', 0.0)) for ev in events)
+        gestures = 0
+        last = None
+        for t in starts:
+            if last is None or t - last > 0.06:
+                gestures += 1
+                last = t
+        density = gestures / beats_total
+    else:
+        density = len(events) / beats_total
 
-    # Average velocity
-    velocities = [getattr(ev, 'velocity', 64) for ev in events]
+    # Average velocity (a chordal part's played dynamics, not its chucks)
+    dynamic = [ev for ev in events if not _is_percussive_kind(getattr(ev, 'kind', None))] \
+        if chordal else events
+    velocities = [getattr(ev, 'velocity', 64) for ev in (dynamic or events)]
     avg_velocity = sum(velocities) / len(velocities) if velocities else 64.0
 
     # Register center: average pitch
@@ -1453,6 +1485,7 @@ def evaluate_transitions(
                 tail_end - tail_start,
                 getattr(section_a_cfg, 'meter', '4/4'),
                 logger if debug else None,
+                chordal=inst_name != "drums",
             )
 
             profile_b = compute_energy_profile(
@@ -1460,6 +1493,7 @@ def evaluate_transitions(
                 head_end - head_start,
                 getattr(section_b_cfg, 'meter', '4/4'),
                 logger if debug else None,
+                chordal=inst_name != "drums",
             )
 
             # Choose transition recipe

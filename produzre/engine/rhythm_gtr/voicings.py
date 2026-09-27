@@ -395,6 +395,27 @@ def choose_voicing(
     return _resolved_to_chord_shape(rv, root_midi, numeral, voicing_name)
 
 
+def home_voicing(root_midi: int, numeral: str) -> ChordShape:
+    """The hand's home position: the tonic chord at its lowest position.
+
+    A section's first chord has no previous chord to lead from, and a
+    movable shape then sits wherever its root's octave puts it (a bVI in a
+    minor key lands around fret 13). Leading the first chord from this
+    reference instead places it the way the rest of the section is placed,
+    each chord near the one before it, starting from home.
+    """
+    rv = select_voicing(
+        root_midi=root_midi,
+        quality=_parse_quality(numeral),
+        profile=_PROFILE,
+        capo=0,
+        prev_voicing=None,
+        prefer_open=True,
+        lowest_position=True,
+    )
+    return _resolved_to_chord_shape(rv, root_midi, numeral, rv.shape_name)
+
+
 def choose_voicing_for_section_type(
     root_midi: int,
     numeral: str,

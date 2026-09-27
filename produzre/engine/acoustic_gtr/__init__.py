@@ -282,6 +282,10 @@ def render_into_timeline(
     bpb = params.beats_per_bar
     section_bars = max(1, getattr(section, "bars", 4) or 4)
     total_beats = float(bpb * section_bars)
+    if params.capo and hasattr(timeline, "capo_windows"):
+        # Tab exports show this section's frets relative to the capo.
+        timeline.capo_windows.append((section_start_beat, section_start_beat + total_beats,
+                                      int(params.capo)))
 
     logger.debug(
         "acoustic_gtr: section='%s' technique='%s' pattern='%s' bars=%d density=%.2f vel=%d",

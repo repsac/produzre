@@ -382,7 +382,7 @@ engine fallbacks. A recipe can replace them. Rates are probabilities in 0-1.
 | `rhythm_pattern` | `anchor`, `push`, `drive`, `syncopated`, `rock_riff`, `funk_16ths`, `walking` | persona | Choose the bass attack pattern. Tight: `anchor`; walking persona: `walking`. |
 | `articulation_style` | `finger`, `pick`, `slap`, `mute` | persona | Change attack, length, and pattern bias. Tight: `finger`. |
 | `register_low`, `register_high` | MIDI pitches 0-127 | persona | Inclusive MIDI pitch limits for every bass note, composed roles, riff doubles and groove-memory restatements included. Your values win over a recipe's, a recipe's over the persona's. Tight: 28, 52. |
-| `approach_rate`, `chromatic_rate` | 0-1 each | persona | Approach-note probability and chromatic choice. Approaches occur before chord changes. Tight: 0, 0. |
+| `approach_rate`, `chromatic_rate` | 0-1 each | persona | Approach-note probability and chromatic choice. Approaches occur before chord changes, and the chord change after one lands on the root it stepped toward (never a fifth drop, pedal or octave jump), so a chromatic approach sounds a half step from the next note. Tight: 0, 0. |
 | `max_passing_per_bar` | Integer >= 0 | persona | Passing-note limit per bar. Tight: 0. |
 | `root_bias` | 0-1 | 0.65 engine fallback | Chance of including the root among interior chord-tone candidates. |
 | `octave_jump_rate`, `fifth_jump_rate`, `pedal_rate` | 0-1 each | persona | Octave changes, fifths at chord changes, and held pitch across chords. Tight: 0, 0, 0. |
@@ -420,7 +420,10 @@ planned a bar at a time. Every beat sounds (dotted quarters in 6/8, 9/8 and
 12/8), so every bar has its downbeat in any meter. Each chord starts on its
 root; a chord held into a new bar starts that bar on another chord tone. The
 last beat before each change steps into the next downbeat by a half step or a
-scale step; `chromatic_rate` is the share of half-step approaches. The inner
+scale step; `chromatic_rate` is the share of half-step approaches. A
+section's last bar steps into the next section's first chord (the key's
+tonic when nothing follows), aimed at the pitch that section's walk opens
+on. The inner
 beats connect the two with chord tones on the strong beats, and the root
 sounds only on the downbeat. `register_low` and `register_high` bound the
 line. `density`, `rest_rate`, the drum locks, octave jumps, fifth drops,
@@ -569,7 +572,10 @@ and gallops. It arranges them so the verse, chorus, and bridge contrast.
 Phrases walk up into the next phrase's chord, and the bar before a chorus
 is stop-time. A walk only ever leads into a chord change: where the chord
 holds, a riff's walking note becomes part of the previous gesture and a
-phrase-end walk-up becomes root and fifth. The approach note is chromatic
+phrase-end walk-up becomes root and fifth. A section's first chord is
+voiced as if the hand came from home (the tonic at its lowest position),
+the way every later chord is voiced near the one before it, so a section
+never opens an octave above the rest of its chords. The approach note is chromatic
 unless it would rub a semitone against the chord it is played over; then
 it is the scale tone below the target (B C into D over A minor, not C#).
 Settings that choose a different part keep your choice: `style`,
@@ -743,7 +749,10 @@ guide while thumb notes and chord shapes remain playable. Barre shapes sit at
 their lowest position above the capo (B as an A-form at fret 2), and a
 picked melody reaches at most nine semitones above the shape and never
 above A5 unless a high capo puts the shape itself there. Each string stops
-before its next picked note. Body taps use short low MIDI notes.
+before its next picked note. Body taps use short low MIDI notes at a
+fixed pitch (E2); groove memory restates them without moving that pitch.
+With a capo, the `tab` view writes frets relative to the capo and names
+it (`CAPO: fret 2`), so the tab shows the shapes as they are fingered.
 
 ## Arpeggiator controls
 
@@ -915,7 +924,11 @@ engine's own fill, turnaround, or variation. Funk, reggae, Latin, soul, R&B,
 hip-hop, disco, and ska use a two-bar groove.
 
 Restated notes follow the chords and keep their role: a third stays a third,
-and approach notes aim at the next chord. A restated bass bar starts on the
+and approach notes aim at the next chord. A chromatic approach keeps its
+half step: it is retargeted chromatically to the restated bar's next chord,
+in the octave beside the note that chord is played on (a bass line that
+opens the next bar elsewhere resolves to that root instead). Unpitched
+gestures such as acoustic body taps keep their pitch. A restated bass bar starts on the
 root, unless the engine drew a fifth drop (`fifth_jump_rate`) for that bar.
 Restated pitches stay inside the bass register. Bars the engine left silent
 stay silent. A returning section type brings back its groove at the new
@@ -943,6 +956,12 @@ Include every setting you want to keep.
 | `turnaround_rate` | 0-1 | 0.25 | Set the chance of a planned turnaround. |
 | `bridge_start_bars` | 0-2 bars | 1 | Bridge introduction length in the bridge's meter, clamped to 0-2 bars. The composed drummer's bar keeps every hit; engine drums thin only hand timekeeping, never the kick, backbeat or crash. |
 | `debug` | Boolean | false | Detailed transition logging. |
+
+Transition planning compares the energy of a section's last bar with the
+next section's first. For pitched parts, a strummed chord counts as one
+attack and dead-note chucks, ghosts and body taps do not count toward the
+part's loudness, so a chorus of chord stabs after a verse of chucks is not
+mistaken for a drop and softened. Drums count every hit.
 
 Drum `pickup_rate` and `downbeat_rate` are separate performance controls.
 Energy rises favor longer pickups; drops leave more space. Fills are built
@@ -977,7 +996,8 @@ exports:
 ```
 
 `events` writes TSV note data, `grid` writes a text piano roll, and `tab` writes
-available guitar tablature. `subdiv` is display steps per bar, commonly 8, 12,
+available guitar tablature. A capoed part is tabbed relative to its capo,
+with a `CAPO` line (per bar when sections use different capos). `subdiv` is display steps per bar, commonly 8, 12,
 16, or 32; it does not change performance timing. Sixteen display steps mean
 sixteenth notes only in 4/4. Pattern controls live under `song`.
 

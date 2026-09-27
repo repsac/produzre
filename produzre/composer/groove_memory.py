@@ -37,6 +37,9 @@ GROOVE_INSTRUMENTS = ("drums", "bass", "rhythm_gtr", "acoustic_gtr")
 _PROTECTED_TOKENS = ("fill", "pickup", "turnaround", "cadence", "crash", "transition",
                      "tom", "cymbal", "splash", "china", "stop", "hit", "accent_hit", "bell")
 _APPROACH_TOKENS = ("approach", "passing", "chromatic", "walk")
+# Unpitched gestures in a pitched part: a body tap (acoustic_gtr) sounds a
+# fixed dead-note pitch, so restating it chord-relatively would "play" it.
+_UNPITCHED_TOKENS = ("body_tap", "body_hit", "unpitched")
 
 # Genres whose grooves are two-bar phrases (clave, one-drop, funk answers).
 _TWO_BAR_GENRES = ("funk", "reggae", "latin", "bossa", "hip_hop", "rnb", "soul", "disco",
@@ -51,6 +54,11 @@ def _protected(kind: Optional[str]) -> bool:
 def _is_approach(kind: Optional[str]) -> bool:
     k = str(kind or "").lower()
     return any(t in k for t in _APPROACH_TOKENS)
+
+
+def _is_unpitched(kind: Optional[str]) -> bool:
+    k = str(kind or "").lower()
+    return any(t in k for t in _UNPITCHED_TOKENS)
 
 
 def groove_cycle(genre: str, override: Any = None) -> int:
@@ -129,8 +137,14 @@ def _nearest_delta(a: int, b: int) -> int:
 
 
 def map_pitch(pitch: int, src_chord, dst_chord, scale: Sequence[int],
-              lo: int = 0, hi: int = 127) -> int:
-    """Carry a pitch from one chord to another, keeping its chord role."""
+              lo: int = 0, hi: int = 127, chromatic: bool = False) -> int:
+    """Carry a pitch from one chord to another, keeping its chord role.
+
+    ``chromatic`` marks a deliberate chromatic approach (measured against
+    the chord it resolves into): it keeps its semitone distance to the new
+    chord's root instead of snapping onto the scale, so a half step below
+    the target stays a half step below the new target.
+    """
     if src_chord is None or dst_chord is None or src_chord.numeral == dst_chord.numeral:
         return pitch
     delta = _nearest_delta(src_chord.root_pc, dst_chord.root_pc)
@@ -138,7 +152,9 @@ def map_pitch(pitch: int, src_chord, dst_chord, scale: Sequence[int],
     rel = (pitch - src_chord.root_pc) % 12
     src_iv = [(pc - src_chord.root_pc) % 12 for pc in src_chord.pcs]
     dst_iv = [(pc - dst_chord.root_pc) % 12 for pc in dst_chord.pcs]
-    if rel in src_iv:
+    if chromatic:
+        pass  # root-relative transposition already keeps the half step
+    elif rel in src_iv:
         k = src_iv.index(rel)
         if k < len(dst_iv):
             target_pc = (dst_chord.root_pc + dst_iv[k]) % 12
@@ -216,6 +232,16 @@ def apply_groove_memory(
     pitched = instrument != "drums"
     eps = 1e-6
 
+    def resolution_beat(bar_idx: int, off: float) -> float:
+        """Where an approach note resolves: the next chord change after it
+        within its bar (a mid-bar change), else the next bar line."""
+        onset = bar_idx * beats_per_bar + off
+        end = (bar_idx + 1) * beats_per_bar
+        for sp in (chords.spans if chords is not None else ()):
+            if onset + eps < sp.start < end - eps:
+                return sp.start
+        return end
+
     def bar_of(ev) -> int:
         local = float(ev.start_beat) - section_start
         # Nearest-step bar membership: an anticipated downbeat belongs to
@@ -261,16 +287,23 @@ def apply_groove_memory(
     def spec(ev, bar_idx: int) -> Dict[str, Any]:
         bar_start = section_start + bar_idx * beats_per_bar
         off = float(ev.start_beat) - bar_start
-        ref = bar_idx * beats_per_bar + (beats_per_bar if _is_approach(ev.kind) else max(0.0, off))
+        ref = (resolution_beat(bar_idx, off) if _is_approach(ev.kind)
+               else bar_idx * beats_per_bar + max(0.0, off))
         chord = chords.at(min(ref, chords.total - eps)) if chords is not None else None
         # A groove bar's bass downbeat is the root (beat-1 tie-break): a fifth
         # or third on one is the engine's variation, kept in phrase-end bars
         # but never restated into every bar.
         anchor = instrument == "bass" and abs(off) < 0.06 and not _is_approach(ev.kind)
+        approach = _is_approach(ev.kind)
+        # A chromatic approach: tagged so, or an approach note outside the
+        # key (the engine chose a half step, not a scale step).
+        chromatic = approach and ("chromatic" in str(ev.kind or "").lower()
+                                  or int(ev.pitch) % 12 not in scale)
         return {"off": off, "dur": float(ev.duration_beats), "pitch": int(ev.pitch),
                 "vel": int(ev.velocity), "kind": ev.kind, "channel": ev.channel,
                 "expression": getattr(ev, "expression", None), "chord": chord,
-                "approach": _is_approach(ev.kind), "anchor": anchor}
+                "approach": approach, "chromatic": chromatic,
+                "unpitched": _is_unpitched(ev.kind), "anchor": anchor}
 
     stored = memory.get(memory_key) if memory is not None and memory_key is not None else None
     if stored is not None and stored.get("bpb") != beats_per_bar:
@@ -301,7 +334,8 @@ def apply_groove_memory(
             # Recalled in a new key (final-chorus modulation): move with it.
             # Move the source chords too, so chord-relative mapping measures
             # from the new key instead of undoing the shift.
-            source_specs = {k: [dict(sp, pitch=sp["pitch"] + key_shift,
+            # Unpitched gestures (body taps) keep their fixed pitch.
+            source_specs = {k: [dict(sp, pitch=sp["pitch"] + (0 if sp.get("unpitched") else key_shift),
                                      chord=_shift_chord(sp["chord"], key_shift)) for sp in v]
                             for k, v in source_specs.items()}
         # Keep this occurrence's dynamics (e.g., a louder last chorus).
@@ -348,14 +382,17 @@ def apply_groove_memory(
                 continue
             pitch = s["pitch"]
             kind = s["kind"]
-            if pitched and chords is not None and s["chord"] is not None:
-                ref = b * beats_per_bar + (beats_per_bar if s["approach"] else max(0.0, s["off"]))
+            if pitched and chords is not None and s["chord"] is not None \
+                    and not s.get("unpitched"):
+                ref = (resolution_beat(b, s["off"]) if s["approach"]
+                       else b * beats_per_bar + max(0.0, s["off"]))
                 dst = chords.at(min(ref, chords.total - eps))
                 # An explicit register wins; the acoustic's picked melody
                 # tops out at A5 (composer/acoustic.py).
                 lo, hi = register or {"bass": (24, 64), "acoustic_gtr": (40, 81)}.get(
                     instrument, (36, 96))
-                pitch = map_pitch(pitch, s["chord"], dst, scale, lo, hi)
+                pitch = map_pitch(pitch, s["chord"], dst, scale, lo, hi,
+                                  chromatic=bool(s.get("chromatic")))
                 if s.get("anchor") and dst is not None:
                     # The downbeat is the root (the beat-1 tie-break): a fifth
                     # or third on one in the source bar is that bar's
@@ -386,6 +423,55 @@ def apply_groove_memory(
             out.append(new)
             restated += 1
         out.extend(kept)
+    # A chromatic approach sits a half step from the note it resolves into
+    # (the next chord, as actually played after restatement), not an octave
+    # away from it: a restated approach, and an approach the engine kept in
+    # a phrase-end bar that resolves into a restated bar. When the note that
+    # follows is not a half step away (the next bar opens on a fifth drop, a
+    # third), a bass line resolves it to the root it stepped toward, the
+    # rule the bass engine plays by.
+    if pitched and chords is not None and restated:
+        lo, hi = register or {"bass": (24, 64), "acoustic_gtr": (40, 81)}.get(instrument, (36, 96))
+        for i, ap in enumerate(out):
+            if not _is_approach(ap.kind) or not ("chromatic" in str(ap.kind or "").lower()
+                                                  or int(ap.pitch) % 12 not in scale):
+                continue
+            b = bar_of(ap)
+            if not 0 <= b < bars:
+                continue
+            res = section_start + resolution_beat(b, float(ap.start_beat) - section_start
+                                                  - b * beats_per_bar)
+            later = [e for e in out if e is not ap and not _is_approach(getattr(e, "kind", None))
+                     and float(ap.start_beat) + 0.06 < float(e.start_beat) < res + 1.0]
+            if not later:
+                continue
+            first = min(float(e.start_beat) for e in later)
+            if first < res - 0.08:
+                continue  # the line moves on before the change: nothing to resolve
+            nxt = [e for e in later if abs(float(e.start_beat) - first) < 0.06]
+            cands = [int(e.pitch) for e in nxt if (int(e.pitch) - int(ap.pitch)) % 12 in (1, 11)]
+            if cands:
+                target = min(cands, key=lambda p: (abs(p - int(ap.pitch)), p))
+                new_pitch = target - 1 if (target - int(ap.pitch)) % 12 == 1 else target + 1
+                if lo <= new_pitch <= hi and new_pitch != ap.pitch:
+                    out[i] = replace(ap, pitch=new_pitch)
+                continue
+            dst = chords.at(min(res - section_start, chords.total - eps))
+            low = min(nxt, key=lambda e: e.pitch)
+            if instrument != "bass" or dst is None or _protected(getattr(low, "kind", None)):
+                continue
+            side = {1: -1, 11: 1}.get((dst.root_pc - int(ap.pitch)) % 12)
+            if side is None:
+                continue  # not a half step from the new root: nothing to resolve to
+            # The root nearest the note the bar opens on, with the approach a
+            # half step beside it, both inside the register.
+            roots = [p for p in range(lo, hi + 1)
+                     if p % 12 == dst.root_pc and lo <= p + side <= hi]
+            if roots:
+                root = min(roots, key=lambda p: (abs(p - int(low.pitch)), p))
+                k = next(j for j, e in enumerate(out) if e is low)
+                out[k] = replace(low, pitch=root, kind="root")
+                out[i] = replace(ap, pitch=root + side)
     # Pitched parts: identical onset + pitch duplicates collapse.
     if pitched:
         seen = set()
