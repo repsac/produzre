@@ -125,8 +125,9 @@ def test_waltz_transition_cannot_add_an_extra_bass_pickup(tmp_path):
     events = timelines['bass'].events
     assert events
     # Only the composed part plays: beat 1, plus the player's walks on 2
-    # and 3 into a chord change. No transition pickup lands between beats.
-    assert all(e.kind.startswith('bass_') for e in events)
+    # and 3 into a chord change, and the band's ending hit on the last
+    # downbeat. No transition pickup lands between beats.
+    assert all(e.kind.startswith(('bass_', 'ending_')) for e in events)
     assert all(min(e.start_beat % 1, 1-e.start_beat % 1) < .08 for e in events)
     walks = [e for e in events if min(e.start_beat % 3, 3-e.start_beat % 3) >= .08]
     beats = Counter(round(e.start_beat) % 3 for e in walks)

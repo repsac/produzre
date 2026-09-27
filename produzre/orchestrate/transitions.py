@@ -914,6 +914,13 @@ def apply_transition_plan(
     if recipe.kind == "none":
         return
 
+    # A band device (stop-time, a drop, a push into the chorus) is this
+    # boundary's transition: the bar stays as the arrangement wrote it.
+    tail = plan.edit_windows.get("tail")
+    if tail and any(s < tail[1] - 1e-6 and e > tail[0] + 1e-6
+                    for s, e in getattr(timeline, "device_windows", ()) or ()):
+        return
+
     if instrument_name == "bass" and recipe.kind in ("pickup", "turnaround") and not (
             plan.metadata.get("harmony", {}).get("allow_turnaround", True)):
         return
@@ -1155,13 +1162,16 @@ def apply_transition_plan(
         turnaround_start = max(tail_start, tail_end - 2.0)
         turnaround_end = tail_end
 
-        # Get events that conflict with turnaround
-        conflicting_events = timeline.get_events_in_range(turnaround_start, turnaround_end)
+        # Get events that conflict with turnaround. A note the groove clock
+        # played a hair early (pocket, push) still belongs to the window;
+        # cutting it at the window start would leave a click.
+        conflicting_events = timeline.get_events_in_range(turnaround_start - 0.06, turnaround_end)
         conflicting_event_ids = {id(ev) for ev in conflicting_events}
 
         # A held note starting before the edit window must release too.
         for ev in timeline.events:
-            if ev.start_beat < turnaround_start < ev.start_beat + ev.duration_beats:
+            if id(ev) not in conflicting_event_ids and \
+                    ev.start_beat < turnaround_start < ev.start_beat + ev.duration_beats:
                 ev.duration_beats = turnaround_start - ev.start_beat
 
         # Remove conflicting events

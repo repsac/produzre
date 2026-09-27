@@ -186,11 +186,13 @@ def apply_groove_memory(
     seed: int,
     cycle_override: Any = None,
     intensity: Optional[float] = None,
+    register: Optional[Tuple[int, int]] = None,
 ) -> Tuple[List[Any], Dict[str, Any]]:
     """Restate groove bars in ``events`` (this section's new events).
 
     Returns (new_events, report). Events are NoteEvent-like objects with
-    start_beat / duration_beats / pitch / velocity / kind.
+    start_beat / duration_beats / pitch / velocity / kind. ``register``
+    bounds restated pitches (the part's own range; bass default 24-64).
     """
     report: Dict[str, Any] = {"applied": False}
     if bars < 3 or beats_per_bar <= 0 or not events:
@@ -200,6 +202,11 @@ def apply_groove_memory(
     quoted = sum(1 for e in events if any(t in str(e.kind or "").lower()
                                           for t in ("motif", "riff", "theme")))
     if quoted >= 0.25 * len(events):
+        return events, report
+    # A walking bass line is through-composed: every bar walks to the next
+    # chord, so restating one bar's contour would stop the walk.
+    walking = sum(1 for e in events if str(e.kind or "").startswith("walk_"))
+    if instrument == "bass" and walking >= 0.5 * len(events):
         return events, report
     cycle = groove_cycle(genre, cycle_override)
     form = bar_form(bars, cycle)
@@ -242,7 +249,7 @@ def apply_groove_memory(
             score += 1.0
         elif on_one and kind.startswith("third"):
             score -= 1.0
-        if any(str(e.kind or "").startswith("fifth") for e in bar_ev):
+        if any(str(e.kind or "").startswith("fifth") for e in bar_ev[1:]):
             score += 0.5
         return score
 
@@ -256,10 +263,14 @@ def apply_groove_memory(
         off = float(ev.start_beat) - bar_start
         ref = bar_idx * beats_per_bar + (beats_per_bar if _is_approach(ev.kind) else max(0.0, off))
         chord = chords.at(min(ref, chords.total - eps)) if chords is not None else None
+        # A groove bar's bass downbeat is the root (beat-1 tie-break): a fifth
+        # or third on one is the engine's variation, kept in phrase-end bars
+        # but never restated into every bar.
+        anchor = instrument == "bass" and abs(off) < 0.06 and not _is_approach(ev.kind)
         return {"off": off, "dur": float(ev.duration_beats), "pitch": int(ev.pitch),
                 "vel": int(ev.velocity), "kind": ev.kind, "channel": ev.channel,
                 "expression": getattr(ev, "expression", None), "chord": chord,
-                "approach": _is_approach(ev.kind)}
+                "approach": _is_approach(ev.kind), "anchor": anchor}
 
     stored = memory.get(memory_key) if memory is not None and memory_key is not None else None
     if stored is not None and stored.get("bpb") != beats_per_bar:
@@ -336,12 +347,32 @@ def apply_groove_memory(
                                    for k in kept):
                 continue
             pitch = s["pitch"]
+            kind = s["kind"]
             if pitched and chords is not None and s["chord"] is not None:
                 ref = b * beats_per_bar + (beats_per_bar if s["approach"] else max(0.0, s["off"]))
                 dst = chords.at(min(ref, chords.total - eps))
-                # The acoustic's picked melody tops out at A5 (composer/acoustic.py).
-                lo, hi = {"bass": (24, 64), "acoustic_gtr": (40, 81)}.get(instrument, (36, 96))
+                # An explicit register wins; the acoustic's picked melody
+                # tops out at A5 (composer/acoustic.py).
+                lo, hi = register or {"bass": (24, 64), "acoustic_gtr": (40, 81)}.get(
+                    instrument, (36, 96))
                 pitch = map_pitch(pitch, s["chord"], dst, scale, lo, hi)
+                if s.get("anchor") and dst is not None:
+                    # The downbeat is the root (the beat-1 tie-break): a fifth
+                    # or third on one in the source bar is that bar's
+                    # variation, not the groove. A fifth drop the engine drew
+                    # for this very bar (fifth_jump_rate) is kept.
+                    own = [e for e in groove_part(bar_events)
+                           if abs(float(e.start_beat) - bar_start) < 0.06]
+                    pc, kind = dst.root_pc, "root"
+                    if own and str(own[0].kind or "").startswith("fifth_drop") \
+                            and int(own[0].pitch) % 12 in dst.pcs:
+                        pc, kind = int(own[0].pitch) % 12, own[0].kind
+                    if pitch % 12 != pc:
+                        near = [p for p in range(lo, hi + 1) if p % 12 == pc]
+                        if near:
+                            pitch = min(near, key=lambda p: (abs(p - pitch), p))
+                    if pc == dst.root_pc and not str(kind).startswith("root"):
+                        kind = "root"
             vel = int(round(s["vel"] * vel_ratio)) + (rng.randint(-3, 3) if vel_varied else 0)
             jitter = rng.uniform(-jitter_beats, jitter_beats)
             if abs(s["off"]) < 1e-6:
@@ -349,7 +380,7 @@ def apply_groove_memory(
             new = replace(template, start_beat=start + jitter,
                           duration_beats=s["dur"], pitch=pitch,
                           velocity=max(1, min(127, vel)), channel=s["channel"],
-                          kind=s["kind"],
+                          kind=kind,
                           expression=dict(s["expression"]) if isinstance(s["expression"], dict)
                           else s["expression"])
             out.append(new)

@@ -346,7 +346,39 @@ What does it:
   more alike across songs (bridge similarity 0.11 to 0.44), because a
   generic role is identical in every song that picks it. Bass `seed`
   overrides re-roll the roles; explicit `rhythm_pattern`, `walking`,
-  `lock_to_kick`, riff or motif locks keep the engine line.
+  `lock_to_kick`, riff or motif locks keep the engine line, and so do a
+  walking line (the walking persona) and an authored `bass_motif`, which
+  the engine plays with its written rhythm and lengths. Composed notes take
+  the bass's `articulation_style` (slap thumb and pop, mute, pick) and its
+  register (user, else recipe, else persona), as engine notes do.
+- **Bass in the arrangement** (`render.py`, `_apply_bass_arrangement_pass`;
+  `composer/bass.py`, `device_bar`). Where the composed drummer plays a
+  section, the bass plays the song's `into_chorus` device and ending with it,
+  whatever line it plays: stop (a hit on one, then rest), drop (out for the
+  bar), push (the band's hit on the last eighth), fill (the last beat left
+  to the drums), build (root eighths swelling into the chorus), and the cold,
+  big or ring ending. The bars are published as the timeline's
+  `device_windows`, so the transition pass does not add a turnaround or
+  pickup on top of a device (or of a walking line's last bar, which walks
+  into the next section itself). A riff-alone intro follows one rule for
+  every part (`arrangement.riff_alone_intro`): it needs a rhythm or acoustic
+  guitar to play the riff alone, and the composed drums and the bass then
+  wait out the same bars; without one, or with drums the user configured,
+  the band plays from the top.
+- **Walking bass** (`engine/bass/walking.py`). A walk is planned a bar at a
+  time, not thinned from a rhythm pattern: every beat sounds (dotted
+  quarters in compound meters), each chord starts on its root, the last
+  beat steps into the next downbeat (chromatic at `chromatic_rate`, else a
+  scale step), and the inner beats connect them with chord tones on strong
+  beats and no repeated root. Each bar draws a shape (climb, fall, or spell
+  the chord) on the line's own seed stream. Density, rests, drum locks and
+  fills do not apply. The walking persona sets `rhythm_pattern: walking`,
+  and a recipe cannot replace it.
+- **Every bar plays.** The engine line's rhythm is drawn on a stream keyed
+  by section type, so a returning chorus keeps its line, and a bar the
+  density and rest draws would empty keeps its first eligible note. Kick
+  locks draw per hit, so a drummer's extra kick never reshuffles the rest
+  of the line.
 - **Generated licks.** Most of a song's lick bank is synthesized from lick
   shapes (cry, run down, run up into a bend, motif, pedal point, pre-bend)
   with per-song rhythm unit, box position, and length.
@@ -409,7 +441,10 @@ metrics for the musical findings and limits of the pocket measurements.
   pickups). Funk, reggae, Latin, and related genres use two-bar grooves.
 - **Typical source.** The source is the phase's medoid, the bar most like the
   others, with ties broken toward idiomatic voicing (bass: root on one,
-  fifths welcome).
+  fifths welcome after it). A restated bass bar starts on the root; a fifth
+  or third on one in the source was that bar's variation, and only a fifth
+  drop the engine drew for the restated bar itself (`fifth_jump_rate`)
+  keeps its fifth. Restated bass pitches stay inside the bass register.
 - **Chord-relative restatement.** A restated pitch follows the root and keeps
   its chord role (a third stays a third). Approach notes aim at the next
   bar's chord.
@@ -423,8 +458,9 @@ metrics for the musical findings and limits of the pocket measurements.
   bass lock negotiated by the engines survives.
 
 Copies are re-humanized only when the engine humanized the source, so
-grid-exact parts stay exact. Theme-quoting parts (riff and motif locks) and
-soloing parts are left alone.
+grid-exact parts stay exact. Theme-quoting parts (riff and motif locks),
+walking bass lines (through-composed: every bar walks to the next chord)
+and soloing parts are left alone.
 
 ## Harmony: turnarounds and the final lift
 

@@ -267,10 +267,11 @@ personas:
       pop_velocity_boost: 15
 
       # Rhythm (Phase B3)
-      rhythm_pattern: anchor  # Steady quarter notes
-      lock_to_kick: 0.2       # Independent walking line
-      lock_to_snare: 0.1
-      lock_to_hat: 0.6        # Swing ride cymbal feel
+      rhythm_pattern: walking # One note per beat, planned a bar at a time;
+                              # recipes keep it (a walking persona walks)
+      lock_to_kick: 0.0       # A walk floats over the kit: drum locks and
+      lock_to_snare: 0.0      # density do not thin or double it
+      lock_to_hat: 0.0
 
       # Fills & Transitions (Phase B9)
       fill_rate: 0.3          # Moderate fills

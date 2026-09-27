@@ -168,7 +168,9 @@ def test_space_budget_reduces_density():
         "density": 0.8,  # Start with high density
         "register_low": 28,
         "register_high": 52,
-        "rhythm_pattern": "anchor",
+        # Drive has room to thin: the anchor pattern has two slots a bar,
+        # and every bar keeps at least one note, so a budget cannot show there.
+        "rhythm_pattern": "drive",
         "lock_to_kick": 0.6,
         "articulation_style": "finger",
     }}

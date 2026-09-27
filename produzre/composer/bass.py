@@ -137,11 +137,12 @@ def compose_bass_dna(*, seed: int, genre: str, country_style=None) -> BassDNA:
 
 
 def _root_pitch(pc: int, near: int, lo: int = 28, hi: int = 47) -> int:
+    hi = max(hi, lo + 11)  # a range narrower than an octave still has every root
     return min((p for p in range(lo, hi + 1) if p % 12 == pc),
                key=lambda p: (abs(p - near), p))
 
 
-def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near):
+def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near, lo=28, hi=52):
     """A country waltz bar: the bass owns beat 1 and the band answers on 2
     and 3. The player chooses how long the note rings, whether a held
     chord moves to its fifth, and whether (and how often) it walks up or
@@ -155,9 +156,9 @@ def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near):
     fifth = dna.country_fifths.get(section_type, 7)
     use_fifth = (w.bass_alternation == "bar" and bar % 2 == 1) or \
         (w.bass_alternation == "change" and held and bar % 2 == 1)
-    root = _root_pitch(span.root_pc, near)
+    root = _root_pitch(span.root_pc, near, lo, min(47, hi))
     interval = fifth if use_fifth else 0
-    pitch = nearest_in(((span.root_pc + interval) % 12,), root + interval, 28, 52)
+    pitch = nearest_in(((span.root_pc + interval) % 12,), root + interval, lo, hi)
     nxt = chords.at(bar_start + 3) if bar_start + 3 < chords.total - 1e-6 else None
     due = {1: True, 2: bar % 2 == 1, 4: bar % 4 == 3}[w.walk_every]
     walk = (walks and due and nxt is not None and not last_bar and span.end >= bar_start + 3 - 1e-6
@@ -166,7 +167,7 @@ def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near):
         end = min(span.end, bar_start + 3)
         return [(bar_start, min(length, end - bar_start - .05), pitch, True)]
     # Walk across 2 and 3 toward the next root, from the side the bass is on.
-    target = nearest_in((nxt.root_pc,), pitch, 28, 52)
+    target = nearest_in((nxt.root_pc,), pitch, lo, hi)
     step = -1 if target > pitch else 1
     scale = scale_pcs(chords.key, chords.mode)
     second = target + step
@@ -187,13 +188,19 @@ def _waltz_bar(bar_start, chords, dna, section_type, last_bar, near):
 def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
              approach: str = "below", near: int = 36,
              last_bar: bool = False, dna: Optional[BassDNA] = None,
-             kick: str = "", groups=None, section_type: str = "verse") -> List[Tuple[float, float, int, bool]]:
+             kick: str = "", groups=None, section_type: str = "verse",
+             lo: int = 28, hi: int = 52) -> List[Tuple[float, float, int, bool]]:
     """One bar of a bass role: (beat, dur, pitch, accent) tuples.
 
     ``dna`` carries the song's variations inside the role; ``kick`` is the
-    song's kick pattern (sixteenth string) for the "kick" role.
+    song's kick pattern (sixteenth string) for the "kick" role. ``lo`` and
+    ``hi`` are the bass's range: roots sit low enough in it that a role's
+    octave notes still fit.
     """
     dna = dna or BassDNA()
+    root_hi = min(47, hi)
+    if role in ("octaves", "pedal8", "whole") and hi - 12 >= lo + 11:
+        root_hi = min(root_hi, hi - 12)
     out: List[Tuple[float, float, int, bool]] = []
     span = chords.at(bar_start)
     if span is None:
@@ -202,7 +209,7 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         from .country import is_waltz
 
         if is_waltz(bpb, groups):
-            return _waltz_bar(bar_start, chords, dna, section_type, last_bar, near)
+            return _waltz_bar(bar_start, chords, dna, section_type, last_bar, near, lo, hi)
     if role == "boom_chick" or role.startswith("country_"):
         gs = tuple(groups) if groups else default_groups(bpb)
         waltz = bpb == 3 and gs == (1.0, 1.0, 1.0)
@@ -215,11 +222,11 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         bar = int(round(bar_start / bpb))
         fifth = dna.country_fifths.get(section_type, 7)
         figure = dna.country_figures.get(section_type, (0, 0, 0, 0))
-        root = _root_pitch(span.root_pc, near)
+        root = _root_pitch(span.root_pc, near, lo, root_hi)
         for i, off in enumerate(pulses):
             t = bar_start + off
             span = chords.at(t)
-            root = _root_pitch(span.root_pc, near)
+            root = _root_pitch(span.root_pc, near, lo, root_hi)
             phase = bar % 2 if waltz else i % 2
             interval = fifth if phase else 0
             if role == "country_octave" and ordinary:
@@ -232,14 +239,14 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             pc = (span.root_pc+interval)%12
             if ordinary and dna.country_pedal and chords.spans[0].root_pc in span.pcs:
                 pc = chords.spans[0].root_pc
-            pitch = nearest_in((pc,), root+interval, 28, 52)
+            pitch = nearest_in((pc,), root+interval, lo, hi)
             end = min(span.end, bar_start + (pulses[i+1] if i+1 < len(pulses) else bpb))
             out.append((t, min(dna.country_lengths.get(section_type, 1.4), end-t-.05), pitch, off % 1 == 0))
         nxt = chords.at(bar_start + bpb) if bar_start + bpb < chords.total else None
         walk = (ordinary and nxt and not last_bar and dna.walk_style != "none"
                 and nxt.root_pc != span.root_pc and (bar+1) % dna.walk_every == 0)
         if walk:
-            target = _root_pitch(nxt.root_pc, near)
+            target = _root_pitch(nxt.root_pc, near, lo, root_hi)
             scale = scale_pcs(chords.key, chords.mode)
             lead = target - 1
             if dna.walk_style == "diatonic":
@@ -252,11 +259,11 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             t = bar_start + dna.train_pickups.get(section_type, 1.5)
             out = [(a, min(d, t-a-.03) if a < t else d, p, acc) for a, d, p, acc in out]
             sp = chords.at(t)
-            out.append((t, .35, _root_pitch(sp.root_pc, near), False))
+            out.append((t, .35, _root_pitch(sp.root_pc, near, lo, root_hi), False))
         if ordinary and dna.country_grace and bar % 4 == 2:
             t = bar_start + pulses[-1]
             if t >= bar_start+.5:
-                root = _root_pitch(chords.at(t).root_pc, near)
+                root = _root_pitch(chords.at(t).root_pc, near, lo, root_hi)
                 out = [(a, min(d, t-.25-a-.02) if a < t-.25 else d, p, acc) for a,d,p,acc in out]
                 out.append((t-.25, .12, root-1, False))
         return sorted(n for n in out if n[1] > .02)
@@ -268,7 +275,7 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
             push = dna.anticipate and end < chords.total - 1e-6 and not last_bar and \
                 end - t >= 1.5
             hold_end = end - 0.5 if push else end
-            root = _root_pitch(s.root_pc, near)
+            root = _root_pitch(s.root_pc, near, lo, root_hi)
             span_len = hold_end - t
             if dna.hold_figure == "dotted" and span_len >= 3.0:
                 out.append((t, span_len * 0.75 - 0.05, root, True))
@@ -281,7 +288,7 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
                 out.append((t, span_len - 0.05, root, True))
             if push:
                 nxt = chords.at(end + 1e-3)
-                out.append((hold_end, 0.45, _root_pitch(nxt.root_pc, near), True))
+                out.append((hold_end, 0.45, _root_pitch(nxt.root_pc, near, lo, root_hi), True))
             t = end
         return out
     eighths = int(bpb * 2)
@@ -305,7 +312,7 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
     for off, up in steps:
         t = bar_start + off
         s = chords.at(t)
-        root = _root_pitch(s.root_pc, near)
+        root = _root_pitch(s.root_pc, near, lo, root_hi)
         pitch = root + 12 if up else root
         nxt_off = next((o for o, _ in steps if o > off + 1e-6), bpb)
         dur = max(0.12, min(0.95, nxt_off - off) - 0.05)
@@ -314,11 +321,11 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
     nxt = chords.at(bar_start + bpb + 1e-3) if bar_start + bpb < chords.total else None
     if approach != "none" and nxt is not None and nxt.root_pc != chords.at(bar_start + bpb - 0.25).root_pc \
             and out and not last_bar:
-        target = _root_pitch(nxt.root_pc, near)
+        target = _root_pitch(nxt.root_pc, near, lo, root_hi)
         lead_in = target - 1
         if approach == "scale":
             scale = scale_pcs(chords.key, chords.mode)
-            current = _root_pitch(chords.at(bar_start + bpb - 0.25).root_pc, near)
+            current = _root_pitch(chords.at(bar_start + bpb - 0.25).root_pc, near, lo, root_hi)
             direction = 1 if current > target else -1
             lead_in = target + direction
             while lead_in % 12 not in scale:
@@ -327,3 +334,47 @@ def bass_bar(role: str, bar_start: float, bpb: float, chords: ChordMap, *,
         if t >= bar_start + bpb - 0.5 - 1e-6:
             out[-1] = (t, min(d, 0.45), lead_in, False)
     return out
+
+
+def device_bar(device: str, bar_start: float, bpb: float, chords: ChordMap, *,
+               near: int = 36, lo: int = 28, hi: int = 52
+               ) -> Optional[Tuple[float, List[Tuple[float, float, int, float, str]]]]:
+    """The bass's part in a band device played in one bar.
+
+    Returns ``(cut, notes)``: the bass line stops at ``cut`` (notes from
+    there to the bar end are dropped, earlier notes are cut short) and
+    ``notes`` are played instead, as (beat, dur, pitch, velocity scale,
+    kind). None when the device leaves the bass line alone.
+
+    Into a chorus (``into_chorus``), the bass agrees with the drums and comp:
+    ``stop`` hits the downbeat with the band and rests; ``drop`` drops out;
+    ``push`` anticipates the chorus with the band's hit on the last eighth;
+    ``fill`` clears the last beat for the drum fill; ``build`` drives root
+    eighths that swell into the chorus. Song endings (``ending_cold``,
+    ``ending_big``, ``ending_ring``) play the band's last bar.
+    """
+    def root_at(t: float) -> int:
+        return _root_pitch(chords.at(t).root_pc, near, lo, min(47, hi))
+
+    end = bar_start + bpb
+    if device == "stop":
+        return bar_start, [(bar_start, min(1.0, bpb) - 0.05, root_at(bar_start), 1.1, "stop_hit")]
+    if device == "drop":
+        return bar_start, []
+    if device == "push":
+        t = end - 0.5
+        return t, [(t, 0.45, root_at(t), 1.12, "push_hit")]
+    if device == "fill":
+        return end - 1.0, []
+    if device == "build":
+        n = int(round(bpb * 2))
+        return bar_start, [(bar_start + k * 0.5, 0.42, root_at(bar_start + k * 0.5),
+                            0.8 + 0.35 * k / max(1, n - 1), "build_drive") for k in range(n)]
+    if device == "ending_cold":
+        return bar_start, [(bar_start, 0.4, root_at(bar_start), 1.1, "ending_hit")]
+    if device == "ending_big":
+        return bar_start, [(bar_start, max(0.4, bpb - 1.0), root_at(bar_start), 1.1, "ending_hit"),
+                           (end - 0.5, 0.45, root_at(bar_start), 1.15, "ending_hit")]
+    if device == "ending_ring":
+        return bar_start, [(bar_start, bpb - 0.05, root_at(bar_start), 1.05, "root_cadence")]
+    return None
