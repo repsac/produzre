@@ -31,12 +31,16 @@ def _third_index(pitches: Sequence[int], numeral: str, key: str, mode: str) -> O
     return None
 
 
-def _walk_pitch(target_pc: Optional[int], distance: int, near: int, key: str, mode: str) -> int:
+def _walk_pitch(target_pc: Optional[int], distance: int, near: int, key: str, mode: str,
+                chord_pcs: Optional[Sequence[int]] = None) -> int:
     """A walking note into ``target_pc``, placed near the bass root ``near``.
 
-    ``distance`` 0 is the last note before the target (its chromatic
-    leading tone); 1 is the scale tone two steps below the target. Played in
-    order they walk up: E F# G# A.
+    ``distance`` 0 is the last note before the target: its chromatic
+    leading tone, unless that note rubs a semitone against the chord being
+    played over (``chord_pcs``; C# under an A minor chord's C), where the
+    scale tone below the target is used instead. 1 is the scale tone two
+    steps below the target. Played in order they walk up: E F# G# A over E,
+    B C D over A minor.
     """
     if target_pc is None:
         return near
@@ -53,7 +57,15 @@ def _walk_pitch(target_pc: Optional[int], distance: int, near: int, key: str, mo
     while p < 40:
         p += 12
         target += 12
-    return target - 1 if distance <= 0 else p
+    if distance > 0:
+        return p
+    leading = target - 1
+    if leading % 12 not in scale and chord_pcs and \
+            any((leading - pc) % 12 in (1, 11) for pc in chord_pcs):
+        leading -= 1
+        while leading % 12 not in scale:
+            leading -= 1
+    return leading
 
 
 def perform_comp(
@@ -78,7 +90,8 @@ def perform_comp(
     ``feel`` carries the user's explicit rhythm settings: ``density`` below
     0.7 thins weak off-beat gestures, ``palm_mute`` turns plain strums into
     chugs, ``chuck_rate`` turns light upstrokes into dead-note chucks,
-    ``sustain_cut_rate`` cuts strums to stabs, and ``accent_strength``,
+    ``sustain_cut_rate`` cuts strums to stabs, ``sustain_duration`` caps how
+    long any note rings (in beats), and ``accent_strength``,
     ``downbeat_boost`` and ``humanize_velocity`` shape dynamics. They use
     their own random stream, so a default build is unchanged.
     """
@@ -94,6 +107,7 @@ def perform_comp(
     density, palm, chuck_rate = _f("density"), _f("palm_mute"), _f("chuck_rate")
     cut, accent_strength = _f("sustain_cut_rate"), _f("accent_strength")
     downbeat_boost, vel_humanize = _f("downbeat_boost"), _f("humanize_velocity")
+    max_ring = _f("sustain_duration")
     accent_gain = 1.0 + 0.24 * accent_strength if accent_strength is not None else 1.12
     vel_spread = int(round(8 * vel_humanize)) if vel_humanize is not None else 4
     base = int(80 * max(0.45, min(1.3, intensity)))
@@ -193,7 +207,8 @@ def perform_comp(
             spread = False
         elif kind == "walk":
             notes = [(_walk_pitch(ev.get("target_pc"), int(ev.get("arp_index") or 0), root,
-                                  key, mode), 0.0, min(dur, 0.3))]
+                                  key, mode, chord_pitch_classes(numeral, key, mode)),
+                      0.0, min(dur, 0.3))]
             vel *= 0.9
             spread = False
         elif kind in ("dyad", "dyad5", "dyad6", "dyad7"):
@@ -245,6 +260,8 @@ def perform_comp(
                 d = min(d, section_start_beat + float(ev["release_beat"]) - note_start)
                 if d <= 0:
                     continue
+            if max_ring is not None:
+                d = min(d, max(0.1, max_ring))
             timeline.add_note(
                 start_beat=note_start,
                 duration_beats=max(0.04, d),

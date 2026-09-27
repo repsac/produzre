@@ -378,6 +378,10 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     eff_m = _get_mapping(eff)
     eff_insts = _get_mapping(eff_m.get("instruments"))
     eff_drums = _get_mapping(eff_insts.get("drums"))
+    # A section-level persona replaces the global one (config/load.py).
+    eff_section = _get_mapping(_get_mapping(eff_m.get("sections")).get(section_id))
+    if _get_mapping(eff_section.get("drums")):
+        eff_drums = _get_mapping(eff_section.get("drums"))
     # Voice-level params (optional). We treat voices as a shallow map like:
     #   voices:
     #     snare:

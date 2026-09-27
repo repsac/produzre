@@ -46,9 +46,10 @@ part. Only settings you write yourself count as your choice:
   beat; its figures, strums and dynamics stay the song's own.
 
 Set `composer: false` on an instrument to hear a persona on its classic
-engine. Personas are set per instrument for the whole song, under
-`instruments`; a section-level `persona` does not apply the persona's
-params.
+engine. A persona under `instruments` applies to the whole song; a
+`persona` on a section's instrument replaces it for that section only. Either
+way it is the base layer: recipes, your global instrument params and the
+section's own params all win over it.
 
 The actual preset values are in
 [produzre/resources/personas](../../produzre/resources/personas).

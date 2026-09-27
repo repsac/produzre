@@ -339,7 +339,8 @@ def apply_groove_memory(
             if pitched and chords is not None and s["chord"] is not None:
                 ref = b * beats_per_bar + (beats_per_bar if s["approach"] else max(0.0, s["off"]))
                 dst = chords.at(min(ref, chords.total - eps))
-                lo, hi = (24, 64) if instrument == "bass" else (36, 96)
+                # The acoustic's picked melody tops out at A5 (composer/acoustic.py).
+                lo, hi = {"bass": (24, 64), "acoustic_gtr": (40, 81)}.get(instrument, (36, 96))
                 pitch = map_pitch(pitch, s["chord"], dst, scale, lo, hi)
             vel = int(round(s["vel"] * vel_ratio)) + (rng.randint(-3, 3) if vel_varied else 0)
             jitter = rng.uniform(-jitter_beats, jitter_beats)

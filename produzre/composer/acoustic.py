@@ -8,6 +8,11 @@ from ..rng import stable_seed_int
 from .theory import nearest_in, scale_pcs
 
 
+# The top of a picked acoustic melody: A5, the 17th fret on the high E,
+# where a cutaway steel-string still plays comfortably.
+MELODY_CEILING = 81
+
+
 @dataclass(frozen=True)
 class PickingDNA:
     thumb: str
@@ -30,7 +35,13 @@ def compose_picking_dna(seed, genre):
 
 def fingerstyle(seed, genre, chords, voicings, *, bars, bpb, groups, section_type,
                 melody_amount=0.72, variation=0.35, capo=0, closing=False):
-    """A recurring right-hand figure under a stronger, independent top voice."""
+    """A recurring right-hand figure under a stronger, independent top voice.
+
+    ``chords`` are concert pitch and ``voicings`` are sounding shapes (the
+    capo is already in them), so every voice is placed in sounding pitch:
+    the capo changes the shapes and raises the open-string floor, never the
+    pitch classes.
+    """
     rng = random.Random(stable_seed_int("composer.fingerstyle", seed, genre, bpb, groups))
     contour = [rng.choice((-2, -1, 0, 1, 2)) for _ in range(8)]
     offsets = [rng.choice((0.0, 0.5, 0.5, 0.75)) for _ in range(8)]
@@ -49,7 +60,7 @@ def fingerstyle(seed, genre, chords, voicings, *, bars, bpb, groups, section_typ
             span = chords.at(t)
             shape = voicings[span.numeral].pitches
             low = min(shape)
-            root = (span.root_pc + capo) % 12
+            root = span.root_pc
             length = (pulses[i+1] if i+1 < len(pulses) else bpb) - pulse
             alternate = dna.thumb == "travis" and i % 2
             bass = nearest_in(((root + dna.fifth if alternate else root) % 12,),
@@ -59,8 +70,8 @@ def fingerstyle(seed, genre, chords, voicings, *, bars, bpb, groups, section_typ
             if dna.thumb == "walking" and i == len(pulses)-1 and start+bpb < chords.total:
                 nxt = chords.at(start+bpb)
                 if nxt.root_pc != span.root_pc:
-                    target = nearest_in(((nxt.root_pc+capo)%12,), low, low, low+12)
-                    pcs = tuple((p+capo)%12 for p in scale_pcs(chords.key, chords.mode))
+                    target = nearest_in((nxt.root_pc,), low, low, low+12)
+                    pcs = tuple(scale_pcs(chords.key, chords.mode))
                     pitch = nearest_in(pcs, target-2, low, low+12)
                     notes.append((t+length*.5, length*.4, pitch, .65, "acoustic_thumb"))
             k = (bar % 2 * len(pulses) + i) % 8
@@ -80,13 +91,14 @@ def fingerstyle(seed, genre, chords, voicings, *, bars, bpb, groups, section_typ
             mt = t + off*length
             mspan = chords.at(mt)
             mshape = voicings[mspan.numeral].pitches
-            pcs = tuple((pc + capo) % 12 for pc in mspan.pcs)
+            pcs = tuple(mspan.pcs)
             target = previous + contour[k] * 2
             if i == 0:
                 target = max(mshape) - (0 if lift else 3)
             if variation > 0 and bar % 4 == 3:
                 target -= i * min(1.0, variation * 2)
-            melody = nearest_in(pcs, target, max(55 + capo, max(mshape)-9), max(mshape)+3)
+            hi = min(max(mshape) + 3, max(MELODY_CEILING, max(mshape)))
+            melody = nearest_in(pcs, target, min(hi, max(55 + capo, max(mshape)-9)), hi)
             melodic = melody_mask[k] and (figure != "held_top" or i % 2 == 0)
             if melodic:
                 dur = (2 if figure == "held_top" else 1)*length-off*length-.03
@@ -104,9 +116,10 @@ def fingerstyle(seed, genre, chords, voicings, *, bars, bpb, groups, section_typ
         span = chords.at(end_start)
         shape = voicings[span.numeral].pitches
         notes = [n for n in notes if n[0] < end_start]
-        root = (span.root_pc + capo) % 12
+        root = span.root_pc
         notes += [(end_start, (bars*bpb-end_start)*.9, nearest_in((root,), min(shape), min(shape), min(shape)+12),
                    .72, "acoustic_thumb"),
-                  (end_start, (bars*bpb-end_start)*.9, nearest_in(tuple((p+capo)%12 for p in span.pcs),
-                    previous, max(shape)-7, max(shape)+3), 1.0, "acoustic_theme")]
+                  (end_start, (bars*bpb-end_start)*.9, nearest_in(tuple(span.pcs),
+                    previous, max(shape)-7, min(max(shape)+3, max(MELODY_CEILING, max(shape)))),
+                   1.0, "acoustic_theme")]
     return sorted((n for n in notes if n[1] > .02), key=lambda n:(n[0], n[2]))

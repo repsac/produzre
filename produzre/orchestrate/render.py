@@ -116,7 +116,7 @@ def _validate_engine_dependencies(
         raise ConfigError("\n".join(error_lines))
 
 
-def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
+def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str, section_id: Optional[str] = None) -> Any:
     """Return the global/default InstrumentConfig for an instrument, if present.
 
     Different versions of the config model may store global instrument defaults
@@ -128,12 +128,16 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
     Args:
         cfg: Parsed root config.
         inst_name: Instrument key (e.g. "drums").
+        section_id: The section being rendered; its own persona, if any,
+            replaces the global persona.
 
     Returns:
         The global/default InstrumentConfig for the instrument, or None.
     """
 
     # Phase B1+: Load persona params from _effective.instruments (if any).
+    # A persona named on this section's instrument replaces the global one
+    # (config/load.py, _resolve_section_personas).
     effective_cfg = None
     if hasattr(cfg, "raw") and isinstance(cfg.raw, dict):
         effective = cfg.raw.get("_effective", {})
@@ -141,6 +145,9 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
             effective_instruments = effective.get("instruments", {})
             if isinstance(effective_instruments, dict):
                 effective_cfg = effective_instruments.get(inst_name)
+            by_section = (effective.get("sections") or {}).get(section_id) if section_id else None
+            if isinstance(by_section, dict) and isinstance(by_section.get(inst_name), dict):
+                effective_cfg = by_section[inst_name]
 
     # Find the base InstrumentConfig from root/song level.
     base_cfg = None
@@ -549,7 +556,7 @@ def render_section_instruments(
     # per-instrument pocket offsets before later engines have rendered).
     effective_cfgs: dict[str, Any] = {}
     for inst_name, inst_cfg, _engine in instruments_with_engines:
-        base_cfg = _get_global_instrument_cfg(cfg, inst_name)
+        base_cfg = _get_global_instrument_cfg(cfg, inst_name, sec.id)
         effective_cfgs[inst_name] = _merge_instrument_config(base_cfg, inst_cfg)
 
     # Shared groove clock state (resolved lazily once per section, after the
@@ -603,7 +610,7 @@ def render_section_instruments(
             # instrument params, including the selected recipe.
             drum_params = groove_inst_params.get("drums")
             if drum_params is None:
-                drum_params = recipe_feel_params("drums", _get_global_instrument_cfg(cfg, "drums"))
+                drum_params = recipe_feel_params("drums", _get_global_instrument_cfg(cfg, "drums", sec.id))
         feel = resolve_groove_feel(cfg, sec, drum_params, groove_inst_params)
         if feel is not None:
             pockets = {
@@ -1110,13 +1117,18 @@ _RHYTHM_USER_MODES = ("style", "strum_style", "sustain_mode", "playstyle", "play
                       "pattern", "follow_hats", "use_patterns", "recipe")
 # Tuning for the legacy generators only. They do not choose a different part,
 # so the composer keeps the section and the build says the setting is unused.
-_RHYTHM_LEGACY_ONLY = ("phrase_len_bars", "phrase_development", "section_contrast")
+_RHYTHM_LEGACY_ONLY = ("phrase_len_bars", "phrase_development", "section_contrast", "register",
+                       "contrast", "mute", "strum", "strum_beats", "strum_dir", "retrigger", "hit_strategy",
+                       "stab_beats", "reattack_vel", "reattack_dur", "reattack_strum",
+                       "voice_leading", "voice_range_low", "voice_range_high", "octave",
+                       "accent_syncopation", "vibrato_rate")
 _LEAD_LEGACY_ONLY = ("phrase_len_bars", "theme_quote_rate", "resolution_strength",
                      "ring_out", "ring_max_beats")
 # Feel settings the composed rhythm performer honors instead of opting out.
 _RHYTHM_FEEL_KEYS = ("density", "palm_mute", "chuck_rate", "voicing", "accent_strength",
                      "humanize_velocity", "downbeat_boost", "sustain_cut_rate",
-                     "register_min", "register_max", "offset_beats", "style_bias", "humanize_timing", "strum_ms")
+                     "register_min", "register_max", "offset_beats", "style_bias", "humanize_timing", "strum_ms",
+                     "sustain_duration")
 
 
 def _seed_override(cfg, sec, inst_cfg) -> Optional[int]:

@@ -67,7 +67,13 @@ def choose_acoustic_voicing(
                        "auto" → open when available, barre otherwise.
         prev_voicing: Previous chord's ResolvedVoicing (for smooth voice-leading).
         rng:          Seeded RNG (reserved, unused currently).
-        capo:         Capo fret position.
+        capo:         Capo fret position. Shapes are fingered relative to
+                      the capo; the returned pitches are sounding pitches.
+
+    Barre shapes sit at their lowest position above the capo (B as an
+    A-form at fret 2, F# as an E-form at fret 2), so the thumb, the picked
+    strings and a melody played over the shape stay in the acoustic's
+    range whatever the root's octave.
 
     Returns:
         ResolvedVoicing with .pitches, .pitch_for_string(), .played_strings, etc.
@@ -82,4 +88,5 @@ def choose_acoustic_voicing(
         capo=capo,
         prev_voicing=prev_voicing,
         prefer_open=prefer_open,
+        lowest_position=True,
     )
