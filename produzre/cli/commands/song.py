@@ -54,11 +54,12 @@ def cmd_validate(cfg: RootConfig) -> int:
 
     # Run enhanced validation (Option A - Phase 2)
     try:
-        from ...config.validation import unknown_instrument_param_warnings
+        from ...config.validation import (unknown_instrument_param_warnings,
+                                          unknown_structure_warnings)
 
-        # The raw YAML, checked the same way the build checks it (global and
-        # section instruments, and the engines block).
-        warnings = unknown_instrument_param_warnings(cfg.raw)
+        # The raw YAML, checked the same way the build checks it (top-level,
+        # song and section keys, global and section instruments, engines).
+        warnings = unknown_structure_warnings(cfg.raw) + unknown_instrument_param_warnings(cfg.raw)
 
         if warnings:
             logger.warning("\n=== Configuration Warnings ===")

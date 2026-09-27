@@ -41,7 +41,6 @@ instruments:
 
   rhythm_gtr:
     params:
-      style: "balanced"
       density: 0.7
 
 sections:

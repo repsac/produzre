@@ -16,6 +16,12 @@ KNOWN_SONG_KEYS = {
     "seed", "take", "variation", "humanize_velocity", "humanize_timing", "exports_root",
     "pattern_bars", "pattern_quantize_beats", "pattern_velocity_step", "pattern_merge_repeats",
     "pattern_merge_min_run", "pattern_merge_max", "themes_auto", "params",
+    "arrangement_style", "composer", "final_chorus", "groove_memory", "meter_grouping",
+    "turnarounds",
+}
+KNOWN_TOP_LEVEL_KEYS = {
+    "version", "song", "exports", "sections", "arrangement", "instruments", "engines",
+    "themes", "groove",
 }
 KNOWN_GROOVE_KEYS = {"swing", "swing_16th", "pocket_ms"}
 KNOWN_EXPORT_KEYS = {
@@ -27,6 +33,7 @@ KNOWN_THEME_KEYS = {"role", "events", "degrees", "rhythm", "length_beats", "regi
 KNOWN_SECTION_KEYS = {
     "type", "bars", "beats", "meter", "key", "mode", "harmony", "instruments",
     "progression", "intent", "solo", "role", "seed", "variation", "energy", "intensity",
+    "meter_grouping",
 }
 KNOWN_TIMING_PARAMS = {"pocket_ms", "push_pull", "timing_jitter_ms", "velocity_humanize"}
 KNOWN_COMMON_PARAMS = {"persona", "transitions"} | KNOWN_TIMING_PARAMS
@@ -106,6 +113,30 @@ def _unknown(key: str, known: Set[str], where: str) -> str:
     elif suggestions:
         hint = " Did you mean one of: '" + "', '".join(suggestions) + "'?"
     return f"Unknown parameter '{key}' for {where}; it is ignored.{hint}"
+
+
+def unknown_structure_warnings(raw: Dict) -> List[str]:
+    """Warnings for top-level, ``song`` and section keys nothing reads.
+
+    Keys starting with an underscore are internal and skipped. Like the
+    instrument check, these never stop a build.
+    """
+    messages: List[str] = []
+    if not isinstance(raw, dict):
+        return messages
+    for key in raw:
+        if not str(key).startswith("_") and key not in KNOWN_TOP_LEVEL_KEYS:
+            messages.append(_unknown(str(key), KNOWN_TOP_LEVEL_KEYS, "the top level"))
+    song = raw.get("song")
+    for key in (song if isinstance(song, dict) else {}):
+        if key not in KNOWN_SONG_KEYS:
+            messages.append(_unknown(str(key), KNOWN_SONG_KEYS, "song"))
+    sections = raw.get("sections")
+    for sec_id, sec in (sections.items() if isinstance(sections, dict) else ()):
+        for key in (sec if isinstance(sec, dict) else {}):
+            if key not in KNOWN_SECTION_KEYS:
+                messages.append(_unknown(str(key), KNOWN_SECTION_KEYS, f"section '{sec_id}'"))
+    return list(dict.fromkeys(messages))
 
 
 def unknown_instrument_param_warnings(raw: Dict) -> List[str]:

@@ -354,7 +354,6 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
         inst = _get_mapping(insts).get("drums")
 
     inst_m = _get_mapping(inst)
-    persona = str(inst_m.get("persona") or "tight")
 
     # Params may come from either a plain mapping (inst["params"]) or an
     # InstrumentConfig dataclass field (inst.params). Some parsers also stash
@@ -382,6 +381,9 @@ def render_into_timeline(*args: Any, **kwargs: Any) -> None:
     eff_section = _get_mapping(_get_mapping(eff_m.get("sections")).get(section_id))
     if _get_mapping(eff_section.get("drums")):
         eff_drums = _get_mapping(eff_section.get("drums"))
+    # The resolved persona lives in the effective config (config/load.py);
+    # a persona named on this section's instrument wins.
+    persona = str(inst_m.get("persona") or eff_drums.get("persona") or "tight")
     # Voice-level params (optional). We treat voices as a shallow map like:
     #   voices:
     #     snare:

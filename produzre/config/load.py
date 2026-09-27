@@ -807,8 +807,8 @@ def load_root_config(path: str) -> RootConfig:
     raw = _load_yaml(p)
 
     # Unknown instrument params are ignored by the engines; say so, by name.
-    from .validation import unknown_instrument_param_warnings
-    for message in unknown_instrument_param_warnings(raw):
+    from .validation import unknown_instrument_param_warnings, unknown_structure_warnings
+    for message in unknown_structure_warnings(raw) + unknown_instrument_param_warnings(raw):
         logger.warning(message)
 
     # Phase P1: load built-in + user personas and attach to raw for visibility.
