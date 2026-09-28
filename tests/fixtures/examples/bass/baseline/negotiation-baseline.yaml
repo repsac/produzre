@@ -1,0 +1,43 @@
+version: 1
+song:
+  title: "Negotiation_Baseline"
+  bpm: 120
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 2000  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: pocket
+    intensity: 1.0
+    params:
+      articulation_style: finger
+      rhythm_pattern: anchor
+      density: 0.8
+      lock_to_kick: 0.6
+
+sections:
+  verse1:
+    type: verse
+    bars: 8
+    harmony:
+      progression: "I IV V I I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

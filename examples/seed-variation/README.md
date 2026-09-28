@@ -1,15 +1,15 @@
-# Seed and variation comparisons
+# Seed and take comparisons
 
-These five configs use the same arrangement with targeted seed or variation
-changes. They share a title, so use each build's export folder to tell them apart.
+These four configs are the same song with one targeted change each. They
+share the song seed on purpose, so only the named change differs; each has
+its own title, so their exports are easy to tell apart.
 
-| File | Main override | Expected scope |
+| File | Change | What changes in the build |
 |---|---|---|
 | [base-song.yaml](base-song.yaml) | None | Reference performance. |
-| [section-seed-override.yaml](section-seed-override.yaml) | Chorus `seed: 999` | Chorus engine RNG streams. |
-| [section-variation.yaml](section-variation.yaml) | Chorus `variation: 0.6` | Chorus performance choices. |
-| [instrument-seed-override.yaml](instrument-seed-override.yaml) | Chorus drums `seed: 777` | Drum RNG stream, then any parts that listen to drums. |
-| [instrument-variation.yaml](instrument-variation.yaml) | Chorus drums `variation: 0.8` | Drum performance choices, then dependent parts. |
+| [section-seed-override.yaml](section-seed-override.yaml) | Chorus `seed: 999` | The chorus drummer, bass line and rhythm guitar figures are re-rolled in both choruses; the other sections keep their notes. |
+| [instrument-seed-override.yaml](instrument-seed-override.yaml) | Chorus drums `seed: 777` | A different drummer in the chorus only; the other parts keep their notes (the chorus bass velocities follow the new drummer's accents). |
+| [song-take.yaml](song-take.yaml) | `take: 1` | The same parts with new velocities; only the intro pickup and a few bass and strum details change. |
 
 Build them from the repository root:
 
@@ -19,9 +19,18 @@ for file in examples/seed-variation/*.yaml; do
 done
 ```
 
-Use each build's printed export root to locate its MIDI and analysis files.
-Compare corresponding chorus sections in a DAW or diff the event TSVs.
-Export folders include timestamps, so use the path printed by each build.
+Use each build's printed export root to locate its MIDI and analysis files,
+then compare corresponding sections in a DAW or diff the event TSVs.
 
-See [DETERMINISM.md](../../DETERMINISM.md) for the seed hierarchy, preserved
-theme material, and how one instrument's changes can affect another.
+A section `seed` re-rolls that section's composed parts (drummer, bass line,
+rhythm guitar figures, lead). An instrument `seed` re-rolls only that part in
+that section and wins over the section seed; a lead `seed` re-rolls the
+composed lead, while the song's hook stays, since it belongs to the song.
+`variation` does not change composed parts; only some classic engines read
+it.
+
+Every example uses the shared `produzre-examples` project, which has the same
+seed on every machine, so these builds and the differences described above
+are the same for everyone. See [DETERMINISM.md](../../DETERMINISM.md) for the
+seed hierarchy, projects, preserved theme material, and how one
+instrument's changes can affect another.

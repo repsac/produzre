@@ -1,16 +1,14 @@
-# Seed & Variation: Section Seed Override
+# Seed variation: a section seed override.
 #
-# Identical to base-song.yaml EXCEPT the chorus section has seed: 999.
-# This re-rolls the entire chorus (all instruments) while every other
-# section stays the same as the base song.
-#
-# Compare the chorus MIDI output against base-song.yaml to hear the
-# difference. Intro, verse, and outro should be identical.
-
+# Identical to base-song.yaml except that the chorus has `seed: 999`. The
+# chorus drummer, bass line and rhythm guitar figures are re-rolled in both
+# choruses; the intro, verses and outro keep their notes (only the rhythm
+# guitar's velocities and note lengths after the first chorus move).
 version: 1
 
 song:
-  title: "Seed Variation Base"
+  project: produzre-examples
+  title: "Seed Variation Section Seed"
   bpm: 120
   key: E
   mode: minor
@@ -59,7 +57,7 @@ sections:
   chorus:
     type: chorus
     bars: 8
-    seed: 999                    # ← ONLY CHANGE: section-level seed override
+    seed: 999
     harmony:
       progression: ["VI", "VII", "i", "VII"]
     instruments:

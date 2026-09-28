@@ -1,0 +1,81 @@
+# Jazz ride kit: a medium swing tune on the kit alone.
+#
+# `genre: jazz` gives the song a composed swing drummer, so nothing about
+# the kit is authored: the ride plays every beat with its skip note on the
+# swung "and" (spang-a-lang), the hi-hat foot closes on 2 and 4, the kick
+# feathers every beat with the odd bomb, and the left hand comps softly on
+# the triplet partials. The song seed draws the ride figure for each
+# section, the comping and the fills. The jazz-lite persona loosens the
+# time (a little ahead of the beat, looser timing, wider velocities)
+# without changing what is played. Drums follow the section intensity, so
+# the strain plays louder than the head.
+#
+# Two arrangement pins are musical choices: `into_chorus: fill` (a triplet
+# fill into each strain, where a snare-roll build would be out of style)
+# and `ending: ring`.
+#
+# Listen for:
+#   - the intro keeps time with the stick on the closed hi-hat, no fills
+#   - the head and strain move to the ride: spang-a-lang with the skip on
+#     2 and 4; the last beat of bars 2 and 4 of each phrase answers on
+#     the toms, except where a fill leads into the next section
+#   - the drum solo plays a skip note on every beat, with one-beat triplet
+#     fills in bars 2 and 6 and longer fills at bars 4 and 8 (fill_rate 0.9)
+#   - the bridge thins the ride to a late skip on 4 only, with no fills
+#   - the last head and a short outro that ends on one ringing ride crash
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Drums Jazz Ride Kit"
+  bpm: 144
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: jazz
+  seed: 5207
+  arrangement_style: {into_chorus: fill, ending: ring}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: jazz-lite
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    instruments:
+      drums: {params: {fill_rate: 0.0}}
+  head:
+    type: verse
+    bars: 8
+    instruments:
+      drums: {}
+  strain:
+    type: chorus
+    bars: 8
+    instruments:
+      drums: {}
+  drum_solo:
+    type: solo
+    bars: 8
+    instruments:
+      drums: {params: {fill_rate: 0.9}}
+  bridge:
+    type: bridge
+    bars: 8
+    instruments:
+      drums: {params: {fill_rate: 0.0}}
+  outro:
+    type: outro
+    bars: 4
+    instruments:
+      drums: {}
+
+arrangement: [intro, head, strain, head, strain, drum_solo, bridge, head, outro]

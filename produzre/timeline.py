@@ -16,7 +16,7 @@ The structures here are intentionally lightweight and serialization-friendly.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 
 @dataclass
@@ -100,6 +100,14 @@ class InstrumentTimeline:
             (`engines.yml` `channel:`). When set, it takes precedence over the
             built-in instrument-name map for events added without an explicit
             channel.
+        device_windows: Song-beat (start, end) windows where the part plays
+            an arrangement device (stop-time, a drop, a push into a chorus,
+            a composed drum fill or build).
+            The device is that boundary's transition, so the transition
+            pass leaves these bars as written.
+        capo_windows: Song-beat (start, end, fret) windows where the part is
+            played with a capo (acoustic_gtr ``capo``). Tab exports write
+            those bars' frets relative to the capo.
 
     Notes:
         Events may be appended in any order. Call `sort_events()` after
@@ -108,6 +116,8 @@ class InstrumentTimeline:
     instrument: str
     events: List[NoteEvent] = field(default_factory=list)
     default_channel: Optional[int] = None
+    device_windows: List[Tuple[float, float]] = field(default_factory=list)
+    capo_windows: List[Tuple[float, float, int]] = field(default_factory=list)
 
     def add_note(
         self,

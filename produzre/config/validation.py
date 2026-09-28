@@ -16,6 +16,12 @@ KNOWN_SONG_KEYS = {
     "seed", "take", "variation", "humanize_velocity", "humanize_timing", "exports_root",
     "pattern_bars", "pattern_quantize_beats", "pattern_velocity_step", "pattern_merge_repeats",
     "pattern_merge_min_run", "pattern_merge_max", "themes_auto", "params",
+    "arrangement_style", "composer", "final_chorus", "groove_memory", "meter_grouping",
+    "turnarounds",
+}
+KNOWN_TOP_LEVEL_KEYS = {
+    "version", "song", "exports", "sections", "arrangement", "instruments", "engines",
+    "themes", "groove",
 }
 KNOWN_GROOVE_KEYS = {"swing", "swing_16th", "pocket_ms"}
 KNOWN_EXPORT_KEYS = {
@@ -27,20 +33,24 @@ KNOWN_THEME_KEYS = {"role", "events", "degrees", "rhythm", "length_beats", "regi
 KNOWN_SECTION_KEYS = {
     "type", "bars", "beats", "meter", "key", "mode", "harmony", "instruments",
     "progression", "intent", "solo", "role", "seed", "variation", "energy", "intensity",
+    "meter_grouping",
 }
 KNOWN_TIMING_PARAMS = {"pocket_ms", "push_pull", "timing_jitter_ms", "velocity_humanize"}
 KNOWN_COMMON_PARAMS = {"persona", "transitions"} | KNOWN_TIMING_PARAMS
 KNOWN_DRUM_PARAMS = {
+    "groove_memory", "groove_cycle_bars", "composer",
     "kick_density", "snare_density", "hat_density", "fill_rate", "fill_chatter", "accent_strength",
     "swing", "swing_16th", "phrase_len_bars", "pickup_rate", "downbeat_rate", "fill_length",
     "phrase_end_emphasis", "choke_rate", "flam_rate", "drag_rate", "ghost_rate", "ghost_steps",
     "riff_accent_rate", "riff_accent_boost", "groove_strength", "constraints", "voices",
+    "pattern",
 } | (KNOWN_COMMON_PARAMS - {"pocket_ms"})
 KNOWN_DRUM_CONSTRAINT_KEYS = {
     "enabled", "max_hand_hits", "max_foot_hits", "fill_duck_hats",
     "kick_density_hihat_pedal_limit",
 }
 KNOWN_BASS_PARAMS = {
+    "groove_memory", "groove_cycle_bars", "hook_response",
     "density", "rest_rate", "rhythm_pattern", "lock_to_kick", "lock_to_snare", "lock_to_hat",
     "lock_to_kicks", "avoid_fills", "octave", "lock_to_riff", "articulation_style", "chromatic_rate",
     "approach_rate", "octave_jump_rate", "fifth_jump_rate", "pedal_rate", "accent_strength",
@@ -48,26 +58,149 @@ KNOWN_BASS_PARAMS = {
     "fill_rate", "fill_complexity", "fill_avoid_drums", "solo_density", "solo_register_high",
     "motif_repeat_rate", "motion_style", "register_low", "register_high", "max_passing_per_bar",
     "phrase_len_bars", "phrase_length_bars", "section_role_variation", "root_bias",
-    "motif_quote_rate", "slide_rate", "vibrato_rate",
+    "motif_quote_rate", "slide_rate", "vibrato_rate", "composer", "walking", "style", "pattern",
 } | KNOWN_COMMON_PARAMS
 KNOWN_RHYTHM_GTR_PARAMS = {
+    "groove_memory", "groove_cycle_bars", "composer",
     "style", "density", "mute", "contrast", "phrase_development", "phrase_len_bars", "sustain_mode",
     "sustain_duration", "strum", "strum_beats", "strum_dir", "strum_style", "retrigger", "hit_strategy",
     "voice_leading", "voice_range_low", "voice_range_high", "use_patterns", "palm_mute", "voicing",
     "register", "register_min", "register_max", "accent_strength", "strum_ms", "chuck_rate",
     "humanize_velocity", "humanize_timing", "downbeat_boost", "sustain_cut_rate", "section_contrast",
     "follow_hats", "accent_syncopation", "octave", "lock_to_riff", "pattern", "reattack_vel",
-    "reattack_dur", "reattack_strum", "stab_beats", "vibrato_rate",
+    "reattack_dur", "reattack_strum", "stab_beats", "vibrato_rate", "playstyle", "play_pattern",
 } | KNOWN_COMMON_PARAMS
 KNOWN_LEAD_GTR_PARAMS = {
+    "composer",
     "contour_style", "rest_probability", "phrase_len_bars", "resolution_strength", "theme_quote_rate",
     "foreground", "vibrato_rate", "bend_rate", "dive_rate", "swell_rate", "ring_out", "ring_max_beats",
 } | KNOWN_COMMON_PARAMS
 KNOWN_ACOUSTIC_GTR_PARAMS = {
+    "groove_memory", "groove_cycle_bars", "composer",
     "technique", "picking_pattern", "melody_amount", "phrase_variation", "voicing_style", "capo",
     "strum_density", "mute_ratio", "body_tap_ratio", "vel_variation", "timing_variation",
 } | KNOWN_COMMON_PARAMS
 KNOWN_ARPEGGIATOR_PARAMS = {"pattern", "note_duration", "rest_probability", "octave_range"} | KNOWN_COMMON_PARAMS
+# Built-in engines whose params are checked, and harmony, which takes none.
+KNOWN_PARAMS_BY_INSTRUMENT = {
+    "drums": KNOWN_DRUM_PARAMS,
+    "bass": KNOWN_BASS_PARAMS,
+    "rhythm_gtr": KNOWN_RHYTHM_GTR_PARAMS,
+    "lead_gtr": KNOWN_LEAD_GTR_PARAMS,
+    "acoustic_gtr": KNOWN_ACOUSTIC_GTR_PARAMS,
+    "arpeggiator": KNOWN_ARPEGGIATOR_PARAMS,
+    "harmony": set(),
+}
+# Instrument fields (config/parse.py) valid directly on an instrument or in
+# its params, plus the persona and playstyle fields every engine accepts.
+KNOWN_INSTRUMENT_FIELDS = {
+    "enabled", "intensity", "style_bias", "offset_beats", "seed", "variation", "groove",
+    "recipe", "genre", "voicing", "register", "role", "patterns", "solo",
+    "humanize_velocity", "humanize_timing", "persona", "playstyle",
+}
+# Engine registry fields. The `engines:` block is their documented home; a
+# global instrument entry may still carry them (older configs).
+ENGINE_REGISTRY_FIELDS = {"engine", "priority", "channel", "program", "enabled",
+                          "requires", "provides", "roles"}
+
+
+def _unknown(key: str, known: Set[str], where: str) -> str:
+    """One warning line naming the key, where it was found and near matches."""
+    suggestions = ValidationHelper.find_closest_matches(key, known)
+    hint = ""
+    if len(suggestions) == 1:
+        hint = f" Did you mean '{suggestions[0]}'?"
+    elif suggestions:
+        hint = " Did you mean one of: '" + "', '".join(suggestions) + "'?"
+    return f"Unknown parameter '{key}' for {where}; it is ignored.{hint}"
+
+
+def unknown_structure_warnings(raw: Dict) -> List[str]:
+    """Warnings for top-level, ``song`` and section keys nothing reads.
+
+    Keys starting with an underscore are internal and skipped. Like the
+    instrument check, these never stop a build.
+    """
+    messages: List[str] = []
+    if not isinstance(raw, dict):
+        return messages
+    for key in raw:
+        if not str(key).startswith("_") and key not in KNOWN_TOP_LEVEL_KEYS:
+            messages.append(_unknown(str(key), KNOWN_TOP_LEVEL_KEYS, "the top level"))
+    song = raw.get("song")
+    for key in (song if isinstance(song, dict) else {}):
+        if key not in KNOWN_SONG_KEYS:
+            messages.append(_unknown(str(key), KNOWN_SONG_KEYS, "song"))
+    sections = raw.get("sections")
+    for sec_id, sec in (sections.items() if isinstance(sections, dict) else ()):
+        for key in (sec if isinstance(sec, dict) else {}):
+            if key not in KNOWN_SECTION_KEYS:
+                messages.append(_unknown(str(key), KNOWN_SECTION_KEYS, f"section '{sec_id}'"))
+    return list(dict.fromkeys(messages))
+
+
+def unknown_instrument_param_warnings(raw: Dict) -> List[str]:
+    """Warnings for instrument params no built-in engine reads.
+
+    Checks the global ``instruments:`` block and every section's
+    ``instruments:`` entries (direct keys, ``params`` and ``extra``) of the
+    built-in engines. Custom engines define their own params and are not
+    checked. Engine registry fields (``program``, ``channel``, ...) are
+    accepted on a global instrument entry and pointed at ``engines:`` when
+    set on a section, where they have no effect. Unknown keys never stop a
+    build; the loader logs these lines.
+    """
+    messages: List[str] = []
+    if not isinstance(raw, dict):
+        return messages
+
+    def check(name: str, cfg, where: str, *, registry_ok: bool) -> None:
+        known = KNOWN_PARAMS_BY_INSTRUMENT.get(name)
+        if known is None or not isinstance(cfg, dict):
+            return
+        all_known = set(known) | KNOWN_INSTRUMENT_FIELDS
+        for key in cfg:
+            if key in ("params", "extra") or key in all_known:
+                continue
+            if key in ENGINE_REGISTRY_FIELDS:
+                if not registry_ok:
+                    messages.append(
+                        f"'{key}' for {where} is an engine registry field and has no "
+                        f"effect in a section; set it under engines.{name}.")
+                continue
+            messages.append(_unknown(key, all_known, where))
+        for block in ("params", "extra"):
+            inner = cfg.get(block)
+            if not isinstance(inner, dict):
+                continue
+            for key in inner:
+                if key in ("extra", "params") and isinstance(inner[key], dict):
+                    check(name, {k: v for k, v in inner[key].items()
+                                 if k not in ENGINE_REGISTRY_FIELDS}, where, registry_ok=True)
+                    continue
+                if key not in all_known:
+                    messages.append(_unknown(key, all_known, where))
+
+    instruments = raw.get("instruments")
+    if isinstance(instruments, dict):
+        for name, cfg in instruments.items():
+            check(str(name), cfg, f"instruments.{name}", registry_ok=True)
+    engines = raw.get("engines")
+    if isinstance(engines, dict):
+        for name, cfg in engines.items():
+            for key in (cfg if isinstance(cfg, dict) else {}):
+                if key not in ENGINE_REGISTRY_FIELDS:
+                    messages.append(_unknown(key, ENGINE_REGISTRY_FIELDS, f"engines.{name}"))
+    sections = raw.get("sections")
+    if isinstance(sections, dict):
+        for sec_id, sec in sections.items():
+            insts = sec.get("instruments") if isinstance(sec, dict) else None
+            if not isinstance(insts, dict):
+                continue
+            for name, cfg in insts.items():
+                check(str(name), cfg, f"{name} in section '{sec_id}'", registry_ok=False)
+    # One line per distinct problem, in first-seen order.
+    return list(dict.fromkeys(messages))
 KNOWN_DRUM_VOICE_PARAMS = {
     "voices.kick.density", "voices.kick.syncopation", "voices.kick.syncopation.rate",
     "voices.kick.syncopation.placements", "voices.kick.double", "voices.kick.double.rate",
@@ -309,15 +442,15 @@ def validate_song_config(
         if not isinstance(section_config, dict):
             errors.append(f"ERROR: Section '{section_id}' must be a mapping")
             continue
+        if not isinstance(section_config.get("instruments", {}), dict):
+            errors.append(f"ERROR: Section '{section_id}': 'instruments' must be a mapping")
 
-        messages = validate_section_config(section_id, section_config, strict=strict)
-
-        # Split into errors and warnings
-        for msg in messages:
-            if msg.startswith("ERROR:"):
-                errors.append(msg)
-            elif msg.startswith("WARNING:"):
-                warnings.append(msg)
+    # The same instrument-param check the build logs (global and section).
+    for msg in unknown_instrument_param_warnings(config):
+        if strict:
+            errors.append(f"ERROR: {msg}")
+        else:
+            warnings.append(f"WARNING: {msg}")
 
     return errors, warnings
 

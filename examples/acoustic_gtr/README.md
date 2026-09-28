@@ -1,6 +1,7 @@
 # Acoustic guitar examples
 
 - [style-comparison.yaml](style-comparison.yaml): hear `travis` fingerpicking, strumming at `strum_density: 0.75`, a `broken_chord` hybrid, and percussion at `body_tap_ratio: 0.35` in four sections.
+- [solo/](solo/): the acoustic guitar on its own.
 
 ```bash
 python produzre_entry.py build examples/acoustic_gtr/style-comparison.yaml

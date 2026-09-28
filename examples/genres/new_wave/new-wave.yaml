@@ -1,0 +1,105 @@
+# New wave: a synth-and-guitar song in D major with a singer.
+#
+# A sequenced synth arpeggio (the arpeggiator engine on a sawtooth patch)
+# ticks in sixteenths under a clean, sparse rhythm guitar and a straight
+# drummer (hi-hat foot in the verse, sixteenth hats in the prechorus,
+# eighths in the chorus). The lead guitar answers the singer with short
+# licks in the verse and punctuates the chorus with staccato octave stabs
+# on the changes, twice a bar (foreground: auto, counter: octaves). The
+# verse sits on the relative minor (vi IV I V), the chorus flips it to the
+# bright I V vi IV.
+#
+# Pinned, and why:
+#   - arrangement_style.counter: octaves, the chorus counter-part is octave
+#     stabs on the changes rather than a melodic line: the root and the
+#     root an octave up, or the fifth's octave where the root's does not
+#     fit the lead's [62, 81] register (the Bm bars, and the V and vi bars
+#     of the final chorus in E)
+#   - arrangement_style.comp_activity: sparse, so the guitar stays out of
+#     the arpeggio's way
+#   - arpeggiator pattern up in sixteenths over two octaves: a sequencer
+#     figure, a six-note triad cycle that restarts on every chord change
+#     and rolls across the four-sixteenth beat (pattern up is a choice: it
+#     keeps the machine-like figure instead of following the melody)
+#   - engines: sawtooth synth for the arpeggiator, clean electric guitars
+# The drummer, the bass role and the licks come from the shared
+# produzre-examples project and the seed.
+#
+# Listen for:
+#   - the arpeggio alone with the drums in the intro
+#   - the arpeggio growing louder from verse to chorus
+#   - the bass locking to the kick in the verse, pedaling eighths in the
+#     chorus
+#   - the verse's minor color opening up into the major chorus
+#   - the lead's octave stabs in every chorus bar before the hook's
+#     two-bar tag
+#   - the final chorus lifted a whole step
+version: 1
+song:
+  project: produzre-examples
+  title: "Glass Radio"
+  bpm: 134
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: new_wave
+  seed: 8127
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    counter: octaves
+    comp_activity: sparse
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  arpeggiator: {program: 81}   # GM Lead 2 (sawtooth)
+  rhythm_gtr: {program: 27}    # GM Electric Guitar (clean)
+  lead_gtr: {program: 27}
+
+instruments:
+  arpeggiator:
+    params: {pattern: up, note_duration: 0.25, octave_range: 2}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "vi IV I V"}
+    instruments: {harmony: {}, drums: {}, arpeggiator: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "vi IV I V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "IV V iii vi"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, chorus, outro]

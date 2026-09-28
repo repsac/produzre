@@ -1,0 +1,46 @@
+# Into the chorus: `build`.
+#
+# One of five short songs that differ only in `arrangement_style.into_chorus`,
+# the band's way into a chorus. Drums, bass and rhythm guitar play it
+# together:
+#
+#   build  the drums play a snare build of their own (not a fill): snare
+#          eighths through the verse's third bar, sixteenths in the fourth
+#          with the kick on every beat; the bass drives root eighths and
+#          the guitar strums straight eighths through the last bar
+#
+# The other files in this folder play the same band (same seed and chords)
+# with stop, build, fill, push and drop. Listen to bars 3 and 4, then
+# bars 11 and 12 (the build takes two bars in this song).
+version: 1
+song:
+  project: produzre-examples
+  title: "Into Chorus Build"
+  bpm: 120
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 3610
+  arrangement_style: {into_chorus: build, ending: ring}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 4
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 4
+    harmony: {progression: "bVI bVII i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [verse, chorus, verse, chorus]

@@ -1,0 +1,89 @@
+# Fingerstyle waltz: a slow 3/4 piece in A minor for fingerpicked acoustic
+# guitar alone.
+#
+# Every section fingerpicks without a picking_pattern, so the composed
+# fingerstyle plays it. In 3/4 the figure and melody are built bar by bar
+# in that meter. The song seed draws this piece's own picking DNA, different
+# from the 4/4 folk song in this folder (examples use the shared
+# produzre-examples project, so everyone hears the same player): a steady
+# thumb on every beat, a pima figure in the verses and pinches in the
+# choruses. The natural persona plays open shapes, so the low strings ring;
+# melody_amount and phrase_variation shape how strongly the top voice
+# sings and how much the figure varies from section to section.
+#
+# Listen for:
+#   - intro: the bare waltz figure, thumb on each beat, a quiet top voice
+#   - verse: a minor-key melody on the treble strings over i, iv and V,
+#     with the harmonic minor's E major chord pulling back home
+#   - chorus: the relative major (C, F, G), a new right-hand figure and a
+#     higher, louder melody
+#   - the bridge sits on iv and bVI with a sparser top voice
+#   - the outro returns to A minor and holds the final chord
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Acoustic Minor Waltz"
+  bpm: 84
+  key: A
+  mode: minor
+  meter: "3/4"
+  genre: folk
+  seed: 8202
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 12
+
+instruments:
+  acoustic_gtr:
+    params:
+      technique: fingerpicking
+      melody_amount: 0.75
+      phrase_variation: 0.3
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.45
+    harmony: {progression: "i iv i V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {melody_amount: 0.5}}
+  verse:
+    type: verse
+    bars: 8
+    intensity: 0.55
+    harmony: {progression: "i iv i V i iv V i"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    intensity: 0.75
+    harmony: {progression: "bIII bVI bVII bIII bVI iv V V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {melody_amount: 0.9}}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "iv iv bVI bVI iv iv V V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {melody_amount: 0.55, phrase_variation: 0.45}}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.45
+    harmony: {progression: "iv V i i"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

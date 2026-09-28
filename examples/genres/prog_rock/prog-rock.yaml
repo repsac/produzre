@@ -1,0 +1,93 @@
+# Prog rock: an instrumental in D dorian that moves between 7/8, 4/4 and 5/4.
+#
+# The verses and the intro are in 7/8, grouped 2+2+3: the riff, the kick
+# and the melody all phrase by those groups, so the long group at the end
+# of the bar is the lurch you feel. The chorus opens into 4/4, the bridge
+# goes to 5/4 (3+2), and the solo returns to 7/8 with the grouping flipped
+# to 3+2+2, the same bar length felt differently. The lead guitar carries
+# the tunes (foreground: full), and the band rides a signature riff that
+# the bass doubles.
+#
+# Pinned, and why:
+#   - arrangement_style.riff_driven and bass_doubles: true, the unison
+#     riff of guitar and bass is the core sound of the style
+#   - arrangement_style.solo_story: climb, a solo that builds by sequence
+#   - section meters and groupings: the point of the example
+#   - song.final_chorus: modulate, the last chorus lifts a whole step
+# The drummer, the riff and the melody come from the shared
+# produzre-examples project and the seed.
+#
+# Listen for:
+#   - the 2+2+3 riff in the intro and verse, guitar and bass in unison
+#   - the chorus relaxing into four, with a major IV of dorian in the verse
+#   - the bridge in five (3+2)
+#   - the solo's 3+2+2 grouping: same 7/8 bar, accents in new places
+#   - the final chorus up a whole step
+version: 1
+song:
+  project: produzre-examples
+  title: "Seven Gates of Morning"
+  bpm: 132
+  key: D
+  mode: dorian
+  meter: "7/8"
+  meter_grouping: "2+2+3"
+  genre: prog_rock
+  seed: 7788
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    solo_story: climb
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 14
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: full
+      register: [60, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bIII IV i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    meter: "4/4"
+    harmony: {progression: "bVI bVII i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 4
+    meter: "5/4"
+    meter_grouping: "3+2"
+    harmony: {progression: "bVII bVI bVII IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    meter_grouping: "3+2+2"
+    harmony: {progression: "i IV i IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVII IV i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

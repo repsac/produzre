@@ -1,0 +1,77 @@
+# Six-eight drums: a rolling 6/8 rock ballad played by the kit alone.
+#
+# 6/8 pulses in two dotted quarters, so the composed drummer builds its
+# grooves on that two-beat pulse (not a 3/4 backbeat): kick on the first
+# pulse, snare on the second, hands on the eighths. No section needs a
+# harmony progression: a drum-only section takes its beat grouping from
+# the meter. Nothing about the kit is authored, so the song seed draws the
+# drummer (chosen here for a different hand voice in every section);
+# ghost_rate and fill_rate only shape it. Drums follow the section
+# intensity: verses and the bridge sit under the choruses, and each chorus
+# repeat plays a little harder than the last.
+#
+# Listen for:
+#   - the intro rolls eighths on the low tom, then the verse moves the
+#     hands to closed hats over the two-pulse lilt
+#   - solo drums keep the backbeat in every bar; bars 2 and 6 of each
+#     eight-bar section answer on the toms in their last pulse, and fills
+#     turn bars 4 and 8
+#   - the chorus moves the hands to the ride, and a snare build (eighths
+#     rising to sixteenths over the last two bars) leads into every chorus
+#     (into_chorus: build)
+#   - the bridge opens the hands to a washy open hat
+#   - the outro stays on the ride and ends on a ringing crash (ending: ring)
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Drums Six Eight"
+  bpm: 96
+  key: D
+  mode: major
+  meter: "6/8"
+  genre: soft_rock
+  seed: 6818
+  arrangement_style:
+    into_chorus: build
+    ending: ring
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 12
+
+instruments:
+  drums:
+    params:
+      ghost_rate: 0.2
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    instruments:
+      drums: {}
+  verse:
+    type: verse
+    bars: 8
+    instruments:
+      drums: {}
+  chorus:
+    type: chorus
+    bars: 8
+    instruments:
+      drums: {params: {fill_rate: 0.6}}
+  bridge:
+    type: bridge
+    bars: 8
+    instruments:
+      drums: {}
+  outro:
+    type: outro
+    bars: 4
+    instruments:
+      drums: {}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

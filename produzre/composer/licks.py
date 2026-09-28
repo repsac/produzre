@@ -1,0 +1,332 @@
+"""Idiomatic lead-guitar licks.
+
+Licks are written on a *ladder* instead of absolute pitches: the pentatonic
+ladder (minor pentatonic in minor-family modes, major pentatonic otherwise)
+or the diatonic ladder. Index 0 is the tonic; the realizer places the lick
+in a register "box" and follows the harmony only where a sustained note
+would clash. One lick therefore works in any key, and the same figure turns
+bluesy in minor and country-flavored in major, the way players reuse
+vocabulary.
+
+A song draws a bank of three licks and keeps reusing them for fills, which
+gives its lead guitar a recognizable voice instead of a new random figure
+every phrase.
+
+Technique codes: ``bend2``/``bend1`` bend up into the written pitch,
+``rel`` a release after a bend, ``slide`` slide in from below, ``hammer`` a
+quick hammer-on grace, ``vib`` wide vibrato, ``stac`` staccato.
+"""
+
+from __future__ import annotations
+
+import random
+from dataclasses import dataclass
+from typing import List, Optional, Sequence, Tuple
+
+from .realize import Note
+from .theory import ChordMap, pentatonic_pcs, pitches_in, scale_pcs, tonic_pc
+
+
+@dataclass(frozen=True)
+class Lick:
+    name: str
+    families: Tuple[str, ...]
+    notes: Tuple[Tuple[float, float, int, Optional[str]], ...]
+    length: float
+    ladder: str = "penta"
+    energy: float = 0.5  # 0 = laid back, 1 = shred
+
+
+def _L(name, families, notes, ladder="penta", energy=0.5):
+    length = max(o + d for o, d, _, _ in notes)
+    return Lick(name, tuple(families), tuple(notes), float(length), ladder, energy)
+
+
+LICKS: Tuple[Lick, ...] = (
+    # --- blues / rock pentatonic vocabulary --------------------------------
+    _L("bend_release_home", ("rock", "blues", "pop"),
+       [(0, .5, 3, "bend2"), (.5, .5, 2, "rel"), (1, .5, 1, None), (1.5, 1.5, 0, "vib")]),
+    _L("climb_and_cry", ("rock", "blues", "metal"),
+       [(0, .25, 0, None), (.25, .25, 1, None), (.5, .5, 2, None), (1, 2, 4, "bend2")], energy=.6),
+    _L("root_b7_answer", ("rock", "blues", "funk"),
+       [(0, .5, 5, None), (.5, .5, 4, None), (1, .5, 3, None), (1.5, .5, 4, "bend1"), (2, 1, 3, "vib")]),
+    _L("double_pickup", ("rock", "pop", "country"),
+       [(0, .5, 2, None), (.5, .5, 2, None), (1, .5, 3, "slide"), (1.5, .5, 4, None), (2, 2, 3, "vib")]),
+    _L("descending_triplets", ("rock", "blues", "metal"),
+       [(0, 1 / 3, 5, None), (1 / 3, 1 / 3, 4, None), (2 / 3, 1 / 3, 3, None),
+        (1, 1 / 3, 4, None), (4 / 3, 1 / 3, 3, None), (5 / 3, 1 / 3, 2, None),
+        (2, 1, 1, None), (3, 1, 0, "vib")], energy=.75),
+    _L("slow_hand_bend", ("blues", "rock", "soul", "gospel"),
+       [(0, 1.5, 4, "bend2"), (1.5, .5, 3, "rel"), (2, 2, 2, "vib")], energy=.3),
+    _L("call_repeat", ("rock", "pop", "funk"),
+       [(0, .5, 3, None), (.5, .25, 3, "stac"), (.75, .75, 4, "bend1"), (1.5, .5, 3, None),
+        (2, 1, 2, "vib")]),
+    # --- metal ------------------------------------------------------------
+    _L("pedal_run", ("metal",),
+       [(0, .25, 0, "stac"), (.25, .25, 2, None), (.5, .25, 0, "stac"), (.75, .25, 3, None),
+        (1, .25, 0, "stac"), (1.25, .25, 4, None), (1.5, .5, 5, "vib")], energy=.9),
+    _L("tremolo_scream", ("metal", "rock"),
+       [(0, .25, 5, None), (.25, .25, 5, None), (.5, .25, 5, None), (.75, .25, 5, None),
+        (1, .25, 6, None), (1.25, .25, 5, None), (1.5, 1.5, 4, "bend2")], energy=1.0),
+    _L("harmonic_minor_dive", ("metal",),
+       [(0, .25, 7, None), (.25, .25, 6, None), (.5, .25, 5, None), (.75, .25, 4, None),
+        (1, .5, 3, None), (1.5, 1.5, 4, "vib")], ladder="diatonic", energy=.85),
+    # --- country / major pentatonic ----------------------------------------
+    _L("chicken_pick", ("country", "pop", "folk"),
+       [(0, .25, 2, "stac"), (.25, .25, 3, None), (.5, .5, 4, "bend2"), (1, .5, 3, None),
+        (1.5, .5, 2, None), (2, 1, 0, "vib")], energy=.6),
+    _L("pedal_steel_sigh", ("country", "folk", "gospel", "soul"),
+       [(0, 1, 1, "bend2"), (1, .5, 0, None), (1.5, 1.5, -1, "vib")], energy=.25),
+    # --- funk / soul ------------------------------------------------------
+    _L("funk_stab_run", ("funk", "rnb", "soul", "disco"),
+       [(0, .25, 3, "stac"), (.5, .25, 3, "stac"), (.75, .25, 4, "stac"), (1, .25, 5, "stac"),
+        (1.5, .5, 4, None)], energy=.55),
+    _L("soul_turn", ("soul", "rnb", "gospel", "pop"),
+       [(0, .25, 2, None), (.25, .25, 3, None), (.5, .25, 2, None), (.75, .25, 1, None),
+        (1, 2, 0, "vib")], ladder="diatonic", energy=.35),
+    # --- jazz / fusion ----------------------------------------------------
+    _L("bebop_enclosure", ("jazz", "latin", "bossa"),
+       [(0, .5, 3, None), (.5, .5, 1, None), (1, .5, 2, None), (1.5, .5, 4, None),
+        (2, 1, 2, None)], ladder="diatonic", energy=.5),
+    # --- pop / anthemic ---------------------------------------------------
+    _L("slide_to_hook_note", ("pop", "rock", "emo", "new_wave"),
+       [(0, .5, 1, None), (.5, .5, 2, None), (1, 2, 3, "slide")], energy=.4),
+    _L("octave_lift", ("pop", "rock", "cinematic", "post-rock"),
+       [(0, 1, 0, None), (1, 1, 5, "slide"), (2, 2, 4, "vib")], energy=.45),
+)
+
+_FAMILY_ALIASES = (
+    ("hard_rock", "rock"), ("grunge", "rock"), ("punk", "rock"), ("alt", "rock"),
+    ("prog", "rock"), ("arena", "rock"), ("thrash", "metal"), ("heavy", "metal"),
+    ("r&b", "rnb"), ("hip_hop", "funk"), ("ska", "funk"), ("reggae", "funk"),
+    ("swing", "jazz"), ("bebop", "jazz"), ("electronic", "pop"), ("techno", "pop"),
+    ("dance", "pop"), ("classical", "cinematic"), ("ambient", "cinematic"),
+)
+
+
+def genre_family(genre: str) -> str:
+    g = str(genre or "").lower().replace(" ", "_").replace("-", "_")
+    for fam in ("metal", "blues", "country", "funk", "soul", "gospel", "jazz", "latin",
+                "folk", "rnb", "emo", "new_wave", "cinematic", "post_rock", "pop", "rock"):
+        if fam in g:
+            return fam
+    for token, fam in _FAMILY_ALIASES:
+        if token in g:
+            return fam
+    return "rock"
+
+
+def choose_lick_bank(rng: random.Random, *, genre: str, count: int = 3,
+                     max_energy: float = 0.7,
+                     own_rng: Optional[random.Random] = None, country_style=None) -> List[Lick]:
+    """The song's signature fills: idiomatic for the genre and laid back
+    enough to answer a phrase (shred licks are saved for the solo)."""
+    fam = genre_family(genre)
+    pool = [l for l in LICKS if fam in l.families and l.energy <= max_energy]
+    others = [l for l in LICKS if fam not in l.families and "rock" in l.families
+              and l.energy <= max_energy]
+    bank: List[Lick] = []
+    while pool and len(bank) < count:
+        pick = pool.pop(rng.randrange(len(pool)))
+        bank.append(pick)
+    while others and len(bank) < count:
+        bank.append(others.pop(rng.randrange(len(others))))
+    if own_rng is not None and fam not in ("jazz", "latin"):
+        # Most of a song's bank is its own: generated licks replace all but
+        # one vocabulary lick, so no two songs answer phrases alike.
+        keep = own_rng.randrange(len(bank)) if bank else 0
+        for i in range(len(bank)):
+            if i != keep:
+                bank[i] = generate_lick(own_rng, family=fam,
+                                        energy=own_rng.uniform(0.3, max_energy), country_style=country_style)
+    return bank
+
+
+# ---------------------------------------------------------------------------
+# Generated licks: the song's own vocabulary
+# ---------------------------------------------------------------------------
+_UNITS = {"8": 0.5, "16": 0.25, "trip": 1.0 / 3.0}
+
+
+def generate_lick(rng: random.Random, *, family: str, energy: float,
+                  max_len: float = 3.0, country_style=None) -> Lick:
+    """Synthesize an idiomatic lick from a shape grammar.
+
+    Shapes are the moves players build licks from: a bend that cries and
+    releases, a run down (or up into a bend), a repeated motif, a pedal-point
+    figure, a pre-bend release. The rhythm unit, starting box position,
+    length and ending are drawn per song, so each song phrases its own way.
+    Every lick lands on a held note so it closes a phrase.
+    """
+    if family == "country":
+        return _country_lick(rng, energy, max_len, country_style)
+    shape = rng.choice(["cry", "run_down", "run_up", "motif", "pedal", "prebend"])
+    unit_name = rng.choice(["8", "16", "16", "trip"] if energy >= 0.5 else ["8", "8", "trip"])
+    unit = _UNITS[unit_name]
+    top = rng.randint(3, 6)
+    notes: List[tuple] = []
+    t = 0.0
+
+    def add(idx, dur, tech=None):
+        nonlocal t
+        notes.append((round(t, 4), dur, idx, tech))
+        t += dur
+
+    if shape == "cry":
+        add(top - 2, unit)
+        add(top - 1, unit)
+        add(top, max(1.0, unit * 3), "bend2")
+        add(top - 1, unit, "rel")
+        add(top - 2, 1.0, "vib")
+    elif shape == "run_down":
+        n = rng.randint(4, 7)
+        for k in range(n):
+            add(top - k, unit)
+        add(top - n, 1.5, "vib")
+    elif shape == "run_up":
+        start = top - rng.randint(3, 5)
+        for k in range(rng.randint(3, 5)):
+            add(start + k, unit)
+        add(start + 4, 1.5, "bend2")
+    elif shape == "motif":
+        cell = rng.choice([(0, -1, 0), (0, 1, -1), (0, -1, -2), (0, 0, -1)])
+        for _ in range(rng.choice([2, 3])):
+            for step in cell:
+                add(top + step, unit)
+        add(top - 2, 1.0, "vib")
+    elif shape == "pedal":
+        for k in range(rng.randint(2, 3)):
+            add(top, unit)
+            add(top - 1 - k, unit)
+        add(top - 3, 1.5, "vib")
+    else:  # prebend: strike bent, release, fall to the box root
+        add(top, max(0.75, unit * 2), "bend2")
+        add(top - 1, unit, "rel")
+        add(top - 2, unit)
+        add(top - 3, 1.5, "vib")
+    # Fit the room a phrase-end fill has: drop notes from the front so the
+    # landing note (the phrase's resolution) survives.
+    while t > max_len + 1e-6 and len(notes) > 2:
+        first_dur = notes[1][0] - notes[0][0]
+        notes = [(round(o - first_dur, 4), d, i, tech) for o, d, i, tech in notes[1:]]
+        t -= first_dur
+    density = len(notes) / max(1.0, t)
+    name = f"gen_{shape}_{unit_name}_{top}"
+    return Lick(name, (family, "rock"), tuple(notes), round(t, 4), "penta",
+                min(1.0, 0.2 + 0.2 * density))
+
+
+def _country_lick(rng, energy, max_len, style):
+    from .country import LICK_FAMILIES, STYLES
+
+    shape = rng.choice(LICK_FAMILIES[style] if style in STYLES else
+                       ("chicken", "thirds", "sixths", "steel", "banjo", "hybrid", "travis", "chromatic"))
+    unit = rng.choice((.25, .5, .5))
+    box = rng.choice((0, 0, 5))
+    end = rng.choice((2, 4)) + box
+    paths = {"chicken": (4, 3, 2, 1), "thirds": (0, 1, 2), "sixths": (2, 1, 0),
+             "steel": (1, 2), "banjo": (0, 3, 2, 4), "hybrid": (0, 2, 3, 4),
+             "travis": (0, 3, 1, 3), "chromatic": (4, 3, 2)}
+    path = list(paths[shape])
+    if shape not in ("steel", "chromatic") and rng.random() < .5:
+        path = path[::-1]
+    start = rng.choice((0., .25, .5))
+    notes = []
+    for i, degree in enumerate(path):
+        t = start+i*unit
+        if t+unit >= max_len-.4:
+            break
+        tech = (shape if shape in ("thirds", "sixths") else "bend2" if shape == "steel" and i == 0 else "stac")
+        notes.append((t, unit*.72, degree+box, tech))
+    t = notes[-1][0]+unit if notes else 0
+    if shape == "chromatic" and t+.25 < max_len-.3:
+        # b3 to 3 is a short passing approach, never a held blue third.
+        notes += [(t, .12, 2+box, "approach"), (t+.25, .2, 2+box, "stac")]
+        t += .5
+    notes.append((t, min(.8, max_len-t), end, "vib" if shape == "steel" else "stac"))
+    return Lick(f"country_{shape}_{unit:g}_{box}_{end}_{start:g}", ("country",), tuple(notes),
+                max(o+d for o,d,_,_ in notes), "penta", energy)
+
+
+def _ladder(lick: Lick, key: str, mode: str, lo: int, hi: int) -> List[int]:
+    pcs = pentatonic_pcs(key, mode) if lick.ladder == "penta" else scale_pcs(key, mode)
+    return pitches_in(pcs, lo - 12, hi + 12)
+
+
+def realize_lick(
+    lick: Lick,
+    start: float,
+    chords: ChordMap,
+    *,
+    key: str,
+    mode: str,
+    lo: int,
+    hi: int,
+    anchor: int,
+    beats_per_bar: float = 4.0,
+    time_scale: float = 1.0,
+) -> List[Note]:
+    """Place a lick with its ladder index 0 on the tonic nearest ``anchor``.
+
+    Sustained notes that clash with the chord slide to the nearest ladder or
+    chord tone; quick notes pass freely, as they do under a player's hands.
+    """
+    ladder = _ladder(lick, key, mode, lo, hi)
+    t = tonic_pc(key)
+    tonics = [i for i, p in enumerate(ladder) if p % 12 == t]
+    if not tonics:
+        return []
+    per_octave = 5 if lick.ladder == "penta" else 7
+
+    def span(b: int) -> Tuple[int, int]:
+        ps = [ladder[max(0, min(len(ladder) - 1, b + idx))] for _, _, idx, _ in lick.notes]
+        return min(ps), max(ps)
+
+    def centre(b: int) -> float:
+        ps = [ladder[max(0, min(len(ladder) - 1, b + idx))] for _, _, idx, _ in lick.notes]
+        return sum(ps) / len(ps)
+
+    # Place the lick so its centre of pitch (not its tonic) sits at the
+    # anchor: a climax lick belongs at the top of the register plan.
+    fitting = [b for b in tonics if span(b)[1] <= hi + 2 and span(b)[0] >= lo - 2]
+    base = min(fitting or tonics, key=lambda b: (abs(centre(b) - anchor), b))
+
+    # Move the whole lick by octaves until it fits: folding single notes
+    # would break its shape (a tremolo peak dropping below its own run).
+    for _ in range(3):
+        low, high = span(base)
+        if high > hi + 2 and base - per_octave >= 0:
+            base -= per_octave
+        elif low < lo - 2 and base + per_octave < len(ladder):
+            base += per_octave
+        else:
+            break
+    out: List[Note] = []
+    for onset, dur, idx, tech in lick.notes:
+        j = max(0, min(len(ladder) - 1, base + idx))
+        pitch = ladder[j]
+        beat = start + onset * time_scale
+        d = dur * time_scale
+        span = chords.at(beat)
+        if span is not None and d >= (0.5 if lick.name.startswith("country_") else 0.75) and (pitch % 12) not in span.pcs:
+            near = [p for p in range(pitch - 2, pitch + 3) if p % 12 in span.pcs]
+            if near:
+                pitch = min(near, key=lambda p: (abs(p - pitch), p))
+        while pitch > hi + 2:
+            pitch -= 12
+        while pitch < lo - 2:
+            pitch += 12
+        role = "country_lick" if lick.name.startswith("country_") else "lick"
+        if tech == "approach":
+            pitch -= 1
+            d = min(d, .12)
+            tech = "stac"
+        if tech in ("thirds", "sixths") and span is not None:
+            offsets = (3, 4) if tech == "thirds" else (8, 9)
+            partners = [pitch+v for v in offsets if pitch+v <= hi and (pitch+v)%12 in span.pcs]
+            if partners:
+                role = "country_double"
+                out.append(Note(round(beat, 4), min(d, .4), partners[0], tech="stac", role=role))
+            tech = "stac"
+        out.append(Note(round(beat, 4), d, pitch, accent=onset == 0, tech=tech, role=role))
+    return out

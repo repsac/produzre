@@ -1,0 +1,94 @@
+# Fingerpicked folk: a country-folk song in A for fingerpicked acoustic
+# guitar alone, played the folk way: G shapes with a capo at the second
+# fret.
+#
+# Every section fingerpicks and no picking_pattern is set, so the composed
+# fingerstyle plays the whole piece. The capo changes the shapes, not the
+# key: the thumb, inner strings and melody all sound in A, fingered as G,
+# C and D shapes above the capo, and the natural persona keeps them open
+# so the strings ring. The song seed draws the player's picking DNA once
+# (examples use the shared produzre-examples project, so everyone hears the
+# same player): an alternating Travis thumb on root and fifth, a forward
+# roll for the verses and a banjo-style roll for the choruses. The top
+# voice follows the chords on the treble strings while the thumb keeps
+# time; the last bar is held. The tab (analysis/acoustic_gtr/*.tab.txt)
+# says CAPO: fret 2 and writes every fret relative to the capo, so it shows
+# the G, C and D shapes as they are fingered.
+#
+# Listen for:
+#   - intro and verses: the thumb alternates root and fifth on every beat
+#     while a melody rides on top, louder than the inner strings
+#   - every second bar answers the first with the melody moved off its spot
+#   - the chorus switches to the banjo-style figure and lifts the melody
+#     toward the top of each shape, then the verse figure returns
+#   - the bridge moves to the relative minor and back to the dominant
+#   - the outro plays the figure softly and ends on a held low A under the
+#     melody's last note
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Acoustic Fingerpicked Folk"
+  bpm: 100
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 8101
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  acoustic_gtr:
+    params:
+      technique: fingerpicking
+      capo: 2
+      melody_amount: 0.8
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "I IV I V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  verse:
+    type: verse
+    bars: 8
+    intensity: 0.6
+    harmony: {progression: "I I IV I I vi V V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    intensity: 0.8
+    harmony: {progression: "IV I V I IV I V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+  bridge:
+    type: bridge
+    bars: 8
+    intensity: 0.65
+    harmony: {progression: "vi iii IV I vi iii ii V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {melody_amount: 0.6}}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "IV I V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

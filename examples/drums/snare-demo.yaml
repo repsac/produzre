@@ -1,12 +1,18 @@
+# Snare voice controls: cross-stick, rimshot and normal backbeats with ghost rates.
+#
+# `voices` is a part selector: every section here sets drum voices, so the
+# classic drum engine plays them with its kit-voice controls instead of
+# the composed drummer. See README.md for the composed drum demos.
 version: 1
 song:
+  project: produzre-examples
   title: "SnareDemo"
   bpm: 120
   key: C
   mode: major
   meter: "4/4"
   beats_per_bar: 4
-  seed: 42
+  seed: 4003
   variation: 0.0
   humanize_velocity: 0.0
   humanize_timing: 0.0

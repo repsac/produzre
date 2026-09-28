@@ -1,6 +1,7 @@
 version: 1
 song:
-  themes_auto: false  # isolate bass engine tests from theme coupling
+  project: produzre-examples
+  themes_auto: false  # no automatic themes: the bass plays its own engine line
   title: "Solo_Bass_Pocket"
   bpm: 110
   key: C

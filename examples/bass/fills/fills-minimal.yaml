@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "Bass_Fills_Minimal"
   bpm: 110
   key: C

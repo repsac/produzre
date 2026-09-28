@@ -16,7 +16,7 @@ from random import Random
 
 def test_baseline_without_rhythm_intent():
     """Verify bass works normally without RhythmIntent (backwards compatible)."""
-    yaml_path = "examples/bass/baseline/negotiation-baseline.yaml"
+    yaml_path = "tests/fixtures/examples/bass/baseline/negotiation-baseline.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -59,7 +59,7 @@ def test_rhythm_intent_injection():
     from produzre.engine.bass import render_into_timeline
 
     # Load config
-    cfg = load_root_config("examples/bass/baseline/negotiation-baseline.yaml")
+    cfg = load_root_config("tests/fixtures/examples/bass/baseline/negotiation-baseline.yaml")
     section = cfg.sections["verse1"]
 
     # Plan harmony
@@ -147,7 +147,7 @@ def test_space_budget_reduces_density():
     import logging
 
     # Load config
-    cfg = load_root_config("examples/bass/baseline/negotiation-baseline.yaml")
+    cfg = load_root_config("tests/fixtures/examples/bass/baseline/negotiation-baseline.yaml")
     section = cfg.sections["verse1"]
 
     # Plan harmony
@@ -168,7 +168,9 @@ def test_space_budget_reduces_density():
         "density": 0.8,  # Start with high density
         "register_low": 28,
         "register_high": 52,
-        "rhythm_pattern": "anchor",
+        # Drive has room to thin: the anchor pattern has two slots a bar,
+        # and every bar keeps at least one note, so a budget cannot show there.
+        "rhythm_pattern": "drive",
         "lock_to_kick": 0.6,
         "articulation_style": "finger",
     }}
@@ -234,7 +236,7 @@ def test_accent_map_with_rhythm_intent():
     import logging
 
     # Load config
-    cfg = load_root_config("examples/bass/baseline/negotiation-baseline.yaml")
+    cfg = load_root_config("tests/fixtures/examples/bass/baseline/negotiation-baseline.yaml")
     section = cfg.sections["verse1"]
 
     # Plan harmony
@@ -306,7 +308,7 @@ def test_negotiation_features_deterministic():
     import logging
 
     def build_and_get_features():
-        cfg = load_root_config("examples/bass/baseline/negotiation-baseline.yaml")
+        cfg = load_root_config("tests/fixtures/examples/bass/baseline/negotiation-baseline.yaml")
         section = cfg.sections["verse1"]
 
         harmony_plan = build_harmony_plan(

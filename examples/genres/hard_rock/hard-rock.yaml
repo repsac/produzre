@@ -1,0 +1,105 @@
+# Hard rock: a riff-driven band with a singer, in A minor at 132 BPM.
+#
+# The song rides one signature riff. The rhythm guitar plays it in the
+# intro, verses and outro, and the bass doubles it an octave down, so the
+# band hits every accent together. The lead guitar plays around an
+# imagined singer (foreground: auto): the guitar hook in the intro, licks
+# at the ends of verse phrases, a held counter-line climbing through the
+# chorus before the hook tag, and a solo after the bridge. In the chorus
+# the bass leaves the riff to pedal root eighths under sixteenth hats.
+#
+# Pinned in song.arrangement_style, and why:
+#   - riff_driven and bass_doubles: the defining hard rock sound, one riff
+#     played by guitar and bass in unison
+#   - intro: riff_alone, so the riff is heard by itself before the band
+#     comes in
+#   - into_chorus: stop, the classic stop-time bar before the chorus
+#   - solo_story: climb and ending: big, for an arena-sized finish
+#   - drums fill_rate 0.3 and ghost_rate 0.1: a few more fills, few ghosts
+# Everything else (the drummer, comp figures, licks, chorus form) is drawn
+# from the seed, so the song keeps its own band identity (examples use the
+# shared produzre-examples project).
+#
+# Listen for:
+#   - the riff alone for two bars, a drum pickup, then drums and bass
+#     locking to it
+#   - verse 2 answering the singer with the same licks as verse 1
+#   - a stop-time bar into each chorus, then a crash on the downbeat
+#   - the solo climbs to a peak and resolves; the last chorus moves up a
+#     whole step (final_chorus: modulate)
+#   - turnarounds lead each section back to the tonic
+version: 1
+song:
+  project: produzre-examples
+  title: "Gravel and Thunder"
+  bpm: 132
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: hard_rock
+  seed: 7312
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    intro: riff_alone
+    into_chorus: stop
+    solo_story: climb
+    ending: big
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 81]
+  bass:
+    params: {articulation_style: pick}
+  drums:
+    params: {fill_rate: 0.3, ghost_rate: 0.1}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bVII bVI"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVII i bVII i bVI bVII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "bVI bVII iv V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "bVI bVII bVI bVII iv iv V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVII bVI i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

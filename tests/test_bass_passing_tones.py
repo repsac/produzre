@@ -16,7 +16,7 @@ from pathlib import Path
 
 def test_no_passing_tones_when_disabled():
     """Verify approach_rate=0 produces no approach tones."""
-    yaml_path = "examples/bass/techniques/passing-none.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-none.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -57,7 +57,7 @@ def test_no_passing_tones_when_disabled():
 
 def test_diatonic_passing_introduces_motion():
     """Verify approach_rate=0.3 with chromatic_rate=0 introduces diatonic motion."""
-    yaml_path = "examples/bass/techniques/passing-diatonic.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-diatonic.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -104,7 +104,7 @@ def test_diatonic_passing_introduces_motion():
 
 def test_chromatic_rate_controls_approach_type():
     """Verify chromatic_rate controls mix of chromatic vs diatonic approaches."""
-    yaml_path = "examples/bass/techniques/passing-chromatic.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-chromatic.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -147,7 +147,7 @@ def test_chromatic_rate_controls_approach_type():
 
 def test_max_passing_per_bar_limit():
     """Verify max_passing_per_bar limits are respected."""
-    yaml_path = "examples/bass/techniques/passing-diatonic.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-diatonic.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -191,7 +191,7 @@ def test_max_passing_per_bar_limit():
 
 def test_walking_bass_allows_strong_beat_passing():
     """Verify walking persona allows passing tones on strong beats."""
-    yaml_path = "examples/bass/techniques/passing-walking.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-walking.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -234,7 +234,7 @@ def test_walking_bass_allows_strong_beat_passing():
 
 def test_default_persona_avoids_strong_beats():
     """Verify default persona avoids passing tones on strong beats (sounds safe)."""
-    yaml_path = "examples/bass/techniques/passing-diatonic.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-diatonic.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -278,7 +278,7 @@ def test_default_persona_avoids_strong_beats():
 
 def test_determinism_with_passing_tones():
     """Verify passing tones are deterministic with same seed."""
-    yaml_path = "examples/bass/techniques/passing-diatonic.yaml"
+    yaml_path = "tests/fixtures/examples/bass/techniques/passing-diatonic.yaml"
 
     def build_and_get_voice_labels():
         result = subprocess.run(

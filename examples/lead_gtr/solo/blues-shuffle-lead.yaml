@@ -1,0 +1,90 @@
+# Blues shuffle lead: an unaccompanied electric blues in A, a 12-bar verse,
+# an 8-bar refrain and a 12-bar solo chorus, all played by one lead guitar.
+#
+# A lone lead defaults to foreground: full, so the composer carries the
+# tune: a hook for the refrain, a verse idea, and three signature licks
+# drawn from the blues vocabulary. The groove block swings the eighths
+# (the lead has no drummer to take a feel from). Settings used all shape
+# the composed line: a register of E3 to C6, a leaping contour, frequent
+# bend-ins (bend_rate above 0.15 also bends untagged notes), wide vibrato,
+# no volume swells, and the song's solo pinned to the blues story with a
+# held ending (arrangement_style).
+#
+# Listen for:
+#   - intro: the refrain's hook over a V-IV-I turnaround
+#   - verse: a 12-bar blues melody that states, repeats over IV and
+#     answers over V, with bends into the target notes; verse 2 keeps the
+#     rhythm and changes some notes, like a new lyric
+#   - refrain (chorus): the hook and its answer, higher and louder; the
+#     second refrain returns note for note
+#   - the 12-bar solo (solo_story: blues) is built from the signature
+#     licks, call and response with space between phrases, a peak around
+#     C6 near the end and a held low note with vibrato to finish
+#   - the last refrain comes back lifted, much of it an octave or a fifth
+#     higher
+#   - the outro quotes the hook and holds the tonic
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Lead Blues Shuffle"
+  bpm: 92
+  key: A
+  mode: mixolydian
+  meter: "4/4"
+  genre: blues
+  seed: 9202
+  arrangement_style:
+    solo_story: blues
+    solo_ending: hold
+    lead_fills: chatty
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+groove:
+  swing: 0.62
+
+instruments:
+  lead_gtr:
+    persona: bluesy
+    register: [52, 84]
+    params:
+      contour_style: leaping
+      rest_probability: 0.25
+      bend_rate: 0.45
+      vibrato_rate: 0.75
+      swell_rate: 0.0
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.6
+    harmony: {progression: "V7 IV7 I7 V7"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  refrain:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV7 I7 V7 I7"}
+    instruments: {harmony: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, refrain, verse, refrain, solo, refrain, outro]

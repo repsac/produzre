@@ -58,6 +58,7 @@ def apply_drum_locking(
     lock_to_hat: float,
     subdivisions_per_beat: int,
     rng,
+    draw=None,
 ) -> set[float]:
     """Apply drum locking: add bass notes at drum hit times based on lock parameters.
 
@@ -69,6 +70,10 @@ def apply_drum_locking(
         lock_to_hat: Probability of adding bass note at hat/ride positions
         subdivisions_per_beat: Subdivisions per beat for quantization
         rng: Random number generator
+        draw: Optional ``draw(kind, beat) -> float`` replacing ``rng.random()``,
+            so a hit's lock decision depends on the hit, not on how many
+            hits came before it (a drummer's extra fill never reshuffles
+            the rest of the bass line)
 
     Returns:
         Set of beat positions with drum locking applied
@@ -99,7 +104,7 @@ def apply_drum_locking(
             lock_prob = lock_to_hat
 
         # Add bass note at this position with given probability
-        if lock_prob > 0 and rng.random() < lock_prob:
+        if lock_prob > 0 and (draw(kind, quantized_beat) if draw else rng.random()) < lock_prob:
             locked_slots.add(quantized_beat)
 
     return locked_slots

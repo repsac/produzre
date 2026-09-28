@@ -17,10 +17,10 @@ import statistics
 def test_style_changes_velocity():
     """Verify different styles produce different velocity ranges."""
     styles = {
-        "finger": "examples/bass/articulation/style-finger.yaml",
-        "pick": "examples/bass/articulation/style-pick.yaml",
-        "mute": "examples/bass/articulation/style-mute.yaml",
-        "slap": "examples/bass/articulation/style-slap.yaml",
+        "finger": "tests/fixtures/examples/bass/articulation/style-finger.yaml",
+        "pick": "tests/fixtures/examples/bass/articulation/style-pick.yaml",
+        "mute": "tests/fixtures/examples/bass/articulation/style-mute.yaml",
+        "slap": "tests/fixtures/examples/bass/articulation/style-slap.yaml",
     }
 
     velocity_stats = {}
@@ -83,10 +83,10 @@ def test_style_changes_velocity():
 def test_style_changes_duration():
     """Verify different styles produce different note durations."""
     styles = {
-        "finger": "examples/bass/articulation/style-finger.yaml",
-        "pick": "examples/bass/articulation/style-pick.yaml",
-        "mute": "examples/bass/articulation/style-mute.yaml",
-        "slap": "examples/bass/articulation/style-slap.yaml",
+        "finger": "tests/fixtures/examples/bass/articulation/style-finger.yaml",
+        "pick": "tests/fixtures/examples/bass/articulation/style-pick.yaml",
+        "mute": "tests/fixtures/examples/bass/articulation/style-mute.yaml",
+        "slap": "tests/fixtures/examples/bass/articulation/style-slap.yaml",
     }
 
     duration_stats = {}
@@ -144,10 +144,10 @@ def test_style_changes_duration():
 def test_style_pattern_biases():
     """Verify style-based pattern biases (pick→drive, mute→syncopated)."""
     test_cases = [
-        ("pick", "examples/bass/articulation/style-pick.yaml", "drive"),
-        ("mute", "examples/bass/articulation/style-mute.yaml", "syncopated"),
-        ("slap", "examples/bass/articulation/style-slap.yaml", "syncopated"),
-        ("finger", "examples/bass/articulation/style-finger.yaml", "anchor"),
+        ("pick", "tests/fixtures/examples/bass/articulation/style-pick.yaml", "drive"),
+        ("mute", "tests/fixtures/examples/bass/articulation/style-mute.yaml", "syncopated"),
+        ("slap", "tests/fixtures/examples/bass/articulation/style-slap.yaml", "syncopated"),
+        ("finger", "tests/fixtures/examples/bass/articulation/style-finger.yaml", "anchor"),
     ]
 
     for style_name, yaml_path, expected_pattern in test_cases:
@@ -182,7 +182,7 @@ def test_style_characteristic_output():
     styles = ["finger", "pick", "mute", "slap"]
 
     for style in styles:
-        yaml_path = f"examples/bass/articulation/style-{style}.yaml"
+        yaml_path = f"tests/fixtures/examples/bass/articulation/style-{style}.yaml"
         result = subprocess.run(
             [sys.executable, "-m", "produzre.cli", "build", yaml_path],
             capture_output=True,
@@ -201,7 +201,7 @@ def test_style_characteristic_output():
 
 def test_style_determinism():
     """Verify articulation is deterministic with same seed."""
-    yaml_path = "examples/bass/articulation/style-pick.yaml"
+    yaml_path = "tests/fixtures/examples/bass/articulation/style-pick.yaml"
 
     def build_and_get_velocities():
         result = subprocess.run(

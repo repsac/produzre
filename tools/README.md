@@ -46,6 +46,41 @@ MIDI archive ──► build_drum_manifest.py ──► manifest.yaml
                                     recipes/drums/*.yaml
 ```
 
+### Composition quality
+
+Two standalone tools judge what the composer writes:
+
+- `musicality.py` measures a melodic line's structure: step ratio, leap
+  recovery, exact and varied phrase repeats, rhythm recurrence,
+  self-information, and climax placement. Run it on a Produzre stem, or with
+  `--corpus DIR` on reference MIDI for a human baseline. Melodies come from
+  the highest mostly-monophonic track.
+
+  ```bash
+  python tools/musicality.py --corpus ~/midi/reference
+  python tools/musicality.py exports/<song>/instruments/lead_gtr/<song>_lead_gtr.mid
+  ```
+
+- `album_diversity.py` writes and builds an album of one genre (varied
+  keys, tempos, modes, progressions, seeds) and reports how alike its songs
+  are, per part and section, plus how often each arrangement habit repeats.
+
+  ```bash
+  python tools/album_diversity.py --genre hard_rock --songs 10 --out /tmp/album
+  ```
+
+- `preview_audio.py` renders a quick listening preview (Karplus-Strong
+  guitars and bass, a pitch-bend-following overdriven lead, synthesized
+  drums). It needs `numpy`; MP3 output also needs `ffmpeg`.
+
+  ```bash
+  python tools/preview_audio.py exports/<song>/<song>.mid -o preview.mp3
+  ```
+
+The composer's listener prior (`produzre/resources/composer/melodic_prior.json`)
+holds aggregate interval counts only (unigram and bigram), taken from a
+reference corpus. No melodies are stored.
+
 ## Prerequisites
 
 ```bash
@@ -290,3 +325,11 @@ The `genre_stats.json` output contains an array of genre objects:
 Each metric field contains `{n, mean, median, stdev, min, max}` computed across
 all files in that genre.  See `GenreStats` in `batch_analyze.py` for the full
 list of tracked metrics.
+
+### Composer review A/B
+
+`python tools/composer_review.py --seeds 24 --lead-sheets` compares contextual
+listener scoring on/off over 288 section cases. It prints musicality metrics,
+metric-weighted harmonic exposure, and optional chord/note lead sheets. Both
+arms include the correctness fixes; the contextual scoring weight is the only
+A/B variable. See `docs/design/composer-review.md` for interpretation.

@@ -1,0 +1,89 @@
+# Alternative rock: a mixolydian verse and a big chorus in E at 124 BPM.
+#
+# The verse borrows the flat seventh (E, D, A) for that open alt-rock
+# jangle, the prechorus turns to the relative minor, and the chorus lands
+# on IV to start its lift. The lead guitar plays around an imagined singer
+# (foreground: auto); under the chorus it punctuates each chord with
+# octave root stabs (the octaves counter), then plays the hook as a tag.
+#
+# Pinned, and why:
+#   - counter: octaves, the lead's octave stabs under the singer's chorus
+#     (a pinned counter keeps the plain counter-line in the chorus)
+#   - comp_activity: sparse, so the rhythm guitar states its figure and
+#     leaves air in the verses
+# The drummer, bass roles, into-chorus device and licks come from the seed
+# (examples use the shared produzre-examples project).
+#
+# Listen for:
+#   - the D chord (bVII) giving the verse its open, modal sound
+#   - the band stopping on the prechorus's last downbeat, then sixteenth
+#     hats and driving bass eighths in the chorus
+#   - octave stabs under the chorus, then the hook as a tag
+#   - the bridge on ii, IV, vi, V, then a climbing solo that sets up the
+#     last chorus
+version: 1
+song:
+  project: produzre-examples
+  title: "Radio Tower Weather"
+  bpm: 124
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: alt_rock
+  seed: 7382
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    counter: octaves
+    comp_activity: sparse
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I bVII IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I bVII IV IV I bVII IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "vi IV vi V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "ii IV vi V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I bVII IV IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV I V I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

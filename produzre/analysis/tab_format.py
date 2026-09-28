@@ -83,7 +83,10 @@ def _group_events_by_step(
         step = int(math.floor((start - bar_start) / step_beats + 1e-9))
         step = max(0, min(step, steps_per_bar - 1))
         pitch = int(getattr(r, "pitch"))
-        result.setdefault(step, []).append(pitch)
+        # A pitch struck twice within one grid step is one fretted note, not
+        # a unison forced onto a second string.
+        if pitch not in result.setdefault(step, []):
+            result[step].append(pitch)
 
     return result
 
@@ -135,6 +138,7 @@ def tab_text_from_rows(
     bars_total: Optional[int] = None,
     profile: Optional[InstrumentProfile] = None,
     capo: int = 0,
+    capo_by_bar: Optional[Dict[int, int]] = None,
 ) -> str:
     """Render multi-bar ASCII guitar tablature from event-like rows.
 
@@ -145,7 +149,10 @@ def tab_text_from_rows(
         instrument:    Instrument name (for header and profile lookup).
         bars_total:    Forced bar count (derived from events if omitted).
         profile:       InstrumentProfile override. None = lookup from instrument.
-        capo:          Capo fret position.
+        capo:          Capo fret position. Frets are written relative to
+                       the capo (fret 0 is the capoed string).
+        capo_by_bar:   Per-bar capo (1-based bar -> fret) overriding
+                       ``capo`` where a section changes it.
 
     Returns:
         Multi-line string containing ASCII tab.
@@ -178,10 +185,16 @@ def tab_text_from_rows(
     lines.append(
         f"METER: {int(beats_per_bar)}/4   SUBDIV: {steps_per_bar} steps/bar"
     )
+    capos = [int((capo_by_bar or {}).get(b, capo)) for b in range(1, bars_total + 1)]
+    varying = len(set(capos)) > 1
+    if not varying and capos and capos[0]:
+        lines.append(f"CAPO: fret {capos[0]} (frets are relative to the capo)")
     lines.append("")
 
+    prev_capo = 0
     for bar_idx in range(1, bars_total + 1):
         bar_start = (bar_idx - 1) * beats_per_bar
+        bar_capo = capos[bar_idx - 1]
 
         # Group pitches by subdivision step
         step_pitches = _group_events_by_step(rows, bar_start, beats_per_bar, steps_per_bar)
@@ -189,10 +202,15 @@ def tab_text_from_rows(
         # Resolve each step's pitches to fret maps
         step_frets: Dict[int, Dict[int, int]] = {}
         for step, plist in step_pitches.items():
-            step_frets[step] = _pitches_to_fret_map(plist, profile, capo)
+            step_frets[step] = _pitches_to_fret_map(plist, profile, bar_capo)
 
-        # Bar header
-        lines.append(f"Bar {bar_idx}")
+        # Bar header (a capo that changes between sections is named where
+        # it changes)
+        if varying and bar_capo != prev_capo:
+            lines.append(f"Bar {bar_idx}   CAPO: " + (f"fret {bar_capo}" if bar_capo else "off"))
+        else:
+            lines.append(f"Bar {bar_idx}")
+        prev_capo = bar_capo
 
         # Render each string line (labels are already in high-to-low order)
         for display_idx, label in enumerate(labels):

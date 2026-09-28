@@ -3,6 +3,10 @@
 With the same song YAML, project seed, presets, engine code, and dependency
 versions, Produzre produces the same MIDI bytes. Output folder timestamps can
 change. Build metadata and logs can change too.
+Groove recall separates effective part genres and beat groups, including
+equal-length meters such as 3/4 and 6/8. These comparisons use stable seed
+material and introduce no random draws.
+
 A release that fixes musical behavior can change output for an existing seed.
 Those changes belong in the changelog and reviewed golden files.
 
@@ -12,6 +16,8 @@ Those changes belong in the changelog and reviewed golden files.
 |---|---|
 | Project | A persistent local seed, selected by `song.project` or the default project. |
 | Song material | Effective song seed, genre, key, and mode. Automatic theme composition uses this stream before take variation. |
+| Composer | Song DNA (`composer.dna`: seed, genre, key, mode, bar length) and per-section development choices (`composer.section`: seed, section id and type, occurrence). Takes never change the DNA. |
+| Groove memory | Micro-timing of restated bars: section seed material, section id, arrangement position, instrument, and bar. |
 | Section performance | Song/project seed, take, section id/type, and arrangement position. |
 | Instrument | Section stream plus instrument name, unless explicitly overridden. |
 | Voice/bar/event | Stable child streams where an engine needs independent local decisions. |
@@ -78,6 +84,10 @@ python produzre_entry.py project import my-song-project.yml
 Select `song.project: my-song` on both machines; the
 [README](README.md#seeds-and-projects) explains import options and registry locations.
 
+The built-in project `produzre-examples` needs no import: it has the same
+seed on every installation. The repository's examples use it, so a build of
+any example matches what its header describes.
+
 ## Verify a build
 
 ```bash
@@ -87,7 +97,7 @@ python produzre_entry.py build examples/themes_demo.yaml --strict-determinism
 This builds twice and compares the bytes of all `.mid` files: full song, stems,
 section clips, and patterns. Both directories remain available. Success exits
 with code 0; a mismatch or error exits with code 1. The check does not compare
-`index.yaml`, `QUICKREF.txt`, sequence YAML, or analysis text. Do not combine it
+the song-named index YAML, `QUICKREF.txt`, sequence YAML, or analysis text. Do not combine it
 with `--dry-run`, which skips exports and the comparison.
 
 For regression coverage:

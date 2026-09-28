@@ -1,14 +1,23 @@
+# Bass persona: `tight`.
+#
+# A bass persona sets the player's pattern, articulation and timing. The
+# three files in this folder play the same drums and chords (key, tempo and
+# seed match) so only the bass player changes:
+#
+#   tight    on the grid, locking to the kick (the default)
+#
+# Compare persona-tight.yaml, persona-pocket.yaml and persona-walking.yaml
+# in analysis/bass/*.events.tsv. `humanize_timing: 0` keeps the drummer's
+# own feel out of the band's timing, so any offset you hear is the persona.
 version: 1
 song:
-  title: "BassPersona_Tight"
+  project: produzre-examples
+  title: "Bass Persona Tight"
   bpm: 120
   key: E
   mode: dorian
   meter: "4/4"
-  beats_per_bar: 4
   seed: 100
-  variation: 0.0
-  humanize_velocity: 0.0
   humanize_timing: 0.0
   exports_root: "exports"
 
@@ -20,18 +29,18 @@ exports:
 
 instruments:
   bass:
-    enabled: true
-    persona: tight  # Explicit persona selection
+    persona: tight
     intensity: 0.7
 
 sections:
   verse1:
     type: verse
-    bars: 4
+    bars: 8
     harmony:
       progression: "i bVII VI V"
     instruments:
       harmony: {}
+      drums: {}
       bass: {}
 
 arrangement:

@@ -1,0 +1,102 @@
+# Punk: a fast, short three-chord song in E major with a singer.
+#
+# Power chords, a bass locked to the kick in the verse and pumping octave
+# eighths in the chorus, and a drummer driving straight through. The lead
+# guitar (foreground: auto) stays out of the way: a short hook in the
+# intro, a few licks, a counter-line in the chorus and a quick solo. The
+# whole thing is under a minute and a half and stops dead.
+#
+# Pinned, and why:
+#   - rhythm_gtr voicing power: power shapes throughout, the punk sound
+#   - arrangement_style.riff_driven: false, punk here is chords, not a
+#     signature riff (the seed would otherwise often pick a riff)
+#   - arrangement_style.comp_activity: busy, the guitarist plays the full
+#     figure every bar
+#   - arrangement_style.into_chorus: push, the band hits the chorus an
+#     eighth early
+#   - arrangement_style.ending: cold, one last hit and silence
+#   - drums kick_density 0.8 and hat_density 0.9: an extra kick on the
+#     last eighth of every beat without a backbeat, and sixteenth-note hats
+#     in every section
+#   - bass articulation pick
+# The composed punk drummer plays dead straight (no swing setting needed).
+# The drummer's fills, the guitar figures and the hook come from the shared
+# produzre-examples project and the seed.
+#
+# Listen for:
+#   - a sixteenth-note hi-hat verse with the bass on the kick
+#   - the chorus: kick on every beat (a stomp), bass octaves and guitar
+#     hammering eighths
+#   - the chorus arriving an eighth early (push)
+#   - the half-bar lead fills between vocal lines
+#   - the bridge on the relative minor, then the last chorus
+#   - a cold stop
+version: 1
+song:
+  project: produzre-examples
+  title: "No Time for Sirens"
+  bpm: 184
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: punk
+  seed: 1979
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: false
+    comp_activity: busy
+    into_chorus: push
+    ending: cold
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    params: {kick_density: 0.8, hat_density: 0.9}
+  bass:
+    params: {articulation_style: pick}
+  rhythm_gtr:
+    params: {voicing: power}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 79]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV V IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi IV vi V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I IV V IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

@@ -1,0 +1,104 @@
+# R&B: a slow-jam in Ab major on seventh chords, with a Rhodes and a singer.
+#
+# The changes are R&B ones: the verse walks down IVmaj7 iii7 vi7 ii7, the
+# chorus moves IVmaj7 V7 iii7 vi7, and the bridge borrows bVImaj7 and
+# bVII7 before landing on Imaj7. An electric piano (the arpeggiator in
+# phrase mode on a Rhodes patch) outlines the chords and follows the melody
+# guide, the clean guitar chanks, and the lead guitar plays around the
+# singer (foreground: auto). The bass answers the melody in the gaps
+# between vocal phrases (hook_response), the way an R&B bassist fills.
+#
+# Pinned, and why:
+#   - bass hook_response: true (off by default), so the bass fills the
+#     holes the melody leaves with the hook's opening rhythm and contour
+#   - drums ghost_rate 0.45: a ghost-note heavy snare hand, part of the
+#     R&B pocket
+#   - arrangement_style.counter: guide, the lead holds long guide tones
+#     under the chorus instead of busy fills
+#   - arrangement_style.lead_fills: sparse and comp_activity: sparse,
+#     space for the singer and the Rhodes
+#   - engines: electric piano for the arpeggiator, clean guitars
+# The drummer's pattern and feel, the comp figures and the hook come from
+# the shared produzre-examples project and the seed. Groove memory gives
+# R&B a two-bar groove.
+#
+# Listen for:
+#   - seventh-chord colors throughout, maj7 on IV and I
+#   - ghost notes around the backbeat
+#   - the bass answering the melody at phrase ends in the prechorus and
+#     chorus, then back in the groove
+#   - the Rhodes figure moving with the melody
+#   - the bridge's borrowed bVImaj7 bVII7 lifting into Imaj7
+version: 1
+song:
+  project: produzre-examples
+  title: "Velvet After Midnight"
+  bpm: 86
+  key: Ab
+  mode: major
+  meter: "4/4"
+  genre: rnb
+  seed: 2317
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    counter: guide
+    lead_fills: sparse
+    comp_activity: sparse
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  arpeggiator: {program: 4}    # GM Electric Piano 1 (Rhodes)
+  rhythm_gtr: {program: 27}    # GM Electric Guitar (clean)
+  lead_gtr: {program: 27}
+
+instruments:
+  drums:
+    params: {ghost_rate: 0.45}
+  bass:
+    params: {hook_response: true}
+  arpeggiator:
+    params: {pattern: phrase, note_duration: 0.5}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 79]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "IVmaj7 iii7 vi7 ii7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "IVmaj7 iii7 vi7 ii7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii7 iii7 IVmaj7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IVmaj7 V7 iii7 vi7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "bVImaj7 bVII7 Imaj7 Imaj7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IVmaj7 V7 Imaj7 Imaj7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, chorus, outro]

@@ -133,6 +133,225 @@ def _group_slots_by_phrase(chord_slots, phrase_len_beats):
     return phrases
 
 
+_ROLE_VELOCITY = {"melody": 1.04, "lick": 1.0, "counter": 0.88, "stab": 1.06,
+                  "stab_octave": 1.06, "harmony": 0.92}
+# Roles a raised `bend_rate` may add bends to. Stabs and double stops stay
+# unbent (a bend on one string of a double stop bends the pair).
+_BENDABLE_ROLES = ("melody", "lick", "counter", "harmony", "country_lick")
+# `dive_rate` at its default plays the composed dives as written (the solo's
+# `dive` ending); above it, held solo notes dive too.
+_DIVE_RATE_DEFAULT = 0.30
+# Techniques a held solo note may trade for an added dive (the dive replaces
+# its bend or vibrato, as on the legacy path). Fall-offs, staccato picks,
+# hammer-ons and trills are gestures of their own.
+_DIVEABLE_TECHS = (None, "vib", "slide", "bend1", "bend2")
+
+
+def _same_gesture(before: Dict[str, Any], note: Dict[str, Any]) -> bool:
+    """Whether composed ``note`` continues the gesture ``before`` belongs to:
+    the next note of a trill or the note it lands on, or the second string
+    of a double stop (``composer.realize.DOUBLE_STOP_ROLES``)."""
+    from ...composer.realize import DOUBLE_STOP_ROLES
+
+    if before.get("tech") == "trill":
+        # A trill's notes are a 32nd apart; the note it lands on is next.
+        return note.get("tech") == "trill" or 0 < float(note["beat"]) - float(before["beat"]) < 0.25
+    role = str(note.get("role") or "melody")
+    return role in DOUBLE_STOP_ROLES and str(before.get("role")) == role \
+        and abs(float(before["beat"]) - float(note["beat"])) < 1e-6
+
+
+def _section_groups(cfg, section, harmony_plan):
+    """The section meter's beat grouping, for metric velocity shaping."""
+    from ...composer.song import section_groups
+
+    return section_groups(cfg, section, getattr(harmony_plan, "meter", None))
+
+
+def _perform_composed(
+    notes: List[Dict[str, Any]],
+    *,
+    timeline: InstrumentTimeline,
+    section_start_beat: float,
+    base_vel: int,
+    intensity: float,
+    solo: bool,
+    rng: random.Random,
+    bpm: float,
+    beats_per_bar: float,
+    vibrato_rate: float,
+    dive_rate: float,
+    swell_rate: float,
+    bend_rate: float = 0.15,
+    groups=None,
+    scale_pcs=None,
+    solo_phrases: Optional[bool] = None,
+) -> int:
+    """Perform composer notes: velocity shape, technique, pitch expression.
+
+    Returns how many composed dives ``dive_rate: 0`` held instead, so the
+    build log can say what was played.
+
+    Technique hints from the composer become playing: ``bend1``/``bend2``
+    bend up into the note, ``slide`` adds a grace from below, ``vib`` a wide
+    delayed vibrato, ``dive`` a whammy dive, ``stac`` a short pick,
+    ``hammer`` a light hammered grace. Untagged long notes get vibrato at
+    ``vibrato_rate``. ``bend_rate`` scales the bends across 0 to 1: at its
+    0.15 default the composed bends play as written, below it only that
+    share of them survives (0 removes them), and above it untagged notes of
+    half a beat or longer also bend in from below, reaching every such note
+    at 1. ``dive_rate`` works the same way in solos: at its 0.3 default the
+    composed dives play as written, 0 holds them with vibrato, and above it
+    held notes (1.5 beats or longer, the phrase endings) also dive, every
+    one at 1. A ``trill`` is one gesture with the note it lands on: they
+    share the first note's timing humanization, so jitter never reorders or
+    crushes them, and a double stop's two strings share theirs. Timing
+    humanization is tighter than the legacy path: composed rhythm is the
+    identity of the line.
+    """
+    from ...composer.realize import DOUBLE_STOP_ROLES, sounds_with
+    from ...composer.theory import metric_weight
+
+    events_before = len(timeline.events)
+    held_dives = 0
+    ordered = sorted(notes, key=lambda n: float(n["beat"]))
+    added_share = max(0.0, (bend_rate - 0.15) / 0.85)
+    added_dives = max(0.0, (dive_rate - _DIVE_RATE_DEFAULT) / (1.0 - _DIVE_RATE_DEFAULT)) \
+        if (solo if solo_phrases is None else solo_phrases) else 0.0
+    shift: Optional[float] = None
+    for i, n in enumerate(ordered):
+        local = float(n["beat"])
+        dur = float(n["duration_beats"])
+        pitch = int(n["pitch"])
+        tech = n.get("tech")
+        role = str(n.get("role") or "melody")
+        if tech in ("bend1", "bend2") and bend_rate < 0.15:
+            # Own stream: the default performance's draws are unchanged.
+            keep = random.Random(int(round(local * 1000)) * 131 + pitch).random() < bend_rate / 0.15
+            tech = tech if keep else None
+        elif tech is None and added_share > 0 and dur >= 0.5 and role in _BENDABLE_ROLES:
+            # Its own per-note stream too, so a note's choice does not
+            # depend on the notes around it.
+            draw = random.Random(_stable_u32(f"lead.bend_add:{local:.4f}:{pitch}")).random()
+            if draw < added_share:
+                # A whole step up into the note when the note below it is in
+                # the key, otherwise a half step.
+                whole = scale_pcs is None or (pitch - 2) % 12 in scale_pcs
+                tech = "bend2" if whole else "bend1"
+        # Its own per-note stream as well: a raised `dive_rate` dives held
+        # solo notes without moving any other draw.
+        phrase_dive = (added_dives > 0 and tech in _DIVEABLE_TECHS and dur >= 1.5
+                       and role in _BENDABLE_ROLES and random.Random(
+                           _stable_u32(f"lead.dive_add:{local:.4f}:{pitch}")).random() < added_dives)
+        next_local = float(ordered[i + 1]["beat"]) if i + 1 < len(ordered) else None
+        if role in DOUBLE_STOP_ROLES:
+            next_local = next((float(other["beat"]) for other in ordered[i+1:]
+                               if float(other["beat"]) > local + 1e-6), None)
+
+        mw = metric_weight(local % beats_per_bar, beats_per_bar, groups) if beats_per_bar > 0 else 0.5
+        vel = base_vel * (0.9 + 0.14 * mw) * _ROLE_VELOCITY.get(role, 1.0)
+        if n.get("accent"):
+            vel *= 1.05
+        if solo:
+            vel *= 1.04
+        if tech == "hammer":
+            vel *= 0.8
+        vel = max(20, min(127, int(vel)))
+
+        kind = role
+        expression: Optional[dict] = None
+        if tech == "stac":
+            dur *= 0.55
+            kind = f"{role}_stac"
+        elif tech in ("bend1", "bend2"):
+            semis = 1 if tech == "bend1" else 2
+            ramp = max(0.1, min(0.3, dur * 0.35))
+            expression = {"bend_in": {"semitones": semis, "ramp_beats": ramp}}
+            if dur >= 1.0:
+                expression["vibrato"] = {
+                    "depth_cents": rng.uniform(25.0, 40.0),
+                    "period_beats": 60.0 / (bpm * rng.uniform(5.0, 6.2)),
+                    "delay_beats": ramp + rng.uniform(0.15, 0.3),
+                }
+            kind = f"{role}_bend"
+        elif tech == "vib" or (tech is None and dur >= 1.5 and rng.random() < vibrato_rate):
+            expression = {"vibrato": {
+                "depth_cents": rng.uniform(28.0, 45.0) if tech == "vib" else rng.uniform(15.0, 30.0),
+                "period_beats": 60.0 / (bpm * rng.uniform(4.8, 6.2)),
+                "delay_beats": min(dur * 0.4, rng.uniform(0.25, 0.4)),
+            }}
+        elif tech == "fall":
+            # A fall-off: the held note slides away at the end.
+            expression = {"dive": {"semitones": 5, "drop_beats": max(0.25, dur * 0.9)}}
+            kind = f"{role}_fall"
+        elif tech == "trill":
+            kind = f"{role}_trill"
+        elif tech == "dive":
+            if dive_rate > 0:
+                expression = {"dive": {"semitones": rng.choice([7, 12]),
+                                       "drop_beats": dur * rng.uniform(0.55, 0.7)}}
+                kind = f"{role}_dive"
+            else:
+                held_dives += 1
+                expression = {"vibrato": {"depth_cents": 40.0,
+                                          "period_beats": 60.0 / (bpm * 5.5),
+                                          "delay_beats": 0.3}}
+        if phrase_dive:
+            # The dive replaces the held note's vibrato (the draws above
+            # still happen, so the rest of the performance is unchanged).
+            shape = random.Random(_stable_u32(f"lead.dive_shape:{local:.4f}:{pitch}"))
+            expression = {"dive": {"semitones": shape.choice([7, 12, 14]),
+                                   "drop_beats": dur * shape.uniform(0.55, 0.75)}}
+            kind = f"{role}_dive"
+        # Documented `swell_rate`: any note held 1.5 beats or longer.
+        if dur >= 1.5 and swell_rate > 0 and tech != "stac" and rng.random() < swell_rate:
+            expression = dict(expression or {})
+            expression["swell"] = {"from": rng.randint(40, 70),
+                                   "ramp_beats": dur * rng.uniform(0.3, 0.5), "to": 127}
+
+        song_beat = section_start_beat + local
+        h_beat, h_dur, vel = humanize_note(song_beat, dur, vel, rng, intensity * 0.5)
+        # One gesture, one timing: a trill and the note it lands on move
+        # with the trill's first note, and a double stop's two strings are
+        # picked together.
+        if shift is not None and i and _same_gesture(ordered[i - 1], n):
+            song_beat += shift
+            h_dur = dur if tech == "trill" else max(0.05, dur - max(0.0, shift))
+        else:
+            shift = h_beat - song_beat
+            song_beat = h_beat
+            if tech == "trill":
+                h_dur = dur  # the whole ornament moves; no note is shortened
+        if next_local is not None:
+            # Never smear into the next composed note (moved with this one
+            # when it belongs to the same gesture).
+            nxt = ordered[i + 1] if i + 1 < len(ordered) else None
+            ahead = shift if nxt is not None and _same_gesture(n, nxt) \
+                and abs(float(nxt["beat"]) - next_local) < 1e-6 else 0.0
+            h_dur = min(h_dur, section_start_beat + next_local + ahead - song_beat - 0.02)
+        h_dur = max(0.05, h_dur)
+
+        if tech == "slide":
+            grace = max(0, pitch - 2)
+            g_start = song_beat - 0.12
+            if g_start > section_start_beat:
+                timeline.add_note(start_beat=g_start, duration_beats=0.12, pitch=grace,
+                                  velocity=max(20, int(vel * 0.7)), channel=None,
+                                  kind="slide_grace")
+        timeline.add_note(start_beat=song_beat, duration_beats=h_dur, pitch=pitch,
+                          velocity=vel, channel=None, kind=kind, expression=expression)
+
+    # Humanization and slide graces change actual attacks. Clip against those
+    # attacks, not the unperformed plan, including grace-note overlaps.
+    performed = sorted(timeline.events[events_before:], key=lambda e: e.start_beat)
+    for a, b in zip(performed, performed[1:]):
+        if sounds_with(a, b):
+            continue
+        a.duration_beats = min(a.duration_beats, max(0.0, b.start_beat - a.start_beat))
+    timeline.events[events_before:] = [e for e in performed if e.duration_beats > 1e-6]
+    return held_dives
+
+
 def contribute_plan(
     cfg: Optional[RootConfig] = None,
     section: Optional[SectionConfig] = None,
@@ -272,8 +491,11 @@ def render_into_timeline(
     if offset_beats is None:
         offset_beats = 0.0
 
+    # A preset name or a [low, high] range, as a direct field or in params.
     register = getattr(instrument_cfg, "register", None)
-    solo = bool(getattr(instrument_cfg, "solo", False))
+    if register is None:
+        register = lead_extra.get("register")
+    solo =bool(getattr(instrument_cfg, "solo", False))
     # Docs put lead params in `extra:` — honor a solo flag placed there too.
     if not solo:
         solo = bool(lead_extra.get("solo", False))
@@ -534,6 +756,41 @@ def render_into_timeline(
         )
 
     events_before = len(timeline.events)
+
+    # Composed lead (produzre/composer): the song composer already wrote this
+    # section's line from the song DNA; perform it and skip the legacy motif
+    # generator. `composer: false` on the lead (or the song) restores legacy.
+    composed = plan.get(f"composer.lead.{section.id}") if plan is not None and hasattr(plan, "get") else None
+    if isinstance(composed, list):
+        from ...composer.theory import scale_pcs as _scale_pcs
+
+        held_dives = _perform_composed(
+            composed,
+            timeline=timeline,
+            section_start_beat=section_start_beat + offset_beats,
+            base_vel=base_vel,
+            intensity=intensity,
+            solo=solo,
+            rng=section_rng,
+            bpm=song_bpm,
+            beats_per_bar=bpb,
+            vibrato_rate=vibrato_rate,
+            dive_rate=dive_rate,
+            swell_rate=swell_rate,
+            bend_rate=bend_rate,
+            groups=_section_groups(cfg, section, harmony_plan),
+            scale_pcs=set(_scale_pcs(song_key, song_mode)),
+            # The composer plays a solo for a solo flag or a solo section.
+            solo_phrases=solo or section_type.lower() in ("solo", "lead"),
+        )
+        if held_dives:
+            logger.info("Section '%s': dive_rate 0 holds the composed dive with vibrato",
+                        section.id)
+        logger.debug(
+            "Section '%s': performed %d composed lead notes",
+            section.id, len(timeline.events) - events_before,
+        )
+        return
 
     # Phase LG2: group chord slots into phrase-length windows.
     phrases = _group_slots_by_phrase(harmony_plan.chord_slots, phrase_len_beats)

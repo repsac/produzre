@@ -93,7 +93,7 @@ the generated TSV before accepting it.
 
 ```bash
 python produzre_entry.py build examples/themes_demo.yaml --strict-determinism
-python produzre_entry.py build examples/genres/rock/rock-full-arrangement.yaml --strict-determinism
+python produzre_entry.py build examples/songs/iron-horse-road.yaml --strict-determinism
 python produzre_entry.py build examples/drums/phrasing-demo.yaml --strict-determinism
 ```
 

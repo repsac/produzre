@@ -1,19 +1,17 @@
+# Tiny: the smallest useful song, for quick checks. Eight bars of solo
+# drums (no harmony needed). `fill_rate: 1.0` puts a fill at the end of
+# every two bars (bars 2, 4 and 6), and the song ends cold on one crash hit
+# in bar 8.
 version: 1
 song:
+  project: produzre-examples
   title: "TinySong"
   bpm: 140
   key: E
   mode: dorian
   meter: "4/4"
-  beats_per_bar: 4
   seed: 2
-  variation: 0.3
-  humanize_velocity: 0.1
-  humanize_timing: 0.2
   exports_root: "exports"
-  pattern_bars: 2
-  pattern_merge_repeats: true
-  pattern_merge_max: 4
 
 exports:
   midi_text:
@@ -25,14 +23,13 @@ instruments:
   drums:
     params:
       fill_rate: 1.0
-      phrase_bars: 4
-      fill_len_beats: 1.0
-      fill_use_toms: true
+
 sections:
   verse1:
     type: verse
     bars: 8
     instruments:
       drums: {}
+
 arrangement:
   - verse1

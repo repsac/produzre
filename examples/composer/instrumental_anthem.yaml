@@ -1,0 +1,91 @@
+# Instrumental rock anthem: the composer at full stretch.
+#
+# The lead guitar is the "singer" (foreground: full). Every lead phrase
+# derives from one song DNA: a hook chosen by a memorability search over
+# the chorus chords, a verse idea, a contrasting bridge idea, and a bank of
+# three signature licks. The arrangement choices named below are drawn
+# under the shared produzre-examples project, so every build hears them.
+#
+# Listen for:
+#   - the intro states the hook; every chorus plays it again (note-identical
+#     while the harmony matches); the final chorus (`final_chorus: modulate`)
+#     moves up a whole step, lifts the line and embellishes it, and the
+#     outro stays in the new key
+#   - verse 2 keeps verse 1's melody with small "new lyric" rhythm changes
+#   - the prechorus climbs by sequence and holds the dominant; the band
+#     stops dead in its last bar before each chorus (the drawn into-chorus
+#     device is `stop`), and again at the end of the solo
+#   - the solo tells a melodic story that ends on a held note
+#   - the song is riff-driven: the bass doubles the rhythm guitar's riff in
+#     the intro, verses and outro; the composed drummer and guitarist keep
+#     their phrase form, while eligible engine bass lines use groove memory
+#   - drums follow the section intensity: louder in choruses than verses,
+#     and a little louder on each repeat
+#   - `turnarounds: true` turns the intro's last half bar to bVII into the
+#     verse; the song ends cold on the tonic
+version: 1
+song:
+  project: produzre-examples
+  title: "Composer Anthem"
+  bpm: 128
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 2026
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: full
+      register: [60, 79]
+  bass:
+    params: {articulation_style: pick}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "iv bVI bVII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "i bVII bVI bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "bVI bVII iv v"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

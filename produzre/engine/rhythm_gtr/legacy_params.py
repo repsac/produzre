@@ -33,6 +33,25 @@ def _truthy(val) -> bool:
     return bool(val)
 
 
+def sustain_settings(extra) -> tuple:
+    """(sustain_mode, sustain_duration or None when unset) from engine params.
+
+    ``sustain_mode`` plays held chords: each chord is struck when it
+    arrives and restruck every ``sustain_duration`` beats while it lasts.
+    ``sustain_duration`` alone caps how long any strum rings. Both
+    renderers read them through this helper so they mean the same thing.
+    """
+    extra = extra if isinstance(extra, dict) else {}
+    mode = _truthy(extra.get("sustain_mode", False))
+    duration = extra.get("sustain_duration")
+    if duration is not None:
+        try:
+            duration = _clamp(float(duration), 0.1, 16.0)
+        except (TypeError, ValueError):
+            duration = None
+    return mode, duration
+
+
 @dataclass
 class LegacyGuitarParams:
     """Resolved parameters for legacy rhythm guitar rendering."""
@@ -64,6 +83,7 @@ class LegacyGuitarParams:
     # Sustain mode (Phase 4.3)
     sustain_mode: bool
     sustain_duration: float
+    sustain_duration_set: bool  # User set sustain_duration explicitly
 
     # Strum feel
     strum_amt: float  # Strum amount (0..1)
@@ -202,19 +222,10 @@ def resolve_legacy_guitar_params(
         style = style.strip().lower()
 
     # Phase 4.3: Sustained chord mode
-    sustain_mode = extra.get("sustain_mode", False)
-    try:
-        sustain_mode = bool(sustain_mode)
-    except Exception:
-        sustain_mode = False
-
-    sustain_duration = extra.get("sustain_duration", 2.0)
-    if sustain_duration is not None:
-        try:
-            sustain_duration = float(sustain_duration)
-        except Exception:
-            sustain_duration = 2.0
-    sustain_duration = _clamp(sustain_duration, 0.1, 16.0)
+    sustain_mode, sustain_duration = sustain_settings(extra)
+    sustain_duration_set = sustain_duration is not None
+    if sustain_duration is None:
+        sustain_duration = 2.0
 
     # Section-type defaults (blendable via contrast)
     if sec_type in ("chorus", "hook", "refrain"):
@@ -379,6 +390,7 @@ def resolve_legacy_guitar_params(
         strum_style=strum_style,
         sustain_mode=sustain_mode,
         sustain_duration=sustain_duration,
+        sustain_duration_set=sustain_duration_set,
         strum_amt=strum_amt,
         strum_beats=strum_beats,
         strum_dir=strum_dir,

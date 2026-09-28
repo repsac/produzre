@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassStyle_Pick"
   bpm: 120
   key: C

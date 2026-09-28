@@ -8,7 +8,7 @@ Verifies that:
 5. Repeated sections in the arrangement produce different output
 6. Non-targeted sections/instruments remain identical to the base song
 
-Uses the 5 YAML files in examples/seed-variation/ as test fixtures.
+Uses the 5 YAML files in tests/fixtures/examples/seed-variation/ as test fixtures.
 """
 
 import logging
@@ -22,7 +22,7 @@ from produzre.orchestrate.build import build_song
 from produzre.rng import make_section_rng, make_instrument_rng, stable_seed_int
 
 
-EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples" / "seed-variation"
+EXAMPLES_DIR = Path(__file__).resolve().parent / "fixtures" / "examples" / "seed-variation"
 
 BASE_YAML = EXAMPLES_DIR / "base-song.yaml"
 SECTION_SEED_YAML = EXAMPLES_DIR / "section-seed-override.yaml"
@@ -106,9 +106,16 @@ def test_section_seed_preserves_structure(base_result, section_seed_result):
 
 
 def test_instrument_seed_changes_events(base_result, inst_seed_result):
-    """Instrument seed override should change event counts."""
-    assert base_result.events_per_instrument != inst_seed_result.events_per_instrument, (
-        "Instrument seed override should produce different event counts"
+    """Instrument seed override should change the re-rolled part's events.
+
+    Compares the chorus drum onsets (the override's target) rather than event
+    counts, which can coincide between two different drum parts.
+    """
+    base = base_result.performance_plan.get("performance.drums.chorus")
+    rolled = inst_seed_result.performance_plan.get("performance.drums.chorus")
+    assert base and rolled
+    assert base["onsets"] != rolled["onsets"], (
+        "Instrument seed override should produce different drum events"
     )
 
 

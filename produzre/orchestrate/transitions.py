@@ -12,7 +12,7 @@ Phase 4: Section-level and per-instrument overrides.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import logging
 
 
@@ -122,11 +122,23 @@ class GrooveCues:
     snare_beats: set[float] = field(default_factory=set)
 
 
+# Percussive articulations in pitched parts: dead-note chucks, ghosted and
+# body-tap hits are always soft by design, so they say nothing about how
+# loud the part is playing.
+_PERCUSSIVE_KIND_TOKENS = ("chuck", "dead", "ghost", "body_tap")
+
+
+def _is_percussive_kind(kind: Any) -> bool:
+    k = str(kind or "").lower()
+    return any(t in k for t in _PERCUSSIVE_KIND_TOKENS)
+
+
 def compute_energy_profile(
     events: List[Any],
     beats_total: float,
     meter: str,
     logger: Optional[logging.Logger] = None,
+    chordal: bool = False,
 ) -> EnergyProfile:
     """Compute energy profile from a list of MIDI events.
 
@@ -139,11 +151,18 @@ def compute_energy_profile(
     - Register center: mean pitch (MIDI note number)
     - Syncopation: fraction of notes not on integer beats
 
+    With ``chordal`` (pitched parts), density counts gestures rather than
+    notes: a strummed chord is one attack, not six, so a bar of chord stabs
+    and a bar of single notes at the same rhythm measure alike. The average
+    velocity then leaves out percussive articulations (chucks, dead notes,
+    ghosts, body taps). Drums count every hit.
+
     Args:
         events: List of MIDI events (NoteEvent or similar with start_beat, pitch, velocity).
         beats_total: Total length of the section in beats.
         meter: Meter string (e.g., "4/4").
         logger: Optional logger for debug output.
+        chordal: Measure a pitched part by gestures (see above).
 
     Returns:
         EnergyProfile: Computed energy metrics.
@@ -162,11 +181,24 @@ def compute_energy_profile(
             articulation=0.0,
         )
 
-    # Density: notes per beat
-    density = len(events) / beats_total
+    # Density: notes per beat (gestures per beat for a chordal part: notes
+    # attacked within a strum's spread of each other are one gesture)
+    if chordal:
+        starts = sorted(float(getattr(ev, 'start_beat', 0.0)) for ev in events)
+        gestures = 0
+        last = None
+        for t in starts:
+            if last is None or t - last > 0.06:
+                gestures += 1
+                last = t
+        density = gestures / beats_total
+    else:
+        density = len(events) / beats_total
 
-    # Average velocity
-    velocities = [getattr(ev, 'velocity', 64) for ev in events]
+    # Average velocity (a chordal part's played dynamics, not its chucks)
+    dynamic = [ev for ev in events if not _is_percussive_kind(getattr(ev, 'kind', None))] \
+        if chordal else events
+    velocities = [getattr(ev, 'velocity', 64) for ev in (dynamic or events)]
     avg_velocity = sum(velocities) / len(velocities) if velocities else 64.0
 
     # Register center: average pitch
@@ -435,17 +467,38 @@ def adjust_durations(events: List[Any], factor: float) -> None:
             ev.duration_beats *= factor
 
 
+_COMPOSED_KINDS = ("melody", "lick", "counter", "stab", "country_lick", "country_double", "trill")
+# How far the groove clock (swing aside) moves a note off its step, in beats:
+# a note within this of a step belongs to it.
+_STEP_SLACK = 0.06
+
+
+def _drum_structural(ev: Any) -> bool:
+    """Structural kit roles, with a GM fallback for unlabeled legacy events."""
+    kind = str(getattr(ev, "kind", "") or "").lower()
+    if kind in ("kick", "snare", "crash") or kind.startswith(("kick_", "crash_")):
+        return True
+    pitch = int(getattr(ev, "pitch", 0))
+    if pitch in (35, 36, 49, 52, 55, 57):
+        return True
+    return pitch in (37, 38, 39, 40) and int(getattr(ev, "velocity", 0)) >= 60
+
+
 def thin_events(
     events: List[Any],
     keep_downbeats: bool = True,
     beats_per_bar: float = 4.0,
+    origin: float = 0.0,
 ) -> List[Any]:
     """Remove every other non-downbeat event to reduce density.
 
     Args:
         events: List of events with start_beat attribute.
-        keep_downbeats: If True, always keep events on downbeats (beat % beats_per_bar == 0).
+        keep_downbeats: If True, always keep events on downbeats (bar starts
+            counted from ``origin``).
         beats_per_bar: Beats per bar for downbeat detection.
+        origin: A bar line (the section start), so downbeats are found in
+            the section's own meter.
 
     Returns:
         List[Any]: Filtered event list (subset of input).
@@ -455,15 +508,21 @@ def thin_events(
 
     result = []
     non_downbeat_count = 0
-    eps = 0.01
 
     for ev in events:
         start_beat = getattr(ev, 'start_beat', 0.0)
 
+        # Composed lead phrases (produzre/composer) are authored as whole
+        # lines: dropping every other note would cut cadences in half.
+        if str(getattr(ev, "kind", "") or "").startswith(_COMPOSED_KINDS):
+            result.append(ev)
+            continue
+
         # Check if downbeat
         if keep_downbeats:
-            beat_in_bar = start_beat % beats_per_bar
-            if beat_in_bar < eps:
+            # Nearest step: a humanized downbeat a hair either side counts.
+            beat_in_bar = (start_beat - origin + _STEP_SLACK) % beats_per_bar
+            if beat_in_bar < 2 * _STEP_SLACK:
                 # It's a downbeat, always keep
                 result.append(ev)
                 continue
@@ -594,8 +653,13 @@ def choose_pickup_pitch(
     instrument: str = "bass",
     rng: Any = None,
     logger: Optional[logging.Logger] = None,
-) -> int:
-    """Choose a safe pitch for a pickup (anacrusis) note.
+    *, incoming_chords: Optional[Any] = None, register: Optional[Tuple[int, int]] = None,
+    beats_per_bar: float = 4.0, incoming_start: float = 0.0,
+) -> Optional[int]:
+    """Choose a safe pitch for a pickup (anacrusis) note, or None.
+
+    A pickup leads into a note; when section B's head has none for this
+    instrument there is nothing to lead into, and the caller adds no pickup.
 
     Selects a pitch that approaches the first strong note of section B,
     using chord tones or approach tones for musical coherence.
@@ -627,16 +691,17 @@ def choose_pickup_pitch(
     # Find first strong note in section B (downbeat preferred)
     if not section_b_events:
         if logger:
-            logger.debug("choose_pickup_pitch: no events in section B, using default pitch")
-        return default_pitch
+            logger.debug("choose_pickup_pitch: no events in section B, no pickup")
+        return None
 
-    # Find first event on or near a downbeat (beat % 4 < 0.5)
+    # Find first event on or near a downbeat of section B's own meter
     target_event = None
     eps = 0.5
+    bpb = float(beats_per_bar) if beats_per_bar and beats_per_bar > 0 else 4.0
 
     for ev in section_b_events:
         start_beat = getattr(ev, 'start_beat', 0.0)
-        beat_in_bar = start_beat % 4.0
+        beat_in_bar = (start_beat - incoming_start) % bpb
         if beat_in_bar < eps:
             target_event = ev
             break
@@ -654,14 +719,30 @@ def choose_pickup_pitch(
     else:
         approach_distance = 1
 
-    pickup_pitch = target_pitch - approach_distance
-
-    # Clamp to instrument register
-    if instrument == "bass":
-        pickup_pitch = max(bass_min, min(bass_max, pickup_pitch))
+    if register is not None:
+        lo, hi = sorted((int(register[0]), int(register[1])))
+    elif instrument == "bass":
+        lo, hi = bass_min, bass_max
     else:
-        # General MIDI range
-        pickup_pitch = max(21, min(108, pickup_pitch))
+        lo, hi = 21, 108  # General MIDI range
+    scale = None
+    if incoming_chords is not None:
+        from ..composer.theory import scale_pcs
+
+        scale = set(scale_pcs(incoming_chords.key, incoming_chords.mode))
+
+    def fits(p: int) -> bool:
+        return lo <= p <= hi and (scale is None or p % 12 in scale)
+
+    # Approach from a step below; from above when below would leave the
+    # instrument's register. With the incoming harmony, the approach is a
+    # scale tone of the key it leads into.
+    order = [approach_distance, 3 - approach_distance]
+    candidates = [target_pitch - d for d in order] + [target_pitch + d for d in order]
+    pickup_pitch = next((p for p in candidates if fits(p)), None)
+    if pickup_pitch is None:
+        pickup_pitch = next((p for p in candidates if lo <= p <= hi), target_pitch - approach_distance)
+    pickup_pitch = max(lo, min(hi, pickup_pitch))
 
     if logger:
         logger.debug(
@@ -672,6 +753,36 @@ def choose_pickup_pitch(
     return pickup_pitch
 
 
+_SNARES = (38, 40, 37)
+
+
+def _add_drum_pickup(timeline: Any, head_start: float, plan: "TransitionPlan",
+                     recipe: "TransitionRecipe", logger: Optional[logging.Logger]) -> None:
+    """A drum pickup is a snare on the last sixteenth, never a pitched note.
+
+    The composed drummer writes its own lead-ins (fills, builds, devices),
+    so its section end gets none; nor does a bar whose last beat already
+    moves (a fill) or already has a snare on that sixteenth.
+    """
+    if plan.metadata.get("composed_drums_a"):
+        return
+    beat = head_start - 0.25
+    tail = timeline.get_events_in_range(head_start - 1.0 - _STEP_SLACK, head_start - _STEP_SLACK)
+    if any("fill" in str(getattr(e, "kind", "") or "") or "pickup" in str(getattr(e, "kind", "") or "")
+           for e in tail):
+        return
+    if any(e.pitch in _SNARES and abs(e.start_beat - beat) < _STEP_SLACK for e in tail):
+        return
+    # The kit's own snare (rimshot or cross-stick articulations included).
+    pitch = next((e.pitch for e in sorted(tail, key=lambda e: -e.velocity)
+                  if e.pitch in _SNARES and "ghost" not in str(e.kind or "")), 38)
+    timeline.add_note(start_beat=beat, duration_beats=0.25, pitch=int(pitch), velocity=72,
+                      kind="pickup_transition")
+    recipe.notes_added = 1
+    if logger:
+        logger.info(f"[PICKUP] drums snare at beat {beat:.3f}")
+
+
 def build_bass_turnaround(
     tail_start: float,
     tail_end: float,
@@ -679,8 +790,14 @@ def build_bass_turnaround(
     rng: Any,
     groove_cues: Optional[GrooveCues] = None,
     logger: Optional[logging.Logger] = None,
+    *, current_chords=None, incoming_chords=None, current_start=0.0,
+    beats_per_bar=4.0, groups=None, allow_turnaround=True, register=(28, 52),
 ) -> List[Any]:
     """Build a bass turnaround figure for the last bar of section A.
+
+    With chord maps, strong notes belong to the current chord and short
+    scale pickups approach the incoming root. Calls without harmonic
+    context retain the legacy note-derived figure.
 
     Creates a stepwise run that resolves into the first note of section B.
     The turnaround occupies the last 2 beats of section A.
@@ -707,6 +824,42 @@ def build_bass_turnaround(
         List[NoteEvent]: Turnaround events to add to timeline.
     """
     from ..timeline import NoteEvent
+
+    if not allow_turnaround:
+        return []
+    if current_chords is not None and incoming_chords is not None:
+        from ..composer.theory import nearest_in, metric_weight, scale_pcs
+
+        start = max(tail_start, tail_end - 2.0)
+        incoming = incoming_chords.at(0)
+        if incoming is None or not current_chords.spans:
+            return []
+        near = getattr(section_b_events[0], "pitch", 36) if section_b_events else 36
+        lo, hi = register
+        target = nearest_in((incoming.root_pc,), near, lo, hi)
+        # Strong attacks belong to the current chord. Scale neighbors are
+        # short, weak pickups; the next chord arrives at its own downbeat.
+        beats = [start, tail_end-1, tail_end-.5]
+        if groove_cues:
+            beats += [b for b in groove_cues.kick_beats if start <= b < tail_end-.5]
+        beats = sorted(set(b for b in beats if start <= b < tail_end))
+        result = []
+        scale = scale_pcs(current_chords.key, current_chords.mode)
+        for i, beat in enumerate(beats):
+            local = beat-current_start
+            span = current_chords.at(local)
+            strong = metric_weight(local % beats_per_bar, beats_per_bar, groups) >= .5
+            pcs = span.pcs if strong else scale
+            aim = target - (len(beats)-i)
+            pitch = nearest_in(pcs, aim, lo, hi)
+            if pitch % 12 not in pcs:
+                continue
+            end = min(beats[i+1] if i+1 < len(beats) else tail_end, current_start+span.end)
+            duration = min(end-beat-.03, .22 if pitch%12 not in span.pcs else .85)
+            if duration > .02:
+                result.append(NoteEvent(pitch=pitch, start_beat=beat, duration_beats=duration,
+                                        velocity=65+3*i, channel=0))
+        return result
 
     # Bass register bounds
     bass_min = 28  # E1
@@ -822,6 +975,27 @@ def build_bass_turnaround(
     return turnaround_events
 
 
+def _clear_bass_for_pickup(timeline: Any, pickup_beat: float, head_start: float) -> None:
+    """The bass is one voice: a pickup replaces the notes it lands on.
+
+    A note that starts inside the pickup's window is dropped (the pickup takes
+    its place), and a note still ringing into it is cut short where the
+    pickup starts, so the pickup never stacks on the line's own notes.
+    """
+    kept = []
+    for ev in timeline.events:
+        start = float(ev.start_beat)
+        if start >= head_start - 1e-6:
+            kept.append(ev)
+            continue
+        if start >= pickup_beat - 0.06:
+            continue  # on (or a hair before) the pickup: the pickup replaces it
+        if start + float(ev.duration_beats) > pickup_beat + 1e-6:
+            ev.duration_beats = max(0.05, pickup_beat - start - 0.01)
+        kept.append(ev)
+    timeline.events[:] = kept
+
+
 def apply_transition_plan(
     timeline: Any,  # InstrumentTimeline
     instrument_name: str,
@@ -851,6 +1025,19 @@ def apply_transition_plan(
     if recipe.kind == "none":
         return
 
+    # A band device (stop-time, a drop, a push into the chorus, a composed
+    # drum fill or build) is this boundary's transition: the bar stays as
+    # the arrangement wrote it. The bridge start edits the incoming head,
+    # every other recipe the outgoing tail.
+    edited = plan.edit_windows.get("head" if recipe.kind == "bridge_start" else "tail")
+    if edited and any(s < edited[1] - 1e-6 and e > edited[0] + 1e-6
+                      for s, e in getattr(timeline, "device_windows", ()) or ()):
+        return
+
+    if instrument_name == "bass" and recipe.kind in ("pickup", "turnaround") and not (
+            plan.metadata.get("harmony", {}).get("allow_turnaround", True)):
+        return
+
     # Handle pickup transitions
     if recipe.kind == "pickup":
         # Get head window (section B start)
@@ -871,14 +1058,24 @@ def apply_transition_plan(
         metadata = plan.metadata
         rng = metadata.get("rng") if metadata else None
 
+        if instrument_name == "drums":
+            _add_drum_pickup(timeline, head_start, plan, recipe, logger)
+            return
+
         # Choose pickup pitch
+        pickup_ctx = (metadata or {}).get("pickup", {}) or {}
         pickup_pitch = choose_pickup_pitch(
             section_b_events,
-            harmony_plan=None,  # TODO: pass actual harmony plan
             instrument=instrument_name,
             rng=rng,
             logger=logger,
+            incoming_chords=pickup_ctx.get("incoming_chords"),
+            register=pickup_ctx.get("register"),
+            beats_per_bar=pickup_ctx.get("beats_per_bar", 4.0),
+            incoming_start=head_start,
         )
+        if pickup_pitch is None:
+            return
 
         # Compute pickup beat: last half-beat before section B
         # Use quarter-beat (0.25 beats) duration for short anacrusis
@@ -887,6 +1084,17 @@ def apply_transition_plan(
 
         # Use modest velocity for pickup (64-80 range)
         pickup_velocity = 72
+
+        # One pickup per boundary, and none where a composed lead line owns
+        # the phrase boundary (produzre/composer writes its own lead-ins).
+        near = timeline.get_events_in_range(pickup_beat - 1.0, head_end)
+        if any(getattr(e, "kind", None) == "pickup_transition"
+               and abs(e.start_beat - pickup_beat) < 1e-6 for e in near) or any(
+                str(getattr(e, "kind", "") or "").startswith(_COMPOSED_KINDS) for e in near):
+            return
+
+        if instrument_name == "bass":
+            _clear_bass_for_pickup(timeline, pickup_beat, head_start)
 
         # Add pickup note to timeline. add_note() resolves the instrument's
         # own channel (engine spec / name map) — a bare NoteEvent(channel=0)
@@ -944,13 +1152,19 @@ def apply_transition_plan(
         # Use 0.5 (50%) as default blend - bar 1 is halfway between A and B energy
         blend_factor = 0.5
 
-        # Get events in first bridge_start_bars of section B
+        # Get events in first bridge_start_bars of section B (in B's meter)
         bridge_bars = recipe.bridge_start_bars
-        beats_per_bar = 4.0  # TODO: get from section config
+        beats_per_bar = float(metadata.get("beats_per_bar_b") or 4.0)
         bridge_beats = bridge_bars * beats_per_bar
         bridge_end = head_start + bridge_beats
 
         bridge_events = timeline.get_events_in_range(head_start, bridge_end)
+        if instrument_name == "drums" and metadata.get("composed_drums"):
+            # The composed drummer arranges its own bridge entry (crash,
+            # backbeat, the bridge groove); only the dynamics blend.
+            bridge_events_thin = None
+        else:
+            bridge_events_thin = bridge_events
 
         if not bridge_events:
             if logger:
@@ -972,14 +1186,22 @@ def apply_transition_plan(
         density_ratio = profile_b.density / profile_a.density if profile_a.density > 0 else 1.0
 
         # If B is significantly denser (>1.5x), thin to reduce density
-        if density_ratio > 1.5:
+        if density_ratio > 1.5 and bridge_events_thin is not None:
             # Keep approximately (1 - blend_factor) of the events
             # blend_factor=0.5 means keep ~50% of events (thin 50%)
-            thinned_events = thin_events(
-                bridge_events,
-                keep_downbeats=True,
-                beats_per_bar=beats_per_bar
-            )
+            if instrument_name == "drums":
+                # A drummer thins the hands, not the kick, backbeat or crash.
+                structural = [ev for ev in bridge_events if _drum_structural(ev)]
+                thinned_events = structural + thin_events(
+                    [ev for ev in bridge_events if not _drum_structural(ev)],
+                    keep_downbeats=True, beats_per_bar=beats_per_bar, origin=head_start)
+            else:
+                thinned_events = thin_events(
+                    bridge_events,
+                    keep_downbeats=True,
+                    beats_per_bar=beats_per_bar,
+                    origin=head_start,
+                )
             removed_count = len(bridge_events) - len(thinned_events)
 
             if removed_count > 0:
@@ -1052,6 +1274,7 @@ def apply_transition_plan(
             rng,
             groove_cues,
             logger,
+            **metadata.get("harmony", {}),
         )
 
         if not turnaround_events:
@@ -1062,12 +1285,20 @@ def apply_transition_plan(
             return
 
         # Remove existing events in turnaround window (last 2 beats) to avoid collisions
-        turnaround_start = tail_end - 2.0
+        turnaround_start = max(tail_start, tail_end - 2.0)
         turnaround_end = tail_end
 
-        # Get events that conflict with turnaround
-        conflicting_events = timeline.get_events_in_range(turnaround_start, turnaround_end)
+        # Get events that conflict with turnaround. A note the groove clock
+        # played a hair early (pocket, push) still belongs to the window;
+        # cutting it at the window start would leave a click.
+        conflicting_events = timeline.get_events_in_range(turnaround_start - 0.06, turnaround_end)
         conflicting_event_ids = {id(ev) for ev in conflicting_events}
+
+        # A held note starting before the edit window must release too.
+        for ev in timeline.events:
+            if id(ev) not in conflicting_event_ids and \
+                    ev.start_beat < turnaround_start < ev.start_beat + ev.duration_beats:
+                ev.duration_beats = turnaround_start - ev.start_beat
 
         # Remove conflicting events
         if conflicting_event_ids:
@@ -1119,8 +1350,10 @@ def apply_transition_plan(
 
     tail_start, tail_end = tail_window
 
-    # Get events in tail window
-    tail_events = timeline.get_events_in_range(tail_start, tail_end)
+    # Events in the tail by the step they sit on: a note the groove clock
+    # played a hair early (pocket, push) belongs to the beat it anticipates,
+    # so the next section's pushed downbeat is not the outgoing tail's.
+    tail_events = timeline.get_events_in_range(tail_start - _STEP_SLACK, tail_end - _STEP_SLACK)
 
     if not tail_events:
         if logger:
@@ -1129,9 +1362,9 @@ def apply_transition_plan(
             )
         return
 
-    # Get beats_per_bar for downbeat detection
-    # We'll use a default of 4.0, could be improved by passing actual beats_per_bar
-    beats_per_bar = 4.0
+    # Downbeats in the outgoing section's own meter, counted from its bar
+    # lines (the tail starts on one).
+    beats_per_bar = float(plan.metadata.get("beats_per_bar_a") or 4.0)
 
     if recipe.kind == "ramp_up":
         # Ramp-up: increase energy
@@ -1149,13 +1382,23 @@ def apply_transition_plan(
     elif recipe.kind == "ramp_down":
         # Ramp-down: decrease energy
         # - Decrease velocity by 20%
-        # - Lengthen durations by 10% (more legato = less perceived motion)
+        # - Lengthen non-bass durations by 10% (more legato)
         # - Thin events by removing every other non-downbeat
         scale_velocities(tail_events, 0.8)
-        adjust_durations(tail_events, 1.1)
+        # Bass gates were already fitted to attacks and harmonic boundaries.
+        # Lengthening them here reintroduces overlapping roots after that pass.
+        if instrument_name != "bass":
+            adjust_durations(tail_events, 1.1)
 
-        # Thin events (keep downbeats)
-        thinned_events = thin_events(tail_events, keep_downbeats=True, beats_per_bar=beats_per_bar)
+        # Thin events (keep downbeats). A drummer thins the hands, not the
+        # kick, backbeat or crash.
+        if instrument_name == "drums":
+            thinned_events = [ev for ev in tail_events if _drum_structural(ev)] + thin_events(
+                [ev for ev in tail_events if not _drum_structural(ev)],
+                keep_downbeats=True, beats_per_bar=beats_per_bar, origin=tail_start)
+        else:
+            thinned_events = thin_events(tail_events, keep_downbeats=True,
+                                         beats_per_bar=beats_per_bar, origin=tail_start)
         removed_count = len(tail_events) - len(thinned_events)
 
         # Remove thinned events from timeline using identity-based filtering
@@ -1175,7 +1418,9 @@ def apply_transition_plan(
         if logger:
             logger.debug(
                 f"apply_transition_plan: ramp_down applied to {len(tail_events)} events "
-                f"in {instrument_name} (vel*0.8, dur*1.1, removed {removed_count} events)"
+                f"in {instrument_name} (vel*0.8, "
+                f"dur*{1.0 if instrument_name == 'bass' else 1.1}, "
+                f"removed {removed_count} events)"
             )
 
     # Update notes_added counter (negative for notes removed in ramp_down)
@@ -1189,6 +1434,7 @@ def evaluate_transitions(
     plan: Any,  # SongPlan
     timelines: Dict[str, Any],  # Dict[str, InstrumentTimeline]
     logger: Optional[logging.Logger] = None,
+    performance_plan: Any = None,
 ) -> List[TransitionPlan]:
     """Evaluate transition opportunities between sections.
 
@@ -1226,6 +1472,7 @@ def evaluate_transitions(
 
     # Build section timing lookup
     timing_by_id = {st.id: st for st in section_timings}
+    planned_sections = getattr(plan, "planned_sections", ())
 
     plans = []
 
@@ -1234,8 +1481,8 @@ def evaluate_transitions(
         section_a_id = arrangement[i]
         section_b_id = arrangement[i + 1]
 
-        timing_a = timing_by_id.get(section_a_id)
-        timing_b = timing_by_id.get(section_b_id)
+        timing_a = section_timings[i] if i < len(section_timings) else timing_by_id.get(section_a_id)
+        timing_b = section_timings[i+1] if i+1 < len(section_timings) else timing_by_id.get(section_b_id)
 
         if not timing_a or not timing_b:
             if debug:
@@ -1295,13 +1542,15 @@ def evaluate_transitions(
             tail_start = max(timing_a.start_beat, timing_a.end_beat - tail_beats)
             tail_end = timing_a.end_beat
 
-            # Head of section B: first ramp_bars (or bridge_start_bars for bridge sections)
+            # Head of section B: first ramp_bars (or bridge_start_bars for
+            # bridge sections), in B's meter
+            beats_per_bar_b = float(getattr(timing_b, "beats_per_bar", beats_per_bar) or beats_per_bar)
             section_b_type = getattr(section_b_cfg, 'type', '').lower()
             if section_b_type == 'bridge':
                 bridge_bars = getattr(effective_settings, 'bridge_start_bars', 1)
-                head_beats = max(bridge_bars, ramp_bars) * beats_per_bar
+                head_beats = max(bridge_bars, ramp_bars) * beats_per_bar_b
             else:
-                head_beats = ramp_bars * beats_per_bar
+                head_beats = ramp_bars * beats_per_bar_b
 
             head_start = timing_b.start_beat
             head_end = min(timing_b.end_beat, timing_b.start_beat + head_beats)
@@ -1316,6 +1565,7 @@ def evaluate_transitions(
                 tail_end - tail_start,
                 getattr(section_a_cfg, 'meter', '4/4'),
                 logger if debug else None,
+                chordal=inst_name != "drums",
             )
 
             profile_b = compute_energy_profile(
@@ -1323,6 +1573,7 @@ def evaluate_transitions(
                 head_end - head_start,
                 getattr(section_b_cfg, 'meter', '4/4'),
                 logger if debug else None,
+                chordal=inst_name != "drums",
             )
 
             # Choose transition recipe
@@ -1351,6 +1602,54 @@ def evaluate_transitions(
                         logger if debug else None,
                     )
 
+            harmony = {}
+            if inst_name == "bass" and i+1 < len(planned_sections):
+                from ..composer.theory import ChordMap
+                from ..composer.song import section_groups
+
+                a, b = planned_sections[i:i+2]
+                if a.harmony_plan and b.harmony_plan:
+                    def chord_map(ps):
+                        return ChordMap(ps.harmony_plan.chord_slots,
+                                        getattr(ps.sec, "key", None) or cfg.song.key,
+                                        getattr(ps.sec, "mode", None) or cfg.song.mode)
+                    harmony = dict(current_chords=chord_map(a), incoming_chords=chord_map(b),
+                                   current_start=timing_a.start_beat,
+                                   beats_per_bar=beats_per_bar,
+                                   groups=section_groups(cfg, a.sec, a.harmony_plan.meter))
+                    raw = getattr(cfg, "raw", {}) or {}
+                    bounds = {}
+                    for part in (raw.get("instruments", {}).get("bass", {}),
+                                 raw.get("sections", {}).get(section_a_id, {}).get("instruments", {}).get("bass", {})):
+                        if isinstance(part, dict):
+                            for source in (part, part.get("params", {})):
+                                if isinstance(source, dict):
+                                    bounds.update({k: source[k] for k in ("register_low", "register_high")
+                                                   if source.get(k) is not None})
+                    lo = int(bounds.get("register_low", 28))
+                    hi = int(bounds.get("register_high", max(52, lo+12)))
+                    harmony["register"] = (min(lo, hi), hi)
+                    harmony["allow_turnaround"] = not ("country" in str(cfg.song.genre).lower()
+                        and beats_per_bar == 3 and tuple(harmony["groups"]) == (1, 1, 1))
+
+            pickup = {}
+            if inst_name != "drums" and i+1 < len(planned_sections):
+                from ..composer.theory import ChordMap
+
+                b = planned_sections[i+1]
+                if b.harmony_plan:
+                    pickup = dict(
+                        incoming_chords=ChordMap(b.harmony_plan.chord_slots,
+                                                 getattr(b.sec, "key", None) or cfg.song.key,
+                                                 getattr(b.sec, "mode", None) or cfg.song.mode),
+                        beats_per_bar=float(getattr(b.harmony_plan.meter, "beats_per_bar", 4.0) or 4.0))
+                if inst_name == "bass" and harmony.get("register"):
+                    pickup["register"] = harmony["register"]
+                elif inst_name == "lead_gtr":
+                    from ..composer.song import lead_register
+
+                    pickup["register"] = lead_register(cfg)
+
             # Build transition plan
             plan_obj = TransitionPlan(
                 section_a_id=section_a_id,
@@ -1362,8 +1661,18 @@ def evaluate_transitions(
                     "head": (head_start, head_end),
                 },
                 metadata={
+                    "harmony": harmony,
+                    "pickup": pickup,
                     "profile_a": profile_a,
                     "profile_b": profile_b,
+                    "beats_per_bar_a": float(beats_per_bar or 4.0),
+                    "beats_per_bar_b": beats_per_bar_b,
+                    "composed_drums_a": bool(
+                        inst_name == "drums" and performance_plan is not None
+                        and performance_plan.get(f"composer.drums.{section_a_id}")),
+                    "composed_drums": bool(
+                        inst_name == "drums" and performance_plan is not None
+                        and performance_plan.get(f"composer.drums.{section_b_id}")),
                     "rng": transition_rng,  # For deterministic pickup pitch selection
                     "groove_cues": groove_cues,  # For bass-drum coordination (Phase 7)
                     "settings": {

@@ -1,0 +1,89 @@
+# Country: a honky-tonk shuffle in G at 116 BPM, with a singer.
+#
+# A full country band: the composed rhythm guitar plays honky-tonk figures
+# (Carter scratch, chucks, bass-string walks), an acoustic guitar strums
+# along underneath, the bass plays a two-beat line on 1 and 3 with leading
+# notes into the changes, and the drummer shuffles on the ride in the
+# verses and the hi-hat in the choruses, with short fills. The lead guitar
+# plays around an imagined singer (foreground: auto): chicken-picked and
+# slide fills at the ends of the verse phrases, a harmony line with the
+# singer in the choruses, and an instrumental break over the verse changes.
+#
+# Pinned, and why:
+#   - country_style: honky_tonk, the shared shuffle and honky-tonk
+#     vocabulary for every player (plain `country` would draw one per song)
+#   - lead_fills: normal, a fill answering every verse phrase
+#   - turnarounds: true, V7 turnarounds lead back into each section
+#   - acoustic_gtr technique: strumming (strum_density 1.0), a steady
+#     strummed acoustic bed on every beat
+#   - drums ghost_rate 0.1: a clean country snare
+# Each player's personal figures, the intro, the fills and the licks come
+# from the seed (examples use the shared produzre-examples project).
+#
+# Listen for:
+#   - the rhythm and acoustic guitars alone for two bars, then a train beat
+#     brings in the band and the lead
+#   - the II7 (A7) in the chorus pulling to V7, a classic country move
+#   - a two-bar snare build and driving bass eighths into each chorus
+#   - lead fills answering the singer, then a solo over the verse chords
+#   - the shared shuffle across drums, bass and guitars
+version: 1
+song:
+  project: produzre-examples
+  title: "Jukebox on Route Nine"
+  bpm: 116
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: country
+  seed: 7411
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    country_style: honky_tonk
+    lead_fills: normal
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 84]
+  acoustic_gtr:
+    params: {technique: strumming, strum_density: 1.0}
+  drums:
+    params: {ghost_rate: 0.1}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "IV I V7 I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I I IV IV V7 V7 I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV IV I I II7 II7 V7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I I IV IV V7 V7 I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V7 I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, acoustic_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

@@ -16,7 +16,7 @@ from pathlib import Path
 def test_bass_follows_chord_changes():
     """Verify bass notes change at chord boundaries in a clear progression."""
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/baseline/chord-changes-demo.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/baseline/chord-changes-demo.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -78,7 +78,7 @@ def test_bass_follows_chord_changes():
 def test_bass_notes_in_register():
     """Verify all bass notes are within register bounds."""
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/baseline/chord-changes-demo.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/baseline/chord-changes-demo.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -116,7 +116,7 @@ def test_bass_notes_in_register():
 def test_bass_minor_key():
     """Verify bass works correctly in minor keys."""
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/baseline/chord-changes-minor.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/baseline/chord-changes-minor.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -181,7 +181,7 @@ def test_bass_minor_key():
 def test_bass_no_chromatic_accidents():
     """Verify no weird chromatic accidents in default tight persona."""
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/baseline/chord-changes-demo.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/baseline/chord-changes-demo.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -313,7 +313,9 @@ def test_bass_cadence_resolution(tmp_path):
                 "kind": parts[11],
             })
 
-    assert len(events) >= 8, f"Dense config should fill all bars, got {len(events)} events"
+    # Every bar plays; the song's last bar lands on its cadence and rings.
+    assert {e["bar"] for e in events} == {1, 2, 3, 4}, \
+        f"Dense config should fill all bars, got {len(events)} events"
 
     # The tonic must be established: bar 1, beat 1 is a root C (I chord).
     first = events[0]
@@ -331,15 +333,9 @@ def test_bass_cadence_resolution(tmp_path):
     assert cadence["pitch"] % 12 == 0, \
         f"Cadence should resolve to C in C major, got: {cadence['note']}"
 
-    # Nothing after the cadence except fill notes (the pickup run into the
-    # next loop): the cadence is the last structural note.
-    after_cadence = [
-        e for e in events
-        if (e["bar"], e["beat"]) > (cadence["bar"], cadence["beat"])
-    ]
-    for e in after_cadence:
-        assert e["kind"].startswith("fill"), \
-            f"Non-fill event after cadence: {e}"
+    # The cadence is the song's last note: nothing follows it (no fill runs
+    # into a next section that never comes).
+    assert (cadence["bar"], cadence["beat"]) == max((e["bar"], e["beat"]) for e in events)
 
     print(f"✓ Cadence resolves to {cadence['note']} in bar {cadence['bar']}")
 

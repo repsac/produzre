@@ -1,6 +1,87 @@
 # Changelog
 
-## 0.9.0 (unreleased)
+## 0.10.0 (2026-09-27): the composer
+
+Songs are now written by a composer instead of assembled from patterns. Each
+song gets its own band: a drummer, a bassist, a rhythm guitarist and a lead
+player with their own habits, playing a hook the whole song is built around.
+The detailed design notes and review reports are in `docs/design/` and
+`docs/reviews/`.
+
+### What changes for existing songs
+
+Existing YAML produces different MIDI. To keep a part's older behavior, set
+`composer: false` on it (or `song.composer: false` for the whole song).
+
+- **The lead guitar is composed.** A song gets one set of ideas: a hook, an
+  answer, verse and bridge ideas and a bank of licks, and returning sections
+  remember them. `foreground: auto` plays around a singer (fills, a chorus
+  counter-line, the solo); `full` makes the lead the melody.
+- **The rest of the band is composed too.** Drums, rhythm guitar and, in band
+  sections, the bass play per-song parts, and all parts agree on arrangement
+  habits: how the band goes into a chorus, how phrases end, how the song
+  ends. Pin any habit with `song.arrangement_style`.
+- **Grooves settle.** Drums, bass, rhythm and acoustic guitar restate a
+  section's typical bar through each phrase, and choruses recall their
+  groove. `groove_memory: false` turns it off.
+- **Odd and compound meters phrase by beat groups** (6/8 as 3+3, 7/8 as
+  2+2+3). Without an explicit `chord_rate`, chords change once per bar in
+  every meter.
+- **Dynamics follow the song.** Composed drums, bass and the arpeggiator get
+  louder from verse to chorus and grow on repeats.
+- **The bass lands on the root on beat 1** of every new chord.
+- Your settings still win. Explicit patterns, styles, recipes, `intent`,
+  swing and register settings keep their engines or bound the composed parts,
+  and settings only the older generators use are logged as unused.
+
+### New
+
+- **Every song its own band.** Per-song drum kits and grooves, signature
+  riffs with optional bass doubling, synthesized comp figures, generated
+  licks and bass roles, so an album in one genre doesn't sound like one song.
+- **Genre idioms**, each with per-song variety: country (six styles such as
+  honky-tonk, Bakersfield and outlaw, plus real waltzes), reggae (one-drop,
+  steppers, rockers), jazz (spang-a-lang ride, walking bass), and a
+  four-on-the-floor drummer for dance and electronic music.
+- **Solo instruments** carry a piece on their own: solo drums, fingerpicked
+  acoustic guitar with a melody over the thumb, and a solo lead that plays
+  the tune.
+- A section or instrument `genre` now changes that part's player, so one
+  song can move between genres.
+- `song.final_chorus: modulate` for a last-chorus key change, and
+  `song.turnarounds` to lead sections into each other.
+- `lead_gtr` chorus forms (`lift`, `anthem`, `call`), solo stories and
+  endings, octave and stab counters, country fills with double stops.
+- The top-level `engines:` block sets MIDI programs and channels. Section
+  personas work. Unknown settings print a warning with a suggestion.
+- Rewritten examples: twelve complete songs in `examples/songs/`, one song
+  per genre, solo pieces for drums, bass, acoustic and lead guitar, and
+  instrument demos for the current app. They use the built-in
+  `produzre-examples` project, so they sound the same on every machine.
+- Tools: `tools/album_diversity.py`, `tools/rhythm_review.py`,
+  `tools/musicality.py` and `tools/preview_audio.py` for MP3 previews.
+
+### Fixed
+
+- **Drums:** 12/8 and 6/8 grooves, swing that no longer warps compound
+  meters, audible builds, one hit per drum per step, the drum persona being
+  ignored, and transitions thinning fills.
+- **Bass:** walking lines that actually walk, no more silent bars, the bass
+  playing through stop-time and drops, authored bass motifs, slap on composed
+  parts, register limits, and the root on one after groove memory.
+- **Lead and arpeggiator:** a crash with a numeric `register` list, dead
+  `bend_rate` and `dive_rate` ranges, lead seeds, sparse or repeated solos,
+  trills under swing, and the arpeggiator's voicings and loudness.
+- **Guitars:** walk-up notes over held chords, capo in fingerstyle and tabs,
+  barre melodies out of range, `sustain_duration`, and chords that started
+  sections an octave high.
+- **Transitions:** pickups now respect the key, meter and register, and never
+  lead into silence; bass notes no longer overlap pickups or ramps.
+- Many smaller fixes. Every issue is listed with its fix in
+  `docs/reviews/2026-09-26-examples-findings.md` and
+  `docs/reviews/2026-09-26-final-review.md`.
+
+## 0.9.0 (2026-09-13)
 
 ### What changes for existing songs
 

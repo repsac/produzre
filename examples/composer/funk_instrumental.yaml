@@ -1,0 +1,70 @@
+# Funk instrumental: a syncopated hook, a lead that answers itself, and a
+# band locked to the kick.
+#
+# The lead carries the melody (foreground: full): each chorus states the
+# hook (it starts on the "a" of beat 1), answers it, lifts and closes. The
+# second chorus repeats the first; the final chorus lifts it higher. With the
+# shared produzre-examples project the composer draws:
+#   - drums: a half-time floor-tom pulse in the verses and eighth hats with a
+#     syncopated kick in the choruses, louder in the choruses and on each
+#     repeat; a snare build leads into every chorus (`into chorus: build`),
+#     and the bass plays the build with it
+#   - bass: it plays the drummer's kick; in the choruses it keeps a two-bar
+#     call-and-response groove (funk uses two-bar groove cycles)
+#   - rhythm guitar: a busy sixteenth chank in the choruses, a spaced
+#     figure in the verses
+#   - solo: a climbing story that ends on a held note; the song ends on a ringing
+#     chord
+# `turnarounds: true` turns the end of the intro and of each chorus to V7
+# before the verse or chorus that follows.
+version: 1
+song:
+  project: produzre-examples
+  title: "Composer Funk"
+  bpm: 104
+  key: D
+  mode: dorian
+  meter: "4/4"
+  genre: funk
+  seed: 77
+  turnarounds: true
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    params: {foreground: full, register: [62, 79]}
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVII7 IV7 i7 i7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i7 IV7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, solo, chorus, outro]

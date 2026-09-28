@@ -1,13 +1,31 @@
+# Hi-hat voice controls: open and pedal rates, placements, and accent boosts.
+#
+# `voices` is a part selector: every section here sets drum voices, so the
+# classic drum engine plays them with its kit-voice controls instead of
+# the composed drummer. See README.md for the composed drum demos.
+#
+#   extreme_hats  open hats on the "and" of 2 and 4 and pedal hats on 2 and
+#                 4, every bar (rate 1.0), with strong accents on 1 and 3
+#   mixed_hats    an eighth-note hat line at rate 0.8, open hats at 0.5 on
+#                 the "and" of 4 (drawn once and restated through the
+#                 phrase), and pedal hats at 0.5 that give way to the busier
+#                 kick (the kit's physical limits drop the pedal hat in bars
+#                 with dense kicks)
+#
+# `energy: 0.6` on the chorus is a choice: a chorus's default energy moves
+# the classic engine's hands to the ride, where the hat controls would not
+# be heard.
 version: 1
 song:
-  themes_auto: false  # isolate drum golden tests from theme coupling
+  project: produzre-examples
+  themes_auto: false  # keep automatic themes out of the kit comparison
   title: "HatsDemo"
   bpm: 120
   key: C
   mode: major
   meter: "4/4"
   beats_per_bar: 4
-  seed: 42
+  seed: 4005
   variation: 0.0
   humanize_velocity: 0.0
   humanize_timing: 0.0
@@ -62,6 +80,7 @@ sections:
 
   mixed_hats:
     type: chorus
+    energy: 0.6  # a chorus's default energy moves the classic engine to the ride
     bars: 4
     harmony:
       progression: "I V vi IV"
@@ -74,7 +93,7 @@ sections:
               # Pattern - sparse on 8th notes
               pattern:
                 rate: 0.8
-                placements: ["1", "2", "3", "4"]
+                placements: ["1", "1&", "2", "2&", "3", "3&", "4", "4&"]
 
               # Open hats - moderate, bar-end pickup
               open:

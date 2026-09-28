@@ -152,6 +152,7 @@ def humanize_events(
     rng_timing: Optional[random.Random] = None,
     rng_velocity: Optional[random.Random] = None,
     swing_16th: Optional[float] = None,
+    groups=None,
 ) -> List[Tuple[float, float, int, int, str]]:
     """Humanize a sequence of DrumEvents into timeline-ready note tuples.
 
@@ -185,6 +186,11 @@ def humanize_events(
         pitch = int(e.pitch)
 
         beat_in_bar = rel % bpb if bpb > 0.0 else 0.0
+        group_start = False
+        boundary = 0.0
+        for group in groups or ():
+            group_start |= abs(beat_in_bar - boundary) < 1e-6
+            boundary += group
 
         # Create per-event RNGs derived from the (section-level) timing/velocity RNG
         # states. This makes humanization stable under event insertion/removal.
@@ -197,8 +203,8 @@ def humanize_events(
             beat_in_bar=beat_in_bar,
             bpm=bpm,
             timing_jitter_ms=timing_jitter_ms,
-            swing=swing,
-            swing_16th=swing_16th,
+            swing=0.0 if group_start else swing,
+            swing_16th=0.0 if group_start else swing_16th,
             push_pull=push_pull,
             rng=rt_e,
         )

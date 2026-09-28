@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassChordChanges_Minor"
   bpm: 100
   key: A

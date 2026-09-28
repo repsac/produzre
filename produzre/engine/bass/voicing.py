@@ -44,6 +44,7 @@ def select_chord_tone_with_voice_leading(
     get_diatonic_approach=None,
     motion_style: str = "stepwise",
     root_bias: Optional[float] = None,
+    new_chord: bool = False,
 ) -> tuple[int, str]:
     """Select the best chord tone using voice leading principles.
 
@@ -65,6 +66,8 @@ def select_chord_tone_with_voice_leading(
         motion_style: Melodic motion preference ("stepwise", "leaping", "mixed") - Phase 4.2
         root_bias: Probability (0.0-1.0) of including the root among inner-beat
             candidates. None keeps the legacy default (~0.65).
+        new_chord: True for the first note of a new harmony. Each chord
+            starts on its root: no fifth, approach or passing tone there.
 
     Returns:
         (pitch, kind) - Selected MIDI note and voice label
@@ -79,14 +82,14 @@ def select_chord_tone_with_voice_leading(
         pitch = clamp_to_register(root, register_low, register_high)
         return (pitch, "root_cadence")
 
-    # Downbeats: strongly prefer root
-    if is_downbeat:
-        # Occasionally use fifth on downbeat for variation (25%: was 15%).
-        # Never on the first note of a section (prev_pitch is None): the bass
-        # must establish the root before varying away from it. The rng draw is
-        # unconditional to keep the stream stable.
+    # Downbeats and chord starts: the root
+    if is_downbeat or new_chord:
+        # A held chord's downbeat occasionally takes the fifth for variation
+        # (25%). Never where a chord starts (each chord starts on its root)
+        # and never on the first note of a section (prev_pitch is None). The
+        # rng draw is unconditional to keep the stream stable.
         use_fifth = rng.random() < 0.25
-        if fifth and use_fifth and prev_pitch is not None:
+        if fifth and use_fifth and prev_pitch is not None and not new_chord:
             pitch = clamp_to_register(fifth, register_low, register_high)
             return (pitch, "fifth")
         else:

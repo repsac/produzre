@@ -1,0 +1,53 @@
+# Drum persona: `jazz-lite`.
+#
+# A drum persona sets the drummer's touch: timing jitter, velocity
+# variation and push or pull against the beat. The composed drummer's
+# parts come from the song's drum DNA, so the three files in this folder
+# play the same hits and differ only in how they are played:
+#
+#   jazz-lite  about 20 ms ahead of the beat, 8 ms of jitter and the widest
+#              velocity variation
+#
+# persona-tight.yaml, persona-rock.yaml and persona-jazz-lite.yaml share
+# key, tempo, seed and chords. Compare the drum stems, or the
+# start_beat_abs and velocity columns of analysis/drums/*.events.tsv.
+#
+# A persona's pattern settings (fill_rate, hat_density, voice rates) and
+# its swing do not steer the composed drummer, which plays the song's own
+# straight feel here; set the drum params yourself for that, or set
+# `composer: false` to hear the persona on the classic engine.
+version: 1
+song:
+  project: produzre-examples
+  title: "Drum Persona Jazz Lite"
+  bpm: 110
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 4101
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    persona: jazz-lite
+
+sections:
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [verse, chorus, verse, chorus]

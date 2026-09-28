@@ -1,0 +1,79 @@
+# Composed comping: feel settings shape the guitarist's figure.
+#
+# Unless you pin a style, the composer writes the rhythm guitar: each song
+# draws its own figures (dead-note chucks, bass-string walks, sus4
+# hammer-ons, slid chords, stabs) and arranges them so verse and chorus
+# contrast. Feel settings change how that figure is played without
+# replacing it. Every verse below plays the same composed figure, with
+# one setting changed:
+#
+#   verse               the song's own figure
+#   verse_thin          density 0.4: weak off-beat strokes drop out
+#   verse_muted         palm_mute 0.8: plain strums become palm-muted chugs
+#   verse_chucks        chuck_rate 0.8: light upstrokes become dead-note chucks
+#   verse_stabs         sustain_cut_rate 0.8: strums are cut short to stabs
+#   verse_power         voicing power: power-chord shapes throughout
+#
+# The last verse also ends with the song's way into a chorus, and the
+# chorus has no settings: the song's contrasting chorus figure.
+# Settings that pick a different part (style, strum_style, sustain_mode,
+# playstyle, pattern, play_pattern, follow_hats, use_patterns, recipe, a
+# nonzero lock_to_riff, composer: false) hand the section to the classic
+# engine instead; see classic-engine-demo.yaml.
+version: 1
+song:
+  project: produzre-examples
+  title: "Composed Comping Feel"
+  bpm: 104
+  key: A
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 6202
+  arrangement_style: {riff_driven: false}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+sections:
+  verse:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse_thin:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {params: {density: 0.4}}}
+  verse_muted:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {params: {palm_mute: 0.8}}}
+  verse_chucks:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {params: {chuck_rate: 0.8}}}
+  verse_stabs:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {params: {sustain_cut_rate: 0.8}}}
+  verse_power:
+    type: verse
+    bars: 4
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {params: {voicing: power}}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V vi I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [verse, verse_thin, verse_muted, verse_chucks, verse_stabs, verse_power, chorus]

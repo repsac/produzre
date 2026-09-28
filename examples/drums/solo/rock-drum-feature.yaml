@@ -1,0 +1,94 @@
+# Rock drum feature: a full song form played by the drums alone.
+#
+# Nothing about the kit is authored, so the composed drummer plays it: the
+# song seed (chosen for the hand voices below) draws one drummer (kick
+# pattern, what the hands ride in each section, ghost notes, fill habits,
+# crash habits and a feel), and the arrangement planner decides where the
+# fills and crashes land. Only feel settings are given (ghost_rate,
+# fill_rate), which shape the composed drummer instead of replacing it,
+# plus two arrangement pins (song.arrangement_style) for the chorus
+# entrances and the ending. The drums follow the section intensity: verses
+# sit under the prechorus and chorus, and every repeat plays a little
+# harder than the one before.
+#
+# Listen for:
+#   - the intro states the groove on eighth-note hats, then a fill kicks
+#     off verse 1
+#   - solo drums keep the backbeat in every bar; bars 2 and 6 of each
+#     section answer on the toms in their last beat, and fills turn
+#     bars 4 and 8
+#   - the prechorus moves the hands to the ride, and a fill plus crash
+#     marks every chorus entrance (into_chorus: fill)
+#   - choruses open the hands up to sixteenth-note hats
+#   - the drum solo section stays on the ride with one-beat triplet fills
+#     in bars 2 and 6 (fill_rate 0.8) and bigger ones at the phrase ends
+#   - the bridge drops to a half-time snare on 3 under a washy open hat,
+#     with ghost notes either side of it (ghost_rate 0.45), before the
+#     last chorus
+#   - the outro ends big: a hit, a roll around the kit and a final crash
+#     (ending: big)
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Drums Rock Feature"
+  bpm: 124
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: rock
+  seed: 4162
+  arrangement_style:
+    into_chorus: fill
+    ending: big
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    params:
+      ghost_rate: 0.2
+      fill_rate: 0.6
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    instruments:
+      drums: {}
+  verse:
+    type: verse
+    bars: 8
+    instruments:
+      drums: {}
+  prechorus:
+    type: prechorus
+    bars: 4
+    instruments:
+      drums: {}
+  chorus:
+    type: chorus
+    bars: 8
+    instruments:
+      drums: {}
+  solo:
+    type: solo
+    bars: 8
+    instruments:
+      drums: {params: {fill_rate: 0.8}}
+  bridge:
+    type: bridge
+    bars: 8
+    instruments:
+      drums: {params: {ghost_rate: 0.45}}
+  outro:
+    type: outro
+    bars: 4
+    instruments:
+      drums: {}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, solo, bridge, chorus, outro]

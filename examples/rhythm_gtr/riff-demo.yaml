@@ -1,0 +1,65 @@
+# Signature riff: a riff-driven song, with the bass answering the guitar.
+#
+# In a riff-driven song the intro, verses and outro ride a signature riff
+# on the low strings: a root power chord, syncopated power-chord moves,
+# palm-muted chugs, and a single-note tail, with bar two answering bar
+# one. The riff is chosen to lock with the drummer's kick and snare, and
+# it moves with the chord root. `song.arrangement_style` pins the habits:
+#
+#   riff_driven: true     play the signature riff (drawn per song otherwise)
+#   bass_doubles: true    the bass doubles the riff an octave down
+#   comp_activity: normal the guitar states the whole riff, then plays a
+#                         bar without its tail; the doubling bass plays that
+#                         tail alone, so the riff answers itself across the
+#                         band (busy: the tail every bar; sparse: every
+#                         fourth bar)
+#   phrase_fill: slide    phrase ends slide into the next chord
+#
+# The chorus leaves the riff for the song's driving chorus figure, and the
+# bass plays its own chorus role.
+version: 1
+song:
+  project: produzre-examples
+  title: "Signature Riff Answers"
+  bpm: 122
+  key: E
+  mode: minor
+  meter: "4/4"
+  genre: hard_rock
+  seed: 6203
+  arrangement_style:
+    riff_driven: true
+    bass_doubles: true
+    comp_activity: normal
+    phrase_fill: slide
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i i bVII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVI bVII i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVII bVI i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, outro]

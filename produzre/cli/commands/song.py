@@ -54,30 +54,12 @@ def cmd_validate(cfg: RootConfig) -> int:
 
     # Run enhanced validation (Option A - Phase 2)
     try:
-        from ...config.validation import validate_section_config
+        from ...config.validation import (unknown_instrument_param_warnings,
+                                          unknown_structure_warnings)
 
-        warnings = []
-        for section_id, section in cfg.sections.items():
-            # Convert section to dict-like structure for validation
-            section_dict = {
-                "type": section.type,
-                "bars": section.bars,
-                "instruments": {},
-            }
-
-            # Build instruments dict from section config
-            for inst_name in ["drums", "bass", "rhythm_gtr", "lead_gtr", "harmony"]:
-                inst_cfg = section.instruments.get(inst_name)
-                if inst_cfg:
-                    inst_dict = {}
-                    if hasattr(inst_cfg, "params") and inst_cfg.params:
-                        inst_dict["params"] = dict(inst_cfg.params) if not isinstance(inst_cfg.params, dict) else inst_cfg.params
-                    if hasattr(inst_cfg, "extra") and inst_cfg.extra:
-                        inst_dict["extra"] = dict(inst_cfg.extra) if not isinstance(inst_cfg.extra, dict) else inst_cfg.extra
-                    section_dict["instruments"][inst_name] = inst_dict
-
-            section_warnings = validate_section_config(section_id, section_dict, strict=False)
-            warnings.extend(section_warnings)
+        # The raw YAML, checked the same way the build checks it (top-level,
+        # song and section keys, global and section instruments, engines).
+        warnings = unknown_structure_warnings(cfg.raw) + unknown_instrument_param_warnings(cfg.raw)
 
         if warnings:
             logger.warning("\n=== Configuration Warnings ===")

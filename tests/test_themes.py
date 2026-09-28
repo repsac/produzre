@@ -7,7 +7,7 @@ Covers the design doc (docs/design/theme-bank-architecture.md) milestones:
   M4: auto-composition determinism and identity semantics
 
 Unit tests build themes/chord slots directly (no filesystem).
-Integration tests build examples/themes_demo.yaml via the CLI.
+Integration tests build tests/fixtures/examples/themes_demo.yaml via the CLI.
 """
 
 from __future__ import annotations
@@ -271,18 +271,18 @@ def _build(args):
 @pytest.mark.integration
 class TestThemedBuild:
     def test_demo_builds_with_strict_determinism(self):
-        result = _build(["examples/themes_demo.yaml", "--strict-determinism"])
+        result = _build(["tests/fixtures/examples/themes_demo.yaml", "--strict-determinism"])
         assert result.returncode == 0, result.stderr[-2000:]
         assert "Determinism check PASSED" in result.stderr
 
     def test_demo_uses_themed_guide_and_coupling(self):
-        result = _build(["examples/themes_demo.yaml"])
+        result = _build(["tests/fixtures/examples/themes_demo.yaml"])
         assert result.returncode == 0, result.stderr[-2000:]
         # Themed melody guide engaged in every section.
         assert result.stderr.count("melody guide from theme") == 6
 
     def test_themes_auto_false_disables_themes(self, tmp_path):
-        src = (REPO_ROOT / "examples" / "themes_demo.yaml").read_text(encoding="utf-8")
+        src = (REPO_ROOT / "tests" / "fixtures" / "examples" / "themes_demo.yaml").read_text(encoding="utf-8")
         src = src.replace("seed: 7", "seed: 7\n  themes_auto: false", 1)
         # No authored themes either: strip the whole block for a pure legacy run.
         start = src.index("themes:")

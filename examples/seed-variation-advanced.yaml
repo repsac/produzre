@@ -1,156 +1,88 @@
-# Seed & Variation - Advanced Example
+# Seed control, advanced: A/B a new bridge and a new solo backing while
+# the rest of the song stays put.
 #
-# Advanced use of granular seed/variation for A/B comparison and
-# section-level re-rolling.
+# Scenario: a producer likes the song but wants to
+#   1. try a completely different bridge: the bridge section gets `seed: 555`,
+#      a new drummer, bass line and guitar figures for those eight bars (plus
+#      the drum fill that leads into it and the first guitar bar after it)
+#   2. keep the choruses: the composer remembers a section type, so the
+#      second chorus repeats the first, and the last chorus (after the solo)
+#      recalls it and lifts: louder, with a new rhythm guitar figure
+#   3. re-roll only the rhythm guitar under the solo: its `seed: 42`
+#      draws new figures while the drums, bass and lead keep theirs
 #
-# Scenario: A producer has a song they like but wants to:
-# 1. Try a completely different bridge (section seed override)
-# 2. Keep everything else identical
-# 3. Add subtle variation to the second chorus so it's not identical to the first
-# 4. Re-roll only the lead guitar in the solo section
-#
-# Note: Repeated sections in the arrangement (e.g., chorus appearing twice)
-# automatically get different output thanks to arrangement-index differentiation.
-# You do NOT need to create separate section definitions for repeats.
-#
-# Complexity: ADVANCED (multi-level seed/variation, A/B workflows)
-
+# To try another solo, give the solo's lead a `seed` (for example
+# `lead_gtr: {seed: 7}`): it re-rolls the composed solo in that section only,
+# while the song's hook stays, since it belongs to the song. The pinned
+# `arrangement_style.solo_story` (climb, melodic, trade, blues) sets the
+# solo's shape.
 version: 1
 
 song:
+  project: produzre-examples
   title: "A/B Comparison"
   bpm: 130
   key: A
   mode: minor
   meter: "4/4"
   genre: rock
-  seed: 100
-  variation: 0.1            # Slight global variation for natural feel
+  seed: 8102
+  arrangement_style: {solo_story: climb}
   exports_root: "exports"
 
 exports:
   midi_text:
     enabled: true
-    views: ["events", "grid", "tab"]
+    views: [events, grid, tab]
     subdiv: 16
 
 instruments:
   drums:
-    persona: "rock"
+    persona: rock
   bass:
-    params:
-      articulation_style: "pick"
+    params: {articulation_style: pick}
 
 sections:
   intro:
     type: intro
     bars: 4
-    harmony:
-      progression: ["i", "VII"]
-    instruments:
-      harmony:
-        intensity: 0.5
-      drums:
-        intensity: 0.5
-      bass:
-        intensity: 0.5
-      rhythm_gtr:
-        intensity: 0.4
+    harmony: {progression: ["i", "VII"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
 
   verse:
     type: verse
     bars: 8
-    harmony:
-      progression: ["i", "VI", "VII", "i"]
-    instruments:
-      harmony:
-        intensity: 0.7
-      drums:
-        intensity: 0.7
-      bass:
-        intensity: 0.7
-      rhythm_gtr:
-        intensity: 0.7
+    harmony: {progression: ["i", "VI", "VII", "i"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
 
   chorus:
     type: chorus
     bars: 8
-    harmony:
-      progression: ["VI", "VII", "i", "VII"]
-    instruments:
-      harmony:
-        intensity: 1.0
-      drums:
-        intensity: 1.0
-      bass:
-        intensity: 1.0
-      rhythm_gtr:
-        intensity: 1.0
-      lead_gtr:
-        intensity: 0.6
+    harmony: {progression: ["VI", "VII", "i", "VII"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
 
   bridge:
     type: bridge
     bars: 8
-    seed: 555                # Try a completely different bridge
-    variation: 0.3           # More variation in the bridge
-    harmony:
-      progression: ["III", "VII", "VI", "VII"]
-    instruments:
-      harmony:
-        intensity: 0.8
-      drums:
-        intensity: 0.75
-      bass:
-        intensity: 0.8
-        variation: 0.5       # Extra bass variation in bridge
-      rhythm_gtr:
-        intensity: 0.8
+    seed: 555                # a completely different bridge
+    harmony: {progression: ["III", "VII", "VI", "VII"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
 
   solo:
     type: solo
     bars: 8
-    harmony:
-      progression: ["i", "VI", "VII", "i"]
+    harmony: {progression: ["i", "VI", "VII", "i"]}
     instruments:
-      harmony:
-        intensity: 0.9
-      drums:
-        intensity: 0.9
-      bass:
-        intensity: 0.9
-      rhythm_gtr:
-        intensity: 0.7
-      lead_gtr:
-        intensity: 1.0
-        solo: true
-        seed: 42             # Re-roll ONLY the lead guitar solo
-        extra:
-          phrase_len_bars: 4
-          contour_style: "leaping"
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {seed: 42}  # new figures under the solo only
+      lead_gtr: {}
 
   outro:
     type: outro
     bars: 4
-    harmony:
-      progression: ["i", "VII", "i"]
-    instruments:
-      harmony:
-        intensity: 0.4
-      drums:
-        intensity: 0.4
-      bass:
-        intensity: 0.4
-      rhythm_gtr:
-        intensity: 0.3
+    harmony: {progression: ["i", "VII", "i"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
 
-arrangement:
-  - intro
-  - verse
-  - chorus       # First chorus
-  - verse
-  - chorus       # Second chorus: automatically different from first
-  - bridge
-  - solo
-  - chorus       # Third chorus: also unique
-  - outro
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

@@ -86,6 +86,19 @@ def _resolve_root(cfg, section, numeral: str, instrument_cfg) -> int:
     return tonic_midi + semitone
 
 
+def _melody_window(top: int) -> tuple:
+    """Picked-melody range over a shape whose highest string sounds ``top``.
+
+    Up to nine semitones above the shape (a reach up the top strings), but
+    never above the acoustic's melodic ceiling unless the shape itself
+    sounds that high (a high capo).
+    """
+    from ...composer.acoustic import MELODY_CEILING
+
+    hi = min(top + 9, max(MELODY_CEILING, top))
+    return min(max(55, top - 5), hi), hi
+
+
 def _slot_for_beat(harmony_plan: HarmonySectionPlan, beat: float):
     """Return the ChordSlot covering the given section-local beat position."""
     for cs in harmony_plan.chord_slots:
@@ -269,6 +282,10 @@ def render_into_timeline(
     bpb = params.beats_per_bar
     section_bars = max(1, getattr(section, "bars", 4) or 4)
     total_beats = float(bpb * section_bars)
+    if params.capo and hasattr(timeline, "capo_windows"):
+        # Tab exports show this section's frets relative to the capo.
+        timeline.capo_windows.append((section_start_beat, section_start_beat + total_beats,
+                                      int(params.capo)))
 
     logger.debug(
         "acoustic_gtr: section='%s' technique='%s' pattern='%s' bars=%d density=%.2f vel=%d",
@@ -276,6 +293,41 @@ def render_into_timeline(
         params.technique, params.picking_pattern, section_bars,
         params.strum_density, params.base_vel,
     )
+
+    # Solo fingerstyle owns its figure unless the user chose a picking pattern.
+    if plan is not None and plan.get("composer.song") is not None:
+        from ...orchestrate.render import (_flat_extra, _explicit_settings, _part_genre,
+                                           _seed_override, _flag)
+        from ...composer.acoustic import fingerstyle
+        from ...composer.song import section_groups
+        from ...composer.theory import ChordMap
+
+        extra = _flat_extra(instrument_cfg)
+        active = {name for name, part in section.instruments.items()
+                  if name != "harmony" and getattr(part, "enabled", True) is not False}
+        owned = _explicit_settings(instrument_cfg, extra, ("picking_pattern", "pattern", "recipe"))
+        if active == {"acoustic_gtr"} and params.technique == "fingerpicking" and not owned \
+                and _flag(extra.get("composer")) and not plan.get("composer.song").dna.authored:
+            composer = plan.get("composer.song")
+            seed = _seed_override(cfg, section, instrument_cfg)
+            chords = ChordMap(harmony_plan.chord_slots, section.key or cfg.song.key,
+                              section.mode or cfg.song.mode)
+            notes = fingerstyle(composer.seed if seed is None else seed,
+                _part_genre(cfg, section, "acoustic_gtr", instrument_cfg, composer),
+                chords, chord_voicings, bars=section_bars, bpb=bpb,
+                groups=section_groups(cfg, section, harmony_plan.meter),
+                section_type=params.section_type, melody_amount=params.melody_amount,
+                variation=params.phrase_variation, capo=params.capo,
+                closing=bool((kwargs.get("transition_context") or {}).get("is_last_section")))
+            for beat, dur, pitch, vel, kind in notes:
+                timeline.add_note(start_beat=section_start_beat + beat + params.offset_beats
+                    + rng.uniform(-params.timing_variation, params.timing_variation),
+                    duration_beats=dur, pitch=pitch, velocity=max(20, min(127,
+                        round(params.base_vel * vel) + rng.randint(-params.vel_variation, params.vel_variation))),
+                    channel=None, kind=kind)
+            plan.set(f"composer.acoustic.{section.id}", True)
+            logger.info("Composer: %s acoustic guitar plays a fingerstyle theme", section.id)
+            return
 
     # --- Dispatch ---
     if params.technique == "fingerpicking":
@@ -377,7 +429,7 @@ def _render_fingerpicking(
             if is_melody:
                 top = max(rv.pitches) if rv.pitches else pitch
                 guided = guide_pitch_at(
-                    melody_guide, local_beat, max(55, top - 5), min(88, top + 9),
+                    melody_guide, local_beat, *_melody_window(top),
                     previous=previous_melody or pitch,
                 )
                 if guided is not None:
@@ -613,7 +665,7 @@ def _render_hybrid(
             if is_melody:
                 top = max(rv.pitches) if rv.pitches else pitch
                 guided = guide_pitch_at(
-                    melody_guide, local_beat, max(55, top - 5), min(88, top + 9),
+                    melody_guide, local_beat, *_melody_window(top),
                     previous=previous_melody or pitch,
                 )
                 if guided is not None:

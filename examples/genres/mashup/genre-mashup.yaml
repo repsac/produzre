@@ -1,66 +1,98 @@
-# Genre Mashup Demo
+# Genre mashup: one song in E minor that changes genre section by section.
 #
-# Demonstrates per-instrument genre overrides. The song has a base genre
-# of "rock" but individual instruments pull from different genre recipes.
+# The song is rock (song.genre), so the intro, the choruses and the outro
+# are played by the composer's rock band: a composed drummer, composed
+# comping, and a lead guitar that plays around a singer (foreground: auto).
+# The other sections switch genre with a section instrument `genre`, which
+# chooses that genre's composed player for the part in that section:
+#   - the verses go reggae: a rockers drummer (kick on 1 and 3, rim on 3
+#     under open hats), a skank on the rhythm guitar (offbeat chucks and stabs), and a
+#     reggae bass that plays two or three notes a bar
+#   - the bridge goes jazz: the jazz drummer (spang-a-lang on the closed
+#     hi-hat, hi-hat foot on 2 and 4, swing that reaches the whole band in
+#     that section), a real walking bass and a jazz comp over seventh chords
+#   - the solo goes metal: a metal drummer on the ride and bell with a
+#     syncopated kick, palm-muted chugs and power chords, a busy bass line,
+#     and a lead that draws its solo licks from metal
+# Each genre's player is seeded from the song, so both reggae verses share
+# one reggae band. Arrangement habits (the push into each chorus, the cold
+# ending) stay the song's, so the band still agrees on them. All sections
+# share one key, one tempo and the song's hook, which ties the song
+# together.
 #
-# Instruments work together because they share the same harmony plan:
-# genre only affects rhythm patterns, density, and voicings, not pitch.
-#
-# Fallback chain: section instrument genre → global instrument genre → song genre
-
+# Listen for:
+#   - the rock intro and chorus against the offbeat skank of the verse
+#   - the bridge swinging, with a walking bass under iv7 bVII7 bIIImaj7
+#   - the solo over chugs and a metal beat, then back to the rock chorus
 version: 1
-
 song:
-  title: "Genre Mashup"
-  bpm: 110
+  project: produzre-examples
+  title: "Crossfade City"
+  bpm: 100
   key: E
   mode: minor
   meter: "4/4"
-  genre: rock       # Base genre (fallback for instruments without override)
-  seed: 42
+  genre: rock
+  seed: 4242
+  turnarounds: true
   exports_root: "exports"
 
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
 instruments:
-  drums:
-    genre: funk      # All sections use funk drum recipes by default
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [59, 81]
 
 sections:
-  verse:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse_reggae:
     type: verse
     bars: 8
-    harmony:
-      progression: ["i", "bVII", "bVI", "bVII"]
+    harmony: {progression: "i iv i iv"}
     instruments:
-      harmony:
-        intensity: 0.8
-      drums:
-        intensity: 0.8
-        # Inherits genre: funk from global instruments block
-      bass:
-        intensity: 0.8
-      rhythm_gtr:
-        genre: reggae   # Section override: reggae skank rhythm
-        intensity: 0.7
-
-  chorus:
+      harmony: {}
+      drums: {genre: reggae}
+      bass: {genre: reggae}
+      rhythm_gtr: {genre: reggae}
+      lead_gtr: {}
+  chorus_rock:
     type: chorus
     bars: 8
-    harmony:
-      progression: ["i", "bVII", "bVI", "V"]
+    harmony: {progression: "i bVI bIII bVII"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge_jazz:
+    type: bridge
+    bars: 8
+    harmony: {progression: "iv7 bVII7 bIIImaj7 bVImaj7 iiø7 V7 i7 V7"}
     instruments:
-      harmony:
-        intensity: 1.0
-      drums:
-        genre: rock     # Override global funk: rock drums for the chorus
-        intensity: 1.0
-      bass:
-        intensity: 1.0
-      rhythm_gtr:
-        intensity: 0.9
-        # No genre override: falls back to song genre = rock
+      harmony: {}
+      drums: {genre: jazz}
+      bass: {genre: jazz}
+      rhythm_gtr: {genre: jazz}
+  solo_metal:
+    type: solo
+    bars: 8
+    harmony: {progression: "i bVI bVII i"}
+    instruments:
+      harmony: {}
+      drums: {genre: metal}
+      bass: {genre: metal}
+      rhythm_gtr: {genre: metal}
+      lead_gtr: {genre: metal}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i bVI bVII i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
 
-arrangement:
-  - verse
-  - chorus
-  - verse
-  - chorus
+arrangement: [intro, verse_reggae, chorus_rock, verse_reggae, chorus_rock, bridge_jazz, solo_metal, chorus_rock, outro]

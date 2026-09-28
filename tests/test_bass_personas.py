@@ -15,7 +15,7 @@ from pathlib import Path
 def test_bass_personas_loaded():
     """Verify all bass personas are loaded with expected params."""
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "show-config", "examples/personas/bass/persona-tight.yaml"],
+        [sys.executable, "-m", "produzre.cli", "show-config", "tests/fixtures/examples/personas/bass/persona-tight.yaml"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -44,7 +44,7 @@ def test_persona_selection():
     """Verify that different personas load different params."""
     # Test tight persona
     result_tight = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "show-config", "examples/personas/bass/persona-tight.yaml"],
+        [sys.executable, "-m", "produzre.cli", "show-config", "tests/fixtures/examples/personas/bass/persona-tight.yaml"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -53,7 +53,7 @@ def test_persona_selection():
 
     # Test pocket persona
     result_pocket = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "show-config", "examples/personas/bass/persona-pocket.yaml"],
+        [sys.executable, "-m", "produzre.cli", "show-config", "tests/fixtures/examples/personas/bass/persona-pocket.yaml"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -70,7 +70,7 @@ def test_bass_default_persona():
     """Verify that default persona is 'tight' when not specified."""
     # Create temp YAML without explicit persona
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "show-config", "examples/bass/baseline/baseline-demo.yaml"],
+        [sys.executable, "-m", "produzre.cli", "show-config", "tests/fixtures/examples/bass/baseline/baseline-demo.yaml"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -88,7 +88,7 @@ def test_config_precedence():
     # TODO: This will need a YAML that tests section-level overrides
     # For now, just verify that instrument-level params work
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "show-config", "examples/personas/bass/persona-tight.yaml"],
+        [sys.executable, "-m", "produzre.cli", "show-config", "tests/fixtures/examples/personas/bass/persona-tight.yaml"],
         capture_output=True,
         text=True,
         timeout=10,
@@ -118,7 +118,7 @@ def test_persona_affects_output():
     """Verify that different personas produce different MIDI outputs."""
     # Build tight persona
     result_tight = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/personas/bass/persona-tight.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/personas/bass/persona-tight.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -127,7 +127,7 @@ def test_persona_affects_output():
 
     # Build pocket persona
     result_pocket = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/personas/bass/persona-pocket.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/personas/bass/persona-pocket.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -136,7 +136,7 @@ def test_persona_affects_output():
 
     # Build walking persona
     result_walking = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/personas/bass/persona-walking.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/personas/bass/persona-walking.yaml"],
         capture_output=True,
         text=True,
         timeout=30,

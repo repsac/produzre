@@ -78,6 +78,10 @@ class HarmonySectionPlan:
     total_beats: float
     chord_rate: float
     chord_slots: List[ChordSlot] = field(default_factory=list)
+    # Where the numerals came from: "explicit" (user progression), "recipe",
+    # or "preset". Cadential phrasing only edits non-explicit harmony by
+    # default (harmony/phrasing.py).
+    source: str = "explicit"
 
 
 def build_harmony_plan(
@@ -123,6 +127,13 @@ def build_harmony_plan(
     total_beats = resolve_total_beats(cfg, section, meter)
 
     chord_rate = float(section.harmony.chord_rate)
+    rate_is_default = bool((section.harmony.extra or {}).get("_chord_rate_default"))
+    bar_beats = float(meter.beats_per_bar or 4.0)
+    if rate_is_default and abs(bar_beats - 4.0) > 1e-6:
+        # The default is "one chord per bar". A fixed 4 beats would drift
+        # against a 3.5-beat (7/8) or 3-beat (6/8, 3/4) bar and change
+        # chords mid-bar.
+        chord_rate = bar_beats
     if chord_rate <= 0:
         chord_rate = float(total_beats) if total_beats > 0 else 0.0
 
@@ -162,6 +173,7 @@ def build_harmony_plan(
         # Regular string format, split on whitespace
         numerals = split_progression(explicit_prog)
 
+    source = "explicit"
     if numerals:
         logger.info(
             "Section '%s': using explicit harmony progression: %s",
@@ -215,6 +227,7 @@ def build_harmony_plan(
                 )
                 if _found and isinstance(_found, list):
                     numerals = [str(n).strip() for n in _found if n]
+                    source = "recipe"
                     logger.info(
                         "Section '%s': using harmony recipe '%s' (mode=%s, type=%s): %s",
                         section.id, _recipe_name, _mode, _sec_type,
@@ -231,7 +244,9 @@ def build_harmony_plan(
                     try:
                         _rate = float(_recipe_rate)
                         if _rate > 0:
-                            chord_rate = _rate
+                            # Recipe rates are written in 4/4 bars; keep
+                            # them bar-relative in other meters.
+                            chord_rate = _rate * bar_beats / 4.0
                             logger.debug(
                                 "Section '%s': using recipe '%s' chord_rate=%.2f",
                                 section.id, _recipe_name, chord_rate,
@@ -241,6 +256,7 @@ def build_harmony_plan(
 
         # Fall back to presets if no recipe matched.
         if not numerals:
+            source = "preset"
             numerals = choose_progression_for_section(
                 song_mode=cfg.song.mode,
                 section_type=section.type,
@@ -292,4 +308,5 @@ def build_harmony_plan(
         total_beats=float(total_beats),
         chord_rate=chord_rate,
         chord_slots=chord_slots,
+        source=source,
     )

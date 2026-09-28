@@ -18,8 +18,8 @@ subsystem once timelines are fully rendered.
 import logging
 import random
 from collections.abc import Mapping
-from dataclasses import fields
-from typing import Any, Optional, List
+from dataclasses import fields, replace as _replace_note
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..model import RootConfig
 from ..rng import make_instrument_rng, stable_seed_int
@@ -116,7 +116,7 @@ def _validate_engine_dependencies(
         raise ConfigError("\n".join(error_lines))
 
 
-def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
+def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str, section_id: Optional[str] = None) -> Any:
     """Return the global/default InstrumentConfig for an instrument, if present.
 
     Different versions of the config model may store global instrument defaults
@@ -128,12 +128,16 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
     Args:
         cfg: Parsed root config.
         inst_name: Instrument key (e.g. "drums").
+        section_id: The section being rendered; its own persona, if any,
+            replaces the global persona.
 
     Returns:
         The global/default InstrumentConfig for the instrument, or None.
     """
 
     # Phase B1+: Load persona params from _effective.instruments (if any).
+    # A persona named on this section's instrument replaces the global one
+    # (config/load.py, _resolve_section_personas).
     effective_cfg = None
     if hasattr(cfg, "raw") and isinstance(cfg.raw, dict):
         effective = cfg.raw.get("_effective", {})
@@ -141,6 +145,9 @@ def _get_global_instrument_cfg(cfg: RootConfig, inst_name: str) -> Any:
             effective_instruments = effective.get("instruments", {})
             if isinstance(effective_instruments, dict):
                 effective_cfg = effective_instruments.get(inst_name)
+            by_section = (effective.get("sections") or {}).get(section_id) if section_id else None
+            if isinstance(by_section, dict) and isinstance(by_section.get(inst_name), dict):
+                effective_cfg = by_section[inst_name]
 
     # Find the base InstrumentConfig from root/song level.
     base_cfg = None
@@ -330,6 +337,29 @@ def _merge_instrument_config(base: Any, override: Any) -> Any:
             # InstrumentConfig doesn't have a 'params' field: fold into extra
             del merged["params"]
         merged["extra"] = {**merged_params, **(merged.get("extra", {}) or {})}
+
+    # A section override wins even when the global and section settings use
+    # different representations (a config field versus nested params).
+    own_extra = (override_map.get("extra", {}) if override_map is not None
+                 else getattr(override, "extra", None)) or {}
+    own_nested = own_extra.get("extra") if isinstance(own_extra.get("extra"), dict) else {}
+    own_params = {**{k: v for k, v in own_extra.items() if k != "extra"},
+                  **override_params, **own_nested}
+    persona_keys = set(own_extra.get("_persona_keys") or [])
+    merged["extra"] = dict(merged.get("extra") or {})
+    nested = merged["extra"].get("extra")
+    if isinstance(nested, dict):
+        merged["extra"]["extra"] = dict(nested)
+    for f in fields(base):
+        if f.name == "extra":
+            continue
+        own_field = override_map.get(f.name) if override_map is not None else getattr(override, f.name, None)
+        if own_field is not None:
+            merged["extra"].pop(f.name, None)
+            if isinstance(nested, dict):
+                merged["extra"]["extra"].pop(f.name, None)
+        elif own_params.get(f.name) is not None and (f.name in own_nested or f.name not in persona_keys):
+            merged[f.name] = own_params[f.name]
 
     # Only pass fields that the dataclass actually accepts
     valid_fields = {f.name for f in fields(base)}
@@ -526,7 +556,7 @@ def render_section_instruments(
     # per-instrument pocket offsets before later engines have rendered).
     effective_cfgs: dict[str, Any] = {}
     for inst_name, inst_cfg, _engine in instruments_with_engines:
-        base_cfg = _get_global_instrument_cfg(cfg, inst_name)
+        base_cfg = _get_global_instrument_cfg(cfg, inst_name, sec.id)
         effective_cfgs[inst_name] = _merge_instrument_config(base_cfg, inst_cfg)
 
     # Shared groove clock state (resolved lazily once per section, after the
@@ -580,7 +610,7 @@ def render_section_instruments(
             # instrument params, including the selected recipe.
             drum_params = groove_inst_params.get("drums")
             if drum_params is None:
-                drum_params = recipe_feel_params("drums", _get_global_instrument_cfg(cfg, "drums"))
+                drum_params = recipe_feel_params("drums", _get_global_instrument_cfg(cfg, "drums", sec.id))
         feel = resolve_groove_feel(cfg, sec, drum_params, groove_inst_params)
         if feel is not None:
             pockets = {
@@ -776,6 +806,34 @@ def render_section_instruments(
             performance_plan.set(f"melody.guide.{sec.id}", guide_dict)
             performance_plan.set("melody.guide", guide_dict)
 
+        # Composed lead (design: docs/design/composer-architecture.md). The
+        # song composer writes this section's lead from the song DNA and its
+        # memory of earlier sections; the lead engine performs it. The
+        # ensemble's lead windows are replaced with where the lead actually
+        # plays, so accompaniment makes room for real phrases. The drums go
+        # first: in a riff-alone intro the lead enters with the drummer.
+        _compose_drums_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("drums"),
+            performance_plan, transition_context, logger,
+        )
+        _compose_lead_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("lead_gtr"),
+            performance_plan, transition_context, logger,
+        )
+        _compose_rhythm_for_section(
+            cfg, sec, hplan, rgrid, effective_cfgs.get("rhythm_gtr"),
+            performance_plan, transition_context, logger,
+        )
+        # Decide bass ownership before the bass engine merges its recipe
+        # into the config (recipe defaults are not the user's choice).
+        bass_cfg = effective_cfgs.get("bass")
+        if bass_cfg is not None:
+            performance_plan.set(f"composer.bass_owned.{sec.id}", bool(
+                _explicit_settings(bass_cfg, _flat_extra(bass_cfg), _BASS_USER_MODES)))
+            performance_plan.set(f"composer.bass_register.{sec.id}",
+                                 _explicit_settings(bass_cfg, _flat_extra(bass_cfg),
+                                                    ("register_low", "register_high")))
+
     # Render instruments in priority order after the complete intent prepass.
     for inst_name, effective_cfg, engine, engine_rng in prepared_engines:
         timeline = timelines.get(inst_name)
@@ -810,6 +868,24 @@ def render_section_instruments(
             feedback_collector=feedback_collector,  # Phase N8: Negotiation feedback
             plan=performance_plan,  # Phase RG2: Pass plan for rhythm.accents access
             logger=logger,
+        )
+        _wait_for_band(inst_name, sec, rgrid, timeline, events_before, section_start_beat,
+                       performance_plan, transition_context)
+
+        # Groove memory (produzre/composer/groove_memory.py): give the rhythm
+        # section a bar form and recall established grooves. Runs before the
+        # groove clock so restated bars still get this section's swing.
+        _apply_groove_memory_pass(
+            cfg, sec, inst_name, effective_cfg, hplan, rgrid, timeline, events_before,
+            section_start_beat, performance_plan, transition_context, section_rng, logger,
+        )
+        _apply_bass_arrangement_pass(
+            cfg, sec, inst_name, effective_cfg, hplan, rgrid, timeline, events_before,
+            section_start_beat, performance_plan, transition_context, logger,
+        )
+        _apply_bass_response_pass(
+            cfg, sec, inst_name, effective_cfg, hplan, timeline, events_before,
+            section_start_beat, performance_plan, logger, rhythm_features=rhythm_features, transition_context=transition_context,
         )
 
         # Shared groove clock: post-process the newly added events with the
@@ -852,6 +928,11 @@ def render_section_instruments(
                     feel_seed = stable_seed_int(
                         "groove", seed_material, sec.id, arrangement_index, inst_name
                     )
+                    from ..composer.song import section_groups
+
+                    country_gates = [(ev, ev.duration_beats) for ev in new_events
+                                     if str(ev.kind).startswith(("country_lick", "country_double"))]
+                    gestures = _gesture_timing(new_events) if inst_name == "lead_gtr" else []
                     apply_feel(
                         new_events,
                         groove_feel,
@@ -862,7 +943,29 @@ def render_section_instruments(
                         section_start_beat=float(section_start_beat),
                         timing_jitter_ms=jitter_ms,
                         velocity_humanize=vel_humanize,
+                        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
                     )
+                    # These picks are already staccato. Swing moves the
+                    # whole attack; shortening again can erase the note.
+                    for ev, duration in country_gates:
+                        ev.duration_beats = duration
+                    _restore_gestures(gestures)
+
+        if inst_name == "bass":
+            _hold_slap_floor(timeline.events[events_before:], effective_params_dict(effective_cfg))
+
+        # Clip the lead line after feel, keeping double stops together.
+        if inst_name == "lead_gtr":
+            from ..composer.realize import sounds_with
+
+            mono = sorted(timeline.events[events_before:], key=lambda e: (e.start_beat, e.pitch))
+            for i, cur in enumerate(mono):
+                nxt = next((e for e in mono[i + 1:] if not sounds_with(cur, e)), None)
+                if nxt is None:
+                    continue
+                gap = float(nxt.start_beat) - float(cur.start_beat)
+                if gap > 0.02 and float(cur.duration_beats) > gap - 0.01:
+                    cur.duration_beats = max(0.05, gap - 0.01)
 
         # Timing feel cannot move notes beyond the section being rendered.
         section_end = section_start_beat + float(getattr(rgrid, "total_beats", float("inf")))
@@ -904,6 +1007,1069 @@ def render_section_instruments(
 
     # Phase N8: Return collected feedback for negotiation between sections
     return feedback_collector.get_feedback()
+
+
+def _as_float(*values: Any) -> Optional[float]:
+    for v in values:
+        try:
+            if v is not None:
+                return float(v)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _flag(value: Any, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "off", "no", "0", "none")
+    return bool(value)
+
+
+def _band_entry_bar(sec, rgrid, performance_plan, transition_context) -> int:
+    """The bar the band enters in a riff-alone intro (0: from the top).
+
+    One rule for every part (``arrangement.riff_alone_intro``): the composed
+    drummer comes in on this bar, and the bass, the lead, the arpeggiator and
+    every other part that is not the riff wait for it. Without the composed
+    drummer the band plays from the top.
+    """
+    if performance_plan is None or not performance_plan.get(f"composer.drums.{sec.id}"):
+        return 0
+    composer = performance_plan.get("composer.song")
+    if composer is None:
+        return 0
+    from ..composer.arrangement import intro_entry_bar, riff_alone_intro
+
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    parts = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+             if getattr(part, "enabled", True) is not False}
+    return intro_entry_bar(riff_alone_intro(composer.arrangement_dna(), parts),
+                           str(getattr(sec, "type", "")), bars, bool(tc.get("is_first_section")))
+
+
+def _wait_for_band(inst_name, sec, rgrid, timeline, events_before, section_start_beat,
+                   performance_plan, transition_context) -> None:
+    """In a riff-alone intro, only the riff players sound before the band's
+    entry bar. The drums and the bass arrange their own entry."""
+    from ..composer.arrangement import RIFF_PLAYERS
+
+    if inst_name in RIFF_PLAYERS or inst_name in ("drums", "bass"):
+        return
+    enter = _band_entry_bar(sec, rgrid, performance_plan, transition_context)
+    if enter <= 0:
+        return
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    # Humanized attacks and a slide's grace note lead into the entry
+    # downbeat; a note on the grid before it (a sixteenth or earlier) waits.
+    start = float(section_start_beat) + enter * bpb - 0.2
+    timeline.events[events_before:] = [e for e in timeline.events[events_before:]
+                                       if float(e.start_beat) >= start]
+
+
+def _gesture_timing(events):
+    """The lead's one-gesture note groups with their performed timing, before
+    the groove clock runs: trill runs (kind ``*_trill``), the note each trill
+    lands on, and double stops (``composer.realize.sounds_with``)."""
+    from ..composer.realize import DOUBLE_STOP_ROLES, sounds_with
+
+    gestures, trill, last = [], None, None
+    for ev in sorted(events, key=lambda e: (float(e.start_beat), e.pitch)):
+        start = float(ev.start_beat)
+        if str(ev.kind or "").endswith("_trill"):
+            if trill is None or last is None or start - last > 0.3:
+                trill = ("trill", [])
+                gestures.append(trill)
+            trill[1].append((ev, start, float(ev.duration_beats)))
+            last = start
+        elif trill is not None and last is not None and 0 < start - last < 0.25:
+            # The note the trill lands on moves with it (its own length).
+            gestures.append(("landing", [trill[1][0], (ev, start, float(ev.duration_beats))]))
+            last = None
+        elif gestures and gestures[-1][0] == "double" and sounds_with(gestures[-1][1][0][0], ev):
+            gestures[-1][1].append((ev, start, float(ev.duration_beats)))
+        elif str(ev.kind or "").startswith(DOUBLE_STOP_ROLES):
+            gestures.append(("double", [(ev, start, float(ev.duration_beats))]))
+    return gestures
+
+
+def _restore_gestures(gestures) -> None:
+    """After the groove clock, a gesture moves as a whole with its first note.
+
+    A trill keeps its note lengths: swing per note would shift its sixteenth
+    positions, reorder it and crush its notes. A double stop's strings keep
+    sounding together.
+    """
+    for kind, notes in gestures:
+        shift = float(notes[0][0].start_beat) - notes[0][1]
+        for ev, start, duration in notes:
+            ev.start_beat = start + shift
+            if kind == "trill":
+                ev.duration_beats = duration
+
+
+def _groove_signature(value):
+    """Canonical configuration identity, including nested params and sets."""
+    if isinstance(value, dict):
+        return tuple(sorted((str(k), _groove_signature(v)) for k, v in value.items()
+                            if not str(k).startswith("_")))
+    if isinstance(value, (list, tuple)):
+        return tuple(_groove_signature(v) for v in value)
+    if isinstance(value, (set, frozenset)):
+        return tuple(sorted((_groove_signature(v) for v in value), key=repr))
+    return value
+
+
+def _apply_groove_memory_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timeline,
+                              events_before, section_start_beat, performance_plan,
+                              transition_context, section_rng, logger) -> None:
+    from ..composer.groove_memory import GROOVE_INSTRUMENTS, GrooveMemory, apply_groove_memory
+
+    if inst_name not in GROOVE_INSTRUMENTS or performance_plan is None:
+        return
+    if inst_name == "rhythm_gtr" and performance_plan.get(f"composer.comp.{sec.id}"):
+        return  # composed comping already has its bar form
+    if inst_name == "acoustic_gtr" and performance_plan.get(f"composer.acoustic.{sec.id}"):
+        return
+    if inst_name == "drums" and performance_plan.get(f"composer.drums.{sec.id}"):
+        return  # the composed drummer already has its bar form
+    raw = getattr(cfg, "raw", None)
+    song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
+    if not _flag(song_raw.get("groove_memory") if isinstance(song_raw, dict) else None):
+        return
+    params = effective_params_dict(inst_cfg)
+    if not _flag(params.get("groove_memory")):
+        return
+    # A soloing part is the foreground, not the groove.
+    if getattr(inst_cfg, "solo", False) or params.get("solo") or \
+            getattr(inst_cfg, "role", None) == "lead" or params.get("role") == "lead":
+        return
+    if inst_name == "bass" and (getattr(sec, "solo", None) is True
+                                or getattr(sec, "role", None) == "lead"):
+        return
+    new_events = timeline.events[events_before:]
+    if not new_events:
+        return
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+
+    memory = performance_plan.get("composer.groove_memory")
+    if memory is None:
+        memory = GrooveMemory()
+        performance_plan.set("composer.groove_memory", memory)
+    # A section type recalls its groove only when the part is configured the
+    # same way; intensity is excluded so escalating repeats still recall.
+    settings = {f.name: getattr(inst_cfg, f.name) for f in fields(inst_cfg)
+                if f.name not in ("extra", "intensity", "patterns")}
+    raw_extra = getattr(inst_cfg, "extra", None) or {}
+    settings["params"] = {k: v for k, v in {
+        **{k: v for k, v in raw_extra.items() if k != "extra"}, **params
+    }.items() if k != "intensity"}
+    signature = _groove_signature(settings)
+    persona = getattr(inst_cfg, "persona", None)
+    from ..composer.song import section_groups
+
+    groups = tuple(section_groups(cfg, sec, getattr(hplan, "meter", None)) or ())
+    genre = str(getattr(inst_cfg, "genre", None) or getattr(cfg.song, "genre", "") or "")
+    memory_key = (inst_name, str(getattr(sec, "type", "") or "").strip().lower(), bpb, groups, genre,
+                  stable_seed_int("groove_sig", persona, signature))
+    arrangement_index = 0
+    if isinstance(transition_context, dict):
+        arrangement_index = int(transition_context.get("arrangement_index", 0) or 0)
+    seed_material = getattr(section_rng, "_produzre_seed", None)
+    seed = stable_seed_int("groove_memory", seed_material if seed_material is not None
+                           else getattr(cfg.song, "seed", 0), sec.id, arrangement_index)
+    replaced, report = apply_groove_memory(
+        new_events,
+        instrument=inst_name,
+        section_start=float(section_start_beat),
+        beats_per_bar=bpb,
+        bars=bars,
+        chord_slots=getattr(hplan, "chord_slots", None) if hplan is not None else None,
+        key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+        mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+        genre=genre,
+        bpm=float(getattr(cfg.song, "bpm", 120.0) or 120.0),
+        memory=memory,
+        memory_key=memory_key,
+        seed=seed,
+        cycle_override=params.get("groove_cycle_bars"),
+        intensity=_as_float(getattr(inst_cfg, "intensity", None), getattr(sec, "intensity", None)),
+        register=_bass_register_bounds(sec, params) if inst_name == "bass" else None,
+        intent=getattr(sec, "intent", None) or (getattr(sec, "extras", None) or {}).get("intent"),
+    )
+    if report.get("applied"):
+        timeline.events[events_before:] = replaced
+        logger.debug(
+            "Section '%s': %s groove memory form=%s cycle=%d restated=%d%s",
+            sec.id, inst_name, report["form"], report["cycle"], report["restated"],
+            " (recalled)" if report["recalled"] else "",
+        )
+
+
+# Settings that choose a *different kind of part* (a pinned style, pattern,
+# sustain mode, recipe, or the legacy generators' own phrase controls). When
+# the user sets one, the composer steps aside for that part.
+_RHYTHM_USER_MODES = ("style", "strum_style", "sustain_mode", "playstyle", "play_pattern",
+                      "pattern", "follow_hats", "use_patterns", "recipe")
+# Tuning for the legacy generators only. They do not choose a different part,
+# so the composer keeps the section and the build says the setting is unused.
+_RHYTHM_LEGACY_ONLY = ("phrase_len_bars", "phrase_development", "section_contrast", "register",
+                       "contrast", "mute", "strum", "strum_beats", "strum_dir", "retrigger", "hit_strategy",
+                       "stab_beats", "reattack_vel", "reattack_dur", "reattack_strum",
+                       "voice_leading", "voice_range_low", "voice_range_high", "octave",
+                       "accent_syncopation", "vibrato_rate")
+_LEAD_LEGACY_ONLY = ("phrase_len_bars", "theme_quote_rate", "resolution_strength",
+                     "ring_out", "ring_max_beats")
+# Feel settings the composed rhythm performer honors instead of opting out.
+_RHYTHM_FEEL_KEYS = ("density", "palm_mute", "chuck_rate", "voicing", "accent_strength",
+                     "humanize_velocity", "downbeat_boost", "sustain_cut_rate",
+                     "register_min", "register_max", "offset_beats", "style_bias", "humanize_timing", "strum_ms",
+                     "sustain_duration")
+
+
+def _part_genre(cfg, sec, inst_name: str, inst_cfg, composer) -> str:
+    """The genre a composed part plays in this section: the section
+    instrument's ``genre``, else the global instrument's, else the song's
+    (the same order recipe selection uses)."""
+    genre = getattr(inst_cfg, "genre", None)
+    if not genre:
+        genre = getattr(_get_global_instrument_cfg(cfg, inst_name, getattr(sec, "id", None)),
+                        "genre", None)
+    return str(genre or composer.genre or "")
+
+
+def _part_dna(composer, kind: str, genre: str, reseed: Optional[int]):
+    """A part's DNA for its own genre and seed, or None for the song's.
+
+    A part whose genre differs from the song's gets that genre's player
+    (drummer, comping, bass roles), seeded from the song so the choice is
+    stable. Cached on the composer, so repeated sections share one player.
+    """
+    if reseed is None and genre == composer.genre:
+        return None
+    cache = composer.__dict__.setdefault("_genre_part_dnas", {})
+    key = (kind, genre, reseed)
+    if key in cache:
+        return cache[key]
+    from ..composer.country import country_style
+
+    seed = composer.seed if reseed is None else reseed
+    style = (composer.arrangement_dna().country_style if genre == composer.genre else
+             country_style(seed, genre, (composer.arrangement_overrides or {}).get("country_style")))
+    if kind == "comp":
+        from ..composer.comping import comp_family, compose_comp_dna
+
+        dna = compose_comp_dna(seed=seed, genre=genre, key=composer.key, mode=composer.mode,
+                               shuffle=comp_family(genre) in ("blues", "jazz"),
+                               country_style=style)
+    elif kind == "bass":
+        from ..composer.bass import compose_bass_dna
+
+        dna = compose_bass_dna(seed=seed, genre=genre, country_style=style)
+    else:
+        from ..composer.drums import compose_drum_dna
+
+        dna = compose_drum_dna(seed=seed, genre=genre, beats_per_bar=composer.bpb,
+                               country_style=style)
+    cache[key] = dna
+    return dna
+
+
+def _seed_override(cfg, sec, inst_cfg) -> Optional[int]:
+    """An instrument or section ``seed`` re-rolls that part's DNA (the
+    documented way to try another take of one part)."""
+    for value in (getattr(inst_cfg, "seed", None), getattr(sec, "seed", None)):
+        if value is not None:
+            return stable_seed_int("composer.reseed", getattr(cfg.song, "seed", 0), value)
+    return None
+
+
+def _note_legacy_only(logger, sec, inst: str, settings: dict) -> None:
+    if settings:
+        logger.info(
+            "Section '%s': %s %s tune the legacy generator and are unused by the "
+            "composer; set `composer: false` on %s to use them.",
+            sec.id, inst, ", ".join(sorted(settings)), inst,
+        )
+
+
+def _explicit_settings(inst_cfg, extra: dict, keys) -> dict:
+    """User-set values for ``keys``: config fields plus non-persona params.
+
+    Recipe defaults are merged later inside the engines, so they never count
+    as the user's choice here.
+    """
+    persona_keys = set(extra.get("_persona_keys") or [])
+    raw = getattr(inst_cfg, "extra", None)
+    # The loader nests the user's own params one level down; a key there is
+    # the user's even when the persona tag still lists the persona's value.
+    nested = raw.get("extra") if isinstance(raw, dict) and isinstance(raw.get("extra"), dict) else {}
+    out = {}
+    for k in keys:
+        v = getattr(inst_cfg, k, None)
+        if v is not None and not isinstance(v, dict):
+            out[k] = v
+        if k in extra and extra[k] is not None and (k in nested or k not in persona_keys):
+            out[k] = extra[k]
+    return out
+
+
+_HEAVY_COMP = ("metal", "punk", "grunge", "hard_rock", "thrash")
+
+
+def _compose_rhythm_for_section(cfg, sec, hplan, rgrid, rhythm_cfg, performance_plan,
+                                transition_context, logger) -> None:
+    """Publish ``composer.comp.<section>`` for the rhythm engine to perform."""
+    if performance_plan is None or rhythm_cfg is None or hplan is None:
+        return
+    performance_plan.data.pop(f"composer.comp.{sec.id}", None)
+    composer = performance_plan.get("composer.song")
+    if composer is None or not getattr(hplan, "chord_slots", None):
+        return
+    raw_extra = getattr(rhythm_cfg, "extra", None)
+    extra: dict = {}
+    if isinstance(raw_extra, dict):
+        extra = {k: v for k, v in raw_extra.items() if k != "extra"}
+        if isinstance(raw_extra.get("extra"), dict):
+            extra.update(raw_extra["extra"])
+    if not _flag(extra.get("composer")) or getattr(rhythm_cfg, "enabled", True) is False:
+        return
+    if _explicit_settings(rhythm_cfg, extra, _RHYTHM_USER_MODES):
+        return
+    feel = _explicit_settings(rhythm_cfg, extra, _RHYTHM_FEEL_KEYS)
+    _note_legacy_only(logger, sec, "rhythm_gtr", _explicit_settings(rhythm_cfg, extra,
+                                                                     _RHYTHM_LEGACY_ONLY))
+    try:
+        if float(extra.get("lock_to_riff", 0) or 0) > 0:
+            return
+    except (TypeError, ValueError):
+        pass
+
+    from ..composer.comping import plan_comp_section
+    from ..composer.song import section_groups
+
+    arrangement_index = 0
+    if isinstance(transition_context, dict):
+        arrangement_index = int(transition_context.get("arrangement_index", 0) or 0)
+    sections = list(getattr(performance_plan, "sections", []) or [])
+    sec_type = str(getattr(sec, "type", "") or "").strip().lower()
+    occurrence = sum(1 for m in sections[:arrangement_index]
+                     if str(getattr(m, "type", "") or "").strip().lower() == sec_type)
+    is_final = not any(str(getattr(m, "type", "") or "").strip().lower() == sec_type
+                       for m in sections[arrangement_index + 1:])
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    nxt = (transition_context or {}).get("next_section_type")
+    if isinstance(transition_context, dict) and transition_context.get("is_last_section"):
+        nxt = None
+    reseed = _seed_override(cfg, sec, rhythm_cfg)
+    part_genre = _part_genre(cfg, sec, "rhythm_gtr", rhythm_cfg, composer)
+    comp_dna = _part_dna(composer, "comp", part_genre, reseed) or composer.comp_dna()
+    groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
+    arrangement = composer.arrangement_dna()
+    kicks, snares = _riff_pocket(composer, performance_plan, sec, bpb, groups)
+    signature = composer.signature_riff(bpb, groups, reseed, kicks, snares)
+    events, riff, ring = plan_comp_section(
+        comp_dna,
+        section_type=sec_type, occurrence=occurrence, is_final_of_type=is_final,
+        bars=bars, beats_per_bar=bpb, chord_slots=hplan.chord_slots,
+        key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+        mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+        next_section_type=nxt if nxt else (None if (transition_context or {}).get(
+            "is_last_section") else "verse"),
+        hook_onsets=composer.hook_onsets(bpb, groups),
+        groups=groups,
+        arrangement=arrangement,
+        prev_section_type=(transition_context or {}).get("prev_section_type"),
+        signature_riff=signature,
+    )
+    if not events:
+        return
+    from ..composer.comping import yield_to_lead
+
+    events = yield_to_lead(events, performance_plan.get(f"composer.lead.{sec.id}") or [],
+                           hplan.chord_slots,
+                           getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+                           getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+                           country="country" in part_genre.lower())
+    # Tails the guitar left open: a doubling bass answers the riff there.
+    answers = []
+    riff_bars = sorted({int(e.beat // bpb) for e in events if e.tag == "comp_riff"})
+    for b in riff_bars:
+        if signature is None or any(e.tag == "comp_riff" and e.kind == "rsingle"
+                                    and b * bpb <= e.beat < (b + 1) * bpb for e in events):
+            continue
+        answers += [{"beat": round(b * bpb + n.onset, 4), "dur": n.dur, "kind": n.kind,
+                     "accent": n.accent, "interval": n.interval}
+                    for n in signature.notes_for_bar(b) if n.kind == "rsingle"]
+    genre = part_genre.lower()
+    from ..composer.country import is_waltz
+    from ..composer.theory import ChordMap
+
+    chords = ChordMap(hplan.chord_slots, getattr(sec, "key", None) or cfg.song.key,
+                      getattr(sec, "mode", None) or cfg.song.mode)
+    release_at_change = "country" in genre and is_waltz(bpb, groups)
+
+    def release(e):
+        if not release_at_change:
+            return {}
+        span = chords.at(e.beat)
+        change = next((s.start for s in chords.spans
+                       if s.start > e.beat and s.pcs != span.pcs), chords.total)
+        return {"release_beat": change}
+
+    performance_plan.set(f"composer.comp.{sec.id}", {
+        "answers": answers,
+        "riff": riff, "ring": ring, "heavy": any(t in genre for t in _HEAVY_COMP),
+        "user": feel,
+        "events": [{"beat": e.beat, "dur": e.dur, "kind": e.kind, "accent": e.accent,
+                    "direction": e.direction, "arp_index": e.arp_index,
+                    "target_pc": e.target_pc, "tag": e.tag, "interval": e.interval, **release(e)}
+                   for e in events],
+    })
+    logger.info("Composer: %s rhythm guitar plays '%s'", sec.id, riff)
+
+
+def _riff_pocket(composer, performance_plan, sec, bpb, groups):
+    """The composed drummer's verse kick and backbeat in one bar, so the
+    signature riff locks with them. Taken from the song's drum DNA rather
+    than one section's hits, so every riff section plays the same riff.
+    Songs whose drums the user wrote get no bias."""
+    if not performance_plan.get(f"composer.drums.{sec.id}"):
+        return (), ()
+    from ..composer.drums import _snare_steps
+
+    dna = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
+    steps = max(1, int(round(bpb * 4)))
+    beats = max(1, int(round(bpb)))
+    backbeat = dna.grooves.get("verse", ("hat8", "backbeat"))[1]
+    kick = (dna.kick_verse * 4)[:steps]
+    snare_steps = _snare_steps(backbeat, beats, steps, groups)
+    kicks = tuple(i * 0.25 for i, c in enumerate(kick) if c == "x" and i not in snare_steps)
+    snares = tuple(sorted(s * 0.25 for s in snare_steps))
+    return kicks, snares
+
+
+# Bass settings that choose the line itself keep the bass engine.
+_BASS_USER_MODES = ("rhythm_pattern", "walking", "lock_to_kick", "lock_to_riff",
+                    "motif_quote_rate", "style", "pattern", "recipe")
+
+
+def _is_band_section(sec) -> bool:
+    """Bass roles lock with a band: drums and at least one guitar. A bass
+    alone keeps the engine's own line."""
+    names = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+             if getattr(part, "enabled", True) is not False}
+    return "drums" in names and bool(names & {"rhythm_gtr", "lead_gtr", "acoustic_gtr"})
+
+
+def _flat_extra(inst_cfg) -> dict:
+    raw = getattr(inst_cfg, "extra", None)
+    out: dict = {}
+    if isinstance(raw, dict):
+        out = {k: v for k, v in raw.items() if k != "extra"}
+        if isinstance(raw.get("extra"), dict):
+            out.update(raw["extra"])
+    return out
+
+
+def _bass_register_bounds(sec, params) -> Tuple[int, int]:
+    """The bass's effective range: user bounds, else recipe, persona, engine
+    default (28-52). A featured bass section reaches ``solo_register_high``."""
+    try:
+        lo = int(params.get("register_low", 28))
+        hi = int(params.get("register_high", 52))
+        if getattr(sec, "solo", None) is True or getattr(sec, "role", None) == "lead":
+            hi = max(hi, int(params.get("solo_register_high", 64)))
+    except (TypeError, ValueError):
+        lo, hi = 28, 52
+    return lo, max(lo, hi)
+
+
+def _apply_bass_arrangement_pass(cfg, sec, inst_name, inst_cfg, hplan, rgrid, timeline,
+                                 events_before, section_start_beat, performance_plan,
+                                 transition_context, logger) -> None:
+    """The bass follows the song's arrangement DNA: it waits out a riff-alone
+    intro, plays the band's device into a chorus and its ending, and (when
+    the song chose it) doubles the signature riff, playing the single-note
+    tail alone where the guitar leaves it open. Composed notes take the
+    bass's articulation, and every note stays inside the bass's range."""
+    if inst_name != "bass" or performance_plan is None or hplan is None:
+        return
+    new_events = timeline.events[events_before:]
+    if not new_events:
+        return
+    params = effective_params_dict(inst_cfg)
+    lo, hi = _bass_register_bounds(sec, params)
+    events = list(new_events)
+    composer = performance_plan.get("composer.song")
+    if composer is not None and _flag(params.get("composer")):
+        events = _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_beat,
+                               performance_plan, transition_context, composer, params, lo, hi,
+                               timeline, logger)
+    # Register: explicit bounds win, then the recipe's, the persona's, and
+    # the engine's. Authored motif notes keep the theme's own register unless
+    # the user bounded the bass.
+    explicit = performance_plan.get(f"composer.bass_register.{sec.id}") or {}
+    from ..engine.bass.voicing import clamp_to_register
+
+    for e in events:
+        if str(e.kind or "") == "motif" and not explicit:
+            continue
+        e.pitch = clamp_to_register(e.pitch, lo, hi)
+    timeline.events[events_before:] = events
+
+
+def _arrange_bass(cfg, sec, inst_cfg, hplan, rgrid, new_events, section_start_beat,
+                  performance_plan, transition_context, composer, params, lo, hi, timeline,
+                  logger):
+    from dataclasses import replace as _replace
+
+    from ..composer.arrangement import intro_entry_bar, into_chorus_device, riff_alone_intro
+    from ..composer.theory import ChordMap
+
+    arrangement = composer.arrangement_dna()
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    start0 = float(section_start_beat)
+    key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+    mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+    chords = ChordMap(hplan.chord_slots, key, mode)
+    parts = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+             if getattr(part, "enabled", True) is not False}
+    # The composed drummer plays the song's devices; the bass plays them
+    # with it. A drum engine the user configured plays straight through,
+    # and so does the bass.
+    with_drummer = bool(performance_plan.get(f"composer.drums.{sec.id}"))
+    enter = intro_entry_bar(riff_alone_intro(arrangement, parts), str(getattr(sec, "type", "")),
+                            bars, bool(tc.get("is_first_section"))) if with_drummer else 0
+    events = [e for e in new_events if e.start_beat - start0 >= enter * bpb - 0.02]
+    # Written notes (roles, riff doubles, device hits) play at the section's
+    # dynamics, like the composed drummer: intensity (with the planner's
+    # macro-dynamics) and energy, not the engine line they replace.
+    velocity = _composed_bass_velocity(sec, inst_cfg)
+    template = new_events[0]
+    near = sorted(e.pitch for e in new_events)[len(new_events) // 2]
+    written = False
+    # A line the user chose, a walking line, or an authored bass motif owns
+    # the bass: the composer's roles and riff doubling step aside for it.
+    owned = performance_plan.get(f"composer.bass_owned.{sec.id}", True) \
+        or any(str(e.kind or "").startswith("walk_") for e in new_events) \
+        or bool((performance_plan.get(f"themes.realized.{sec.id}") or {}).get("bass_motif"))
+    comp = performance_plan.get(f"composer.comp.{sec.id}")
+    riff = [e for e in (comp or {}).get("events", []) if e.get("tag") == "comp_riff"]
+    if owned:
+        pass
+    elif riff and arrangement.bass_doubles:
+        doubled = []
+        # The bass answers in the bars where the guitar leaves its tail open.
+        for r in riff + list((comp or {}).get("answers", [])):
+            span = chords.at(float(r["beat"]))
+            if span is None or float(r["beat"]) < enter * bpb - 1e-6:
+                continue
+            pc = (span.root_pc + int(r.get("interval") or 0)) % 12
+            pitch = min((p for p in range(lo, max(min(48, hi + 1), lo + 12)) if p % 12 == pc),
+                        key=lambda p: (abs(p - 36), p))
+            dur = float(r["dur"]) if r["kind"] != "rchug" else min(float(r["dur"]), 0.2)
+            doubled.append(_replace(template, start_beat=start0 + float(r["beat"]),
+                                    duration_beats=max(0.1, dur), pitch=pitch,
+                                    velocity=min(127, int(velocity * (1.08 if r.get("accent")
+                                                                      else 0.95))),
+                                    kind="riff_double", expression=None))
+        if doubled:
+            riff_bars = {int(float(r["beat"]) / bpb) for r in riff}
+            # Transition and ending bars still need their engine bass line.
+            kept = [e for e in events if int((e.start_beat - start0 + .02) / bpb) not in riff_bars]
+            events = sorted(kept + doubled, key=lambda e: (e.start_beat, e.pitch))
+            written = True
+            logger.info("Section '%s': bass doubles the signature riff", sec.id)
+    elif _is_band_section(sec):
+        # The song's bass role for this section (composer/bass.py).
+        st = str(getattr(sec, "type", "") or "").strip().lower()
+        st = {"pre-chorus": "prechorus", "hook": "chorus", "solo": "chorus",
+              "outro": "chorus", "intro": "verse"}.get(st, st)
+        reseed = _seed_override(cfg, sec, inst_cfg)
+        bass_dna = _part_dna(composer, "bass", _part_genre(cfg, sec, "bass", inst_cfg, composer),
+                             reseed) or composer.bass_dna()
+        role = bass_dna.roles.get(st, "engine")
+        drums = performance_plan.get(f"composer.drum_dna.{sec.id}") or composer.drum_dna()
+        kick = drums.kick_chorus if st in ("chorus", "solo", "outro") else drums.kick_verse
+        if role != "engine":
+            from ..composer.song import section_groups
+            from ..composer.bass import bass_bar, land_bar
+
+            role_events = []
+            for b in range(enter, bars):
+                song_end = b == bars - 1 and not tc.get("next_section_type")
+                written_bar = bass_bar(role, b * bpb, bpb, chords,
+                                       approach=bass_dna.approach, near=near,
+                                       last_bar=song_end, dna=bass_dna, kick=kick,
+                                       section_type=st,
+                                       groups=section_groups(cfg, sec, hplan.meter),
+                                       lo=lo, hi=hi)
+                if song_end and not with_drummer:
+                    # No band ending to play: the line lands on its last chord.
+                    written_bar = land_bar(written_bar, b * bpb, bpb, chords, near=near,
+                                           lo=lo, hi=hi)
+                for t, d, p, acc in written_bar:
+                    role_events.append(_replace(template, start_beat=start0 + t,
+                                                duration_beats=max(0.1, d), pitch=p,
+                                                velocity=min(127, int(velocity * (1.06 if acc else 0.94))),
+                                                kind=f"bass_{role}", expression=None))
+            if role_events:
+                events = role_events
+                written = True
+                logger.info("Section '%s': bass plays %s", sec.id, role)
+
+    # The band's device in the last bar: into a chorus, or the song's ending.
+    device = ""
+    if with_drummer and bars > 0:
+        if tc.get("is_last_section"):
+            device = "ending_" + str(getattr(arrangement, "ending", "ring") or "ring")
+        else:
+            device = into_chorus_device(arrangement, str(getattr(sec, "type", "") or ""),
+                                        tc.get("next_section_type") or "verse")
+    last = (bars - 1) * bpb
+    if device and bars - 1 >= enter:
+        from ..composer.bass import device_bar
+
+        played = device_bar(device, last, bpb, chords, near=near, lo=lo, hi=hi)
+        if played is not None:
+            cut, notes = played
+            kept = []
+            for e in events:
+                local = e.start_beat - start0
+                if local >= cut - 0.02:
+                    continue
+                if local + e.duration_beats > cut - 0.02:
+                    e.duration_beats = max(0.05, cut - local - 0.02)
+                kept.append(e)
+            for t, d, p, scale, kind in notes:
+                kept.append(_replace(template, start_beat=start0 + t, duration_beats=d, pitch=p,
+                                     velocity=max(1, min(127, int(velocity * scale))), kind=kind,
+                                     expression=None))
+            events = sorted(kept, key=lambda e: (e.start_beat, e.pitch))
+            written = True
+            timeline.device_windows.append((start0 + last, start0 + last + bpb))
+            logger.info("Section '%s': bass plays the band's %s", sec.id, device.replace("_", " "))
+
+    if written:
+        events = _articulate_written_bass(events, sec, params, bpb, start0, transition_context)
+    return events
+
+
+# The composed bass's touch at a default verse (section level 1.0); the
+# composed drummer's is 72. Articulation shapes it afterwards (pick sharpens,
+# mute dampens, slap thumbs and pops).
+_BASS_TOUCH = 80
+
+
+def _composed_bass_velocity(sec, inst_cfg) -> int:
+    """Velocity of the composer's bass notes in a section: the bass touch
+    scaled by the section's level (composer/drums.py ``section_level``), from
+    the bass's own intensity, else the section's resolved intensity, and the
+    section's energy."""
+    from ..composer.drums import section_level
+    from .energy import resolve_section_energy
+
+    intensity = _as_float(getattr(inst_cfg, "intensity", None), getattr(sec, "intensity", None))
+    energy = resolve_section_energy(getattr(sec, "energy", None),
+                                    str(getattr(sec, "type", "") or "verse"))
+    return max(1, min(127, int(round(_BASS_TOUCH * section_level(intensity, energy)))))
+
+
+def _hold_slap_floor(events, params) -> None:
+    """``slap_velocity_floor`` is the slap's minimum: every slapped note
+    (engine line, composed role, answer) stays at or above it after the
+    groove clock's velocity humanization. Percussive ghost notes are the
+    only notes below it."""
+    if str(params.get("articulation_style", "finger") or "finger").lower() != "slap":
+        return
+    try:
+        floor = max(1, min(127, int(params.get("slap_velocity_floor", 70))))
+    except (TypeError, ValueError):
+        floor = 70
+    for e in events:
+        if "ghost" not in str(e.kind or ""):
+            e.velocity = max(int(e.velocity), floor)
+
+
+def _articulate_written_bass(events, sec, params, bpb, start0, transition_context):
+    """Composed bass notes (roles, riff doubles, device hits) are played with
+    the bass's articulation, like the engine's own line."""
+    style = str(params.get("articulation_style", "finger") or "finger").lower()
+    if style not in ("pick", "mute", "slap"):
+        return events
+    from ..engine.bass.articulation import articulate_written_note
+
+    written_kinds = ("bass_", "riff_double", "stop_hit", "push_hit", "build_drive",
+                     "ending_hit")
+    index = int((transition_context or {}).get("arrangement_index", 0) or 0)
+    rng = random.Random(stable_seed_int("bass.articulation", getattr(sec, "id", ""), index,
+                                        style))
+
+    def rate(name, default):
+        try:
+            return float(params.get(name, default))
+        except (TypeError, ValueError):
+            return default
+
+    lows: Dict[int, int] = {}
+    for e in events:
+        bar = int((e.start_beat - start0 + 0.02) // bpb)
+        lows[bar] = min(lows.get(bar, 127), int(e.pitch))
+    for e in events:
+        kind = str(e.kind or "")
+        if not kind.startswith(written_kinds):
+            continue  # the engine already articulated its own notes
+        local = e.start_beat - start0
+        on_beat = abs(local - round(local)) < 0.03
+        bar = int((local + 0.02) // bpb)
+        dur, vel, suffix = articulate_written_note(
+            style, duration=float(e.duration_beats), velocity=int(e.velocity),
+            strong=on_beat, offbeat=not on_beat, octave_up=int(e.pitch) - lows[bar] >= 12,
+            rng=rng, slap_pop_rate=rate("slap_pop_rate", 0.4),
+            slap_thumb_rate=rate("slap_thumb_rate", 0.9),
+            ghost_perc_rate=rate("ghost_perc_rate", 0.0),
+            slap_velocity_floor=int(rate("slap_velocity_floor", 70)),
+            pop_velocity_boost=int(rate("pop_velocity_boost", 15)),
+            final=kind.startswith("ending_hit"))
+        e.duration_beats, e.velocity, e.kind = dur, vel, kind + suffix
+    return events
+
+
+def _apply_bass_response_pass(cfg, sec, inst_name, inst_cfg, hplan, timeline, events_before,
+                              section_start_beat, performance_plan, logger,
+                              rhythm_features=None, transition_context=None) -> None:
+    """Opt-in (bass ``hook_response: true``): answer the lead's holes with the hook."""
+    if inst_name != "bass" or performance_plan is None or hplan is None:
+        return
+    raw_extra = getattr(inst_cfg, "extra", None) or {}
+    params = {**{k: v for k, v in raw_extra.items() if k != "extra"},
+              **(raw_extra.get("extra") or {})}
+    response_mode = params.get("hook_response")
+    if not _flag(response_mode, default=False):
+        return
+    composer = performance_plan.get("composer.song")
+    lead = performance_plan.get(f"composer.lead.{sec.id}")
+    if composer is None or not lead or not getattr(hplan, "chord_slots", None):
+        return
+    from ..composer.bass_response import align_to_kicks, lead_holes, phrase_holes, respond
+    from ..composer.theory import ChordMap
+
+    total = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+    bpb = float(getattr(hplan.meter, "beats_per_bar", 4.0) or 4.0)
+    holes = phrase_holes(lead_holes([(float(n["beat"]), float(n["duration_beats"]))
+                                     for n in lead], total), bpb, total)
+    kicks = getattr((rhythm_features or {}).get("drums"), "strong_beats", None)
+    if kicks:
+        holes = align_to_kicks(holes, [float(t) for t in kicks])
+    # A band device (into-chorus stop or drop, the song's ending) or a
+    # walk's last bar is played as written: the bass answers only before it.
+    start = float(section_start_beat)
+    devices = [(float(a) - start, float(b) - start)
+               for a, b in getattr(timeline, "device_windows", ()) or ()
+               if float(b) > start and float(a) < start + total]
+    clipped = []
+    for a, b in holes:
+        for d0, d1 in devices:
+            if a < d1 and b > d0:
+                b = min(b, d0) if a < d0 else a
+        if b - a >= 0.25:
+            clipped.append((a, b))
+    holes = clipped
+    new_events = timeline.events[events_before:]
+    if not holes or not new_events:
+        return
+    key = getattr(sec, "key", None) or getattr(cfg.song, "key", "C")
+    mode = getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major")
+    pitches = sorted(e.pitch for e in new_events)
+    reference = pitches[len(pitches) // 2]
+    from ..composer.song import section_groups
+
+    dna = composer._dna_for(bpb, section_groups(cfg, sec, hplan.meter))
+    index = int((transition_context or {}).get("arrangement_index", 0))
+    sections = list(getattr(performance_plan, "sections", ()) or ())
+    occurrence = sum(getattr(s, "type", None) == getattr(sec, "type", None) for s in sections[:index])
+    answer = respond(dna.hook, holes, ChordMap(hplan.chord_slots, key, mode),
+                     key=key, mode=mode, reference=reference,
+                     lo=int(params.get("register_low", 28)), hi=int(params.get("register_high", 55)),
+                     develop=str(response_mode).lower() == "develop", occurrence=occurrence,
+                     answer=dna.hook_answer)
+    if not answer:
+        return
+    # The beat-1 rule holds in an answer too: a note on a bar's downbeat or
+    # where a chord starts is that chord's root (the hook keeps its rhythm).
+    chord_map = ChordMap(hplan.chord_slots, key, mode)
+    lo_r, hi_r = int(params.get("register_low", 28)), int(params.get("register_high", 55))
+    starts = [float(cs.start_beat) for cs in hplan.chord_slots]
+    for i, n in enumerate(answer):
+        on_one = abs(n.beat - round(n.beat / bpb) * bpb) < 0.06
+        if not (on_one or any(abs(n.beat - s) < 0.06 for s in starts)):
+            continue
+        span = chord_map.at(min(n.beat + 0.06, total - 1e-6))
+        if span is not None and n.pitch % 12 != span.root_pc:
+            roots = [p for p in range(lo_r, max(hi_r, lo_r + 11) + 1) if p % 12 == span.root_pc]
+            if roots:
+                answer[i] = _replace_note(n, pitch=min(roots, key=lambda p: (abs(p - n.pitch), p)))
+    used = [h for h in holes if any(h[0] - 1e-6 <= n.beat < h[1] for n in answer)]
+    velocity = min(127, int(_composed_bass_velocity(sec, inst_cfg) * 1.05))
+    template = new_events[0]
+    kept = []
+    for ev in new_events:
+        local = float(ev.start_beat) - float(section_start_beat)
+        if any(a - 0.02 <= local < b for a, b in used):
+            continue  # the groove steps aside for the answer
+        for a, _ in used:
+            if local < a and local + ev.duration_beats > a:
+                ev.duration_beats = max(0.05, a - local - 0.02)
+        kept.append(ev)
+    from dataclasses import replace as _replace
+
+    for n in answer:
+        kept.append(_replace(template, start_beat=float(section_start_beat) + n.beat,
+                             duration_beats=n.dur, pitch=n.pitch, velocity=velocity,
+                             kind="hook_response", expression=None))
+    kept.sort(key=lambda e: (e.start_beat, e.pitch))
+    timeline.events[events_before:] = kept
+    logger.info("Section '%s': bass answers the lead in %d hole(s) with the hook's rhythm",
+                sec.id, len(used))
+
+
+# Drum settings that choose a different part keep the drum engine's own
+# grooves; feel settings shape the composed drummer; the rest tune only the
+# engine's templates.
+_DRUM_USER_MODES = ("voices", "recipe", "pattern", "riff_accent_rate")
+_DRUM_FEEL_KEYS = ("ghost_rate", "fill_rate", "kick_density", "hat_density")
+_DRUM_LEGACY_ONLY = ("snare_density", "fill_chatter", "accent_strength", "pickup_rate",
+                     "downbeat_rate", "fill_length", "phrase_end_emphasis", "choke_rate",
+                     "flam_rate", "drag_rate", "ghost_steps", "phrase_len_bars",
+                     "groove_strength", "constraints")
+
+
+def _compose_drums_for_section(cfg, sec, hplan, rgrid, drums_cfg, performance_plan,
+                               transition_context, logger) -> None:
+    """Publish ``composer.drums.<section>`` for the drum engine to perform."""
+    if performance_plan is None or drums_cfg is None:
+        return
+    performance_plan.data.pop(f"composer.drums.{sec.id}", None)
+    performance_plan.data.pop(f"composer.drums_handoff.{sec.id}", None)
+    performance_plan.data.pop(f"composer.drums_windows.{sec.id}", None)
+    composer = performance_plan.get("composer.song")
+    if composer is None:
+        return
+    raw_extra = getattr(drums_cfg, "extra", None)
+    extra: dict = {}
+    if isinstance(raw_extra, dict):
+        extra = {k: v for k, v in raw_extra.items() if k != "extra"}
+        if isinstance(raw_extra.get("extra"), dict):
+            extra.update(raw_extra["extra"])
+    if not _flag(extra.get("composer")) or getattr(drums_cfg, "enabled", True) is False:
+        return
+    if _explicit_settings(drums_cfg, extra, _DRUM_USER_MODES):
+        return
+    if getattr(sec, "intent", None) or (getattr(sec, "extras", None) or {}).get("intent"):
+        # An explicit section feel (drop, half_time, build...) is the
+        # engine's; it plays at the composed drummer's dynamics.
+        performance_plan.set(f"composer.drums_handoff.{sec.id}", True)
+        return
+    if performance_plan.get(f"themes.groove.{sec.id}"):
+        return  # an authored drum_groove theme is the beat
+    feel = _explicit_settings(drums_cfg, extra, _DRUM_FEEL_KEYS)
+    _note_legacy_only(logger, sec, "drums", _explicit_settings(drums_cfg, extra, _DRUM_LEGACY_ONLY))
+
+    from dataclasses import replace as _replace
+
+    from ..composer.drums import apply_feel_knobs, feel_values, for_meter, plan_drum_section
+    from ..composer.song import section_groups
+
+    reseed = _seed_override(cfg, sec, drums_cfg)
+    dna = _part_dna(composer, "drums", _part_genre(cfg, sec, "drums", drums_cfg, composer),
+                    reseed) or composer.drum_dna()
+    for key in ("ghost_rate", "fill_rate", "kick_density", "hat_density"):
+        try:
+            dna = apply_feel_knobs(dna, **{key: feel.get(key)})
+        except (TypeError, ValueError):
+            pass
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(rgrid, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    tc = transition_context if isinstance(transition_context, dict) else {}
+    # The shared resolver also handles drum-only sections without harmony.
+    groups = section_groups(cfg, sec, getattr(hplan, "meter", None))
+    dna = for_meter(dna, bpb, groups)
+    performance_plan.set(f"composer.drum_dna.{sec.id}", dna)
+    index = int(tc.get("arrangement_index", 0) or 0)
+    occurrence = sum(1 for meta in list(getattr(performance_plan, "sections", []) or [])[:index]
+                     if str(getattr(meta, "type", "") or "").lower() == str(getattr(sec, "type", "") or "").lower())
+    active = {name for name, part in (getattr(sec, "instruments", {}) or {}).items()
+              if name != "harmony" and getattr(part, "enabled", True) is not False}
+    from ..composer.arrangement import riff_alone_intro
+
+    arrangement = riff_alone_intro(composer.arrangement_dna(), active)
+    windows: list = []
+    hits = plan_drum_section(
+        dna, arrangement, section_type=str(getattr(sec, "type", "") or ""),
+        bars=bars, beats_per_bar=bpb, occurrence=occurrence,
+        next_section_type=None if tc.get("is_last_section") else (tc.get("next_section_type") or "verse"),
+        prev_section_type=tc.get("prev_section_type"),
+        is_first_section=bool(tc.get("is_first_section")),
+        groups=groups,
+        solo=active == {"drums"},
+        fills_enabled=_as_float(feel.get("fill_rate")) != 0.0,
+        windows=windows,
+    )
+    # The song's feel reaches the whole band through the groove clock, unless
+    # the drums or the song's `groove:` block already set one.
+    raw = getattr(cfg, "raw", None)
+    song_groove = (raw.get("groove") or {}) if isinstance(raw, dict) else {}
+    own_feel = _explicit_settings(drums_cfg, extra, ("swing", "swing_16th", "push_pull",
+                                                     "timing_jitter_ms"))
+    song_raw = raw.get("song", {}) if isinstance(raw, dict) else {}
+    if isinstance(song_raw, dict) and song_raw.get("humanize_timing") is not None:
+        own_feel["humanize_timing"] = song_raw["humanize_timing"]  # the user owns timing
+    # The drummer's feel outranks recipe and persona swing (a straight
+    # drummer keeps the band straight); explicit settings keep theirs.
+    values = feel_values(dna, groups)
+    if not own_feel and not any(k in song_groove for k in ("swing", "swing_16th")):
+        performance_plan.set(f"composer.drums_feel.{sec.id}", values)
+    else:
+        performance_plan.data.pop(f"composer.drums_feel.{sec.id}", None)
+    if hits:
+        performance_plan.set(f"composer.drums.{sec.id}", [
+            {"beat": h.beat, "voice": h.voice, "vel": h.vel, "kind": h.kind, "dur": h.dur}
+            for h in hits])
+        # Fills, builds and devices: the drummer's own transitions.
+        performance_plan.set(f"composer.drums_windows.{sec.id}", windows)
+        groove = dna.grooves.get(str(getattr(sec, "type", "") or "").lower())
+        logger.info("Composer: %s drums play %s", sec.id, "/".join(groove) if groove else "verse groove")
+
+
+def _sung_line(performance_plan, sec):
+    """The section's realized melody theme as (beat, duration, pitch): the
+    line a singer carries, which the lead answers or harmonizes."""
+    realized = performance_plan.get(f"themes.realized.{sec.id}")
+    notes = realized.get("melody") if isinstance(realized, dict) else None
+    try:
+        return tuple((float(n["beat"]), float(n["duration_beats"]), int(n["pitch"]))
+                     for n in notes or ()) or None
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _compose_lead_for_section(cfg, sec, hplan, rgrid, lead_cfg, performance_plan,
+                              transition_context, logger) -> None:
+    """Publish ``composer.lead.<section>`` for the lead engine to perform."""
+    if performance_plan is None:
+        return
+    performance_plan.data.pop(f"composer.lead.{sec.id}", None)
+    if lead_cfg is None or hplan is None:
+        return
+    if not getattr(hplan, "chord_slots", None):
+        return
+    composer = performance_plan.get("composer.song")
+    if composer is None:
+        return
+    raw_extra = getattr(lead_cfg, "extra", None)
+    extra: dict = {}
+    if isinstance(raw_extra, dict):
+        # Persona keys sit at the top level, user params may nest one level.
+        extra = {k: v for k, v in raw_extra.items() if k != "extra"}
+        if isinstance(raw_extra.get("extra"), dict):
+            extra.update(raw_extra["extra"])
+    shaping = _explicit_settings(lead_cfg, extra, ("rest_probability", "contour_style"))
+    opt = extra.get("composer", True)
+    if isinstance(opt, str):
+        opt = opt.strip().lower() not in ("false", "off", "no", "legacy", "0")
+    if not opt or getattr(lead_cfg, "enabled", True) is False:
+        performance_plan.data.pop(f"composer.lead.{sec.id}", None)
+        return
+    _note_legacy_only(logger, sec, "lead_gtr",
+                      _explicit_settings(lead_cfg, extra, _LEAD_LEGACY_ONLY))
+
+    from ..composer.lead import LeadContext
+    from ..composer.song import lead_register, lead_register_is_range, section_groups
+    from .ensemble import _lead_foreground_mode
+
+    arrangement_index = 0
+    if isinstance(transition_context, dict):
+        arrangement_index = int(transition_context.get("arrangement_index", 0) or 0)
+    sections = list(getattr(performance_plan, "sections", []) or [])
+    sec_type = str(getattr(sec, "type", "") or "").strip().lower()
+    solo_flag = bool(getattr(lead_cfg, "solo", False) or extra.get("solo", False)
+                     or getattr(lead_cfg, "role", None) == "lead")
+    comp_type = "solo" if solo_flag else sec_type
+    occurrence = sum(1 for meta in sections[:arrangement_index]
+                     if str(getattr(meta, "type", "") or "").strip().lower() == sec_type)
+    is_final = not any(str(getattr(meta, "type", "") or "").strip().lower() == sec_type
+                       for meta in sections[arrangement_index + 1:])
+    bpb = float(getattr(rgrid, "beats_per_bar", 4.0) or 4.0)
+    total = float(getattr(hplan, "total_beats", 0.0) or 0.0)
+    bars = int(round(total / bpb)) if bpb > 0 else 0
+    intensity = getattr(lead_cfg, "intensity", None)
+    if intensity is None:
+        intensity = getattr(sec, "intensity", None)
+    ctx = LeadContext(
+        section_id=sec.id,
+        section_type=comp_type,
+        occurrence=occurrence,
+        is_final_of_type=is_final,
+        bars=bars,
+        beats_per_bar=bpb,
+        total_beats=total,
+        key=getattr(sec, "key", None) or getattr(cfg.song, "key", "C"),
+        mode=getattr(sec, "mode", None) or getattr(cfg.song, "mode", "major"),
+        chord_slots=hplan.chord_slots,
+        intensity=float(intensity if intensity is not None else 0.7),
+        foreground=_lead_foreground_mode(cfg, sec),
+        next_section_type=(transition_context or {}).get("next_section_type"),
+        register=lead_register(cfg, lead_cfg),
+        rest_probability=_as_float(shaping.get("rest_probability")),
+        contour=str(shaping.get("contour_style") or "balanced").strip().lower(),
+        groups=section_groups(cfg, sec, getattr(hplan, "meter", None)),
+        strict_register=lead_register_is_range(cfg, lead_cfg),
+        seed=_seed_override(cfg, sec, lead_cfg),
+        genre=_part_genre(cfg, sec, "lead_gtr", lead_cfg, composer),
+        prev_section_type=(transition_context or {}).get("prev_section_type"),
+        melody=_sung_line(performance_plan, sec),
+        entry_bar=_band_entry_bar(sec, rgrid, performance_plan, transition_context),
+    )
+    notes = composer.compose_lead(ctx)
+    payload = [
+        {"beat": n.beat, "duration_beats": n.dur, "pitch": n.pitch, "accent": n.accent,
+         "tech": None if ctx.strict_register and n.tech == "slide"
+         and n.pitch - 2 < ctx.register[0] else n.tech, "role": n.role}
+        for n in notes
+    ]
+    performance_plan.set(f"composer.lead.{sec.id}", payload)
+    if composer.log:
+        logger.info("Composer: %s", composer.log[-1])
+
+    # Advertise the lead's real phrases to the band.
+    windows: list[list[float]] = []
+    for n in notes:
+        start, end = n.beat, n.beat + n.dur
+        if windows and start - windows[-1][1] < 1.0:
+            windows[-1][1] = max(windows[-1][1], end)
+        else:
+            windows.append([start, end])
+    ens = performance_plan.get(f"ensemble.{sec.id}")
+    if isinstance(ens, dict):
+        ens = dict(ens)
+        ens["lead_activity_windows"] = [tuple(w) for w in windows]
+        active = sum(e - s for s, e in windows)
+        ens["lead_rest_ratio"] = round(1.0 - min(1.0, active / max(total, 1e-6)), 4)
+        performance_plan.set(f"ensemble.{sec.id}", ens)
+        performance_plan.set(f"lead_rest_ratio.{sec.id}", ens["lead_rest_ratio"])
 
 
 def sort_used_timelines(timelines: dict[str, InstrumentTimeline], instruments_used: list[str]) -> None:

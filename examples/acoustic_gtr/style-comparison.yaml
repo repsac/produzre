@@ -14,6 +14,7 @@
 version: 1
 
 song:
+  project: produzre-examples
   title: "Acoustic Style Comparison"
   bpm: 92
   key: G
@@ -102,9 +103,12 @@ arrangement:
   - hybrid_prechorus
   - perc_breakdown
 
-# Verification checklist:
-# - fingerpicking: alternating low/high pitches, bass notes longer than treble
-# - strumming: 4-6 pitches per strum hit (not power chords), velocity ~55-92
-# - hybrid: arpeggio on beats 0-2, strum block from beat 2 onward
-# - percussive: rare stabs (vel ~45-60) + body tap events (MIDI 40, very short)
+# Verification checklist (analysis/acoustic_gtr/*.events.tsv, beats counted from 1):
+# - fingerpicking: single notes, a thumb bass on each beat alternating with
+#   treble notes on the off-beats, bass notes held longer than treble
+# - strumming: full downstrokes of 4-5 strings (open chords, not power
+#   chords) with lighter 2-3 string strokes between them, velocity ~70-100
+# - hybrid: picked notes on beats 1 and 2, a 4-note strummed chord from beat 3
+# - percussive: a soft 6-string stab on each downbeat (vel ~40-47), a very
+#   short body tap (kind body_tap) around beat 3.5, and an occasional strum
 # - Same seed -> same MIDI output (determinism check)

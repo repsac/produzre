@@ -1,82 +1,60 @@
-# Blues Lead Guitar
+# Blues lead: an instrumental 12-bar blues with a slow-blues solo.
 #
-# Blues-style lead guitar with 12-bar form.
-# Stepwise pentatonic phrases with breathing room,
-# building to a denser solo section.
+# The lead is the melody (`foreground: full`). Its hook and licks are
+# composed once per song and chosen over these chords; blues songs lean on
+# the song's slow, bent licks. `arrangement_style` pins the solo:
 #
-# genre: blues loads shuffle drums and laid-back rhythm guitar.
-
+#   solo_story: blues   licks with room to breathe between them, a crying
+#                       bend at the climax, a slow lick to resolve
+#   solo_ending: hold   the last note is held with a wide vibrato
+#
+# Listen for:
+#   - the head states the hook and the second head repeats it note for note,
+#     because the composer remembers it; the head after the solo is the last
+#     one, so it lifts and ornaments the line
+#   - the solo is never recalled: it is composed fresh each time
+#   - the drummer's feel is drawn per song (blues songs often shuffle) and
+#     the whole band follows it
 version: 1
-
 song:
-  title: "Blues Lead"
-  bpm: 85
+  project: produzre-examples
+  title: "Slow Blues Lead"
+  bpm: 76
   key: E
   mode: major
   meter: "4/4"
   genre: blues
-  seed: 300
+  seed: 5201
+  arrangement_style: {solo_story: blues, solo_ending: hold}
   exports_root: "exports"
 
 exports:
   midi_text:
     enabled: true
-    views: ["events", "grid", "tab"]
+    views: [events, grid, tab]
     subdiv: 16
 
 instruments:
-  drums:
-    persona: "jazz-lite"
-  bass:
-    params:
-      articulation_style: "finger"
+  lead_gtr:
+    params: {foreground: full}
 
 sections:
-  blues_verse:
-    type: verse
+  head:
+    type: chorus
     bars: 12
     harmony:
-      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "I"]
-    instruments:
-      harmony:
-        intensity: 0.7
-      drums:
-        intensity: 0.7
-      bass:
-        intensity: 0.7
-      rhythm_gtr:
-        intensity: 0.7
-      lead_gtr:
-        intensity: 0.7
-        extra:
-          rest_probability: 0.35
-          phrase_len_bars: 4
-          contour_style: "stepwise"
-          resolution_strength: 0.5
-
-  blues_solo:
+      progression: ["I7", "IV7", "I7", "I7", "IV7", "IV7", "I7", "I7", "V7", "IV7", "I7", "V7"]
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  solo:
     type: solo
     bars: 12
     harmony:
-      progression: ["I", "I", "I", "I", "IV", "IV", "I", "I", "V", "IV", "I", "I"]
-    instruments:
-      harmony:
-        intensity: 0.8
-      drums:
-        intensity: 0.8
-      bass:
-        intensity: 0.8
-      rhythm_gtr:
-        intensity: 0.6
-      lead_gtr:
-        intensity: 0.85
-        solo: true
-        extra:
-          rest_probability: 0.2
-          phrase_len_bars: 4
-          contour_style: "balanced"
-          resolution_strength: 0.6
+      progression: ["I7", "IV7", "I7", "I7", "IV7", "IV7", "I7", "I7", "V7", "IV7", "I7", "V7"]
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: ["I7", "IV7", "I7", "I7"]}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
 
-arrangement:
-  - blues_verse
-  - blues_solo
+arrangement: [head, head, solo, head, outro]

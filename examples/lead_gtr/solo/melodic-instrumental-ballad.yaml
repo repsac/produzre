@@ -1,0 +1,99 @@
+# Melodic instrumental ballad: an electric guitar alone playing a song's
+# melody in D, verse to final chorus, with a solo in the middle.
+#
+# A lone lead guitar defaults to foreground: full, so it is the singer. The
+# composer writes every phrase from one song DNA: a hook chosen for how
+# memorable it sounds over the chorus chords, an answer phrase, a verse
+# idea, a contrasting bridge idea and three signature licks. harmony: {}
+# in each section gives the lead the chords it is melodizing. Only
+# composer-shaping settings are used: a G3 to G5 register, a stepwise
+# contour, breathing room (rest_probability), the lift chorus form, and
+# expression rates for vibrato, bends and swells.
+#
+# Listen for:
+#   - intro: the hook stated once, softly, as a preview
+#   - verse: an eight-bar period on the verse idea, low in the register;
+#     verse 2 keeps the melody with small rhythm changes, like a new lyric
+#   - prechorus: a sequence that climbs and holds on the dominant
+#   - chorus: the hook, its answer, a lift to the melodic summit and a
+#     close; each chorus returns note for note, and the last one moves up a
+#     whole step (final_chorus: modulate) and is ornamented
+#   - bridge: the contrasting idea over the relative minor, ending on V
+#   - solo: hook quote, development up the neck, a climax and a held end
+#   - volume swells fade in some long notes; vibrato on most held notes
+#   - outro: the hook one last time, then a held tonic
+version: 1
+song:
+  project: produzre-examples
+  title: "Solo Lead Melodic Ballad"
+  bpm: 72
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: soft_rock
+  seed: 9101
+  final_chorus: modulate
+  turnarounds: true
+  arrangement_style:
+    solo_story: melodic
+    solo_ending: hold
+    chorus_form: lift
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  lead_gtr:
+    persona: melodic
+    register: [55, 79]
+    params:
+      contour_style: stepwise
+      rest_probability: 0.2
+      vibrato_rate: 0.7
+      bend_rate: 0.1
+      swell_rate: 0.35
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "I IV I V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I V vi IV I V IV V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii iii IV V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi IV I V V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi iii IV I vi iii ii V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I V vi IV I V IV V"}
+    instruments: {harmony: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    intensity: 0.5
+    harmony: {progression: "IV I V I"}
+    instruments: {harmony: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

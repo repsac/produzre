@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Tuple
+from typing import Any, List, Optional, Dict, Tuple
 
-from .defaults import REGISTER_RANGES, DEFAULT_REGISTER
+from .register import get_register_bounds
 
 
 # Mode scale intervals (semitones from tonic)
@@ -118,7 +118,7 @@ def allowed_pitches_for_slot(
     numeral: str,
     key: str,
     mode: str,
-    register: str = "mid",
+    register: Any = "mid",
     genre: str | None = None,
 ) -> PitchPool:
     """Build pitch pool for a chord slot: chord tones + safe scale neighbours.
@@ -131,12 +131,12 @@ def allowed_pitches_for_slot(
         numeral: Chord numeral (e.g. "i", "bVII", "IV")
         key: Song key string (e.g. "E")
         mode: Scale mode (e.g. "minor", "major")
-        register: Register name matching REGISTER_RANGES
+        register: Register preset name or an explicit ``[low, high]`` range
 
     Returns:
         PitchPool with prioritised chord_tones and scale_tones
     """
-    low, high = REGISTER_RANGES.get(register, REGISTER_RANGES[DEFAULT_REGISTER])
+    low, high = get_register_bounds(register)
     tonic = _resolve_key_midi(key)
     intervals = _MODE_INTERVALS.get((mode or "minor").lower(), _MODE_INTERVALS["minor"])
 

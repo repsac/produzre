@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "Walking_vs_Pocket"
   bpm: 140
   key: C

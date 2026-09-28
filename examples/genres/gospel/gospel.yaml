@@ -1,0 +1,91 @@
+# Gospel: a slow 6/8 praise song in Ab at 96 BPM, with a singer.
+#
+# Six-eight gives the rolling triplet feel of a slow gospel number: two
+# dotted-quarter pulses per bar, the snare on the second, and each chord
+# held for two bars (chord_rate 6). The harmony is church harmony, not rock:
+# I to I7 into IV, the minor iv plagal color, a ii7 V7 cadence, and a
+# chorus that walks IV V iii vi before resolving. A piano (the
+# arpeggiator) rolls triplet eighths under everything. The bass pedals
+# eighth-note roots in the verses and pumps octaves in the choruses. The
+# lead guitar plays around an imagined singer (foreground: auto), and the
+# last chorus steps up a whole tone, the classic gospel key change.
+#
+# Pinned, and why:
+#   - meter "6/8" with chord_rate 6: the slow gospel triplet feel
+#   - final_chorus: modulate, the choir-lifting key change
+#   - ending: ring, a held final chord rather than a cold stop
+#   - lead_fills: normal, so the guitar answers the singer every phrase
+#   - drums ghost_rate 0.1 and fill_rate 0.2: a patient drummer at this
+#     tempo
+# The drummer's grooves, the intro, the bass roles, the comp figures and
+# the licks come from the seed (examples use the shared produzre-examples
+# project).
+#
+# Listen for:
+#   - the whole band from the first bar of the intro
+#   - the I7 (Ab7) pulling to IV, then the minor iv before home
+#   - piano triplets rolling through every section
+#   - the bridge easing back (softer drums, the bass on held roots and
+#     fifths) before the final chorus
+#   - the last chorus a whole step higher, then a ringing amen chord
+version: 1
+song:
+  project: produzre-examples
+  title: "Sunday Morning Glory Road"
+  bpm: 96
+  key: Ab
+  mode: major
+  meter: "6/8"
+  genre: gospel
+  seed: 7443
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    ending: ring
+    lead_fills: normal
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 12
+
+instruments:
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [60, 81]
+  arpeggiator:
+    params: {pattern: phrase, note_duration: 0.5, rest_probability: 0.05}
+  drums:
+    params: {ghost_rate: 0.1, fill_rate: 0.2}
+
+sections:
+  intro:
+    type: intro
+    bars: 8
+    harmony: {progression: "IV iv I V7", chord_rate: 6}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 16
+    harmony: {progression: "I I7 IV iv I vi ii7 V7", chord_rate: 6}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 16
+    harmony: {progression: "IV V iii vi ii7 V7 I I", chord_rate: 6}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 16
+    harmony: {progression: "ii7 V7 I vi ii7 V7 IV V7", chord_rate: 6}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 8
+    harmony: {progression: "IV iv I I", chord_rate: 6}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, chorus, outro]

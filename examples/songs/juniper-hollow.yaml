@@ -1,0 +1,121 @@
+# Juniper Hollow: a folk song that starts with one guitar and grows a band.
+#
+# A fingerpicked steel-string acoustic plays the song alone for the intro
+# and first verse, a Travis pattern with the melody on the top strings.
+# The bass joins for verse 2, the drums come in at the first chorus, and a
+# second acoustic guitar (lead_gtr on a steel-string patch) enters in verse
+# 3 around the voice (foreground: auto): a fill at the end of the verse,
+# then a harmony line in thirds and sixths under the singer's chorus melody
+# (this band draws the anthem chorus form). The last verse drops back to
+# guitar and bass before the final chorus, and the outro is the guitar
+# alone again.
+#
+# Pins: none. The acoustic guitar's technique follows the section: it
+# picks the verses and the bridge and strums the choruses, with
+# picking_pattern: travis set for the verses. A capo on 2 gives the
+# open-string chord shapes a brighter ring. Without drums the folk bass
+# holds one root per bar, a quiet floor under the picking; with the band
+# it plays driving roots in the choruses and octaves in the bridge.
+#
+# Listen for:
+#   - the Travis picking alone: alternating thumb bass, melody on top
+#   - each entrance: bass in verse 2, drums in the chorus, the second
+#     guitar in verse 3
+#   - the guitar switching from picking to strumming at each chorus
+#   - the quiet last verse, then the full band for the final chorus
+version: 1
+song:
+  project: produzre-examples
+  title: "Juniper Hollow"
+  bpm: 96
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: folk
+  seed: 5901
+  turnarounds: true
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  lead_gtr: {program: 25}
+
+instruments:
+  acoustic_gtr:
+    params: {capo: 2}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I IV I V"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+  verse_alone:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV I V I IV V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+  verse_bass:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV I V I IV V I"}
+    instruments:
+      harmony: {}
+      bass: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+  chorus_first:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi IV I V I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}}
+  verse_band:
+    type: verse
+    bars: 8
+    harmony: {progression: "I IV I V I IV V I"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+      lead_gtr: {}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V vi IV I V I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi IV I V vi IV V V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, lead_gtr: {}}
+  verse_quiet:
+    type: verse
+    bars: 8
+    intensity: 0.5
+    harmony: {progression: "I IV I V I IV V I"}
+    instruments:
+      harmony: {}
+      bass: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV I V I"}
+    instruments:
+      harmony: {}
+      acoustic_gtr: {params: {picking_pattern: travis}}
+
+arrangement: [intro, verse_alone, verse_bass, chorus_first, verse_band, chorus, bridge, verse_quiet, chorus, outro]

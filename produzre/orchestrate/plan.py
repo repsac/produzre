@@ -325,6 +325,42 @@ class BuildPlan:
     theme_bank: Optional[object] = None
 
 
+_SHARP_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+_FLAT_NAMES = ("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
+
+
+def _apply_final_chorus_modulation(cfg: RootConfig, planned_sections: list, logger) -> None:
+    raw = getattr(cfg, "raw", None)
+    song = raw.get("song", {}) if isinstance(raw, dict) else {}
+    setting = song.get("final_chorus") if isinstance(song, dict) else None
+    if setting in (None, False, "none", "same", "off"):
+        return
+    if isinstance(setting, bool) or str(setting).strip().lower() in ("modulate", "key_change", "lift"):
+        semis = 2
+    else:
+        try:
+            semis = int(setting)
+        except (TypeError, ValueError):
+            return
+    if semis == 0:
+        return
+    chorus_idx = [i for i, ps in enumerate(planned_sections)
+                  if str(ps.sec.type or "").strip().lower() in ("chorus", "hook")]
+    if len(chorus_idx) < 2:
+        return
+    from ..harmony.spelling import _KEY_PCS, _normalize_key
+
+    first = chorus_idx[-1]
+    for i in range(first, len(planned_sections)):
+        ps = planned_sections[i]
+        old_key = getattr(ps.sec, "key", None) or cfg.song.key
+        pc = (_KEY_PCS.get(_normalize_key(old_key), 0) + semis) % 12
+        names = _FLAT_NAMES if "b" in str(old_key)[1:] else _SHARP_NAMES
+        planned_sections[i] = replace(ps, sec=replace(ps.sec, key=names[pc]))
+    logger.info("Final chorus modulates %+d semitones from section '%s' (%s)",
+                semis, planned_sections[first].sec_id, planned_sections[first].sec.key)
+
+
 def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
     """Compute a `BuildPlan` from configuration.
 
@@ -445,6 +481,29 @@ def plan_song(*, cfg: RootConfig, logger: logging.Logger) -> BuildPlan:
 
     if intensity_arc:
         logger.info("intensity arc: %s", " → ".join(intensity_arc))
+
+    # Final-chorus key change (opt-in: `song.final_chorus: modulate`, or a
+    # semitone count). The last chorus and everything after it move up; the
+    # change is direct, the classic "gear change", so no pivot chord is
+    # written across the new key's boundary.
+    _apply_final_chorus_modulation(cfg, planned_sections, logger)
+
+    # Cadential phrasing (harmony/phrasing.py): a section whose successor
+    # returns to the tonic gets a turnaround in its last half bar. Harmony
+    # plans are per occurrence objects, so a repeated section id only gets
+    # the turnaround where its successor calls for one.
+    from ..harmony.phrasing import apply_turnaround, wants_turnaround
+
+    genre = str(getattr(cfg.song, "genre", "") or "")
+    for i, ps in enumerate(planned_sections[:-1]):
+        hp = ps.harmony_plan
+        if hp is None or not wants_turnaround(ps.sec, cfg, getattr(hp, "source", "explicit")):
+            continue
+        mode = getattr(ps.sec, "mode", None) or getattr(cfg.song, "mode", "major")
+        nxt = planned_sections[i + 1]
+        if (getattr(nxt.sec, "key", None) or cfg.song.key) != (getattr(ps.sec, "key", None) or cfg.song.key):
+            continue
+        apply_turnaround(hp, nxt.harmony_plan, mode=str(mode), genre=genre, logger=logger)
 
     return BuildPlan(
         song_name=song_name,

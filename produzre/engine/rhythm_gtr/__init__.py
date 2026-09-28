@@ -163,6 +163,22 @@ def _voice_lead_root(root: int, prev: int, lo: int, hi: int, key: str) -> int:
     return best
 
 
+def _held_chord_beats(chord_slots, sustain_duration: float) -> list[float]:
+    """Section-local strike positions for held chords (``sustain_mode``).
+
+    Each chord is struck when it arrives and restruck every
+    ``sustain_duration`` beats while it lasts.
+    """
+    step = max(0.1, float(sustain_duration))
+    beats: list[float] = []
+    for cs in chord_slots:
+        t = float(cs.start_beat)
+        while t < float(cs.end_beat) - 1e-6:
+            beats.append(round(t, 6))
+            t += step
+    return beats
+
+
 # R3-V2: Helper for strum offsets (micro-staggered chord hits)
 def _strum_offsets(n: int, span_beats: float, direction: str) -> list[float]:
     """Return per-note start offsets (in beats) for a simple strum.
@@ -344,6 +360,17 @@ _KEY_TO_MIDI_ROOT: Dict[str, int] = {
 
 
 # Compute a rhythm guitar root MIDI note for a given chord numeral (modal logic, guitar register)
+def _home_shape(cfg: RootConfig, section: SectionConfig, rhythm_cfg) -> ChordShape:
+    """The tonic at its lowest position: where a section's first chord
+    leads from (see voicings.home_voicing)."""
+    from ...composer.theory import is_minorish
+    from .voicings import home_voicing
+
+    mode = getattr(section, "mode", None) or cfg.song.mode or "major"
+    numeral = "i" if is_minorish(mode) else "I"
+    return home_voicing(_rhythm_root_for_numeral(cfg, section, numeral, rhythm_cfg), numeral)
+
+
 def _rhythm_root_for_numeral(
     cfg: RootConfig,
     section: SectionConfig,
@@ -658,6 +685,15 @@ def render_into_timeline(
             if logger:
                 logger.debug(f"[COORDINATION] Rhythm coordination failed: {e}")
 
+    # Composed comping (produzre/composer/comping.py): the song composer
+    # arranged this section's rhythm part; perform it on playable shapes.
+    comp = plan.get(f"composer.comp.{section.id}") if plan is not None and hasattr(plan, "get") else None
+    if isinstance(comp, dict) and comp.get("events") and harmony_plan is not None \
+            and harmony_plan.chord_slots and rng is not None:
+        _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_start_beat,
+                              timeline, comp, rng, logger)
+        return
+
     if use_patterns and plan is not None and rng is not None:
         _render_pattern_based_guitar(
             cfg=cfg,
@@ -706,6 +742,95 @@ def render_into_timeline(
         coordinated_accent_beats=coordinated_accent_beats,  # Rule 4
         logger=logger,
     )
+
+
+def _render_composed_comp(cfg, section, instrument_cfg, harmony_plan, section_start_beat,
+                          timeline, comp, rng, logger) -> None:
+    """Perform a composed comp part with voice-led, playable chord shapes."""
+    from .composed import perform_comp
+    from .voicings import choose_voicing
+
+    feel = dict(comp.get("user") or {})
+    heavy = bool(comp.get("heavy"))
+    voicing = str(feel.get("voicing") or ("power" if heavy else "triad")).lower()
+    if voicing == "auto":
+        voicing = "power" if heavy else "triad"
+
+    def _fit(pitches):
+        """Octave-shift a shape into an explicit register_min/max."""
+        ps = list(pitches)
+        lo, hi = feel.get("register_min"), feel.get("register_max")
+        try:
+            while hi is not None and ps and max(ps) > int(hi) and min(ps) - 12 >= 28:
+                ps = [p - 12 for p in ps]
+            while lo is not None and ps and min(ps) < int(lo) and max(ps) + 12 <= 100:
+                ps = [p + 12 for p in ps]
+        except (TypeError, ValueError):
+            pass
+        return ps
+    shapes = []
+    # The first chord leads from the home position, like every later chord
+    # leads from the one before it (voicings.home_voicing).
+    prev_full = prev_power = _home_shape(cfg, section, instrument_cfg)
+    for slot in harmony_plan.chord_slots:
+        root = _rhythm_root_for_numeral(cfg, section, slot.numeral, instrument_cfg)
+        power = choose_voicing(root_midi=root, numeral=slot.numeral, voicing_style="power",
+                               prev_chord_shape=prev_power, rng=rng)
+        full = power if voicing == "power" else choose_voicing(root_midi=root, numeral=slot.numeral,
+                                                  voicing_style=voicing,
+                                                  prev_chord_shape=prev_full, rng=rng)
+        prev_full, prev_power = full, power
+        full_pitches = list(full.pitches)
+        if heavy and len(full_pitches) < 3:
+            full_pitches = sorted(set(full_pitches + [full_pitches[0] + 12]))
+        shapes.append((float(slot.start_beat), float(slot.end_beat), _fit(full_pitches),
+                       _fit(power.pitches), slot.numeral))
+
+    def shape_at(beat: float):
+        for start, end, f, p, numeral in shapes:
+            if start - 1e-6 <= beat < end - 1e-6:
+                return f, p, numeral
+        return (shapes[-1][2], shapes[-1][3], shapes[-1][4]) if shapes else None
+
+    intensity = getattr(instrument_cfg, "intensity", None) if instrument_cfg is not None else None
+    if intensity is None:
+        intensity = getattr(section, "intensity", None)
+    try:
+        intensity = (float(intensity) if intensity is not None else 0.75) + \
+            float(feel.get("style_bias") or 0.0)
+        offset = float(feel.get("offset_beats") or 0.0)
+    except (TypeError, ValueError):
+        offset = 0.0
+    from ...groove import effective_params_dict
+
+    params = effective_params_dict(instrument_cfg)
+
+    def _num(name, default):
+        try:
+            return float(feel.get(name, params.get(name))) if feel.get(name, params.get(name)) is not None else default
+        except (TypeError, ValueError):
+            return default
+
+    written = perform_comp(
+        comp["events"],
+        timeline=timeline,
+        section_start_beat=section_start_beat + offset,
+        shape_at=shape_at,
+        key=(section.key or cfg.song.key or "C").strip(),
+        mode=getattr(section, "mode", None) or cfg.song.mode or "major",
+        intensity=float(intensity if intensity is not None else 0.75),
+        bpm=_song_bpm(cfg),
+        ring=float(comp.get("ring", 1.0)),
+        rng=rng,
+        strum_ms=_num("strum_ms", 14.0),
+        # humanize_timing is 0-1 in the pattern engine; 1.0 ~ 12 ms here.
+        timing_jitter_ms=_num("humanize_timing", 0.5) * 12.0,
+        feel=feel,
+        beats_per_bar=float(getattr(harmony_plan.meter, "beats_per_bar", 4.0) or 4.0),
+    )
+    if logger:
+        logger.debug("Section '%s': performed composed comp '%s' (%d notes)",
+                     section.id, comp.get("riff"), written)
 
 
 def _render_pattern_based_guitar(
@@ -817,7 +942,7 @@ def _render_pattern_based_guitar(
     # Phase RG1: Pre-generate chord voicings for all harmony slots
     # Now delegates to shared instruments library for physically playable shapes
     chord_voicings: Dict[str, ChordShape] = {}
-    prev_shape: Optional[ChordShape] = None
+    prev_shape: Optional[ChordShape] = _home_shape(cfg, section, rhythm_cfg)
 
     for chord_slot in harmony_plan.chord_slots:
         # Compute root MIDI note from the numeral
@@ -885,8 +1010,6 @@ def _render_pattern_based_guitar(
             phrase_len_bars = int(extra.get("phrase_len_bars", phrase_len_bars))
         except Exception:
             phrase_len_bars = 4
-        if "sustain_mode" in extra:
-            phrase_development_enabled = False
         if extra.get("phrase_development") is False:
             phrase_development_enabled = False
     phrase_len_bars = max(1, phrase_len_bars)
@@ -899,6 +1022,29 @@ def _render_pattern_based_guitar(
         effective_style = params.strum_style  # e.g. "downbeat_heavy" → straight_8s via mapping in rhythm.py
 
     base_pattern = None
+
+    from .legacy_params import sustain_settings
+    sustain_mode, sustain_duration = sustain_settings(extra)
+    if sustain_mode:
+        # Held chords replace the strum pattern (see _held_chord_beats).
+        events_count = _render_held_chords(
+            harmony_plan=harmony_plan,
+            chord_voicings=chord_voicings,
+            hold=sustain_duration if sustain_duration is not None else 2.0,
+            beats_per_bar=beats_per_bar,
+            accent_beats=accent_beats,
+            base_velocity=base_velocity,
+            params=params,
+            section_start_beat=section_start_beat,
+            timeline=timeline,
+            rng=rng,
+            song_bpm=song_bpm,
+            expr_rng=expr_rng,
+            vibrato_rate=vibrato_rate,
+        )
+        total_bars = 0
+    # The longest a strum rings: an explicit sustain_duration, else one beat.
+    max_ring = sustain_duration if sustain_duration is not None else 1.0
 
     for bar_idx in range(total_bars):
         bar_start_beat = bar_idx * beats_per_bar
@@ -990,7 +1136,7 @@ def _render_pattern_based_guitar(
                     next_hit_beat = bar_start_beat + (next_hit_idx / pattern.subdivision)
                     break
             duration = next_hit_beat - beat_position
-            duration = min(duration, 1.0)  # Max sustain
+            duration = min(duration, max_ring)  # Max sustain
             # Never ring past the active chord's span
             duration = max(0.05, min(duration, active_chord_slot.end_beat - beat_position))
 
@@ -1092,6 +1238,57 @@ def _render_pattern_based_guitar(
             params.style,
             params.density,
         )
+
+
+def _render_held_chords(*, harmony_plan, chord_voicings, hold, beats_per_bar, accent_beats,
+                        base_velocity, params, section_start_beat, timeline, rng, song_bpm,
+                        expr_rng, vibrato_rate) -> int:
+    """Pattern renderer ``sustain_mode``: full chord shapes held ``hold`` beats.
+
+    Each chord is strummed when it arrives and restruck every ``hold``
+    beats while it lasts; only the arrival carries the accent. Every string
+    lets go just before the next strike, so a restruck string never
+    overlaps itself. Returns the number of notes written.
+    """
+    accents = {round(float(b), 2) for b in accent_beats or ()}
+    written = 0
+    for slot in harmony_plan.chord_slots:
+        voicing = chord_voicings.get(f"{slot.numeral}_{slot.index}")
+        if voicing is None or not voicing.pitches:
+            continue
+        for beat in _held_chord_beats([slot], hold):
+            arrival = abs(beat - float(slot.start_beat)) < 1e-6
+            duration = max(0.1, min(hold, float(slot.end_beat) - beat))
+            notes = create_chord_articulation(
+                pitches=list(voicing.pitches),
+                base_velocity=base_velocity,
+                base_duration=duration,
+                beat_position=beat % beats_per_bar,
+                beats_per_bar=beats_per_bar,
+                is_palm_mute=False,
+                is_accent=arrival or round(beat, 2) in accents,
+                palm_mute_amount=0.0,
+                accent_strength=params.accent_strength,
+                downbeat_boost=params.downbeat_boost,
+                chuck_rate=0.0,
+                rng=rng,
+            )
+            spread = apply_strum_spread(notes=notes, strum_direction="down",
+                                        strum_ms=params.strum_ms,
+                                        humanize_amount=params.humanize_timing,
+                                        rng=rng, bpm=song_bpm)
+            expr = _draw_chord_vibrato(expr_rng, duration, song_bpm, vibrato_rate)
+            for idx, (note, offset) in enumerate(spread):
+                timeline.add_note(
+                    start_beat=section_start_beat + beat + offset,
+                    duration_beats=max(0.05, note.duration - offset - 0.03),
+                    pitch=note.pitch,
+                    velocity=humanize_velocity(velocity=note.velocity,
+                                               amount=params.humanize_velocity, rng=rng),
+                    expression=expr if idx == 0 else None,
+                )
+                written += 1
+    return written
 
 
 def _render_legacy_rhythm_guitar(
@@ -1208,6 +1405,12 @@ def _render_legacy_rhythm_guitar(
             step_beats = max(0.1, min(gaps))
     else:
         cell_beats = [cell.beat for cell in cells]
+    if sustain_mode:
+        # Held chords: strike each chord as it arrives and restrike it every
+        # sustain_duration beats while it lasts, whatever the grid density.
+        cell_beats = _held_chord_beats(harmony_plan.chord_slots, sustain_duration)
+        # A held chord rings open unless the user asked for muting.
+        mute_amount = params.mute_knob if params.mute_knob is not None else 0.0
 
     # Classify intensity into bands to control density.
     eff_intensity = _clamp(intensity * density_scale, 0.0, 2.0)
@@ -1252,7 +1455,7 @@ def _render_legacy_rhythm_guitar(
         # Decide whether to place a chord hit at this cell based on intensity band.
         # Synthesized pattern positions ARE the hits: no density gating needed.
         place_note = False
-        if pattern_positions is not None:
+        if pattern_positions is not None or sustain_mode:
             place_note = True
         elif intensity_band == "low":
             # Very sparse: hits on bar downbeats only.
@@ -1268,7 +1471,7 @@ def _render_legacy_rhythm_guitar(
         # At quarter-note grid resolution, work by beat position within the bar.
         # beat_index 0,2 → beats 1,3 (strong/downbeat side)
         # beat_index 1,3 → beats 2,4 (weak/backbeat/upbeat side)
-        if strum_style != "balanced" and pattern_positions is None:
+        if strum_style != "balanced" and pattern_positions is None and not sustain_mode:
             is_strong_beat = (beat_index % 2 == 0)  # beats 1 & 3 (0-indexed: 0 & 2)
             if strum_style == "downbeat_heavy":
                 # Keep only strong beats (1 & 3), suppress backbeat (2 & 4)
@@ -1284,7 +1487,7 @@ def _render_legacy_rhythm_guitar(
         # ---- R2-C: Apply rhythmic pattern preset (if any) ----
         # Only as a filter when iterating raw grid cells; synthesized pattern
         # positions already encode the preset's hits.
-        if play_pattern and pattern_positions is None:
+        if play_pattern and pattern_positions is None and not sustain_mode:
             place_note = _apply_rhythmic_pattern(play_pattern, beat_in_bar, place_note)
 
         if not place_note:
@@ -1297,11 +1500,13 @@ def _render_legacy_rhythm_guitar(
 
         # R3-V6: Strategy gating.
         # Sustain: only hit on chord change.
-        if hit_strategy == "sustain" and not chord_changed:
+        if hit_strategy == "sustain" and not chord_changed and not sustain_mode:
             continue
 
         allow = True
-        if retrigger == "all":
+        if sustain_mode:
+            allow = True  # the held-chord positions are the hits
+        elif retrigger == "all":
             allow = True
         elif retrigger == "chord":
             allow = chord_changed
@@ -1401,7 +1606,8 @@ def _render_legacy_rhythm_guitar(
             duration_scale = 0.8
         # else: None or unknown → use defaults (power chord root+5, duration_scale=1.0)
 
-        duration *= duration_scale
+        if not sustain_mode:
+            duration *= duration_scale
         # Ensure we still never exceed the remaining chord span
         duration = max(0.1, min(duration, remaining_in_chord))
 
@@ -1454,13 +1660,17 @@ def _render_legacy_rhythm_guitar(
         # R3-V4: If this is a retrigger within the same chord, shape it to feel like a re-attack.
         if is_reattack:
             vel = int(vel * reattack_vel)
-            duration = duration * reattack_dur
+            if not sustain_mode:
+                duration = duration * reattack_dur
 
         # Rule 4: Coordinated accent boost: punch harder on drum crash/accent positions.
         if accent_beat_set and round(local_beat, 2) in accent_beat_set:
             vel = int(vel * 1.20)
 
-        # Final clamps for duration and velocity.
+        # Final clamps for duration and velocity. An explicit sustain_duration
+        # is the longest any strum rings.
+        if sustain_mode or params.sustain_duration_set:
+            duration = min(duration, sustain_duration)
         duration = max(0.1, min(duration, remaining_in_chord))
         vel = max(20, min(127, vel))
 
@@ -1475,12 +1685,17 @@ def _render_legacy_rhythm_guitar(
             vel = max(20, min(127, vel + vel_jitter))
 
             # Duration humanization: ±12% so note lengths feel natural, not stamped.
-            duration = max(0.1, min(duration * rng.uniform(0.88, 1.12), remaining_in_chord))
+            # A held chord keeps its sustain_duration exactly.
+            jitter = rng.uniform(0.88, 1.12)
+            if not sustain_mode:
+                duration = max(0.1, min(duration * jitter, remaining_in_chord))
+                if params.sustain_duration_set:
+                    duration = min(duration, sustain_duration)
 
             # "Breathe" skip: occasionally silence a non-structural re-attack so the
             # guitar doesn't hammer every beat identically every bar.  Only applies
             # to re-attacks (within same chord) on non-downbeats at high density.
-            if is_reattack and not is_downbeat and intensity_band == "high":
+            if is_reattack and not is_downbeat and intensity_band == "high" and not sustain_mode:
                 rest_prob = 0.10 + mute_amount * 0.12  # 10-22% based on mute amount
                 if rng.random() < rest_prob:
                     skip_this_hit = True

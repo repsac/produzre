@@ -1,0 +1,102 @@
+# Soft rock: a mid-tempo ballad in D major with acoustic guitar and a singer.
+#
+# The acoustic fingerpicks the verses and strums the choruses, a clean
+# electric joins from the prechorus, the drummer plays a light quarter-note
+# hi-hat with few ghosts, and the lead guitar (foreground: auto) sings a
+# hook in the intro, answers the singer, and takes a lyrical solo that ends
+# on a held, vibrato note. The bridge borrows the flat seven (bVII) for a
+# warm lift.
+#
+# Pinned, and why:
+#   - drums hat_density 0.3, ghost_rate 0.1 and kick_density 0.2:
+#     quarter-note hats, a clean snare and a simple kick, a soft rock touch
+#   - arrangement_style.riff_driven: false, the genre name contains "rock"
+#     and would otherwise often draw a signature riff
+#   - arrangement_style.solo_story: melodic and solo_ending: hold, a solo
+#     that sings and ends on a held note instead of a dive
+#   - arrangement_style.ending: ring, the last chord rings out
+#   - bass persona pocket: sits just behind the beat
+# The drummer's fills, the comp figures, the bass roles (eighths in the
+# prechorus, a gallop under the chorus and solo) and the hook come from the
+# shared produzre-examples project and the seed, as does the stop before
+# each chorus.
+#
+# Listen for:
+#   - fingerpicked acoustic in the verse, strummed in the chorus
+#   - the electric guitar entering at the prechorus
+#   - a one-bar stop before each chorus, and the bass lifting into a gallop
+#   - the bridge's C chord (bVII) in D major
+#   - a solo that quotes the hook and holds its last note
+#   - the final chord ringing out
+version: 1
+song:
+  project: produzre-examples
+  title: "Harbor Lights Again"
+  bpm: 84
+  key: D
+  mode: major
+  meter: "4/4"
+  genre: soft_rock
+  seed: 7300
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    riff_driven: false
+    solo_story: melodic
+    solo_ending: hold
+    ending: ring
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  drums:
+    params: {hat_density: 0.3, ghost_rate: 0.1, kick_density: 0.2}
+  bass:
+    persona: pocket
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I iii vi IV"}
+    instruments: {harmony: {}, acoustic_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I iii vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii iii IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V I vi"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 4
+    harmony: {progression: "bVII IV I V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, rhythm_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "IV V I vi"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, solo, chorus, outro]

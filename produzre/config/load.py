@@ -29,7 +29,7 @@ import pathlib
 import importlib.resources
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import yaml
 
@@ -617,6 +617,88 @@ def _load_personas_registry_for_instrument(instrument: str) -> Dict[str, Any]:
     return merged
 
 
+# Keys that are a persona's technique rather than a genre default: when the
+# user names the persona, a recipe does not replace them.
+_PERSONA_TECHNIQUE_KEYS: Dict[str, Tuple[str, ...]] = {"bass": ("articulation_style",)}
+
+
+def _persona_setting(instrument_cfg: Optional[Dict[str, Any]]) -> Optional[str]:
+    """The persona an instrument entry names: a direct ``persona`` field, or
+    ``persona`` inside its ``params`` or ``extra`` block (direct wins)."""
+    if not isinstance(instrument_cfg, dict):
+        return None
+    for block in (instrument_cfg, instrument_cfg.get("params"), instrument_cfg.get("extra")):
+        if isinstance(block, dict) and block.get("persona") is not None:
+            return str(block["persona"])
+    return None
+
+
+def _instrument_user_params(instrument_cfg: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """A global instrument entry's own params (the ``params`` block)."""
+    if isinstance(instrument_cfg, dict) and isinstance(instrument_cfg.get("params"), dict):
+        return instrument_cfg["params"]
+    return {}
+
+
+_PERSONA_INSTRUMENTS = ("drums", "bass", "rhythm_gtr", "lead_gtr", "acoustic_gtr")
+
+
+def _resolve_section_personas(raw: Dict[str, Any], instruments_raw: Any) -> None:
+    """Resolve personas named on a section's instrument.
+
+    A section persona replaces the global persona for that section only; it
+    sits at the persona layer of the merge (persona < recipe < global
+    instrument params < section params), so global and section params still
+    win over it. The result goes to ``_effective.sections.<id>.<instrument>``
+    in the same shape as ``_effective.instruments``; the orchestrator (and the
+    drum engine, which reads persona voices) prefer it for that section.
+    """
+    sections = raw.get("sections")
+    if not isinstance(sections, dict):
+        return
+    out: Dict[str, Any] = {}
+    for sec_id, sec in sections.items():
+        insts = sec.get("instruments") if isinstance(sec, dict) else None
+        if not isinstance(insts, dict):
+            continue
+        for inst in _PERSONA_INSTRUMENTS:
+            persona = _persona_setting(insts.get(inst))
+            if persona is None:
+                continue
+            registry = raw["_personas"][inst]
+            name = _resolve_persona_name(
+                instrument=inst,
+                instrument_cfg={"persona": persona},
+                registry=registry,
+                fallback_default=persona,
+                context=f"sections.{sec_id}.instruments.{inst}",
+            )
+            global_cfg = instruments_raw.get(inst) if isinstance(instruments_raw, dict) else None
+            data = ((registry.get("personas", {}) or {}).get(name, {}) or {})
+            persona_params = data.get("params", {}) or {}
+            user_params = _instrument_user_params(global_cfg)
+            entry: Dict[str, Any] = {
+                "persona": name,
+                "params": _deep_merge_dict(persona_params, user_params),
+                # A named persona keeps its technique over the recipe.
+                "persona_keys": sorted(k for k in persona_params if k not in user_params
+                                       and k not in _PERSONA_TECHNIQUE_KEYS.get(inst, ())),
+            }
+            if inst == "drums":
+                voices = data.get("voices", {}) or {}
+                if voices:
+                    voices = _normalize_drum_voice_concepts(voices, context=f"persona '{name}'")
+                user_voices = global_cfg.get("voices") if isinstance(global_cfg, dict) else None
+                if isinstance(user_voices, dict) and user_voices:
+                    voices = _deep_merge_dict(voices, _normalize_drum_voice_concepts(
+                        user_voices, context="instruments.drums"))
+                if voices:
+                    entry["voices"] = voices
+            out.setdefault(str(sec_id), {})[inst] = entry
+    if out:
+        raw["_effective"]["sections"] = out
+
+
 def _resolve_persona_name(
     *,
     instrument: Optional[str],
@@ -626,9 +708,7 @@ def _resolve_persona_name(
     context: str,
 ) -> str:
     """Resolve a persona name from config + registry, validating existence."""
-    persona = None
-    if instrument_cfg and isinstance(instrument_cfg, dict):
-        persona = instrument_cfg.get("persona")
+    persona = _persona_setting(instrument_cfg)
 
     if persona is None:
         persona = registry.get("default_persona") or registry.get("default") or fallback_default
@@ -717,8 +797,8 @@ def load_root_config(path: str) -> RootConfig:
       - Overwrites `song.seed` with the effective seed for generation.
 
     Engine registry:
-      - Builds the runtime engine registry from defaults plus top-level
-        `instruments:` overrides in the YAML.
+      - Builds the runtime engine registry from defaults plus the YAML's
+        top-level `engines:` block (and registry fields on `instruments:`).
 
     Args:
         path: Path to the YAML config file.
@@ -732,6 +812,11 @@ def load_root_config(path: str) -> RootConfig:
     """
     p = pathlib.Path(path)
     raw = _load_yaml(p)
+
+    # Unknown instrument params are ignored by the engines; say so, by name.
+    from .validation import unknown_instrument_param_warnings, unknown_structure_warnings
+    for message in unknown_structure_warnings(raw) + unknown_instrument_param_warnings(raw):
+        logger.warning(message)
 
     # Phase P1: load built-in + user personas and attach to raw for visibility.
     drums_personas = _load_personas_registry_for_instrument("drums")
@@ -842,9 +927,13 @@ def load_root_config(path: str) -> RootConfig:
     raw["_effective"]["instruments"]["bass"]["persona"] = effective_bass_persona
     raw["_effective"]["instruments"]["bass"]["params"] = _deep_merge_dict(bass_persona_params, bass_inst_params)
     # Persona-sourced keys (not overridden by the user): recipes may override
-    # these but never explicit user params (persona < recipe < user).
+    # these but never explicit user params (persona < recipe < user). A
+    # persona the user named keeps its technique: the funk persona slaps
+    # under any genre's recipe.
     raw["_effective"]["instruments"]["bass"]["persona_keys"] = sorted(
         k for k in (bass_persona_params or {}) if k not in bass_inst_params
+        and not (_persona_setting(bass_instrument_cfg) is not None
+                 and k in _PERSONA_TECHNIQUE_KEYS.get("bass", ()))
     )
 
     # === Rhythm guitar persona resolution ===
@@ -855,6 +944,9 @@ def load_root_config(path: str) -> RootConfig:
 
     # === Acoustic guitar persona resolution ===
     _resolve_simple_persona(raw, instruments_raw, acoustic_gtr_personas, "acoustic_gtr", "natural")
+
+    # === Section-level personas ===
+    _resolve_section_personas(raw, instruments_raw)
 
     raw_version = raw.get("version", None)
     if raw_version is None:

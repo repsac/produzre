@@ -7,10 +7,9 @@ You also get stems (one MIDI file per instrument), section clips (one section
 at a time), and patterns (reusable chunks of notes).
 
 The output is MIDI, so you choose the sounds in your DAW or synthesizer.
-Version 0.9.0 adds shared themes, recurring musical ideas that instruments
-develop across the song. It also adds melodic development and more coordination
-between instruments. See [CHANGELOG.md](CHANGELOG.md) for changes
-that affect existing songs.
+Version 0.10.0 adds a song composer that gives every song its own band,
+building on the themes and melodic development introduced in 0.9.0. See
+[CHANGELOG.md](CHANGELOG.md) for changes that affect existing songs.
 
 ## Start here
 
@@ -134,10 +133,10 @@ instruments:
     params: {lock_to_riff: 1.0}
 ```
 
-Sustained lead notes get seeded vibrato, bends, and, in solo sections, a
-closing whammy dive, all written as pitch bend. Set `foreground: full` on the
-lead for instrumental songs so it plays through the whole section instead of
-answering an imaginary singer. See the lead guitar controls for the rates.
+Sustained lead notes get seeded vibrato and bends, written as pitch bend.
+Solos get a style-appropriate ending. Set `foreground: full` on the lead for
+instrumental songs so it plays through the whole section instead of answering
+an imaginary singer. See the lead guitar controls for the rates.
 
 See the [theme controls](docs/llm-song-config-reference.md#themes) for writing
 and developing your own material. [themes_demo.yaml](examples/themes_demo.yaml)
@@ -156,6 +155,89 @@ groove:
 
 You can change meter per section; see [meter and beat units](docs/llm-song-config-reference.md#meter-and-beat-units)
 for timing units and how exports carry those changes.
+
+## The composer
+
+The lead guitar is written, not generated bar by bar. Once per song, the
+composer chooses a hook, its answer, a verse idea, a bridge idea, and three
+signature licks: its song DNA. It tries a few hundred candidates and keeps
+the most memorable one over your chorus chords. Every lead phrase then
+derives from that DNA through real phrase forms. The chorus states the hook,
+lifts to one summit, and closes on a cadence. The prechorus climbs to the
+dominant. The solo builds to one climax and resolves.
+
+Returning sections remember what they played. The second chorus repeats the
+first note for note, the last chorus lifts it, and the second verse keeps the
+melody with small rhythm changes. A model of the listener's expectations,
+trained on the song as it plays, picks each development so its surprise suits
+the phrase: settled when the hook returns, fresher in a development, highest
+at a climax.
+
+The listener also weighs dissonance against metric position and chord changes,
+including notes held across a change. Lead part selectors such as
+`phrase_len_bars` and `composer: false` select
+the legacy performer; contour, rest and expression controls shape the composed
+part. Numeric `register: [low, high]` bounds are kept exactly. Rhythm density, voicing, and performance controls also take
+precedence over comping. See the [composer review](docs/design/composer-review.md)
+for reproductions, measurements, and remaining limits.
+
+With `foreground: full` the lead carries the melody, for instrumental
+songs. With the default `auto`, it plays the band's guitar part around a
+singer: the hook in the intro, licks at the end of verse phrases, a chorus
+part shaped by `chorus_form` or a pinned counter, and the solo.
+
+The rhythm guitar is composed too. Each song gets its own signature comp
+figures, drawn from real technique: dead-note chucks, bass-string walks into
+the next chord, sus4 hammer-ons, slid chords, boogie shuffles, stabs, and
+gallops. Verse, chorus, and bridge play contrasting figures, phrases walk up
+into the next, and the bar before a chorus follows the band's chosen
+transition device. Set a rhythm `style`
+yourself and the engine plays that instead.
+
+Every song gets its own band. The drummer's kick patterns, what the hands
+play in each section, ghost notes, fills, crash habits, and feel (straight,
+laid back, pushing, or shuffle) are drawn per song, and so are arrangement
+habits every part agrees on: how the band goes into a chorus, how phrases
+end, whether the riff opens the song alone, the solo's story and ending,
+the chorus form, and the ending. Riff-driven songs get a signature riff the
+bass can double. Pin any habit with `song.arrangement_style`; see the
+[configuration reference](docs/llm-song-config-reference.md#every-song-its-own-band).
+How busy the rhythm guitarist is (`comp_activity`: busy, normal, or
+sparse) is a per-song habit too; most songs draw normal or sparse, and
+riffs are chosen to lock with the drummer's kick and snare. See the measured [rhythm-guitar review](docs/design/rhythm-guitar-review.md)
+for the benefits, tradeoffs, and before/after previews.
+
+Engine rhythm parts get groove memory. Drums, bass, rhythm and acoustic guitar settle
+into one pattern per section and vary it at phrase ends. The pattern moves
+with the chords, and a returning chorus brings its groove back when its playing
+settings, beat grouping and genre match. Composed drum and rhythm-guitar parts
+already have their own phrase form. Two optional
+harmony touches mark arrivals: turnarounds that lead each section home, and a
+final-chorus key change.
+
+```yaml
+song:
+  turnarounds: true        # lead into sections that start on the tonic
+  final_chorus: modulate   # last chorus up a whole step (or a semitone count)
+instruments:
+  lead_gtr:
+    params: {foreground: full}
+```
+
+Set `song.composer: false` or `song.groove_memory: false` to hear the
+previous behavior. [instrumental_anthem.yaml](examples/composer/instrumental_anthem.yaml)
+and [band_with_singer.yaml](examples/composer/band_with_singer.yaml) show the
+whole system. The [composer design](docs/design/composer-architecture.md)
+explains it, with measurements against human melodies. Use
+`tools/musicality.py` to measure a build, and `tools/preview_audio.py` to
+render a quick MP3 without a DAW.
+
+Bass can answer the lead with `instruments.bass.params.hook_response: true`.
+Use `hook_response: develop` to alternate hook openings, tails and answer motifs
+across the song. Both are off by default: more conversation can reduce groove
+repetition. Compound shuffle riffs follow dotted-quarter pulses, and generated
+ideas adapt to section meter changes. See the [second review](docs/design/composer-review-round2.md)
+for reproductions, measurements and listening pairs.
 
 ## CLI reference
 
@@ -193,7 +275,7 @@ to `exports`. The song name is sanitized for filenames.
 ```text
 exports/My_Song_<timestamp>/
   My_Song.mid
-  index.yaml
+  My_Song.yaml
   QUICKREF.txt
   instruments/
     bass/
@@ -214,7 +296,7 @@ Pattern IDs identify deduplicated note windows;
 remain distinct in the sequence and index. Pattern meter is part of its identity.
 
 Use the full song for a first listen, stems for separate sounds, or section clips
-for rearranging. `QUICKREF.txt` lists DAW bar markers. `index.yaml` records section
+for rearranging. `QUICKREF.txt` lists DAW bar markers. `<song_name>.yaml` records section
 times, meters, instruments, and file paths. These text files include build metadata
 and are outside the MIDI byte-determinism check.
 
@@ -299,7 +381,7 @@ are `name`, `email`, `url`, `company`, and `band`.
 
 ## Examples and development
 
-The [example library](examples/README.md) has 166 configs covering instruments,
+The [example library](examples/README.md) has 138 configs covering instruments,
 genres, personas, seeds, and orchestration. Start with a simple genre example,
 then compare it with a longer arrangement.
 

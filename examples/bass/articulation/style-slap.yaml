@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "BassStyle_Slap"
   bpm: 115
   key: C

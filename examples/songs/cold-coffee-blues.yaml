@@ -1,0 +1,106 @@
+# Cold Coffee Blues: a slow 12/8 blues, late at night.
+#
+# Twelve-bar blues in G, felt in four slow dotted-quarter beats per bar
+# with three eighth notes in each. The singer (not rendered) takes the
+# verses; the lead guitar answers each vocal line with a lick (foreground:
+# auto) and then takes two choruses of solo. A piano (the arpeggiator)
+# rolls the triplets, the rhythm guitar plays a signature riff under the
+# verses and strums through the solo, and the composed drummer plays on the
+# 12/8 pulse: snare on pulses 2 and 4, ride eighths in the intro, a busier
+# closed hi-hat in the verses and hi-hat eighths with an open hat in the
+# solo. Nothing is swung: 12/8 is already in threes.
+#
+# Pins and choices made on purpose:
+#   - arrangement_style intro: riff_alone, so the riff opens the song
+#     alone and the drums, bass, piano and lead wait out the first half of
+#     the intro
+#   - the bass plays an authored twelve-bar line (a bass_motif theme):
+#     root, third, fifth, sixth or flat seventh, back down, on each chord.
+#     The motif owns the bass rhythm and lengths; the intro and outro turn
+#     quoting off (motif_quote_rate 0) because the line is written for 12
+#     bars, so the bass plays held roots there
+#   - the lead uses the bluesy persona for its phrasing and bends
+# The quick-change form (IV7 in bar 2) and the V7 turnaround in bar 12 are
+# written into the progression.
+#
+# Listen for:
+#   - the intro: the riff alone, then drums, bass and piano halfway through
+#   - four big beats per bar, each split in three (12/8, not 4/4 swing)
+#   - the bass line climbing and falling through each chord
+#   - licks answering the vocal lines at the end of each four bars
+#   - the turnaround on V7 pulling each chorus back to the top
+#   - the second solo chorus developing the first (varied, not repeated)
+#     over a louder band, then a quieter last verse without rhythm guitar
+version: 1
+song:
+  project: produzre-examples
+  title: "Cold Coffee Blues"
+  bpm: 80
+  key: G
+  mode: major
+  meter: "12/8"
+  genre: blues
+  seed: 6003
+  arrangement_style: {intro: riff_alone}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 12
+
+themes:
+  slow_walk:
+    role: bass_motif
+    register: [31, 55]
+    events: >-
+      1:1.5 3:1 5:.5 6:1.5 5:1 3:.5
+      4:1.5 6:1 1+:.5 2+:1.5 1+:1 6:.5
+      1:1.5 3:1 5:.5 6:1.5 5:1 3:.5
+      1:1.5 3:1 5:.5 6:1.5 5:1 3:.5
+      4:1.5 6:1 1+:.5 2+:1.5 1+:1 6:.5
+      4:1.5 6:1 1+:.5 2+:1.5 1+:1 6:.5
+      1:1.5 3:1 5:.5 6:1.5 5:1 3:.5
+      1:1.5 3:1 5:.5 6:1.5 5:1 3:.5
+      5:1.5 7:1 2+:.5 3+:1.5 2+:1 7:.5
+      4:1.5 6:1 1+:.5 2+:1.5 1+:1 6:.5
+      1:1.5 3:1 5:.5 6:1.5 5:1 3:.5
+      5:1.5 7:1 2+:.5 3+:1.5 2+:1 7:.5
+
+instruments:
+  lead_gtr:
+    persona: bluesy
+    params:
+      foreground: auto
+      register: [55, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {params: {motif_quote_rate: 0}}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  solo:
+    type: solo
+    bars: 12
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  last_verse:
+    type: verse
+    bars: 12
+    intensity: 0.55
+    harmony: {progression: "I7 IV7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7"}
+    instruments: {harmony: {}, drums: {}, bass: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 2
+    harmony: {progression: "IV7 I7"}
+    instruments: {harmony: {}, drums: {}, bass: {params: {motif_quote_rate: 0}}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, verse, solo, solo, last_verse, outro]

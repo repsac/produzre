@@ -136,6 +136,16 @@ def _create_performance_plan(
     # song-level themes so the render phase can build themed melody guides and
     # engines can quote realized material.
     theme_bank = getattr(plan, "theme_bank", None)
+
+    # Composer (design: docs/design/composer-architecture.md): song DNA is
+    # chosen once, against the song's real harmony, before any rendering.
+    from ..composer.song import adopt_hook_into_bank, build_song_composer
+
+    composer = build_song_composer(cfg, plan, theme_bank, logger)
+    if composer is not None:
+        performance_plan.set("composer.song", composer)
+        theme_bank = adopt_hook_into_bank(composer, theme_bank, logger)
+
     if theme_bank is not None and getattr(theme_bank, "themes", None):
         performance_plan.set("themes.bank", theme_bank)
 
@@ -256,8 +266,15 @@ def build_song(
             next_section_type = getattr(plan.planned_sections[idx + 1].sec, "type", None)
 
         next_energy = None
+        next_section = next_first_numeral = None
         if idx < total_sections - 1:
             next_sec = plan.planned_sections[idx + 1].sec
+            # A line that steps into the next section (a walking bass's last
+            # bar) aims at that section's first chord.
+            next_section = next_sec
+            next_slots = getattr(plan.planned_sections[idx + 1].harmony_plan, "chord_slots", None)
+            if next_slots:
+                next_first_numeral = str(next_slots[0].numeral)
             next_energy = resolve_section_energy(
                 getattr(next_sec, "energy", None),
                 str(getattr(next_sec, "type", "") or ""),
@@ -272,6 +289,8 @@ def build_song(
             "current_energy": current_energy,
             "prev_energy": prev_energy,  # For energy lift/drop detection
             "next_energy": next_energy,
+            "next_section": next_section,
+            "next_first_numeral": next_first_numeral,
             # Arrangement occurrence index: lets engines resolve the correct
             # per-occurrence transition directive for repeated sections
             # (see orchestrate.transitions.get_section_transition).
@@ -326,7 +345,7 @@ def build_song(
 
     # Phase 3: Transition-aware arranging - evaluate and apply
     # Analyze energy profiles between sections and generate transition plans.
-    transition_plans = evaluate_transitions(cfg, plan, timelines, logger)
+    transition_plans = evaluate_transitions(cfg, plan, timelines, logger, performance_plan=performance_plan)
 
     # Apply transition plans to timelines (Phase 3: ramp_up, ramp_down)
     for transition_plan in transition_plans:
@@ -337,6 +356,37 @@ def build_song(
                 transition_plan,
                 logger
             )
+
+    # A slap's velocity floor holds after transition blends and ramps too.
+    bass_timeline = timelines.get("bass")
+    if bass_timeline is not None:
+        from .render import (_get_global_instrument_cfg, _hold_slap_floor,
+                             _merge_instrument_config, effective_params_dict)
+
+        for ps, timing in zip(plan.planned_sections, plan.section_timings):
+            bass_cfg = (getattr(ps.sec, "instruments", None) or {}).get("bass")
+            if bass_cfg is None:
+                continue
+            params = effective_params_dict(_merge_instrument_config(
+                _get_global_instrument_cfg(cfg, "bass", ps.sec.id), bass_cfg))
+            _hold_slap_floor([e for e in bass_timeline.events
+                              if timing.start_beat - 0.1 <= e.start_beat < timing.end_beat - 0.1],
+                             params)
+
+    # Transition ramps can lengthen notes after section-level cleanup.
+    # Keep the lead monophonic except double stops (composer.realize).
+    lead_timeline = timelines.get("lead_gtr")
+    if lead_timeline is not None:
+        from ..composer.realize import sounds_with
+
+        notes = sorted(lead_timeline.events, key=lambda e: (e.start_beat, e.pitch))
+        for i, current in enumerate(notes):
+            following = next((e for e in notes[i + 1:] if not sounds_with(current, e)), None)
+            if following is None:
+                continue
+            current.duration_beats = min(current.duration_beats,
+                                         max(0.0, following.start_beat - current.start_beat))
+        lead_timeline.events[:] = [e for e in notes if e.duration_beats > 1e-6]
 
     _log_section_timings(logger, list(plan.section_timings), bpm=float(cfg.song.bpm))
     _log_instrument_summary(logger, timelines)

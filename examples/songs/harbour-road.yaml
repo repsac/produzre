@@ -1,0 +1,101 @@
+# Harbour Road: a roots reggae song, one-drop in the verses.
+#
+# A slow, heavy groove in A minor. The drummer plays a one-drop in the
+# verses and the dub (nothing on 1, kick and cross-stick together on 3) and
+# moves to a rockers kick on 1 and 3 in the choruses. The rhythm guitar
+# skanks on the offbeats, and the bass plays an authored four-bar riddim (a
+# bass_motif theme) note for note in the intro, verses, dub and outro. The
+# melody is played on a harmonica patch (lead_gtr, program 22), in the
+# spirit of instrumental melodica reggae: with no singer, the lead carries
+# the tune throughout (foreground: full).
+#
+# Pins and choices made on purpose (none in arrangement_style):
+#   - drums seed 8: reggae drummers draw one-drop, rockers or steppers per
+#     section, and this drummer plays one-drop verses and rockers choruses
+#     under the shared produzre-examples project
+#   - the chorus turns riddim quoting off (motif_quote_rate 0), since the
+#     riddim is written for i and iv; there the bass plays roots and fifths
+#     with the rockers kick on 1 and 3
+#
+# Listen for:
+#   - the intro: the skank alone, then drums, bass and melody halfway through
+#   - the one-drop: an empty beat 1 and the drop on 3 in every verse bar
+#   - the riddim bass line repeating under every verse
+#   - the skank on the offbeats, and the kick opening up in the chorus
+#   - the dub: drums and bass alone, then the band dropping back in
+version: 1
+song:
+  project: produzre-examples
+  title: "Harbour Road"
+  bpm: 74
+  key: A
+  mode: minor
+  meter: "4/4"
+  genre: reggae
+  seed: 5702
+  turnarounds: true
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  rhythm_gtr: {program: 27}
+  lead_gtr: {program: 22}
+
+themes:
+  riddim:
+    role: bass_motif
+    register: [33, 57]
+    events: >-
+      1:1 .:.5 1:.5 3:.5 5:.5 3:1
+      4:1 .:.5 4:.5 6:.5 1+:.5 6:1
+      1:1 .:.5 1:.5 3:.5 5:.5 7:.5 5:.5
+      5:1 .:.5 5:.5 7:.5 2+:.5 7:.5 5:.5
+
+instruments:
+  drums: {seed: 8}
+  bass:
+    persona: dub
+    params: {articulation_style: finger}
+  lead_gtr:
+    params:
+      foreground: full
+      register: [62, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "i iv i v"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "i iv i v"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "bVI bVII i i bVI bVII v v"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {params: {motif_quote_rate: 0}}
+      rhythm_gtr: {}
+      lead_gtr: {}
+  dub:
+    type: breakdown
+    bars: 8
+    harmony: {progression: "i iv i v"}
+    instruments: {harmony: {}, drums: {}, bass: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "i iv i i"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, dub, verse, chorus, outro]

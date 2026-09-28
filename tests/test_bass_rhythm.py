@@ -16,10 +16,10 @@ from pathlib import Path
 def test_rhythm_patterns_differ():
     """Verify different rhythm patterns produce different event counts."""
     patterns = {
-        "anchor": "examples/bass/rhythm/rhythm-anchor.yaml",
-        "drive": "examples/bass/rhythm/rhythm-drive.yaml",
-        "syncopated": "examples/bass/rhythm/rhythm-syncopated.yaml",
-        "push": "examples/bass/rhythm/rhythm-push.yaml",
+        "anchor": "tests/fixtures/examples/bass/rhythm/rhythm-anchor.yaml",
+        "drive": "tests/fixtures/examples/bass/rhythm/rhythm-drive.yaml",
+        "syncopated": "tests/fixtures/examples/bass/rhythm/rhythm-syncopated.yaml",
+        "push": "tests/fixtures/examples/bass/rhythm/rhythm-push.yaml",
     }
 
     event_counts = {}
@@ -60,7 +60,7 @@ def test_density_controls_note_count():
     # anchor pattern has 8 eligible slots (beats 1 and 3 in 4 bars)
 
     result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", "examples/bass/rhythm/rhythm-anchor.yaml"],
+        [sys.executable, "-m", "produzre.cli", "build", "tests/fixtures/examples/bass/rhythm/rhythm-anchor.yaml"],
         capture_output=True,
         text=True,
         timeout=30,
@@ -107,7 +107,7 @@ def test_rest_rate_creates_gaps():
         onsets = [float(ln.split("\t")[4]) for ln in lines[1:] if ln.strip()]
         return len(onsets), onsets
 
-    src = Path("examples/bass/rhythm/rhythm-drive.yaml")
+    src = Path("tests/fixtures/examples/bass/rhythm/rhythm-drive.yaml")
     count_rests, onsets_rests = build_and_count(src)
 
     # Same config with rests disabled, written to a temp file.
@@ -140,7 +140,7 @@ def test_rest_rate_creates_gaps():
 def test_rhythm_determinism():
     """Verify rhythm is deterministic with same seed."""
     # Build the same pattern twice with same seed
-    yaml_path = "examples/bass/rhythm/rhythm-drive.yaml"
+    yaml_path = "tests/fixtures/examples/bass/rhythm/rhythm-drive.yaml"
 
     def build_and_get_events():
         result = subprocess.run(
@@ -169,10 +169,10 @@ def test_rhythm_determinism():
 def test_pattern_logs_correctly():
     """Verify rhythm pattern is logged correctly."""
     patterns_to_test = [
-        ("examples/bass/rhythm/rhythm-anchor.yaml", "anchor"),
-        ("examples/bass/rhythm/rhythm-drive.yaml", "drive"),
-        ("examples/bass/rhythm/rhythm-syncopated.yaml", "syncopated"),
-        ("examples/bass/rhythm/rhythm-push.yaml", "push"),
+        ("tests/fixtures/examples/bass/rhythm/rhythm-anchor.yaml", "anchor"),
+        ("tests/fixtures/examples/bass/rhythm/rhythm-drive.yaml", "drive"),
+        ("tests/fixtures/examples/bass/rhythm/rhythm-syncopated.yaml", "syncopated"),
+        ("tests/fixtures/examples/bass/rhythm/rhythm-push.yaml", "push"),
     ]
 
     for yaml_path, expected_pattern in patterns_to_test:

@@ -29,10 +29,30 @@ for section overrides and how recipes combine with personas.
 | Acoustic guitar | `natural` (default), `precise`, `expressive`, `percussive`, `delicate` |
 
 Tight players use restrained timing variation. Pocket and dub bass sit later;
-walking bass favors continuous chord movement. Funk and metal choices change
-articulation and activity. Lead personas change phrase length, contour,
-resolution, and rests. Acoustic personas change picking/strumming behavior,
-muting, percussion, and expression.
+walking bass plays a walking line (a quarter note on every beat, stepping
+into each chord change) whatever the recipe, density or drum locks. Funk and
+metal choices change articulation and activity. Acoustic personas change
+picking/strumming behavior, muting, percussion, and expression.
+
+With the composer on (the default), a persona is a starting point, not a
+part. Only settings you write yourself count as your choice:
+
+- Drum personas set the composed drummer's touch and timing (jitter,
+  velocity variation, push or pull against the beat). Its patterns and
+  feel come from the song's drum DNA, so persona fill, hat and voice rates
+  and persona swing do not change them. Your own `fill_rate`,
+  `hat_density`, `kick_density`, `ghost_rate` and `swing` do.
+- Lead personas set phrase length, contour, rests and resolution for the
+  classic lead generator. The composed lead is shaped only by the
+  `rest_probability` and `contour_style` you set yourself.
+- Rhythm guitar personas move the composed comping's timing against the
+  beat; its figures, strums and dynamics stay the song's own.
+
+Set `composer: false` on an instrument to hear a persona on its classic
+engine. A persona under `instruments` applies to the whole song; a
+`persona` on a section's instrument replaces it for that section only. Either
+way it is the base layer: recipes, your global instrument params and the
+section's own params all win over it.
 
 The actual preset values are in
 [produzre/resources/personas](../../produzre/resources/personas).
@@ -43,10 +63,10 @@ for the tight persona's locking defaults.
 
 ## Compare the examples
 
-- [bass/persona-pocket.yaml](bass/persona-pocket.yaml): compare `persona: pocket` with `tight`; key, tempo, seed, intensity, and progression are identical.
-- [bass/persona-tight.yaml](bass/persona-tight.yaml): hear the tight baseline for the pocket and walking comparisons.
-- [bass/persona-walking.yaml](bass/persona-walking.yaml): compare `persona: walking` with `tight` over the same E dorian progression and seed.
-- [drums/persona-demo.yaml](drums/persona-demo.yaml): hear six drum personas, then a rock override with `swing: 0.25` and `fill_rate: 0.8`; section intensity changes too.
+- [bass/persona-tight.yaml](bass/persona-tight.yaml): the tight baseline for the pocket and walking comparisons, over drums.
+- [bass/persona-pocket.yaml](bass/persona-pocket.yaml): `persona: pocket`, a few milliseconds behind the beat; key, tempo, seed, drums and progression match.
+- [bass/persona-walking.yaml](bass/persona-walking.yaml): `persona: walking`, a walking quarter-note line over the same E dorian progression and seed.
+- [drums/persona-tight.yaml](drums/persona-tight.yaml), [drums/persona-rock.yaml](drums/persona-rock.yaml), [drums/persona-jazz-lite.yaml](drums/persona-jazz-lite.yaml): the same composed drummer and band with three drum personas; the hits match and the timing and velocity differ (tight on the grid, rock about 5 ms ahead, jazz-lite about 20 ms ahead with the widest spread).
 
 ```bash
 for file in examples/personas/drums/*.yaml examples/personas/bass/*.yaml; do

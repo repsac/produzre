@@ -1,0 +1,96 @@
+# Pop: a hook-first song in E major with piano, acoustic guitar and a singer.
+#
+# A piano figure (the arpeggiator in phrase mode, on a piano patch) opens
+# the song and follows the melody guide, the acoustic guitar fingerpicks
+# the verses and strums the choruses, and the electric rhythm guitar joins
+# for the prechorus and chorus. The lead guitar plays around the singer
+# (foreground: auto): the hook in the intro, a few licks in the verse, a
+# harmony line under the singer's chorus melody and the hook as a tag at
+# the end of each chorus. The last chorus steps up a whole tone.
+#
+# Pinned, and why:
+#   - arrangement_style.chorus_form: anthem, the lead harmonizes the
+#     chorus melody in thirds and sixths, like a band singing along
+#   - arrangement_style.into_chorus: stop, a stop-time bar before each
+#     chorus so it lands hard (the bass and drums hit it together)
+#   - song.final_chorus: modulate, the classic truck-driver key change
+#   - engines: acoustic piano for the arpeggiator
+# The drummer, the comp figures, the bass roles and the hook come from the
+# shared produzre-examples project and the seed.
+#
+# Listen for:
+#   - the piano figure and the guitar hook alone in the intro, the band
+#     joining in the verse
+#   - the verse bass locked to the kick, a root on every downbeat
+#   - the prechorus climbing (ii iii IV V) into a stop, then the chorus
+#   - the lead harmonizing the chorus melody, then tagging the hook
+#   - the bridge dropping to the relative minor, with its own stop into
+#     the last chorus
+#   - the final chorus up a whole step
+version: 1
+song:
+  project: produzre-examples
+  title: "Paper Planes Tonight"
+  bpm: 116
+  key: E
+  mode: major
+  meter: "4/4"
+  genre: pop
+  seed: 1182
+  turnarounds: true
+  final_chorus: modulate
+  exports_root: "exports"
+  arrangement_style:
+    chorus_form: anthem
+    into_chorus: stop
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+engines:
+  arpeggiator: {program: 0}   # GM Acoustic Grand Piano
+
+instruments:
+  arpeggiator:
+    params: {pattern: phrase, note_duration: 0.5}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 81]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I vi IV V"}
+    instruments: {harmony: {}, arpeggiator: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I vi IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  prechorus:
+    type: prechorus
+    bars: 4
+    harmony: {progression: "ii iii IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, rhythm_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi IV I V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, arpeggiator: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "I vi IV I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, acoustic_gtr: {}, arpeggiator: {}}
+
+arrangement: [intro, verse, prechorus, chorus, verse, prechorus, chorus, bridge, chorus, outro]

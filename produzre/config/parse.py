@@ -19,6 +19,7 @@ These functions assume that higher-level validation (e.g., presence of `song`,
 from typing import Any, Dict, Optional
 
 from .errors import ConfigError
+from ..genres import normalize_genre
 from ..model import (
     HarmonyConfig,
     InstrumentConfig,
@@ -151,7 +152,7 @@ def parse_song(song_data: Dict[str, Any]) -> SongConfig:
     exports_root = str(song_data.get("exports_root", "exports"))
 
     genre = song_data.get("genre")
-    genre = str(genre).strip() if genre is not None else None
+    genre = normalize_genre(str(genre).strip() if genre is not None else None)
 
     # Parse transition settings from params.transitions if present
     transitions = TransitionSettings()  # Default
@@ -233,7 +234,7 @@ def _parse_instrument_config(name: str, data: Dict[str, Any]) -> InstrumentConfi
 
     genre = data.get("genre")
     if genre is not None:
-        genre = str(genre).strip()
+        genre = normalize_genre(str(genre).strip())
 
     voicing = data.get("voicing")
     register = data.get("register")

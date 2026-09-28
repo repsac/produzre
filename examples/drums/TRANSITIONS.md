@@ -1,106 +1,76 @@
-# Drum Transitions Feature
+# Drum transitions
 
-The transitions feature makes the drummer announce section changes with pickups and downbeat punctuation.
+How the composed band gets from one section to the next.
+[transitions-demo.yaml](transitions-demo.yaml) plays a whole song with the
+habits pinned; [transitions/](transitions/) has one short song per way
+into a chorus.
 
-## Features
+## Arrangement habits
 
-### Pickup Window
-- **What**: Snare roll in the last 2 beats before transitioning to a different section type
-- **When**: Triggered when next section has a different type (verse→chorus, chorus→bridge, etc.)
-- **Configurable**: `drums.params.pickup_rate` (0.0-1.0, default 0.7)
-- **Effect**: 16th note snare crescendo leading into the next section
-
-### Downbeat Punctuation
-- **What**: Crash cymbal + kick on beat 1 when section type changes
-- **When**: Triggered on first beat of a new section type
-- **Configurable**: `drums.params.downbeat_rate` (0.0-1.0, default 0.8)
-- **Effect**: Emphasizes the section boundary with a crash accent
-
-## Configuration
-
-Add to your YAML under `sections.<section_name>.instruments.drums.params`:
+Each song draws habits that the drums, bass and rhythm guitar agree on.
+Pin any of them with `song.arrangement_style`
+([reference](../../docs/llm-song-config-reference.md#every-song-its-own-band)):
 
 ```yaml
-sections:
-  verse:
-    instruments:
-      drums:
-        params:
-          pickup_rate: 0.7      # 70% chance of pickup before section change
-          downbeat_rate: 0.8    # 80% chance of downbeat crash on section change
+song:
+  arrangement_style:
+    into_chorus: stop     # stop | build | fill | push | drop
+    intro: riff_alone     # full | riff_alone
+    ending: cold          # ring | cold | big
 ```
 
-### Disabling Transitions
+### Into a chorus
 
-Set rates to 0.0 to disable:
+The last bar before a chorus:
 
-```yaml
-# Disable pickups (no snare roll before section changes)
-pickup_rate: 0.0
+| `into_chorus` | Drums | Bass | Rhythm guitar | Demo |
+|---|---|---|---|---|
+| `stop` | Kick and crash on 1, silence, a two-note snare pickup | Hits 1 with the band, then rests | One chord, silence, a chuck and an upstroke | [into-chorus-stop.yaml](transitions/into-chorus-stop.yaml) |
+| `build` | A snare build, not a fill: eighths rising to sixteenths over the last bar or two (each song draws the length), the kick on every beat under the sixteenths | Root eighths swelling into the chorus | Straight eighth strums | [into-chorus-build.yaml](transitions/into-chorus-build.yaml) |
+| `fill` | The big fill | Leaves the last beat to the fill | Its figure, then chucks and an upstroke | [into-chorus-fill.yaml](transitions/into-chorus-fill.yaml) |
+| `push` | The groove, then crash and kick on the last "and", ringing over the downbeat | Hits the same "and" | Its figure, then a held chord on the same "and" | [into-chorus-push.yaml](transitions/into-chorus-push.yaml) |
+| `drop` | Silence, then a snare hit on the last beat and a floor-tom pickup | Drops out for the bar | One chord held for the bar | [into-chorus-drop.yaml](transitions/into-chorus-drop.yaml) |
 
-# Disable downbeat punctuation (no crash on section transitions)
-downbeat_rate: 0.0
-```
+The band agrees on the device after any kind of section (a bridge or a
+solo into a chorus too). Every other section boundary gets the drummer's
+big fill in the last bar, and every new section opens with a crash (a
+pushed chorus takes its crash on the "and" before it; see
+[PHRASING.md](PHRASING.md) for the other exceptions).
 
-## Detection Logic
+### Intros and endings
 
-Transitions are detected automatically based on section `type` field:
+- `intro: riff_alone`: in a song that opens with an intro, the guitar plays
+  alone for the first half; the drums, the bass and every other part (lead,
+  arpeggiator) enter together halfway, the drums with a fill and a crash.
+  An intro without a rhythm or acoustic
+  guitar plays from the top.
+- `ending: ring`: the last bar is one crash and kick, left to ring, with
+  the bass holding the root.
+- `ending: cold`: the band stops on the last downbeat and the crash is
+  choked.
+- `ending: big`: a hit, a swelling roll around the kit, and a final crash;
+  the bass hits and holds.
 
-- **Pickup**: Added to end of section when `next_section.type != current_section.type`
-- **Downbeat**: Added to start of section when `prev_section.type != current_section.type`
-- **No transition**: When consecutive sections have the same type (verse→verse, chorus→chorus)
+With `fill_rate: 0` in the last section, a big ending plays as a ring.
 
-## Example
+## The transition planner
 
-See [examples/drums/transitions-demo.yaml](transitions-demo.yaml) for a full demonstration:
+`song.params.transitions` runs after every part is written and adjusts
+section boundaries for the whole band: occasional pickups before a new
+section (in the part's register, key and meter, and never into silence),
+velocity ramps, and a blended first bar after a large energy change. The
+blended first bar uses the new section's meter and never thins the
+composed drummer's bar; on classic-engine drums it thins only the hand
+timekeeping. Its settings (`strength`, `pickup_rate`, `turnaround_rate`,
+`ramp_bars`, `bridge_start_bars`) are in the
+[transitions reference](../../docs/llm-song-config-reference.md#transitions).
+Pickups it adds show up in the events TSV as `pickup_transition`.
 
-```yaml
-arrangement:
-  - verse_intro      # No pickup (first section)
-  - chorus           # ✓ Pickup at end of verse + ✓ Downbeat crash
-  - verse_return     # ✓ Pickup at end of chorus + ✓ Downbeat crash
-  - bridge           # ✓ Pickup at end of verse + ✓ Downbeat crash
-  - chorus_final     # ✓ Pickup at end of bridge + ✓ Downbeat crash
-```
+## The classic engine's transition controls
 
-## Grid Visualization
-
-The grid view shows transition effects:
-
-```
-BAR 4   |1e&a2e&a3e&a4e&a|  (last bar of verse)
-SNARE   |----x---ggggxxxx|  ← Pickup roll
-
-BAR 5   |1e&a2e&a3e&a4e&a|  (first bar of chorus)
-CRASH   |^---------------|  ← Downbeat crash (^ = transition)
-KICK    |x---------------|  ← Downbeat kick
-```
-
-## Implementation Details
-
-### Pickup Window
-- **Duration**: Last 2 beats of section
-- **Pattern**: 16th note snare rolls
-- **Velocity**: Crescendo from soft to loud (e.g., 50 → 80)
-- **Kind**: `snare_pickup` (for analysis/debugging)
-
-### Downbeat Punctuation
-- **Crash**: Added on beat 0.0 with accent velocity
-- **Kick**: Added on beat 0.0 for emphasis
-- **Kind**: `crash_transition`, `kick_transition`
-- **Collision detection**: Skips if crash/kick already present
-
-## Performance Considerations
-
-- Transitions use the section's deterministic RNG
-- Probability checks (`pickup_rate`, `downbeat_rate`) consume one RNG draw each
-- No performance impact when rates are 0.0
-
-## Future Enhancements
-
-Potential future additions:
-
-- `transition_style` param: `safe` (current behavior) vs `bold` (more aggressive fills)
-- Configurable pickup window length (1 beat, 2 beats, full bar)
-- Different pickup patterns (tom fills, cymbal swells, etc.)
-- Section-specific overrides for transition behavior
+Drum `pickup_rate` (a snare roll before a new section type) and
+`downbeat_rate` (crash and kick on its first beat) belong to the classic
+engine. With the composed drummer they are logged as unused. Set
+`composer: false` in the drum params to use them;
+[classic-engine-demo.yaml](classic-engine-demo.yaml) turns each one off in
+one section.

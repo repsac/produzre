@@ -1,5 +1,6 @@
 version: 1
 song:
+  project: produzre-examples
   title: "ThemeBankDemo"
   bpm: 120
   key: E
@@ -50,9 +51,15 @@ themes:
     events: "1:.5 3:.5 2:.5 3:.5 1:.25 1:.25 3:.5 2:.5 4:.5"
 
 # Accompaniment coupling is opt-in; this demo turns it on so you can hear it.
+# The rhythm guitar's `lock_to_riff` is also a part selector: it hands the
+# guitar to its classic engine, which takes the riff's accents. The drums
+# play the classic engine anyway (kit_groove is the beat) and accent some
+# riff onsets. The bass plays the authored bass_hook, which owns the bass
+# line with its written rhythm, so it needs no coupling. The lead is
+# composed around the hook: in each chorus it answers (the drawn chorus
+# form is `call`) and closes on the hook as a tag, which the final chorus
+# lifts an octave.
 instruments:
-  bass:
-    params: {lock_to_riff: 1.0}
   rhythm_gtr:
     params: {lock_to_riff: 0.7}
   drums:

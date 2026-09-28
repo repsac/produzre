@@ -1,0 +1,81 @@
+# Lead foreground: the melody itself, or the guitar around a singer.
+#
+# `foreground` sets the lead's job, per section or for the whole song:
+#
+#   full   the lead is the melody (instrumental music): an eight-bar period
+#          in the verse, hook lines in the chorus
+#   auto   the default: the lead plays around a singer, with signature
+#          licks at phrase ends in the verse, and a counter-line under the
+#          chorus with the hook as a tag
+#
+# The first verse and chorus are instrumental; the second pair plays the
+# same chords as a band backing a singer (no vocal part is written, so you
+# hear the space a singer would fill). `arrangement_style` pins how the
+# lead behaves under the sung chorus (`counter: guide`, a sustained line of
+# guide tones moving by step) and how often it fills (`lead_fills: normal`,
+# every four bars). Other counter styles are `octaves`, `stabs` and `fills`.
+# Because `counter` is pinned and `chorus_form` is not, the sung chorus
+# plays that plain counter-line; pin `chorus_form` (`lift` climbs, `anthem`
+# harmonizes the singer's line, `call` answers it) to shape it instead.
+version: 1
+song:
+  project: produzre-examples
+  title: "Lead Foreground Comparison"
+  bpm: 96
+  key: G
+  mode: major
+  meter: "4/4"
+  genre: pop_rock
+  seed: 5102
+  arrangement_style: {counter: guide, lead_fills: normal}
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+sections:
+  verse_melody:
+    type: verse
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {foreground: full}}
+  chorus_melody:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V I vi"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {foreground: full}}
+  verse_singer:
+    type: verse
+    bars: 8
+    harmony: {progression: "I V vi IV"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {foreground: auto}}
+  chorus_singer:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV V I vi"}
+    instruments:
+      harmony: {}
+      drums: {}
+      bass: {}
+      rhythm_gtr: {}
+      lead_gtr: {params: {foreground: auto}}
+
+arrangement: [verse_melody, chorus_melody, verse_singer, chorus_singer]

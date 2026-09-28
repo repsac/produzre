@@ -1,0 +1,48 @@
+version: 1
+song:
+  title: "Slap_Funk"
+  bpm: 110
+  key: C
+  mode: major
+  meter: "4/4"
+  beats_per_bar: 4
+  seed: 700  # Fixed seed for reproducibility
+  variation: 0.0
+  humanize_velocity: 0.0
+  humanize_timing: 0.0
+  exports_root: "exports"
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid, tab]
+    subdiv: 16
+
+instruments:
+  bass:
+    enabled: true
+    persona: funk  # Funk persona with slap technique
+    intensity: 0.8
+    params:
+      articulation_style: slap  # Slap bass style
+      rhythm_pattern: syncopated
+      density: 0.8
+      rest_rate: 0.15
+      slap_pop_rate: 0.7      # High pop rate for funk
+      slap_thumb_rate: 0.9    # Strong thumb presence
+      ghost_perc_rate: 0.25   # Funk uses ghost notes
+      slap_velocity_floor: 75
+      pop_velocity_boost: 25
+
+sections:
+  verse1:
+    type: verse
+    bars: 4
+    harmony:
+      progression: "I IV V I"
+    instruments:
+      harmony: {}
+      bass: {}
+
+arrangement:
+  - verse1

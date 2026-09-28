@@ -35,7 +35,7 @@ def _export_root(result: subprocess.CompletedProcess) -> str:
 # ---------------------------------------------------------------------------
 
 class TestRhythmGuitar:
-    YAML = "examples/rhythm_gtr/sustained-chords-demo.yaml"
+    YAML = "tests/fixtures/examples/rhythm_gtr/sustained-chords-demo.yaml"
 
     def test_builds_successfully(self):
         result = _build(self.YAML)
@@ -66,7 +66,7 @@ class TestRhythmGuitar:
 # ---------------------------------------------------------------------------
 
 class TestLeadGuitar:
-    YAML = "examples/lead_gtr/styles/rock-solo.yaml"
+    YAML = "tests/fixtures/examples/lead_gtr/styles/rock-solo.yaml"
 
     def test_builds_successfully(self):
         result = _build(self.YAML)
@@ -95,7 +95,7 @@ class TestLeadGuitar:
 # ---------------------------------------------------------------------------
 
 class TestAcousticGuitar:
-    YAML = "examples/acoustic_gtr/style-comparison.yaml"
+    YAML = "tests/fixtures/examples/acoustic_gtr/style-comparison.yaml"
 
     def test_builds_successfully(self):
         result = _build(self.YAML)
@@ -126,7 +126,7 @@ class TestAcousticGuitar:
 class TestGuitarPersonas:
     def test_personas_load(self):
         from produzre.config.load import load_root_config
-        cfg = load_root_config("examples/genres/rock/rock-recipe-showcase.yaml")
+        cfg = load_root_config("tests/fixtures/examples/genres/rock/rock-recipe-showcase.yaml")
         personas = cfg.raw.get("_personas", {})
         for inst in ("rhythm_gtr", "lead_gtr", "acoustic_gtr"):
             assert inst in personas, f"Missing personas for {inst}"
@@ -135,7 +135,7 @@ class TestGuitarPersonas:
 
     def test_effective_persona_defaults(self):
         from produzre.config.load import load_root_config
-        cfg = load_root_config("examples/genres/rock/rock-recipe-showcase.yaml")
+        cfg = load_root_config("tests/fixtures/examples/genres/rock/rock-recipe-showcase.yaml")
         eff = cfg.raw.get("_effective", {}).get("instruments", {})
         assert eff.get("rhythm_gtr", {}).get("persona") == "tight"
         assert eff.get("lead_gtr", {}).get("persona") == "balanced"
@@ -144,7 +144,7 @@ class TestGuitarPersonas:
     def test_persona_params_reach_engine(self):
         from produzre.config.load import load_root_config
         from produzre.orchestrate.render import _get_global_instrument_cfg
-        cfg = load_root_config("examples/genres/rock/rock-recipe-showcase.yaml")
+        cfg = load_root_config("tests/fixtures/examples/genres/rock/rock-recipe-showcase.yaml")
         for inst in ("rhythm_gtr", "lead_gtr", "acoustic_gtr"):
             ic = _get_global_instrument_cfg(cfg, inst)
             assert ic is not None, f"No instrument config for {inst}"

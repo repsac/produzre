@@ -78,7 +78,7 @@ def test_param_plumbing_user_params_reach_engine(caplog):
     from produzre.config.load import load_root_config
     from produzre.orchestrate.build import build_song
 
-    cfg = load_root_config(str(REPO_ROOT / "examples/bass/rhythm/rhythm-drive.yaml"))
+    cfg = load_root_config(str(REPO_ROOT / "tests/fixtures/examples/bass/rhythm/rhythm-drive.yaml"))
 
     with caplog.at_level(logging.INFO):
         result = build_song(

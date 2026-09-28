@@ -207,7 +207,7 @@ class TestLegacyPlayPatterns:
         from produzre.harmony import build_harmony_plan, parse_meter
         from produzre.rhythm import create_basic_rhythm_grid
 
-        cfg = load_root_config("examples/rhythm_gtr/sustained-chords-demo.yaml")
+        cfg = load_root_config("tests/fixtures/examples/rhythm_gtr/sustained-chords-demo.yaml")
         section = cfg.sections["intro_normal"]
         logger = logging.getLogger("test_chord_shapes_fixes")
         harmony_plan = build_harmony_plan(cfg=cfg, section=section, logger=logger)

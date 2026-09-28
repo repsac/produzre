@@ -71,17 +71,26 @@ def _lead_foreground_mode(cfg: Any, section: Any) -> str:
     if lead_cfg is not None:
         extra = getattr(lead_cfg, "extra", None)
         if isinstance(extra, dict):
-            mode = extra.get("foreground")
+            nested = extra.get("extra") if isinstance(extra.get("extra"), dict) else {}
+            mode = nested.get("foreground", extra.get("foreground"))
     if mode is None:
         raw = getattr(cfg, "raw", None)
         if isinstance(raw, dict):
             data = (raw.get("instruments") or {}).get("lead_gtr")
             if isinstance(data, dict):
-                extra = data.get("extra")
-                if isinstance(extra, dict) and "foreground" in extra:
-                    mode = extra.get("foreground")
-                elif "foreground" in data:
+                # `params:` is the documented block; `extra:` and a bare key
+                # are accepted aliases.
+                for block in (data.get("params"), data.get("extra")):
+                    if isinstance(block, dict) and "foreground" in block:
+                        mode = block.get("foreground")
+                        break
+                if mode is None and "foreground" in data:
                     mode = data.get("foreground")
+    if mode is None:
+        active = {name for name, part in (getattr(section, "instruments", None) or {}).items()
+                  if name != "harmony" and getattr(part, "enabled", True) is not False}
+        if active == {"lead_gtr"}:
+            mode = "full"
     return str(mode or "auto").strip().lower()
 
 

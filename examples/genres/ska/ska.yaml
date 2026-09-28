@@ -1,0 +1,100 @@
+# Ska: an upbeat two-tone song in Bb major with a singer.
+#
+# The guitar skanks on every offbeat (doubled up in the bridge and solo),
+# the bass walks quarter notes through the changes, and the drummer keeps
+# a fast backbeat with the hi-hat foot on every beat in the verse and a
+# stomp in the chorus. The lead guitar plays
+# around the singer (foreground: auto) like a horn section: the hook in the
+# intro, and rhythmic stabs on the hook's attacks under the chorus. Groove
+# memory gives ska a two-bar groove.
+#
+# Pinned, and why:
+#   - bass rhythm_pattern walking: the ska walking line, a real walk with
+#     every beat sounding, a root on each change and a step or half step
+#     into the next (a line setting like this keeps the bass engine rather
+#     than a composed bass role)
+#   - rhythm_gtr register_max 76: keeps the skank chords in the middle of
+#     the neck instead of up around the lead
+#   - arrangement_style.counter: stabs, horn-section style hits with the
+#     chorus hook
+#   - arrangement_style.comp_activity: busy, the skank plays its full
+#     figure every bar
+#   - arrangement_style.solo_story: trade, short phrases with gaps, like a
+#     horn trading with the band
+# The drummer, the skank figures and the hook come from the shared
+# produzre-examples project and the seed, including the stop before each
+# chorus: the band hits the downbeat of the last verse (or solo) bar and
+# rests until a quick pickup.
+#
+# Listen for:
+#   - two bars of skank alone in the intro, then the band
+#   - upstroke skanks on the "and" of every beat
+#   - a walking bass under the I vi ii V verse
+#   - the lead stabbing the chorus hook rhythm like horns
+#   - the bridge on vi, then back to the chorus
+version: 1
+song:
+  project: produzre-examples
+  title: "Two Tone Tuesday"
+  bpm: 158
+  key: Bb
+  mode: major
+  meter: "4/4"
+  genre: ska
+  seed: 2626
+  turnarounds: true
+  exports_root: "exports"
+  arrangement_style:
+    counter: stabs
+    comp_activity: busy
+    solo_story: trade
+
+exports:
+  midi_text:
+    enabled: true
+    views: [events, grid]
+    subdiv: 16
+
+instruments:
+  bass:
+    params: {rhythm_pattern: walking}
+  rhythm_gtr:
+    params: {register_max: 76}
+  lead_gtr:
+    params:
+      foreground: auto
+      register: [62, 82]
+
+sections:
+  intro:
+    type: intro
+    bars: 4
+    harmony: {progression: "I vi ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  verse:
+    type: verse
+    bars: 8
+    harmony: {progression: "I vi ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  chorus:
+    type: chorus
+    bars: 8
+    harmony: {progression: "IV I V I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  bridge:
+    type: bridge
+    bars: 8
+    harmony: {progression: "vi V IV V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}}
+  solo:
+    type: solo
+    bars: 8
+    harmony: {progression: "I vi ii V"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+  outro:
+    type: outro
+    bars: 4
+    harmony: {progression: "IV V I I"}
+    instruments: {harmony: {}, drums: {}, bass: {}, rhythm_gtr: {}, lead_gtr: {}}
+
+arrangement: [intro, verse, chorus, verse, chorus, bridge, solo, chorus, outro]

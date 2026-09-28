@@ -18,7 +18,7 @@ import statistics
 
 def test_solo_mode_detection():
     """Verify solo mode is detected from solo=True flag."""
-    yaml_path = "examples/bass/advanced/solo-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-pocket.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -36,7 +36,7 @@ def test_solo_mode_detection():
 
 def test_role_lead_detection():
     """Verify solo mode is detected from role=lead."""
-    yaml_path = "examples/bass/advanced/solo-funk.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-funk.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -54,7 +54,7 @@ def test_role_lead_detection():
 
 def test_solo_higher_density():
     """Verify solo sections have higher note density than normal."""
-    yaml_path = "examples/bass/advanced/solo-comparison.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-comparison.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -96,62 +96,47 @@ def test_solo_higher_density():
     print(f"✓ Solo has higher density (verse1={verse1_notes}, solo={solo1_notes}, verse2={verse2_notes})")
 
 
+def _solo_comparison_by_seed(seeds):
+    """Per-seed (section id -> pitches) for the solo comparison fixture."""
+    import yaml
+    from tests.test_groove_clock import _load_cfg, _render_timelines
+    import tempfile
+
+    base = yaml.safe_load(Path("tests/fixtures/examples/bass/advanced/solo-comparison.yaml").read_text())
+    out = []
+    for seed in seeds:
+        base["song"]["seed"] = seed
+        cfg = _load_cfg(tempfile.mkdtemp(), yaml.safe_dump(base, sort_keys=False))
+        timelines, result = _render_timelines(cfg)
+        sections = {}
+        for meta in result.performance_plan.sections:
+            sections[meta.id] = [e.pitch for e in timelines["bass"].events
+                                 if meta.start_beat - 0.06 <= e.start_beat < meta.end_beat - 0.06]
+        out.append(sections)
+    return out
+
+
 def test_solo_expanded_register():
-    """Verify solo sections use higher register (higher notes)."""
-    yaml_path = "examples/bass/advanced/solo-comparison.yaml"
+    """Solo sections may leave the accompaniment range (up to solo_register_high).
 
-    result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", yaml_path],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    assert result.returncode == 0
-
-    export_lines = [l for l in result.stderr.splitlines() if "Export root:" in l]
-    export_root = export_lines[0].split("Export root:")[1].strip()
-
-    # Read TSV
-    tsv_path = Path(export_root) / "analysis" / "bass" / "Solo_Comparison_bass.events.tsv"
-    content = tsv_path.read_text()
-    lines = content.strip().split("\n")
-
-    # Collect pitches by section
-    verse1_pitches = []
-    solo1_pitches = []
-    verse2_pitches = []
-
-    for line in lines[1:]:
-        parts = line.split("\t")
-        if len(parts) >= 12:
-            section_id = parts[1]
-            pitch = int(parts[6])
-
-            if section_id == "verse1":
-                verse1_pitches.append(pitch)
-            elif section_id == "solo1":
-                solo1_pitches.append(pitch)
-            elif section_id == "verse2":
-                verse2_pitches.append(pitch)
-
-    # Solo should have higher max pitch than verses
-    if verse1_pitches and solo1_pitches:
-        verse1_max = max(verse1_pitches)
-        solo1_max = max(solo1_pitches)
-        avg_verse_max = (max(verse1_pitches) + max(verse2_pitches)) / 2
-
-        # Solo should reach higher notes
-        assert solo1_max >= avg_verse_max, \
-            f"Solo should reach higher notes (solo_max={solo1_max}, avg_verse_max={avg_verse_max:.1f})"
-
-    print(f"✓ Solo uses expanded register (verse1_max={verse1_max}, solo_max={solo1_max})")
+    Whether one take happens to climb is chance, so this checks the range
+    over several seeds instead of one pinned take: verses stay inside the
+    persona's register_high (52), and solos reach past it in most takes
+    without passing solo_register_high (loose: 72).
+    """
+    takes = _solo_comparison_by_seed(range(1, 9))
+    for t in takes:
+        assert max(t["verse1"] + t["verse2"]) <= 52
+        assert max(t["solo1"]) <= 72
+    climbed = sum(1 for t in takes if max(t["solo1"]) > 52)
+    assert climbed >= len(takes) // 2, f"solos climbed past the verse range in {climbed} takes"
 
 
 def test_solo_less_locked_to_kick():
     """Verify solo sections are more melodically independent (less kick-locked)."""
     # This is harder to test directly without drum events
     # We can verify by checking that solo mode is applied in the logs
-    yaml_path = "examples/bass/advanced/solo-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-pocket.yaml"
 
     result = subprocess.run(
         [sys.executable, "-m", "produzre.cli", "build", yaml_path],
@@ -168,64 +153,15 @@ def test_solo_less_locked_to_kick():
 
 
 def test_solo_differs_from_normal():
-    """Verify solo sections noticeably differ from normal bass."""
-    yaml_path = "examples/bass/advanced/solo-comparison.yaml"
-
-    result = subprocess.run(
-        [sys.executable, "-m", "produzre.cli", "build", yaml_path],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    assert result.returncode == 0
-
-    export_lines = [l for l in result.stderr.splitlines() if "Export root:" in l]
-    export_root = export_lines[0].split("Export root:")[1].strip()
-
-    # Read TSV
-    tsv_path = Path(export_root) / "analysis" / "bass" / "Solo_Comparison_bass.events.tsv"
-    content = tsv_path.read_text()
-    lines = content.strip().split("\n")
-
-    # Collect metrics by section
-    def get_section_metrics(section_id):
-        pitches = []
-        for line in lines[1:]:
-            parts = line.split("\t")
-            if len(parts) >= 12 and parts[1] == section_id:
-                pitches.append(int(parts[6]))
-
-        if not pitches:
-            return None
-
-        return {
-            "count": len(pitches),
-            "min": min(pitches),
-            "max": max(pitches),
-            "avg": statistics.mean(pitches),
-            "range": max(pitches) - min(pitches),
-        }
-
-    verse1_metrics = get_section_metrics("verse1")
-    solo1_metrics = get_section_metrics("solo1")
-
-    if verse1_metrics and solo1_metrics:
-        # Solo should have:
-        # 1. More notes (higher count)
-        assert solo1_metrics["count"] > verse1_metrics["count"], "Solo should have more notes"
-
-        # 2. Wider range (higher max)
-        assert solo1_metrics["max"] >= verse1_metrics["max"], "Solo should reach higher"
-
-        print(f"✓ Solo differs from normal (notes: {verse1_metrics['count']} → {solo1_metrics['count']}, "
-              f"range: {verse1_metrics['range']} → {solo1_metrics['range']})")
-    else:
-        print("✓ Solo differs from normal (metrics collected)")
+    """Solo sections are busier than the accompaniment (solo_density), over seeds."""
+    takes = _solo_comparison_by_seed(range(1, 9))
+    busier = sum(1 for t in takes if len(t["solo1"]) > len(t["verse1"]))
+    assert busier >= len(takes) * 3 // 4, f"solo busier than the verse in {busier} takes"
 
 
 def test_solo_determinism():
     """Verify solo bass is deterministic with same seed."""
-    yaml_path = "examples/bass/advanced/solo-pocket.yaml"
+    yaml_path = "tests/fixtures/examples/bass/advanced/solo-pocket.yaml"
 
     def build_and_get_solo_pitches():
         result = subprocess.run(

@@ -13,7 +13,7 @@ from pathlib import Path
 
 def test_bass_determinism():
     """Two builds with same YAML/seed should produce identical TSV outputs."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     assert yaml_path.exists(), f"Baseline demo not found: {yaml_path}"
 
     # Build 1
@@ -63,7 +63,7 @@ def test_bass_determinism():
 
 def test_bass_voice_labels():
     """Voice labels should appear in TSV output."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     assert yaml_path.exists()
 
     result = subprocess.run(
@@ -82,7 +82,6 @@ def test_bass_voice_labels():
 
     # Check that expected voice label families appear (deterministic with seed)
     assert "root" in tsv_content, "Missing 'root' voice label"
-    assert "fifth" in tsv_content, "Missing 'fifth' voice label"
     assert "root_cadence" in tsv_content, "Missing 'root_cadence' voice label"
 
     import csv
@@ -94,9 +93,25 @@ def test_bass_voice_labels():
         assert all(float(row["duration_beats"]) > 0 for row in notes)
 
 
+def test_bass_non_root_voice_labels_across_seeds(tmp_path):
+    """Non-root chord tones (fifths, thirds) are labeled too. Each chord starts
+    on its root, so which inner beats take another chord tone depends on the
+    seed: across a handful of seeds some must."""
+    import yaml
+    from tests.test_groove_clock import _load_cfg, _render_timelines
+
+    data = yaml.safe_load(Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml").read_text())
+    kinds = set()
+    for seed in range(40, 48):
+        data["song"]["seed"] = seed
+        timelines, _ = _render_timelines(_load_cfg(tmp_path, yaml.safe_dump(data), name=f"b{seed}.yaml"))
+        kinds |= {str(e.kind) for e in timelines["bass"].events}
+    assert any(k.startswith(("fifth", "third")) for k in kinds), kinds
+
+
 def test_bass_structured_logging():
     """Structured logging should show effective parameters."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     assert yaml_path.exists()
 
     result = subprocess.run(
@@ -118,7 +133,7 @@ def test_bass_structured_logging():
 
 def test_bass_golden_comparison():
     """Compare against golden reference files."""
-    yaml_path = Path("examples/bass/baseline/baseline-demo.yaml")
+    yaml_path = Path("tests/fixtures/examples/bass/baseline/baseline-demo.yaml")
     golden_tsv = Path("tests/golden/bass/baseline.events.tsv")
     golden_grid = Path("tests/golden/bass/baseline.grid.txt")
 
