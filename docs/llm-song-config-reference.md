@@ -1,7 +1,7 @@
 # Song configuration reference
 
 Produzre reads a YAML song description and writes MIDI. Use this reference
-for the 0.10.0 development version when writing configs yourself or with an assistant. Run commands from the repository root with
+for version 0.10.0 when writing configs yourself or with an assistant. Run commands from the repository root with
 `python produzre_entry.py`, or use a built `produzre` executable.
 
 ## File structure

@@ -1,220 +1,87 @@
 # Changelog
 
-## 0.10.0 (unreleased): the composer
+## 0.10.0 (2026-09-27): the composer
 
-### Final merged review
-
-- Keep country lead fills, double stops and trills intact through transition thinning.
-- Protect quiet structural drum hits by role, including remapped kit pitches.
-- Separate groove recall by beat grouping and use the effective part genre for
-  groove-cycle policy. Share the meter resolver with drum-only composition.
-- Honor an explicit country style when a part changes genre inside another song.
-- Preserve fitted bass note lengths through ramp-down transitions, preventing
-  overlapping roots at attacks and section boundaries.
-- Let classic solo rhythm guitar use the orchestrator grid without requiring
-  a drummer when only that part opts out of composition.
-- Correct example descriptions, composer ownership, register bounds, harmonic
-  rhythm and export-index names. See the final merged review report in
-  `docs/reviews/2026-09-26-final-review.md`.
-
-### Config, guitar and docs fixes from the examples findings
-
-- The top-level `engines:` block works as documented: each field overrides
-  the built-in registry (program, channel, priority, new engines). Registry
-  fields on a global `instruments:` entry still apply; `engines` wins when
-  both set a field, and the build logs the conflict.
-- A `persona` on a section's instrument applies its params for that
-  section, at the persona layer (persona < recipe < global params < section
-  params). `params.persona` works too.
-- The build warns about instrument params no built-in engine reads, naming
-  the key, where it was set and the closest known keys; `validate` reports
-  the same lines. Section-level registry fields and unknown `engines`
-  fields are flagged too.
-- Rhythm-guitar walks only lead into chord changes: a riff's walk over a
-  held chord becomes a hold, and a phrase-end walk-up into the same chord
-  becomes root and fifth. The approach note is chromatic unless it rubs a
-  semitone against the chord it is played over (C, not C#, into Dm over Am).
-- `sustain_mode` plays held chords on both classic renderers (struck on each
-  chord, restruck every `sustain_duration` beats, not palm-muted by the
-  section default); `sustain_duration` caps every strum on every renderer,
-  composed comping included. Composed comping logs the classic renderers'
-  controls (`mute`, `retrigger`, a `register` preset and so on) as unused.
-- Acoustic `capo` is consistent in the composed fingerstyle: thumb, inner
-  voice and melody all sound in the song's key over capo-relative shapes.
-  Barre shapes sit at their lowest position on the neck, and picked melodies
-  (including groove-memory restatements) stay at or below A5.
-
-### Examples for the current app
-
-- New `examples/songs/`: twelve complete songs across genres and meters.
-- New solo-track folders: `drums/solo`, `bass/solo`, `acoustic_gtr/solo`
-  and `lead_gtr/solo`, each with three full pieces for one instrument.
-- One current song per genre replaces the simple, full and recipe-showcase
-  files (31 files instead of about 90).
-- Drum, lead, rhythm guitar, orchestration, persona and seed demos are
-  rewritten around settings the composer honors; each instrument keeps one
-  `composer: false` classic-engine demo. `drums/transitions/` plays one song
-  with each into-chorus device.
-- Tests read frozen copies under `tests/fixtures/examples/`, so examples can
-  change freely. App findings from writing them are in
-  `docs/reviews/2026-09-26-examples-findings.md`.
-
-### Country waltzes and style hints
-
-- Country waltzes get a per-song waltz band: bass on 1 with its own
-  ring length, root/fifth habit and walks on 2 and 3 into chord changes;
-  guitar answers on 2 and 3 with the song's figure; drums keep the kick on
-  1 with their own snare or cross-stick, foot hat and timekeeper. The ten-song
-  waltz album moves from 0.69 to about 0.51 similarity. Other meters are
-  byte-identical.
-- Genre names choose the country style (`outlaw_country`, `country_rock`,
-  `honky_tonk`, `bakersfield`, `texas_country`, `country_ballad`); a pinned
-  `country_style` still wins.
-- Composed drums can play `cross_stick` (GM 37).
-
-### Rhythm-guitar groove review
-
-- Keep riff pitch calculations from changing subsequent note velocities.
-- Fit signature riffs to section meter/grouping and honor rhythm part seeds;
-  trim bar-two body notes before the answering tail.
-- Keep drum group starts on the same compound pulse as the guitars.
-- Preserve explicit bass line choices and registers through riff doubling,
-  retain transition/ending bars, and use actual scale neighbors for approaches.
-- Add opt-in `comp_activity: normal` and `sparse`, with repeated open bars,
-  spaced phrase devices and drum-aware riff candidate scoring.
-- `comp_activity` is now a per-song habit (busy, normal, sparse), drawn
-  like the other arrangement habits and pinned by `arrangement_style`.
-- Signature riffs lock with the drummer in every mode: kick and snare
-  unisons score up, sixteenths off the backbeat are ruled out. Verse
-  near-misses against the drums halve across the benchmark album.
-- Riff power moves under a clashing held lead note are choked to a stab
-  (sustained guitar/lead clashes on the album: 22 to 2).
-- A doubling bass plays the riff tail alone where the guitar leaves it open.
-- Add a rendered bar audit and regression tests. Default guitar album
-  similarity is unchanged; see the [review](docs/design/rhythm-guitar-review.md)
-  for the bass tradeoff, rejected automatic changes and audio comparisons.
-
-### Composer review, round 2
-
-- Correct compound shuffle grids and preserve group starts through shared swing.
-- Include grouping in lead recall and adapt generated ideas to section meters.
-- Preserve authored bass contours, avoid fast-answer overlaps and honor bounds.
-- Honor section settings across field/param layers, nested lead registers,
-  composed rhythm timing, octave voicing and final gesture register bounds.
-- Add opt-in `hook_response: develop` for rotating hook fragments and answers.
-  Responses remain off by default in every genre.
-- Add 37 regression/probe cases, a 216-build before/after matrix, and four
-  blinded listening pairs. The three existing 4/4 composer examples retain
-  byte-identical MIDI; no goldens regenerated. See the
-  [second review](docs/design/composer-review-round2.md).
-
-### Composer review fixes and extension
-
-- Respect explicit lead phrase and technique controls, numeric lead register
-  bounds, and rhythm density, voicing, and performance controls.
-- Fit song DNA using the source section's key, mode, and meter. Counter-lines
-  include chords already sounding at phrase entry; realization uses actual
-  section-relative metric position.
-- Walk toward the next harmonic change, independent of arpeggio state. Keep
-  power chords and walking notes above standard guitar's low E.
-- Groove recall includes top-level configuration and canonical nested params.
-- Keep slide graces MIDI-safe and the final lead monophonic after transitions.
-- Add metric and harmonic exposure scoring to listener development choices,
-  plus a reproducible A/B tool and readable lead sheets. Exposure fell 5.6%
-  on 288 controlled section cases; other metrics show small tradeoffs.
-- Existing affected songs intentionally change. No golden files regenerated.
-  See [the review report](docs/design/composer-review.md).
+Songs are now written by a composer instead of assembled from patterns. Each
+song gets its own band: a drummer, a bassist, a rhythm guitarist and a lead
+player with their own habits, playing a hook the whole song is built around.
+The detailed design notes and review reports are in `docs/design/` and
+`docs/reviews/`.
 
 ### What changes for existing songs
 
-Existing YAML produces different MIDI. The lead guitar is now composed, and
-the rhythm section settles into grooves.
+Existing YAML produces different MIDI. To keep a part's older behavior, set
+`composer: false` on it (or `song.composer: false` for the whole song).
 
-- **Lead guitar** comes from the song composer (`produzre/composer/`). A song
-  gets one set of ideas, its DNA: a hook, answer, verse idea, bridge idea,
-  and three signature licks. Returning sections remember their material.
-  `song.composer: false`, or `composer: false` on the lead, restores the 0.9
-  motif generator.
-- The auto-generated melody theme (`auto_hook`) is replaced by the
-  composer's hook, so the acoustic guitar, arpeggiator, and lead share one
-  melody. Authored melody themes are never replaced; they become the hook.
-- **Groove memory** gives drums, bass, rhythm guitar, and acoustic guitar a
-  bar form: each 4-bar phrase restates the section's most typical bar and
-  keeps the engine's own last bar. Choruses recall their groove.
-  `song.groove_memory: false`, or `groove_memory: false` per instrument,
-  restores bar-by-bar output. The bass golden baseline was regenerated.
-- **Your settings shape composed parts.** Part selectors (`style`,
-  `pattern`, `sustain_mode`, `recipe`, `composer: false`) keep the previous
-  engines. Lead `rest_probability`, `contour_style` and expression rates, and
-  rhythm `density`, `palm_mute`, `chuck_rate`, `voicing`, register and dynamics,
-  shape the composed parts. Legacy-only tuning is logged as unused.
-- **Rhythm guitar** is composed unless a part pins its own style or mode.
-  Each song gets signature comp riffs (chucks, walks, sus hammer-ons,
-  slides, boogies, gallops), with verse, chorus, and bridge contrast,
-  walk-ups, and stop-time before choruses. `composer: false` on the rhythm
-  part restores the recipe or legacy behavior.
-- **Odd and compound meters phrase by beat groups** (6/8 = 3+3, 7/8 = 2+2+3,
-  5/4 = 3+2; `meter_grouping` overrides). Without an explicit `chord_rate`,
-  chords change once per bar in every meter (previously every 4 beats, which
-  drifted against 7/8 and 6/8 bars). 4/4 output is unchanged.
-- Bass `hook_response: true` (opt-in): the bass answers the composed lead at
-  phrase ends with the hook's rhythm and contour, starting on a kick.
-- **Every song its own band.** Composed drums (per-song kick patterns,
-  timekeepers per section, backbeat styles, ghost notes, synthesized fills,
-  fill and crash habits, and a band feel), arrangement habits shared by all
-  parts (chorus approach, phrase endings, riff-alone intros, solo stories
-  and endings, lead counter-parts, chorus forms, fill density, endings),
-  signature riffs for riff-driven songs with optional bass doubling,
-  synthesized comp figures, and generated licks. Across a ten-song hard
-  rock album, part similarity fell from 0.41 to 0.16
-  (`tools/album_diversity.py`). `song.arrangement_style` pins any habit;
-  drum `composer: false` keeps the drum engine.
-- **Turnarounds**: preset and recipe progressions now lead into sections
-  that start on the tonic (the last half bar moves to V, V7, or bVII).
-  Explicit progressions are unchanged unless you opt in.
-- The shared groove clock now shortens swung off-beat notes so they end on
-  the grid; previously they overlapped the next downbeat.
-- The lead's `foreground` setting is read from `params:` (the documented
-  block). Before, only `extra:` or a bare key worked.
+- **The lead guitar is composed.** A song gets one set of ideas: a hook, an
+  answer, verse and bridge ideas and a bank of licks, and returning sections
+  remember them. `foreground: auto` plays around a singer (fills, a chorus
+  counter-line, the solo); `full` makes the lead the melody.
+- **The rest of the band is composed too.** Drums, rhythm guitar and, in band
+  sections, the bass play per-song parts, and all parts agree on arrangement
+  habits: how the band goes into a chorus, how phrases end, how the song
+  ends. Pin any habit with `song.arrangement_style`.
+- **Grooves settle.** Drums, bass, rhythm and acoustic guitar restate a
+  section's typical bar through each phrase, and choruses recall their
+  groove. `groove_memory: false` turns it off.
+- **Odd and compound meters phrase by beat groups** (6/8 as 3+3, 7/8 as
+  2+2+3). Without an explicit `chord_rate`, chords change once per bar in
+  every meter.
+- **Dynamics follow the song.** Composed drums, bass and the arpeggiator get
+  louder from verse to chorus and grow on repeats.
+- **The bass lands on the root on beat 1** of every new chord.
+- Your settings still win. Explicit patterns, styles, recipes, `intent`,
+  swing and register settings keep their engines or bound the composed parts,
+  and settings only the older generators use are logged as unused.
 
 ### New
 
-- Song DNA chosen by a memorability search. Hundreds of candidate ideas are
-  scored for rhythm, contour, gap-fill, and surprise, then re-scored as
-  realized over your real chorus and verse chords.
-- Phrase grammars per section: a verse period, a climbing prechorus, a chorus
-  of hook lines (A A' B A'', with one summit), a contrasting bridge, a
-  narrative solo (hook quote, development, climax, resolution, dive), and an
-  outro. `foreground: auto` gives a band part around a singer: the intro
-  hook, verse fills from the lick bank, a chorus counter-line, and the solo.
-- Composed comping (`composer/comping.py`, `engine/rhythm_gtr/composed.py`):
-  57 idiomatic rhythm-guitar riffs across 20 genre families, chosen per song for
-  character, personalized by seeded idiom-preserving mutations, and performed
-  on playable chord shapes with strum spread, chucks, pull-offs, and slides.
-- A listener model: a self-updating expectation model over intervals and
-  durations, primed with statistics from human melodies. It picks each
-  phrase's development so its surprise suits the phrase's role. Targets were
-  calibrated on 3,520 human phrases.
-- Beam-search realization: motifs keep their intervals over changing chords,
-  with chord tones on strong beats, prepared dissonance, and cadences that
-  re-aim when the harmony forbids their degree.
-- `song.final_chorus: modulate` (or a semitone count): a final-chorus key
-  change that every pitched part follows.
-- `song.turnarounds` and per-section `harmony: turnaround:` overrides.
-- `tools/musicality.py`: a structural benchmark for melodic lines against a
-  reference corpus. `tools/preview_audio.py`: a quick MP3 preview renderer.
-- The composer showcases in `examples/composer/`. Design and measurements are
-  in [docs/design/composer-architecture.md](docs/design/composer-architecture.md).
+- **Every song its own band.** Per-song drum kits and grooves, signature
+  riffs with optional bass doubling, synthesized comp figures, generated
+  licks and bass roles, so an album in one genre doesn't sound like one song.
+- **Genre idioms**, each with per-song variety: country (six styles such as
+  honky-tonk, Bakersfield and outlaw, plus real waltzes), reggae (one-drop,
+  steppers, rockers), jazz (spang-a-lang ride, walking bass), and a
+  four-on-the-floor drummer for dance and electronic music.
+- **Solo instruments** carry a piece on their own: solo drums, fingerpicked
+  acoustic guitar with a melody over the thumb, and a solo lead that plays
+  the tune.
+- A section or instrument `genre` now changes that part's player, so one
+  song can move between genres.
+- `song.final_chorus: modulate` for a last-chorus key change, and
+  `song.turnarounds` to lead sections into each other.
+- `lead_gtr` chorus forms (`lift`, `anthem`, `call`), solo stories and
+  endings, octave and stab counters, country fills with double stops.
+- The top-level `engines:` block sets MIDI programs and channels. Section
+  personas work. Unknown settings print a warning with a suggestion.
+- Rewritten examples: twelve complete songs in `examples/songs/`, one song
+  per genre, solo pieces for drums, bass, acoustic and lead guitar, and
+  instrument demos for the current app. They use the built-in
+  `produzre-examples` project, so they sound the same on every machine.
+- Tools: `tools/album_diversity.py`, `tools/rhythm_review.py`,
+  `tools/musicality.py` and `tools/preview_audio.py` for MP3 previews.
 
 ### Fixed
 
-- The grid dump rounds each hit to the nearest step, instead of drawing
-  slightly-early hits a sixteenth early.
-- Transition pickups are written once per boundary. They no longer duplicate,
-  and they no longer land inside composed lead phrases.
-- The lead is monophonic after the groove clock and humanization.
+- **Drums:** 12/8 and 6/8 grooves, swing that no longer warps compound
+  meters, audible builds, one hit per drum per step, the drum persona being
+  ignored, and transitions thinning fills.
+- **Bass:** walking lines that actually walk, no more silent bars, the bass
+  playing through stop-time and drops, authored bass motifs, slap on composed
+  parts, register limits, and the root on one after groove memory.
+- **Lead and arpeggiator:** a crash with a numeric `register` list, dead
+  `bend_rate` and `dive_rate` ranges, lead seeds, sparse or repeated solos,
+  trills under swing, and the arpeggiator's voicings and loudness.
+- **Guitars:** walk-up notes over held chords, capo in fingerstyle and tabs,
+  barre melodies out of range, `sustain_duration`, and chords that started
+  sections an octave high.
+- **Transitions:** pickups now respect the key, meter and register, and never
+  lead into silence; bass notes no longer overlap pickups or ramps.
+- Many smaller fixes. Every issue is listed with its fix in
+  `docs/reviews/2026-09-26-examples-findings.md` and
+  `docs/reviews/2026-09-26-final-review.md`.
 
-## 0.9.0 (unreleased)
+## 0.9.0 (2026-09-13)
 
 ### What changes for existing songs
 

@@ -7,7 +7,7 @@ You also get stems (one MIDI file per instrument), section clips (one section
 at a time), and patterns (reusable chunks of notes).
 
 The output is MIDI, so you choose the sounds in your DAW or synthesizer.
-The 0.10.0 development version adds a song composer and shared band habits,
+Version 0.10.0 adds a song composer that gives every song its own band,
 building on the themes and melodic development introduced in 0.9.0. See
 [CHANGELOG.md](CHANGELOG.md) for changes that affect existing songs.
 
